@@ -32,15 +32,26 @@ test("the floor plan links each rack to its elevation", async ({ page }) => {
 
 test("a fully populated 48 U rack (96 devices, both faces) renders in under a second", async ({ page }) => {
   await signInWithToken(page, `/rooms/${ID.room}`);
-  await expect(page.locator("svg.floor-svg a.floor-rack")).toHaveCount(3);
   // From the click to the last slot painted: 97 requests to the mock API, the layout and the SVG.
-  const started = Date.now();
-  await page.locator(`svg.floor-svg a.floor-rack[data-id="${ID.r48}"]`).click();
-  await expect(page.locator('svg[data-face="front"] a.rack-slot')).toHaveCount(48);
-  await expect(page.locator('svg[data-face="rear"] a.rack-slot')).toHaveCount(48);
-  const elapsed = Date.now() - started;
-  test.info().annotations.push({ type: "rack-render-ms", description: String(elapsed) });
-  console.log(`48 U rack, 96 devices, click to fully drawn (incl. 97 mock API calls): ${elapsed} ms`);
-  expect(elapsed).toBeLessThan(1000);
+  // Each run reloads the room page, so the query cache is empty and all 97 requests are made again;
+  // the first run also pays for loading the rack code, which a user pays once per session, so it is
+  // a warm-up and not measured. The budget is the median of the measured runs: one slow run of a
+  // shared CI runner does not decide, a slow rendering does (issue #48).
+  const render = async (): Promise<number> => {
+    await page.goto(`/rooms/${ID.room}`);
+    await expect(page.locator("svg.floor-svg a.floor-rack")).toHaveCount(3);
+    const started = Date.now();
+    await page.locator(`svg.floor-svg a.floor-rack[data-id="${ID.r48}"]`).click();
+    await expect(page.locator('svg[data-face="front"] a.rack-slot')).toHaveCount(48);
+    await expect(page.locator('svg[data-face="rear"] a.rack-slot')).toHaveCount(48);
+    return Date.now() - started;
+  };
+  const warmUp = await render();
+  const runs: number[] = [];
+  for (let i = 0; i < 5; i++) runs.push(await render());
+  const median = [...runs].sort((a, b) => a - b)[Math.floor(runs.length / 2)];
+  test.info().annotations.push({ type: "rack-render-ms", description: `median ${median} (runs ${runs.join(", ")}; warm-up ${warmUp})` });
+  console.log(`48 U rack, 96 devices, click to fully drawn (incl. 97 mock API calls): median ${median} ms, runs ${runs.join(", ")}, warm-up ${warmUp}`);
+  expect(median).toBeLessThan(1000);
   await expectAccessible(page);
 });
