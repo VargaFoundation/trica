@@ -11,6 +11,25 @@ make ci        # what blocks a PR
 
 Read [`AGENTS.md`](../AGENTS.md): it is the short list of rules, for humans and agents alike.
 
+### Test database without Docker
+
+`make db` needs a Docker daemon. Without one, any PostgreSQL 17 with the `pg_trgm` and
+`btree_gist` extensions works (both ship in the contrib package of every distribution; the
+first migration creates them, so the role must be allowed to). With a system PostgreSQL:
+
+```bash
+sudo apt-get install postgresql-17 postgresql-contrib   # or your distribution's equivalent
+sudo -u postgres psql -c "CREATE ROLE trica LOGIN SUPERUSER PASSWORD 'trica'"
+sudo -u postgres createdb -O trica trica
+export TRICA_TEST_DATABASE_URL='postgres://trica:trica@127.0.0.1:5432/trica?sslmode=disable'
+export TRICA_REQUIRE_DB=1   # fail instead of skipping if the database is unreachable
+```
+
+`SUPERUSER` is the short path on a throwaway server. `internal/testdb` creates and drops one
+database per test from the URL's connection, so the role needs at least `CREATEDB`, and the two
+extensions must be creatable in each new database (superuser, or installed in `template1`). Do
+not point the tests at a server that holds anything you care about.
+
 ## Repository layout
 
 | Path | What |
