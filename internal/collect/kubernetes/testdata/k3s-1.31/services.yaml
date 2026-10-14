@@ -1,0 +1,151 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubernetes
+  namespace: default
+  uid: 00000000-0000-4000-8000-000000000029
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    component: apiserver
+    provider: kubernetes
+spec:
+  type: ClusterIP
+  clusterIP: 198.51.100.1
+  clusterIPs:
+  - 198.51.100.1
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 6443
+  sessionAffinity: None
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-dns
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000002a
+  creationTimestamp: '2026-09-02T08:14:07Z'
+spec:
+  type: ClusterIP
+  clusterIP: 198.51.100.10
+  clusterIPs:
+  - 198.51.100.10
+  ports:
+  - name: dns
+    port: 53
+    protocol: UDP
+    targetPort: dns
+  - name: dns-tcp
+    port: 53
+    protocol: TCP
+    targetPort: dns-tcp
+  sessionAffinity: None
+  selector:
+    k8s-app: kube-dns
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metrics-server
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000002b
+  creationTimestamp: '2026-09-02T08:14:07Z'
+spec:
+  type: ClusterIP
+  clusterIP: 198.51.100.20
+  clusterIPs:
+  - 198.51.100.20
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: https
+  sessionAffinity: None
+  selector:
+    k8s-app: metrics-server
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000002c
+  creationTimestamp: '2026-09-02T08:14:07Z'
+spec:
+  type: LoadBalancer
+  clusterIP: 198.51.100.30
+  clusterIPs:
+  - 198.51.100.30
+  ports:
+  - name: web
+    port: 80
+    protocol: TCP
+    targetPort: web
+    nodePort: 30080
+  - name: websecure
+    port: 443
+    protocol: TCP
+    targetPort: websecure
+    nodePort: 30443
+  sessionAffinity: None
+  selector:
+    app.kubernetes.io/name: traefik
+status:
+  loadBalancer:
+    ingress:
+    - ip: 192.0.2.13
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shop-web
+  namespace: shop
+  uid: 00000000-0000-4000-8000-00000000002d
+  creationTimestamp: '2026-09-02T08:14:07Z'
+spec:
+  type: ClusterIP
+  clusterIP: 198.51.100.40
+  clusterIPs:
+  - 198.51.100.40
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  sessionAffinity: None
+  selector:
+    app: shop-web
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shop-db
+  namespace: shop
+  uid: 00000000-0000-4000-8000-00000000002e
+  creationTimestamp: '2026-09-02T08:14:07Z'
+spec:
+  type: ClusterIP
+  clusterIP: None
+  clusterIPs:
+  - None
+  ports:
+  - name: postgres
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  sessionAffinity: None
+  selector:
+    app: shop-db
+status:
+  loadBalancer: {}

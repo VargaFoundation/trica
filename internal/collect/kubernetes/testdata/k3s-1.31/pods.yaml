@@ -1,0 +1,729 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: coredns-5d9c7f6b8-xk2lp
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000000b
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: kube-dns
+    pod-template-hash: 5d9c7f6b8
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: ReplicaSet
+    name: coredns-5d9c7f6b8
+    uid: 00000000-0000-4000-8000-00000000000a
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: coredns
+    image: rancher/mirrored-coredns-coredns:1.11.3
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-cp-01
+status:
+  phase: Running
+  hostIP: 192.0.2.11
+  podIP: 203.0.113.11
+  podIPs:
+  - ip: 203.0.113.11
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: coredns
+    image: rancher/mirrored-coredns-coredns:1.11.3
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: local-path-provisioner-74f8d5c6d-xk2lp
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000000e
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: local-path-provisioner
+    pod-template-hash: 74f8d5c6d
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: ReplicaSet
+    name: local-path-provisioner-74f8d5c6d
+    uid: 00000000-0000-4000-8000-00000000000d
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: local-path-provisioner
+    image: rancher/local-path-provisioner:v0.0.30
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-cp-01
+status:
+  phase: Running
+  hostIP: 192.0.2.11
+  podIP: 203.0.113.12
+  podIPs:
+  - ip: 203.0.113.12
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: local-path-provisioner
+    image: rancher/local-path-provisioner:v0.0.30
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: metrics-server-6b7d9c5f4-xk2lp
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000011
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: metrics-server
+    pod-template-hash: 6b7d9c5f4
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: ReplicaSet
+    name: metrics-server-6b7d9c5f4
+    uid: 00000000-0000-4000-8000-000000000010
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: metrics-server
+    image: rancher/mirrored-metrics-server:v0.7.2
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-wk-01
+status:
+  phase: Running
+  hostIP: 192.0.2.12
+  podIP: 203.0.113.13
+  podIPs:
+  - ip: 203.0.113.13
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: metrics-server
+    image: rancher/mirrored-metrics-server:v0.7.2
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: traefik-7c5f8d6b9-xk2lp
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000014
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app.kubernetes.io/name: traefik
+    pod-template-hash: 7c5f8d6b9
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: ReplicaSet
+    name: traefik-7c5f8d6b9
+    uid: 00000000-0000-4000-8000-000000000013
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: traefik
+    image: rancher/mirrored-library-traefik:2.11.18
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-wk-02
+status:
+  phase: Running
+  hostIP: 192.0.2.13
+  podIP: 203.0.113.14
+  podIPs:
+  - ip: 203.0.113.14
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: traefik
+    image: rancher/mirrored-library-traefik:2.11.18
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cilium-operator-69b8c7d5f-xk2lp
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000017
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    io.cilium/app: operator
+    name: cilium-operator
+    pod-template-hash: 69b8c7d5f
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: ReplicaSet
+    name: cilium-operator-69b8c7d5f
+    uid: 00000000-0000-4000-8000-000000000016
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: cilium-operator
+    image: quay.io/cilium/operator-generic:v1.16.5
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-cp-01
+status:
+  phase: Running
+  hostIP: 192.0.2.11
+  podIP: 203.0.113.15
+  podIPs:
+  - ip: 203.0.113.15
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: cilium-operator
+    image: quay.io/cilium/operator-generic:v1.16.5
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cilium-4gk7d
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000019
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: cilium
+    controller-revision-hash: 5d8f6b7c9
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: DaemonSet
+    name: cilium
+    uid: 00000000-0000-4000-8000-000000000018
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: cilium-agent
+    image: quay.io/cilium/cilium:v1.16.5
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-cp-01
+  hostNetwork: true
+status:
+  phase: Running
+  hostIP: 192.0.2.11
+  podIP: 192.0.2.11
+  podIPs:
+  - ip: 192.0.2.11
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: cilium-agent
+    image: quay.io/cilium/cilium:v1.16.5
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cilium-bz9xv
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000001a
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: cilium
+    controller-revision-hash: 5d8f6b7c9
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: DaemonSet
+    name: cilium
+    uid: 00000000-0000-4000-8000-000000000018
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: cilium-agent
+    image: quay.io/cilium/cilium:v1.16.5
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-wk-01
+  hostNetwork: true
+status:
+  phase: Running
+  hostIP: 192.0.2.12
+  podIP: 192.0.2.12
+  podIPs:
+  - ip: 192.0.2.12
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: cilium-agent
+    image: quay.io/cilium/cilium:v1.16.5
+    imageID: ''
+    ready: true
+    restartCount: 1
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cilium-m2p6s
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000001b
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: cilium
+    controller-revision-hash: 5d8f6b7c9
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: DaemonSet
+    name: cilium
+    uid: 00000000-0000-4000-8000-000000000018
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: cilium-agent
+    image: quay.io/cilium/cilium:v1.16.5
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-wk-02
+  hostNetwork: true
+status:
+  phase: Running
+  hostIP: 192.0.2.13
+  podIP: 192.0.2.13
+  podIPs:
+  - ip: 192.0.2.13
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: cilium-agent
+    image: quay.io/cilium/cilium:v1.16.5
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: node-exporter-4gk7d
+  namespace: monitoring
+  uid: 00000000-0000-4000-8000-00000000001d
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app.kubernetes.io/name: node-exporter
+    controller-revision-hash: 5d8f6b7c9
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: DaemonSet
+    name: node-exporter
+    uid: 00000000-0000-4000-8000-00000000001c
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: node-exporter
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-cp-01
+  hostNetwork: true
+status:
+  phase: Running
+  hostIP: 192.0.2.11
+  podIP: 192.0.2.11
+  podIPs:
+  - ip: 192.0.2.11
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: node-exporter
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: node-exporter-bz9xv
+  namespace: monitoring
+  uid: 00000000-0000-4000-8000-00000000001e
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app.kubernetes.io/name: node-exporter
+    controller-revision-hash: 5d8f6b7c9
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: DaemonSet
+    name: node-exporter
+    uid: 00000000-0000-4000-8000-00000000001c
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: node-exporter
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-wk-01
+  hostNetwork: true
+status:
+  phase: Running
+  hostIP: 192.0.2.12
+  podIP: 192.0.2.12
+  podIPs:
+  - ip: 192.0.2.12
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: node-exporter
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: node-exporter-m2p6s
+  namespace: monitoring
+  uid: 00000000-0000-4000-8000-00000000001f
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app.kubernetes.io/name: node-exporter
+    controller-revision-hash: 5d8f6b7c9
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: DaemonSet
+    name: node-exporter
+    uid: 00000000-0000-4000-8000-00000000001c
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: node-exporter
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-wk-02
+  hostNetwork: true
+status:
+  phase: Running
+  hostIP: 192.0.2.13
+  podIP: 192.0.2.13
+  podIPs:
+  - ip: 192.0.2.13
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: node-exporter
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shop-web-7d9f8c6b5-xk2lp
+  namespace: shop
+  uid: 00000000-0000-4000-8000-000000000022
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: shop-web
+    pod-template-hash: 7d9f8c6b5
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: ReplicaSet
+    name: shop-web-7d9f8c6b5
+    uid: 00000000-0000-4000-8000-000000000021
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: web
+    image: registry.example.test/shop/web:1.8.2
+    imagePullPolicy: IfNotPresent
+  - name: sidecar
+    image: registry.example.test/shop/metrics-sidecar:0.4.0
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-wk-01
+status:
+  phase: Running
+  hostIP: 192.0.2.12
+  podIP: 203.0.113.16
+  podIPs:
+  - ip: 203.0.113.16
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: web
+    image: registry.example.test/shop/web:1.8.2
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+  - name: sidecar
+    image: registry.example.test/shop/metrics-sidecar:0.4.0
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shop-web-7d9f8c6b5-q8m4z
+  namespace: shop
+  uid: 00000000-0000-4000-8000-000000000023
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: shop-web
+    pod-template-hash: 7d9f8c6b5
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: ReplicaSet
+    name: shop-web-7d9f8c6b5
+    uid: 00000000-0000-4000-8000-000000000021
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: web
+    image: registry.example.test/shop/web:1.8.2
+    imagePullPolicy: IfNotPresent
+  - name: sidecar
+    image: registry.example.test/shop/metrics-sidecar:0.4.0
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-wk-02
+status:
+  phase: Running
+  hostIP: 192.0.2.13
+  podIP: 203.0.113.17
+  podIPs:
+  - ip: 203.0.113.17
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: web
+    image: registry.example.test/shop/web:1.8.2
+    imageID: ''
+    ready: true
+    restartCount: 2
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+  - name: sidecar
+    image: registry.example.test/shop/metrics-sidecar:0.4.0
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shop-db-0
+  namespace: shop
+  uid: 00000000-0000-4000-8000-000000000025
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: shop-db
+    statefulset.kubernetes.io/pod-name: shop-db-0
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: StatefulSet
+    name: shop-db
+    uid: 00000000-0000-4000-8000-000000000024
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: postgres
+    image: postgres:16.4
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-wk-02
+status:
+  phase: Running
+  hostIP: 192.0.2.13
+  podIP: 203.0.113.18
+  podIPs:
+  - ip: 203.0.113.18
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: postgres
+    image: postgres:16.4
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shop-backup-28812340-x7b2d
+  namespace: shop
+  uid: 00000000-0000-4000-8000-000000000028
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: shop-backup
+    job-name: shop-backup-28812340
+  ownerReferences:
+  - apiVersion: batch/v1
+    kind: Job
+    name: shop-backup-28812340
+    uid: 00000000-0000-4000-8000-000000000027
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: backup
+    image: registry.example.test/shop/backup:2.1.0
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Never
+  nodeName: kube-wk-01
+status:
+  phase: Succeeded
+  hostIP: 192.0.2.12
+  podIP: 203.0.113.19
+  podIPs:
+  - ip: 203.0.113.19
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: backup
+    image: registry.example.test/shop/backup:2.1.0
+    imageID: ''
+    ready: false
+    restartCount: 0
+    state:
+      terminated:
+        exitCode: 0
+        reason: Completed
+        startedAt: '2026-09-02T08:14:07Z'
+        finishedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: virt-launcher-app-vm-01-9t4xk
+  namespace: vms
+  uid: 00000000-0000-4000-8000-000000000032
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubevirt.io: virt-launcher
+    vm.kubevirt.io/name: app-vm-01
+  ownerReferences:
+  - apiVersion: kubevirt.io/v1
+    kind: VirtualMachineInstance
+    name: app-vm-01
+    uid: 00000000-0000-4000-8000-000000000030
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: compute
+    image: quay.io/kubevirt/virt-launcher:v1.4.0
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-wk-01
+status:
+  phase: Running
+  hostIP: 192.0.2.12
+  podIP: 203.0.113.71
+  podIPs:
+  - ip: 203.0.113.71
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: compute
+    image: quay.io/kubevirt/virt-launcher:v1.4.0
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: virt-launcher-db-vm-01-m2c8v
+  namespace: vms
+  uid: 00000000-0000-4000-8000-000000000035
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubevirt.io: virt-launcher
+    vm.kubevirt.io/name: db-vm-01
+  ownerReferences:
+  - apiVersion: kubevirt.io/v1
+    kind: VirtualMachineInstance
+    name: db-vm-01
+    uid: 00000000-0000-4000-8000-000000000033
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: compute
+    image: quay.io/kubevirt/virt-launcher:v1.4.0
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: kube-wk-02
+status:
+  phase: Running
+  hostIP: 192.0.2.13
+  podIP: 203.0.113.72
+  podIPs:
+  - ip: 203.0.113.72
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: compute
+    image: quay.io/kubevirt/virt-launcher:v1.4.0
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'

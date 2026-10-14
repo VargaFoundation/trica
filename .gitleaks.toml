@@ -5,3 +5,7 @@ title = "trica"
 
 [extend]
 useDefault = true
+
+[allowlist]
+description = "Kubernetes canary: a Secret whose data is the marker 'canary-never-read' in base64, there to prove the collector never reads Secrets"
+paths = ['''internal/collect/kubernetes/testdata/[^/]+/secrets\.yaml''']

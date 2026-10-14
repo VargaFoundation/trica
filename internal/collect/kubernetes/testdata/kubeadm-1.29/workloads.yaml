@@ -1,0 +1,157 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000003b
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: kube-dns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      k8s-app: kube-dns
+  template:
+    metadata:
+      labels:
+        k8s-app: kube-dns
+    spec:
+      containers:
+      - name: coredns
+        image: registry.k8s.io/coredns/coredns:v1.11.1
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 2
+  readyReplicas: 1
+  availableReplicas: 1
+  updatedReplicas: 2
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: coredns-76f75df574
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000003c
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: kube-dns
+    pod-template-hash: 76f75df574
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: coredns
+    uid: 00000000-0000-4000-8000-00000000003b
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      k8s-app: kube-dns
+  template:
+    metadata:
+      labels:
+        k8s-app: kube-dns
+    spec:
+      containers:
+      - name: coredns
+        image: registry.k8s.io/coredns/coredns:v1.11.1
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 2
+  readyReplicas: 1
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000003f
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: kube-proxy
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kube-proxy
+  template:
+    metadata:
+      labels:
+        k8s-app: kube-proxy
+    spec:
+      containers:
+      - name: kube-proxy
+        image: registry.k8s.io/kube-proxy:v1.29.9
+        imagePullPolicy: IfNotPresent
+      hostNetwork: true
+status:
+  currentNumberScheduled: 2
+  desiredNumberScheduled: 2
+  numberReady: 2
+  numberAvailable: 2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wiki
+  namespace: tools
+  uid: 00000000-0000-4000-8000-000000000042
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: wiki
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wiki
+  template:
+    metadata:
+      labels:
+        app: wiki
+    spec:
+      containers:
+      - name: wiki
+        image: registry.example.test/tools/wiki:3.2
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1
+  availableReplicas: 1
+  updatedReplicas: 1
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: wiki-5f6d8c7b9
+  namespace: tools
+  uid: 00000000-0000-4000-8000-000000000043
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: wiki
+    pod-template-hash: 5f6d8c7b9
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: wiki
+    uid: 00000000-0000-4000-8000-000000000042
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wiki
+  template:
+    metadata:
+      labels:
+        app: wiki
+    spec:
+      containers:
+      - name: wiki
+        image: registry.example.test/tools/wiki:3.2
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1

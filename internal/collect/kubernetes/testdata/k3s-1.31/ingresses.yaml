@@ -1,0 +1,40 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shop
+  namespace: shop
+  uid: 00000000-0000-4000-8000-00000000002f
+  creationTimestamp: '2026-09-02T08:14:07Z'
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: shop.lab.example
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: shop-web
+            port:
+              number: 80
+  - host: api.shop.lab.example
+    http:
+      paths:
+      - path: /v1
+        pathType: Prefix
+        backend:
+          service:
+            name: shop-web
+            port:
+              name: http
+  tls:
+  - hosts:
+    - shop.lab.example
+    - api.shop.lab.example
+    secretName: shop-tls
+status:
+  loadBalancer:
+    ingress:
+    - ip: 192.0.2.13

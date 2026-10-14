@@ -1,0 +1,537 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000009
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: kube-dns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: kube-dns
+  template:
+    metadata:
+      labels:
+        k8s-app: kube-dns
+    spec:
+      containers:
+      - name: coredns
+        image: rancher/mirrored-coredns-coredns:1.11.3
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1
+  availableReplicas: 1
+  updatedReplicas: 1
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: coredns-5d9c7f6b8
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000000a
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: kube-dns
+    pod-template-hash: 5d9c7f6b8
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: coredns
+    uid: 00000000-0000-4000-8000-000000000009
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: kube-dns
+  template:
+    metadata:
+      labels:
+        k8s-app: kube-dns
+    spec:
+      containers:
+      - name: coredns
+        image: rancher/mirrored-coredns-coredns:1.11.3
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-path-provisioner
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000000c
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: local-path-provisioner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: local-path-provisioner
+  template:
+    metadata:
+      labels:
+        app: local-path-provisioner
+    spec:
+      containers:
+      - name: local-path-provisioner
+        image: rancher/local-path-provisioner:v0.0.30
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1
+  availableReplicas: 1
+  updatedReplicas: 1
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: local-path-provisioner-74f8d5c6d
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000000d
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: local-path-provisioner
+    pod-template-hash: 74f8d5c6d
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: local-path-provisioner
+    uid: 00000000-0000-4000-8000-00000000000c
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: local-path-provisioner
+  template:
+    metadata:
+      labels:
+        app: local-path-provisioner
+    spec:
+      containers:
+      - name: local-path-provisioner
+        image: rancher/local-path-provisioner:v0.0.30
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-server
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000000f
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: metrics-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: metrics-server
+  template:
+    metadata:
+      labels:
+        k8s-app: metrics-server
+    spec:
+      containers:
+      - name: metrics-server
+        image: rancher/mirrored-metrics-server:v0.7.2
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1
+  availableReplicas: 1
+  updatedReplicas: 1
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: metrics-server-6b7d9c5f4
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000010
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: metrics-server
+    pod-template-hash: 6b7d9c5f4
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: metrics-server
+    uid: 00000000-0000-4000-8000-00000000000f
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: metrics-server
+  template:
+    metadata:
+      labels:
+        k8s-app: metrics-server
+    spec:
+      containers:
+      - name: metrics-server
+        image: rancher/mirrored-metrics-server:v0.7.2
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000012
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app.kubernetes.io/name: traefik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: traefik
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: traefik
+    spec:
+      containers:
+      - name: traefik
+        image: rancher/mirrored-library-traefik:2.11.18
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1
+  availableReplicas: 1
+  updatedReplicas: 1
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: traefik-7c5f8d6b9
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000013
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app.kubernetes.io/name: traefik
+    pod-template-hash: 7c5f8d6b9
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: traefik
+    uid: 00000000-0000-4000-8000-000000000012
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: traefik
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: traefik
+    spec:
+      containers:
+      - name: traefik
+        image: rancher/mirrored-library-traefik:2.11.18
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cilium-operator
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000015
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    io.cilium/app: operator
+    name: cilium-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.cilium/app: operator
+      name: cilium-operator
+  template:
+    metadata:
+      labels:
+        io.cilium/app: operator
+        name: cilium-operator
+    spec:
+      containers:
+      - name: cilium-operator
+        image: quay.io/cilium/operator-generic:v1.16.5
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1
+  availableReplicas: 1
+  updatedReplicas: 1
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: cilium-operator-69b8c7d5f
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000016
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    io.cilium/app: operator
+    name: cilium-operator
+    pod-template-hash: 69b8c7d5f
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: cilium-operator
+    uid: 00000000-0000-4000-8000-000000000015
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.cilium/app: operator
+      name: cilium-operator
+  template:
+    metadata:
+      labels:
+        io.cilium/app: operator
+        name: cilium-operator
+    spec:
+      containers:
+      - name: cilium-operator
+        image: quay.io/cilium/operator-generic:v1.16.5
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cilium
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000018
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: cilium
+spec:
+  selector:
+    matchLabels:
+      k8s-app: cilium
+  template:
+    metadata:
+      labels:
+        k8s-app: cilium
+    spec:
+      containers:
+      - name: cilium-agent
+        image: quay.io/cilium/cilium:v1.16.5
+        imagePullPolicy: IfNotPresent
+      hostNetwork: true
+status:
+  currentNumberScheduled: 3
+  desiredNumberScheduled: 3
+  numberReady: 3
+  numberAvailable: 3
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: monitoring
+  uid: 00000000-0000-4000-8000-00000000001c
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app.kubernetes.io/name: node-exporter
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: node-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: node-exporter
+    spec:
+      containers:
+      - name: node-exporter
+        image: quay.io/prometheus/node-exporter:v1.8.2
+        imagePullPolicy: IfNotPresent
+      hostNetwork: true
+status:
+  currentNumberScheduled: 3
+  desiredNumberScheduled: 3
+  numberReady: 3
+  numberAvailable: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-web
+  namespace: shop
+  uid: 00000000-0000-4000-8000-000000000020
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: shop-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: shop-web
+  template:
+    metadata:
+      labels:
+        app: shop-web
+    spec:
+      containers:
+      - name: web
+        image: registry.example.test/shop/web:1.8.2
+        imagePullPolicy: IfNotPresent
+      - name: sidecar
+        image: registry.example.test/shop/metrics-sidecar:0.4.0
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 2
+  readyReplicas: 2
+  availableReplicas: 2
+  updatedReplicas: 2
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: shop-web-7d9f8c6b5
+  namespace: shop
+  uid: 00000000-0000-4000-8000-000000000021
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: shop-web
+    pod-template-hash: 7d9f8c6b5
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: shop-web
+    uid: 00000000-0000-4000-8000-000000000020
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: shop-web
+  template:
+    metadata:
+      labels:
+        app: shop-web
+    spec:
+      containers:
+      - name: web
+        image: registry.example.test/shop/web:1.8.2
+        imagePullPolicy: IfNotPresent
+      - name: sidecar
+        image: registry.example.test/shop/metrics-sidecar:0.4.0
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 2
+  readyReplicas: 2
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: shop-db
+  namespace: shop
+  uid: 00000000-0000-4000-8000-000000000024
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: shop-db
+spec:
+  replicas: 1
+  serviceName: shop-db
+  selector:
+    matchLabels:
+      app: shop-db
+  template:
+    metadata:
+      labels:
+        app: shop-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16.4
+        imagePullPolicy: IfNotPresent
+status:
+  replicas: 1
+  readyReplicas: 1
+  availableReplicas: 1
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: shop-backup
+  namespace: shop
+  uid: 00000000-0000-4000-8000-000000000026
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: shop-backup
+spec:
+  schedule: 0 2 * * *
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: registry.example.test/shop/backup:2.1.0
+            imagePullPolicy: IfNotPresent
+          restartPolicy: OnFailure
+status:
+  lastScheduleTime: '2026-09-02T08:14:07Z'
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: shop-backup-28812340
+  namespace: shop
+  uid: 00000000-0000-4000-8000-000000000027
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: shop-backup
+  ownerReferences:
+  - apiVersion: batch/v1
+    kind: CronJob
+    name: shop-backup
+    uid: 00000000-0000-4000-8000-000000000026
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    spec:
+      containers:
+      - name: backup
+        image: registry.example.test/shop/backup:2.1.0
+        imagePullPolicy: IfNotPresent
+      restartPolicy: OnFailure
+status:
+  succeeded: 1
+  completionTime: '2026-09-02T08:14:07Z'
+  startTime: '2026-09-02T08:14:07Z'

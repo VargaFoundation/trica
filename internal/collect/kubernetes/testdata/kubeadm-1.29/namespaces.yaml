@@ -1,0 +1,70 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+  uid: 00000000-0000-4000-8000-000000000036
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: default
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-node-lease
+  uid: 00000000-0000-4000-8000-000000000037
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: kube-node-lease
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-public
+  uid: 00000000-0000-4000-8000-000000000038
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: kube-public
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-system
+  uid: 00000000-0000-4000-8000-000000000039
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: kube-system
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tools
+  uid: 00000000-0000-4000-8000-00000000003a
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: tools
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active

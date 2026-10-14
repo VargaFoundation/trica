@@ -1,0 +1,148 @@
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-a1
+  uid: 00000000-0000-4000-8000-0000000b0001
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    beta.kubernetes.io/arch: amd64
+    beta.kubernetes.io/os: linux
+    kubernetes.io/arch: amd64
+    kubernetes.io/hostname: node-a1
+    kubernetes.io/os: linux
+    node-role.kubernetes.io/control-plane: ''
+    node.kubernetes.io/exclude-from-external-load-balancers: ''
+spec:
+  podCIDR: 203.0.113.0/26
+  podCIDRs:
+  - 203.0.113.0/26
+status:
+  capacity:
+    cpu: '2'
+    ephemeral-storage: 101430960Ki
+    hugepages-1Gi: '0'
+    hugepages-2Mi: '0'
+    memory: 8148816Ki
+    pods: '110'
+  allocatable:
+    cpu: '2'
+    ephemeral-storage: '98671437720'
+    hugepages-1Gi: '0'
+    hugepages-2Mi: '0'
+    memory: 8046416Ki
+    pods: '110'
+  conditions:
+  - type: MemoryPressure
+    status: 'False'
+    reason: KubeletHasSufficientMemory
+    message: kubelet has sufficient memory available
+    lastHeartbeatTime: '2026-09-02T08:14:07Z'
+    lastTransitionTime: '2026-09-02T08:14:07Z'
+  - type: DiskPressure
+    status: 'False'
+    reason: KubeletHasNoDiskPressure
+    message: kubelet has no disk pressure
+    lastHeartbeatTime: '2026-09-02T08:14:07Z'
+    lastTransitionTime: '2026-09-02T08:14:07Z'
+  - type: PIDPressure
+    status: 'False'
+    reason: KubeletHasSufficientPID
+    message: kubelet has sufficient PID available
+    lastHeartbeatTime: '2026-09-02T08:14:07Z'
+    lastTransitionTime: '2026-09-02T08:14:07Z'
+  - type: Ready
+    status: 'True'
+    reason: KubeletReady
+    message: kubelet is posting ready status
+    lastHeartbeatTime: '2026-09-02T08:14:07Z'
+    lastTransitionTime: '2026-09-02T08:14:07Z'
+  addresses:
+  - type: InternalIP
+    address: 198.51.100.101
+  - type: Hostname
+    address: node-a1
+  nodeInfo:
+    machineID: '00000000000000000000000000000101'
+    systemUUID: 00000000-0000-4000-9000-000000000021
+    bootID: 00000000-0000-4000-8000-b00700000101
+    kernelVersion: 5.15.0-122-generic
+    osImage: Ubuntu 22.04.5 LTS
+    containerRuntimeVersion: containerd://1.7.22
+    kubeletVersion: v1.29.9
+    kubeProxyVersion: v1.29.9
+    operatingSystem: linux
+    architecture: amd64
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-a2
+  uid: 00000000-0000-4000-8000-0000000b0002
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    beta.kubernetes.io/arch: amd64
+    beta.kubernetes.io/os: linux
+    kubernetes.io/arch: amd64
+    kubernetes.io/hostname: node-a2
+    kubernetes.io/os: linux
+spec:
+  podCIDR: 203.0.113.64/26
+  podCIDRs:
+  - 203.0.113.64/26
+status:
+  capacity:
+    cpu: '4'
+    ephemeral-storage: 101430960Ki
+    hugepages-1Gi: '0'
+    hugepages-2Mi: '0'
+    memory: 16296236Ki
+    pods: '110'
+  allocatable:
+    cpu: '4'
+    ephemeral-storage: '98671437720'
+    hugepages-1Gi: '0'
+    hugepages-2Mi: '0'
+    memory: 16193836Ki
+    pods: '110'
+  conditions:
+  - type: MemoryPressure
+    status: 'False'
+    reason: KubeletHasSufficientMemory
+    message: kubelet has sufficient memory available
+    lastHeartbeatTime: '2026-09-02T08:14:07Z'
+    lastTransitionTime: '2026-09-02T08:14:07Z'
+  - type: DiskPressure
+    status: 'False'
+    reason: KubeletHasNoDiskPressure
+    message: kubelet has no disk pressure
+    lastHeartbeatTime: '2026-09-02T08:14:07Z'
+    lastTransitionTime: '2026-09-02T08:14:07Z'
+  - type: PIDPressure
+    status: 'False'
+    reason: KubeletHasSufficientPID
+    message: kubelet has sufficient PID available
+    lastHeartbeatTime: '2026-09-02T08:14:07Z'
+    lastTransitionTime: '2026-09-02T08:14:07Z'
+  - type: Ready
+    status: 'False'
+    reason: KubeletNotReady
+    message: container runtime network not ready
+    lastHeartbeatTime: '2026-09-02T08:14:07Z'
+    lastTransitionTime: '2026-09-02T08:14:07Z'
+  addresses:
+  - type: InternalIP
+    address: 198.51.100.102
+  - type: Hostname
+    address: node-a2
+  nodeInfo:
+    machineID: '00000000000000000000000000000102'
+    systemUUID: 00000000-0000-4000-9000-000000000022
+    bootID: 00000000-0000-4000-8000-b00700000102
+    kernelVersion: 5.15.0-122-generic
+    osImage: Ubuntu 22.04.5 LTS
+    containerRuntimeVersion: containerd://1.7.22
+    kubeletVersion: v1.29.9
+    kubeProxyVersion: v1.29.9
+    operatingSystem: linux
+    architecture: amd64

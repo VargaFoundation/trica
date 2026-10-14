@@ -450,6 +450,7 @@ types:
       name: {kind: string, identity: strong, search: true, required: true, label: {en: Name, fr: Nom}, description: "Cluster name (kube context)."}
       version: {kind: string, search: true, label: {en: Version, fr: Version}, description: "Server version."}
       api_endpoint: {kind: string, label: {en: API endpoint, fr: API}, description: "API server URL."}
+      distribution: {kind: string, search: true, label: {en: Distribution, fr: Distribution}, description: "Kubernetes distribution guessed from the server version string (k3s, rke2, eks, gke, kubernetes)."}
   k8s_node:
     layer: compute
     label: {en: Kubernetes node, fr: Nœud Kubernetes}
@@ -512,6 +513,7 @@ types:
       type: {kind: string, label: {en: Type, fr: Type}, description: "ClusterIP, NodePort, LoadBalancer."}
       cluster_ip: {kind: string, label: {en: Cluster IP, fr: IP de cluster}, description: "Virtual IP."}
       ports: {kind: json, label: {en: Ports, fr: Ports}, description: "Exposed ports."}
+      selector: {kind: json, label: {en: Selector, fr: Sélecteur}, description: "Label selector (key to value) choosing the pods the service sends traffic to; empty for services without a selector."}
   ingress:
     layer: compute
     label: {en: Ingress, fr: Ingress}
@@ -521,6 +523,7 @@ types:
       name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Ingress name."}
       uid: {kind: string, identity: strong, label: {en: UID, fr: UID}, description: "Kubernetes UID."}
       hosts: {kind: list, search: true, label: {en: Hosts, fr: Hôtes}, description: "Host names served."}
+      rules: {kind: json, label: {en: Rules, fr: Règles}, description: "Routing rules as a list of host, path, path type, backend service and port."}
 
   # ----------------------------------------------------------------- software
   software:

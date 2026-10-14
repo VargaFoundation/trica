@@ -1,0 +1,68 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubernetes
+  namespace: default
+  uid: 00000000-0000-4000-8000-000000000045
+  creationTimestamp: '2026-09-02T08:14:07Z'
+spec:
+  type: ClusterIP
+  clusterIP: 198.51.100.1
+  clusterIPs:
+  - 198.51.100.1
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 6443
+  sessionAffinity: None
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-dns
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000046
+  creationTimestamp: '2026-09-02T08:14:07Z'
+spec:
+  type: ClusterIP
+  clusterIP: 198.51.100.10
+  clusterIPs:
+  - 198.51.100.10
+  ports:
+  - name: dns
+    port: 53
+    protocol: UDP
+    targetPort: 53
+  sessionAffinity: None
+  selector:
+    k8s-app: kube-dns
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wiki
+  namespace: tools
+  uid: 00000000-0000-4000-8000-000000000047
+  creationTimestamp: '2026-09-02T08:14:07Z'
+spec:
+  type: NodePort
+  clusterIP: 198.51.100.50
+  clusterIPs:
+  - 198.51.100.50
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+    nodePort: 31080
+  sessionAffinity: None
+  selector:
+    app: wiki
+status:
+  loadBalancer: {}
