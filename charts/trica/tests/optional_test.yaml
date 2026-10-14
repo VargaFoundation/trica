@@ -1,0 +1,44 @@
+suite: optional resources
+set:
+  database.existingSecret: trica-db
+tests:
+  - it: has a network policy by default, open to the namespace
+    template: templates/networkpolicy.yaml
+    asserts:
+      - hasDocuments: {count: 1}
+      - equal: {path: "spec.ingress[0].from", value: [{podSelector: {}}]}
+      - equal: {path: "spec.policyTypes", value: [Ingress]}
+  - it: restricts egress to DNS and the listed targets when given
+    template: templates/networkpolicy.yaml
+    set:
+      networkPolicy.egressTo:
+        - to: [{podSelector: {matchLabels: {application: spilo}}}]
+          ports: [{port: 5432, protocol: TCP}]
+    asserts:
+      - equal: {path: "spec.policyTypes", value: [Ingress, Egress]}
+      - lengthEqual: {path: "spec.egress", count: 2}
+  - it: can disable the network policy
+    template: templates/networkpolicy.yaml
+    set: {networkPolicy.enabled: false}
+    asserts:
+      - hasDocuments: {count: 0}
+  - it: renders no ServiceMonitor by default
+    template: templates/servicemonitor.yaml
+    asserts:
+      - hasDocuments: {count: 0}
+  - it: scrapes /metrics when the ServiceMonitor is enabled
+    template: templates/servicemonitor.yaml
+    set: {serviceMonitor.enabled: true, serviceMonitor.labels: {release: vm}}
+    asserts:
+      - equal: {path: "spec.endpoints[0].path", value: /metrics}
+      - equal: {path: "metadata.labels.release", value: vm}
+  - it: renders a disruption budget only when asked
+    template: templates/pdb.yaml
+    set: {podDisruptionBudget.enabled: true}
+    asserts:
+      - equal: {path: "spec.minAvailable", value: 1}
+  - it: can use an existing service account
+    template: templates/serviceaccount.yaml
+    set: {serviceAccount.create: false}
+    asserts:
+      - hasDocuments: {count: 0}

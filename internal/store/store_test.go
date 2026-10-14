@@ -2,8 +2,10 @@ package store_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 
+	"github.com/VargaFoundation/trica/internal/store"
 	"github.com/VargaFoundation/trica/internal/testdb"
 )
 
@@ -45,5 +47,48 @@ func TestHistoryRangesCannotOverlap(t *testing.T) {
 	}
 	if _, err := s.Pool.Exec(ctx, insert, obj, `"4.19"`, "2026-01-15", "2026-01-20", cs); err == nil {
 		t.Fatal("overlapping range accepted")
+	}
+}
+
+// Replicas starting together all migrate on start; they must take turns
+// instead of racing on goose's version table.
+func TestConcurrentMigrationsTakeTurns(t *testing.T) {
+	url := testdb.NewURL(t)
+	ctx := context.Background()
+	const n = 6
+	stores := make([]*store.Store, n)
+	for i := range stores {
+		s, err := store.Open(ctx, url)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer s.Close()
+		stores[i] = s
+	}
+	var wg sync.WaitGroup
+	errs := make(chan error, n)
+	for _, s := range stores {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs <- s.Migrate(ctx)
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("concurrent migrate: %v", err)
+		}
+	}
+	v, err := stores[0].SchemaVersion(ctx)
+	if err != nil || v < 1 {
+		t.Fatalf("version %d, %v", v, err)
+	}
+	if err := stores[0].MigrateDownOne(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if w, _ := stores[0].SchemaVersion(ctx); w >= v || w == 0 && v > 1 {
+		t.Fatalf("down one: %d -> %d", v, w)
 	}
 }

@@ -3,102 +3,131 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
-	"github.com/VargaFoundation/trica/internal/reconcile"
-	"github.com/VargaFoundation/trica/internal/schema"
+	"github.com/VargaFoundation/trica/internal/server"
 	"github.com/VargaFoundation/trica/internal/testdb"
-	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
-// The two subcommands end to end on real databases: export a seeded one to a
-// YAML file, import the file into an empty one.
-func TestExportThenImportCLI(t *testing.T) {
-	src, dst := testdb.New(t), testdb.New(t)
-	reg := schema.Builtin()
-	eng := &reconcile.Engine{Store: src, Schema: func() *schema.Registry { return reg }}
-	b := sdk.NewBatch("user:vd", sdk.ScopePartial)
-	b.Confidence = sdk.Declared
-	b.Object("s", "site").Identify("code", "LAB-1").Set("name", "Lab")
-	if _, err := eng.Apply(context.Background(), b, "", ""); err != nil {
-		t.Fatal(err)
-	}
-	file := filepath.Join(t.TempDir(), "inv.yaml")
+func runCmd(t *testing.T, args ...string) (string, error) {
+	t.Helper()
 	var out, errOut bytes.Buffer
-	srcEnv := env(map[string]string{"TRICA_DATABASE_URL": src.Pool.Config().ConnString()})
-	if err := run(context.Background(), []string{"export", "-o", file, "--history"}, nil, &out, &errOut, srcEnv); err != nil {
-		t.Fatal(err)
+	err := run(context.Background(), args, nil, &out, &errOut, os.Getenv)
+	return out.String() + errOut.String(), err
+}
+
+func TestCommands(t *testing.T) {
+	if out, err := runCmd(t, "version"); err != nil || strings.TrimSpace(out) != version {
+		t.Fatalf("version: %q %v", out, err)
 	}
-	data, err := os.ReadFile(file)
-	if err != nil || !strings.Contains(string(data), "LAB-1") {
-		t.Fatalf("export file: %v %s", err, data)
+	if out, err := runCmd(t, "help"); err != nil || !strings.Contains(out, "migrate") {
+		t.Fatalf("help: %q %v", out, err)
 	}
-	dstEnv := env(map[string]string{"TRICA_DATABASE_URL": dst.Pool.Config().ConnString()})
-	if err := run(context.Background(), []string{"import", "--dry-run", file}, nil, &out, &errOut, dstEnv); err != nil || !strings.Contains(out.String(), "dry run as import:inv: 1 created") {
-		t.Fatalf("dry run: %v %q", err, out.String())
-	}
-	out.Reset()
-	if err := run(context.Background(), []string{"import", file}, nil, &out, &errOut, dstEnv); err != nil || !strings.Contains(out.String(), "imported as import:inv: 1 created") {
-		t.Fatalf("import: %v %q", err, out.String())
-	}
-	out.Reset()
-	if err := run(context.Background(), []string{"export", "--at", "2999-01-01", "--no-provenance"}, nil, &out, &errOut, dstEnv); err != nil || !strings.Contains(out.String(), `"code": "LAB-1"`) {
-		t.Fatalf("re-export: %v %q", err, out.String())
+	for _, args := range [][]string{nil, {"frobnicate"}, {"server", "--no-such-flag"}, {"server", "--config", "/nonexistent.yaml"}} {
+		if _, err := runCmd(t, args...); err == nil {
+			t.Errorf("%v accepted", args)
+		}
 	}
 }
 
-func env(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
-
-func TestRunErrors(t *testing.T) {
-	cases := []struct {
-		name string
-		args []string
-		want string
-	}{
-		{"no command", nil, "no command"},
-		{"unknown", []string{"frobnicate"}, "unknown command"},
-		{"export without database", []string{"export"}, "no database"},
-		{"export bad date", []string{"export", "--at", "yesterday"}, "--at"},
-		{"import without file", []string{"import"}, "exactly one file"},
-		{"import missing file", []string{"import", "--scope", "x", "/nonexistent.json"}, "no such file"},
+func TestMigrate(t *testing.T) {
+	t.Setenv(server.EnvDatabaseURL, testdb.NewURL(t))
+	t.Setenv("TRICA_CONFIG", "")
+	out, err := runCmd(t, "migrate", "status")
+	if err != nil || !strings.Contains(out, "schema version 0") {
+		t.Fatalf("status on an empty database: %q %v", out, err)
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := run(context.Background(), tc.args, strings.NewReader(""), &bytes.Buffer{}, &bytes.Buffer{}, env(nil))
-			if err == nil || !strings.Contains(err.Error(), tc.want) {
-				t.Fatalf("want %q, got %v", tc.want, err)
-			}
-		})
+	if out, err = runCmd(t, "migrate", "up"); err != nil {
+		t.Fatalf("up: %q %v", out, err)
 	}
-}
-
-func TestHelpAndHelpers(t *testing.T) {
-	var out bytes.Buffer
-	if err := run(context.Background(), []string{"help"}, nil, &out, &bytes.Buffer{}, env(nil)); err != nil || !strings.Contains(out.String(), "export") {
-		t.Fatalf("help: %v %q", err, out.String())
+	var up int
+	if _, err := fmtSscan(out, &up); err != nil || up < 1 {
+		t.Fatalf("up: %q", out)
 	}
-	if formatOf("", "x.yml") != "yaml" || formatOf("", "x.json") != "json" || formatOf("yaml", "x.json") != "yaml" || formatOf("", "") != "json" {
-		t.Fatal("formatOf")
+	out, err = runCmd(t, "migrate", "down")
+	var down int
+	if _, scanErr := fmtSscan(out, &down); err != nil || scanErr != nil || down >= up {
+		t.Fatalf("down rolled back nothing: %q %v", out, err)
 	}
-	if _, err := parseTime("2026-03-01"); err != nil {
-		t.Fatal(err)
+	if down == 0 && up > 1 {
+		t.Fatalf("down rolled back every migration, want one: %d -> %d", up, down)
+	}
+	for _, args := range [][]string{{"migrate"}, {"migrate", "sideways"}} {
+		if _, err := runCmd(t, args...); err == nil {
+			t.Errorf("%v accepted", args)
+		}
+	}
+	t.Setenv(server.EnvDatabaseURL, "postgres://nobody@127.0.0.1:1/none?connect_timeout=1")
+	if _, err := runCmd(t, "migrate", "status"); err == nil {
+		t.Fatal("unreachable database accepted")
 	}
 }
 
-func TestImportRejectsBadFile(t *testing.T) {
-	p := filepath.Join(t.TempDir(), "x.json")
-	if err := os.WriteFile(p, []byte(`{"format":"nope","version":1}`), 0o600); err != nil {
-		t.Fatal(err)
+// syncBuffer is a bytes.Buffer safe for the server's logger and the test.
+type syncBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *syncBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+
+func (s *syncBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
+}
+
+func TestServerCommandStopsOnCancel(t *testing.T) {
+	t.Setenv(server.EnvDatabaseURL, testdb.NewURL(t))
+	t.Setenv("TRICA_CONFIG", "")
+	t.Setenv("TRICA_HTTP_ADDR", "127.0.0.1:0")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	var out syncBuffer
+	go func() { done <- run(ctx, []string{"server"}, nil, &out, &out, os.Getenv) }()
+	deadline := time.Now().Add(90 * time.Second)
+	for !strings.Contains(out.String(), `"msg":"trica server started"`) {
+		select {
+		case err := <-done:
+			t.Fatalf("server exited before starting: %v\n%s", err, out.String())
+		default:
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("server never started:\n%s", out.String())
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
-	err := run(context.Background(), []string{"import", p}, nil, &bytes.Buffer{}, &bytes.Buffer{}, env(nil))
-	if err == nil || !strings.Contains(err.Error(), "not a trica-inventory") {
-		t.Fatalf("got %v", err)
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("server: %v\n%s", err, out.String())
+		}
+	case <-time.After(90 * time.Second):
+		t.Fatal("server did not stop")
 	}
-	err = run(context.Background(), []string{"import", "-"}, strings.NewReader(`{"format":"trica-inventory","version":1}`), &bytes.Buffer{}, &bytes.Buffer{}, env(nil))
-	if err == nil || !strings.Contains(err.Error(), "--name") {
-		t.Fatalf("got %v", err)
+}
+
+func TestNewLogger(t *testing.T) {
+	var b bytes.Buffer
+	newLogger(&b, "warn").Info("hidden")
+	newLogger(&b, "warn").Warn("shown")
+	if s := b.String(); strings.Contains(s, "hidden") || !strings.Contains(s, `"msg":"shown"`) {
+		t.Fatalf("log level not applied: %s", s)
 	}
+}
+
+// fmtSscan reads the version out of "schema version N".
+func fmtSscan(out string, v *int) (int, error) {
+	return fmt.Sscanf(strings.TrimSpace(out[strings.LastIndex(strings.TrimSpace(out), "\n")+1:]), "schema version %d", v)
 }

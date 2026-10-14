@@ -1,0 +1,80 @@
+suite: deployment
+templates:
+  - templates/deployment.yaml
+  - templates/configmap.yaml
+set:
+  database.existingSecret: trica-db
+tests:
+  - it: refuses to render without a database Secret
+    template: templates/deployment.yaml
+    set:
+      database.existingSecret: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "database.existingSecret is required: the name of a Secret holding the PostgreSQL URL"
+
+  - it: mounts the database URL as a file, never as an environment variable
+    template: templates/deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: database
+            secret:
+              secretName: trica-db
+              items:
+                - {key: database-url, path: database-url}
+      - notExists:
+          path: spec.template.spec.containers[0].env
+
+  - it: runs non-root on a read-only root filesystem
+    template: templates/deployment.yaml
+    asserts:
+      - equal: {path: "spec.template.spec.securityContext.runAsNonRoot", value: true}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem", value: true}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation", value: false}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.capabilities.drop", value: [ALL]}
+      - equal: {path: "spec.template.spec.automountServiceAccountToken", value: false}
+
+  - it: probes liveness and readiness separately
+    template: templates/deployment.yaml
+    asserts:
+      - equal: {path: "spec.template.spec.containers[0].livenessProbe.httpGet.path", value: /healthz}
+      - equal: {path: "spec.template.spec.containers[0].readinessProbe.httpGet.path", value: /readyz}
+
+  - it: defaults the image tag to the app version and prefers a digest
+    template: templates/deployment.yaml
+    chart:
+      appVersion: 9.9.9
+    asserts:
+      - equal: {path: "spec.template.spec.containers[0].image", value: "ghcr.io/vargafoundation/trica:9.9.9"}
+  - it: pins by digest
+    template: templates/deployment.yaml
+    set:
+      image.digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    asserts:
+      - equal: {path: "spec.template.spec.containers[0].image", value: "ghcr.io/vargafoundation/trica@sha256:0000000000000000000000000000000000000000000000000000000000000000"}
+
+  - it: mounts each schema overlay and lists it in the configuration
+    set:
+      schemaOverlays:
+        site.yaml: "types: {}"
+    asserts:
+      - template: templates/deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: config, mountPath: /etc/trica/schema/site.yaml, subPath: schema-site.yaml, readOnly: true}
+      - template: templates/configmap.yaml
+        matchRegex:
+          path: data["trica.yaml"]
+          pattern: "schema_overlays:\\n- /etc/trica/schema/site.yaml"
+      - template: templates/configmap.yaml
+        matchRegex: {path: 'data["schema-site.yaml"]', pattern: '^types: \{\}\n?$'}
+
+  - it: points the configuration at the mounted database file and the service port
+    template: templates/configmap.yaml
+    set:
+      service.port: 9000
+    asserts:
+      - matchRegex: {path: 'data["trica.yaml"]', pattern: "url_file: /var/run/secrets/trica/database-url"}
+      - matchRegex: {path: 'data["trica.yaml"]', pattern: "addr: :9000"}

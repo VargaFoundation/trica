@@ -1,0 +1,102 @@
+{{- if not .Values.database.existingSecret }}
+{{- fail "database.existingSecret is required: the name of a Secret holding the PostgreSQL URL" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "trica.fullname" . }}
+  labels:
+    {{- include "trica.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "trica.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "trica.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "trica.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      containers:
+        - name: trica
+          image: {{ include "trica.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["server", "--config", "/etc/trica/trica.yaml"]
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            # Migrations run before the server listens.
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 5
+            failureThreshold: 60
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/trica/trica.yaml
+              subPath: trica.yaml
+              readOnly: true
+            {{- range $name, $_ := .Values.schemaOverlays }}
+            - name: config
+              mountPath: /etc/trica/schema/{{ $name }}
+              subPath: schema-{{ $name }}
+              readOnly: true
+            {{- end }}
+            - name: database
+              mountPath: /var/run/secrets/trica
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "trica.fullname" . }}
+        - name: database
+          secret:
+            secretName: {{ .Values.database.existingSecret }}
+            items:
+              - key: {{ .Values.database.urlKey }}
+                path: database-url
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
