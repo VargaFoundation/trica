@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -28,7 +29,8 @@ import (
 	"time"
 )
 
-// ContentSecurityPolicy is sent with every response. The application loads
+// ContentSecurityPolicy is sent with every response when the single sign-on
+// is not configured (see Config for the case where it is). The application loads
 // nothing from another origin, runs no inline script and sets no inline
 // style: a template that needs one of these is a bug (a web test checks the
 // built index.html). The API is same-origin, so connect-src is 'self'.
@@ -42,6 +44,10 @@ const ContentSecurityPolicy = "default-src 'none'; " +
 	"base-uri 'none'; " +
 	"form-action 'none'; " +
 	"frame-ancestors 'none'"
+
+// configPath is where the application reads its Config. It is outside /api
+// on purpose: the page needs it before it holds any credential.
+const configPath = "ui-config.json"
 
 // Cache-Control values. Vite names every file under assets/ after a hash of
 // its content, so those never change; everything else is revalidated.
@@ -61,29 +67,50 @@ var extraTypes = map[string]string{
 }
 
 type handler struct {
-	fsys  fs.FS
-	index []byte
-	etag  string
+	fsys   fs.FS
+	index  []byte
+	etag   string
+	csp    string
+	config []byte
 }
 
 // New returns the handler that serves the application from fsys (the
-// directory that holds index.html). It fails when index.html is missing: a
-// server that mounts it would answer every page with an error.
+// directory that holds index.html), without single sign-on. It fails when
+// index.html is missing: a server that mounts it would answer every page with
+// an error.
 func New(fsys fs.FS) (http.Handler, error) {
+	return NewWithConfig(fsys, Config{})
+}
+
+// NewWithConfig is New with the settings the page needs at start-up.
+func NewWithConfig(fsys fs.FS, cfg Config) (http.Handler, error) {
 	idx, err := fs.ReadFile(fsys, indexName)
 	if err != nil {
 		return nil, fmt.Errorf("web: %s: %w", indexName, err)
 	}
-	return &handler{fsys: fsys, index: idx, etag: etagOf(idx)}, nil
+	cfg, err = cfg.normalised()
+	if err != nil {
+		return nil, err
+	}
+	doc, err := json.Marshal(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("web: config: %w", err)
+	}
+	return &handler{fsys: fsys, index: idx, etag: etagOf(idx), csp: cfg.csp(), config: doc}, nil
 }
 
 // Default returns the handler for the embedded assets (see Built).
 func Default() (http.Handler, error) {
+	return DefaultWithConfig(Config{})
+}
+
+// DefaultWithConfig is Default with the settings the page needs at start-up.
+func DefaultWithConfig(cfg Config) (http.Handler, error) {
 	sub, err := embedded()
 	if err != nil {
 		return nil, err
 	}
-	return New(sub)
+	return NewWithConfig(sub, cfg)
 }
 
 func etagOf(b []byte) string {
@@ -91,8 +118,8 @@ func etagOf(b []byte) string {
 	return `"` + hex.EncodeToString(sum[:8]) + `"`
 }
 
-func setSecurityHeaders(h http.Header) {
-	h.Set("Content-Security-Policy", ContentSecurityPolicy)
+func setSecurityHeaders(h http.Header, csp string) {
+	h.Set("Content-Security-Policy", csp)
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("X-Frame-Options", "DENY")
 	h.Set("Referrer-Policy", "no-referrer")
@@ -102,7 +129,7 @@ func setSecurityHeaders(h http.Header) {
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	setSecurityHeaders(w.Header())
+	setSecurityHeaders(w.Header(), h.csp)
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.Header().Set("Allow", "GET, HEAD")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -112,6 +139,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case name == "" || name == indexName:
 		h.serveIndex(w, r)
+		return
+	case name == configPath:
+		h.serveConfig(w, r)
 		return
 	case name == "api" || strings.HasPrefix(name, "api/"):
 		// The API is mounted beside this handler; a request that reaches us
@@ -135,6 +165,15 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.serveIndex(w, r)
+}
+
+// serveConfig answers the start-up settings. They are public (an issuer and a
+// public client id) and are never cached: a change of identity provider must
+// reach the next page load.
+func (h *handler) serveConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	http.ServeContent(w, r, configPath, time.Time{}, bytes.NewReader(h.config))
 }
 
 func (h *handler) serveIndex(w http.ResponseWriter, r *http.Request) {

@@ -1,9 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { useLocation } from "react-router";
+import { CALLBACK_PATH } from "./auth/oidc";
+import { useUiConfig } from "./auth/useUiConfig";
 import { getAuthState, subscribeAuth } from "./api/token";
 import { ErrorBox, Loading } from "./components/Async";
 import { useMe } from "./hooks";
 import { LoginPage } from "./pages/LoginPage";
+import { OidcCallbackPage } from "./pages/OidcCallbackPage";
 
 /**
  * Shows the sign-in form until there is a token, then loads who the caller is
@@ -14,13 +18,18 @@ import { LoginPage } from "./pages/LoginPage";
 export function AuthGate({ children }: { children: ReactNode }) {
   const auth = useSyncExternalStore(subscribeAuth, getAuthState);
   const client = useQueryClient();
+  const ui = useUiConfig();
+  const { pathname } = useLocation();
 
   // Nothing cached for one caller may be shown to the next.
   useEffect(() => {
     if (!auth.token) client.clear();
   }, [auth.token, client]);
 
-  if (!auth.token) return <LoginPage rejected={auth.rejected} />;
+  if (!auth.token) {
+    if (pathname === CALLBACK_PATH) return ui ? <OidcCallbackPage cfg={ui.oidc} /> : <Loading />;
+    return <LoginPage rejected={auth.rejected} sso={ui?.oidc ?? null} />;
+  }
   return <Authenticated>{children}</Authenticated>;
 }
 
