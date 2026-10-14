@@ -32,7 +32,9 @@ helm install trica ./charts/trica -n trica \
 kubectl -n trica rollout status deploy/trica
 ```
 
-No image or chart is published yet: build the image (`docker build -t REGISTRY/trica:TAG .`)
+Releases publish the image to `ghcr.io/vargafoundation/trica` and the chart to
+`oci://ghcr.io/vargafoundation/charts/trica` ([releasing](reference/releasing.md)). No
+release has been tagged yet: until then, build the image (`docker build -t REGISTRY/trica:TAG .`)
 and push it to a registry the cluster can pull from.
 
 The chart's values are documented in [`charts/trica/README.md`](../charts/trica/README.md).
