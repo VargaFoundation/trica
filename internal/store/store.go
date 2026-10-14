@@ -92,6 +92,13 @@ type Object struct {
 
 const objectCols = `id, type, parent_id, display, status, attrs, created_at, first_seen, last_seen, observed`
 
+// ObjectColumns is the select list CollectObjects expects, for read-only
+// queries built elsewhere (package search).
+const ObjectColumns = objectCols
+
+// CollectObjects scans rows selected with ObjectColumns and closes them.
+func CollectObjects(rows pgx.Rows) ([]*Object, error) { return collectObjects(rows) }
+
 func scanObject(row pgx.Row) (*Object, error) {
 	var o Object
 	var attrs []byte
