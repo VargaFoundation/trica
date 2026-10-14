@@ -4,12 +4,14 @@
 full-scope `sdk.Batch` per run, from the source `agent:<hostname>`. Code:
 `internal/agent` (probes, mapping) and `cmd/trica-agent` (the binary).
 
-**Not in this release**: the mTLS transport and the disk spool (ADR-0008), deb/rpm
-packages, a DaemonSet, remote update and rollback. Today batches go to
-`--output` only (stdout or a file).
+**Not in this release**: the mTLS transport and the disk spool (ADR-0008), and the
+network side of remote update (the `Source` that talks to the server). Today
+batches go to `--output` only (stdout or a file). Packaging, the DaemonSet
+example, the update machinery and the footprint benchmark are described below
+(ADR-0022).
 
 ```
-trica-agent [--root /] [--interval 5m] [--once] [--output -]
+trica-agent [--root /] [--interval 5m] [--once] [--output -] [--state-dir DIR] [--health-timeout 2m]
 ```
 
 | Flag | Meaning |
@@ -17,6 +19,8 @@ trica-agent [--root /] [--interval 5m] [--once] [--output -]
 | `--root` | Directory the probes read, default `/`. Any other root is a tree to describe (a test fixture, a mounted image): the agent then runs **no command** and asks **no netlink**, since both would describe the machine it runs on instead of the tree. |
 | `--interval` | Time between runs, default 5 m, minimum 30 s (`--once` ignores it). |
 | `--once` | Run once and exit. |
+| `--state-dir` | Directory of staged versions and update state (`/var/lib/trica-agent` in the packages). Empty (default): the agent never runs anything but itself. |
+| `--health-timeout` | How long a newly staged version has to emit one batch before it is rolled back, default 2 m. |
 | `--output` | `-` (default): one JSON batch per line on stdout. A path: the latest batch, rewritten atomically (temporary file next to it, mode 0600, rename). |
 
 Logs are JSON (`log/slog`) on stderr, with the keys `source` and `collector`.
@@ -141,15 +145,139 @@ weak identity, searchable); `kernel` and `primary_ip` on `vm`, as already on
 
 Target: under 50 MB resident and under 1 % of one core.
 
-What is measured in the tests (`TestFootprint`, `BenchmarkCollect`, over a fake
-root with 2000 packages): heap in use after GC, allocation per run, and the mean
-duration of a collection against the 30 s minimum interval. The figures and
-thresholds are in `internal/agent/footprint_test.go`.
+Two measurements, both in CI:
 
-What is **not** measured here: the real resident set size and CPU of the binary
-on a real host. Fake roots do not have a real `/proc` with thousands of
-processes and sockets, and the Go runtime's own overhead is not in a heap
-figure. That measurement is done on a host in the release pipeline, later.
+- `TestFootprint`, `BenchmarkCollect` (`internal/agent/footprint_test.go`, a fake
+  root with 2000 packages): heap in use after GC, allocation per run, and the mean
+  duration of a collection against the 30 s minimum interval. The cheap early
+  warning.
+- `TestRealFootprint` (`cmd/trica-agent/footprint_linux_test.go`, `make
+  agent-footprint`): the **real static binary**, started as root on the real host
+  at the shortest interval (30 s), measured from `/proc/<pid>` from start-up to the
+  second batch, so over a full cycle: two collections and the idle time between
+  them. It fails above 50 MB of **peak** resident set (`VmHWM`) or 1 % of one core
+  (`utime + stime` over the wall-clock window). The CI job `agent` runs it on the
+  GitHub runner. A development machine (non-root, shared) gave 9.7 MB and 0.10 %.
+
+What is not measured: a host with tens of thousands of processes or sockets (the
+runner has a few hundred), and the cost of the transport, which does not exist yet.
+
+## Packaging
+
+`make package-agent` builds the static binary (`CGO_ENABLED=0`, `-trimpath`) for
+`amd64` and `arm64`, then a **deb and an rpm** each with nfpm (pinned version,
+installed with `go install`, not a module dependency) into `dist/`. `VERSION` is
+`0.0.0` locally; the release pipeline passes the tag. **The packages are not
+signed here**: signing belongs to the release pipeline (PR #17).
+
+The package ships `/usr/bin/trica-agent`, the unit
+`/usr/lib/systemd/system/trica-agent.service` and a `sysusers.d` entry for the
+`trica-agent` system user (nologin). The post-install script creates the user and
+reloads systemd; it does **not** start the service, since the agent needs its
+server and update key configured first. Removal stops the service and deletes
+nothing (the user and `/var/lib/trica-agent` stay).
+
+The unit runs as `trica-agent`, not root, with `ProtectSystem=strict` (only
+`/var/lib/trica-agent` is writable), `NoNewPrivileges`, and the capability set
+below, derived from what the probes read. Nothing else is granted, and
+`packaging/packaging_test.go` fails if the set changes.
+
+| Capability | Probe that needs it | Why |
+|---|---|---|
+| `CAP_DAC_READ_SEARCH` | host (DMI serial, UUID), disks (SMART) | `/sys/class/dmi/id/{product_serial,product_uuid,board_serial,chassis_serial}` are mode 0400 root; `smartctl` opens `/dev/sdX` (root:disk 0660) |
+| `CAP_SYS_PTRACE` | sockets (process name of a listener or connection) | `readlink /proc/<pid>/fd/*` of another user's process is a ptrace-read access check, not a file permission |
+| `CAP_SYS_RAWIO` | disks (SMART on SATA/SAS) | `smartctl` uses SG_IO pass-through |
+
+Deliberately **not** granted:
+
+- `CAP_SYS_ADMIN`: NVMe SMART needs admin-command pass-through. Without it NVMe
+  wear is skipped. To have it, add a drop-in (`systemctl edit trica-agent`) adding
+  `CAP_SYS_ADMIN` to both `CapabilityBoundingSet=` and `AmbientCapabilities=`: that
+  is a very broad capability for a wear counter; decide knowingly.
+- Access to the lldpd socket (`/run/lldpd.socket` is root:`_lldpd` 0660): add
+  `SupplementaryGroups=_lldpd` in a drop-in on hosts that run lldpd. It is not in
+  the unit because a group that does not exist stops the unit from starting.
+- Netlink addresses and `systemctl list-units` need no capability.
+  `PrivateDevices`, `PrivateUsers` and `ProtectProc` are left off because the
+  probes read devices and other users' processes.
+
+Not verified: the unit has been checked by `systemd-analyze verify` (no directive
+error) and by the tests above, but **has not been started on a real host**, so a
+sandbox directive that blocks a probe on some distribution would show only there.
+`rpm -qa` on a Berkeley-DB rpmdb may try to write lock files, which
+`ProtectSystem=strict` forbids; RHEL 9 and later use SQLite.
+
+## Kubernetes
+
+`deploy/kubernetes/trica-agent-daemonset.yaml` is an **example**: the image does not
+exist yet and the manifest has not been applied to a cluster (`kubectl apply
+--dry-run=client` only). It sets `hostPID` (the node's process table names a
+socket's owner) and `hostNetwork` (addresses, `/proc/net/*` and `/sys/class/net`
+describe the namespace they are read from), because the probes need both; mounts
+three host files read-only (`/etc/os-release`, `/etc/machine-id`, `/var/lib/dpkg`)
+because the pod's own root is the image's; runs as uid 0 with **all capabilities
+dropped except `DAC_READ_SEARCH` and `SYS_PTRACE`** (capabilities are only
+effective for uid 0 in Kubernetes), a read-only root file system, no privilege
+escalation and the runtime default seccomp profile. The image has no `rpm`,
+`systemctl`, `smartctl` or `lldpctl`, so RPM packages, services, SMART and LLDP
+are not inventoried in this mode. Updates are the DaemonSet's rolling update
+(`maxUnavailable: 10 %`), not `--state-dir`. The namespace needs the `privileged`
+Pod Security level. If the node's AppArmor profile denies reading
+`/proc/<pid>/fd` of host processes, process names come back empty; relaxing the
+profile is the cluster operator's call.
+
+## Remote update
+
+Code: `internal/agent/update`. The agent updates itself in waves, rolls back when
+the new version does not prove itself, and **never installs what it cannot
+verify**. The network side is not here: the contract with the server is the
+`Source` interface (`Desired`, `Open`), with `FakeSource` for tests, until the
+transport exists (PR #19). `--state-dir` turns on the start-up side (running a
+staged version, probation, rollback); the periodic check (`Updater.Run`) is **not
+yet started by the binary**, since there is nothing to ask.
+
+```
+server: Desired(identity, current, os, arch) -> Offer{version, percent} | nothing
+agent : in wave? newer? not known-bad? nothing on probation?
+        SHA256SUMS + SHA256SUMS.sig  -> signature verifies with the pinned key?
+        artifact (size-capped)       -> SHA-256 is the one SHA256SUMS lists?
+        stage versions/<v>/trica-agent, then state.json {current, previous, pending}
+restart : Boot() -> exec the staged binary (starts counted, deadline set)
+health  : first batch emitted -> Confirm(): probation over, previous version kept
+failure : crash (3 starts) or no batch within --health-timeout -> Boot() restores
+          the previous version and records the failed one as bad
+```
+
+- **Waves.** `InWave(identity, version, percent)`: SHA-256 of `version NUL
+  identity`, first 8 bytes mod 10 000, below `percent x 100`. Stable for an agent
+  and a release, monotonic (widening only adds agents), and reshuffled between
+  releases. The server evaluates it per agent and only offers to agents in the
+  wave; the agent evaluates it again, so a server that offers to everybody cannot
+  push outside the wave.
+- **Verification.** The pinned key (PEM, ECDSA P-256 as made by `cosign
+  generate-key-pair`, or Ed25519) verifies the signature over `SHA256SUMS`: base64,
+  ASN.1 ECDSA over the SHA-256 of the file, as `cosign sign-blob --key` writes it.
+  The artifact is staged only if its SHA-256 is the listed one. Standard library
+  only: ADR-0022 says why sigstore-go is not used. There is **no default key and no
+  way to update without one**.
+- **Not an update**: an offer not strictly newer than the running version (no
+  downgrade by a replayed offer), a version already marked bad on this host,
+  anything while another version is on probation, a version that is not
+  `MAJOR.MINOR.PATCH`, a development build (`dev`).
+- **Why a state directory and not `/usr/bin`.** The agent is unprivileged and
+  `/usr/bin` is read-only to it. The packaged binary stays the launcher: at start it
+  asks the state which version to run and `exec`s it (`TRICA_AGENT_BOOTED=1` stops
+  a second decision). The state names **versions, never paths**: a tampered state
+  file can only pick a directory the updater staged itself. The switch is two
+  atomic renames (the binary into place, then `state.json`).
+- **Health** is one batch emitted by the new version. If none within
+  `--health-timeout`, the agent stops with status 1 and the service manager
+  restarts it, which is when the rollback happens. Three starts without a healthy
+  batch roll back too.
+
+Not verified: the staged binary has been executed in tests through a simulated
+service manager, not through systemd; whether a real cosign produces a signature
+this code accepts has not been tried (the tests sign the way cosign documents).
 
 ## Running it
 

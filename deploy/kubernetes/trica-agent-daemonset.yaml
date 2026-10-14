@@ -1,0 +1,101 @@
+# Example: trica-agent on every node of a cluster (docs/reference/agent.md, ADR-0022).
+#
+# It is an example, not a release artifact: the image below does not exist yet
+# (the release pipeline builds it, PR #17), the transport to the server is not
+# wired (batches go to a file in an emptyDir), and it has not been applied to a
+# cluster. packaging_test.go checks the security fields of this file.
+#
+# What the agent reads, and so what the pod needs from the host:
+#   hostPID: true      /proc/<pid>/fd and comm of the node's processes name the owner
+#                      of each socket. In a pod's own PID namespace there is nothing
+#                      but the agent.
+#   hostNetwork: true  addresses (netlink), /proc/net/{tcp,udp,route} and
+#                      /sys/class/net describe the network namespace they are read
+#                      from: the pod's own would describe the pod, not the node.
+#   three hostPath files, read-only: /etc/os-release, /etc/machine-id and
+#                      /var/lib/dpkg (the package database). The root file system of
+#                      the pod is the image's, so without them the agent would
+#                      describe the image. On an RPM-based node remove the dpkg
+#                      volume: the static image has no `rpm`, so RPM packages are
+#                      not inventoried by this deployment (known gap).
+# No `rpm`, `systemctl`, `smartctl` or `lldpctl` in the image: those probes are skipped and
+# say so in the batch's health. So CAP_SYS_RAWIO (SMART) is not granted.
+#
+# Updates: no --state-dir, so the agent never runs a staged binary here. In a
+# cluster the way to update is the DaemonSet's own rollout, below.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trica-system
+  labels:
+    # hostPID, hostNetwork, hostPath and root are refused by the "baseline" and
+    # "restricted" Pod Security levels: this namespace has to be "privileged".
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: trica-agent
+  namespace: trica-system
+  labels:
+    app.kubernetes.io/name: trica-agent
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: trica-agent
+  updateStrategy:
+    # The waves of a DaemonSet: at most one node in ten is on the new image at a
+    # time, and a node whose pod is not Ready blocks the rollout.
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 10%
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: trica-agent
+    spec:
+      hostPID: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      automountServiceAccountToken: false
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: trica-agent
+          image: ghcr.io/vargafoundation/trica-agent:0.0.0 # placeholder, see above
+          args:
+            - --interval=5m
+            - --output=/var/lib/trica-agent/batch.json
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            # Root inside the container, because file capabilities and ambient
+            # capabilities do not exist for a non-root user in Kubernetes: the
+            # capabilities below are only effective for uid 0. Everything else is
+            # dropped.
+            runAsUser: 0
+            capabilities:
+              drop: [ALL]
+              add:
+                - DAC_READ_SEARCH # DMI serial and UUID under /sys/class/dmi/id are 0400 root
+                - SYS_PTRACE # readlink /proc/<pid>/fd of other users' processes
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 64Mi }
+          volumeMounts:
+            - { name: out, mountPath: /var/lib/trica-agent }
+            - { name: os-release, mountPath: /etc/os-release, readOnly: true }
+            - { name: machine-id, mountPath: /etc/machine-id, readOnly: true }
+            - { name: dpkg, mountPath: /var/lib/dpkg, readOnly: true }
+      volumes:
+        - name: out
+          emptyDir: { sizeLimit: 16Mi }
+        - name: os-release
+          hostPath: { path: /etc/os-release, type: File }
+        - name: machine-id
+          hostPath: { path: /etc/machine-id, type: File }
+        - name: dpkg
+          hostPath: { path: /var/lib/dpkg, type: Directory }

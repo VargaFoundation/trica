@@ -37,6 +37,8 @@ jobs:
               - 'go.mod'
               - 'go.sum'
               - 'Makefile'
+              - 'packaging/**'
+              - 'deploy/**'
               - '.golangci.yml'
 
   go:
@@ -67,6 +69,30 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with: { name: coverage, path: coverage.out, if-no-files-found: ignore }
+
+  agent:
+    # The agent as shipped: static binary, deb and rpm (unsigned: signing is the
+    # release pipeline's job), and its real footprint on this runner. The
+    # footprint fails the job above 50 MB resident or 1 % of a core, measured as
+    # root over a full collection cycle of the real binary on the real host.
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with: { go-version-file: go.mod }
+      - run: make package-agent
+      - name: the packages hold the binary, the unit and the user definition
+        run: |
+          for f in dist/*.deb; do
+            files=$(dpkg-deb -c "$f")
+            for want in ./usr/bin/trica-agent ./usr/lib/systemd/system/trica-agent.service ./usr/lib/sysusers.d/trica-agent.conf; do
+              echo "$files" | grep -q " $want\$" || { echo "::error::$f lacks $want"; exit 1; }
+            done
+          done
+          test "$(ls dist/*.rpm | wc -l)" -eq 2
+      - run: make agent-footprint
 
   secrets:
     # A committed secret cannot be taken back: it is already in the history.
@@ -114,7 +140,7 @@ jobs:
     # only `success` and `skipped`: whatever else GitHub reports closes the gate.
     # `changes` is in the list because a failed filter skips every job after
     # it, and a gate that only sees skipped jobs is green.
-    needs: [changes, go, secrets, dco]
+    needs: [changes, go, agent, secrets, dco]
     if: always()
     runs-on: ubuntu-latest
     steps:

@@ -66,6 +66,43 @@ db:  ## Start a throwaway PostgreSQL for the integration tests, print the URL to
 db-down:  ## Remove the throwaway PostgreSQL
 	docker rm -f $(DB_CONTAINER)
 
+# ─────────────────────── agent: binary, packages, footprint ───────────────────────
+# Packages are NOT signed here: signing (cosign, the repository keys) belongs to the
+# release pipeline. Locally, VERSION defaults to 0.0.0; the pipeline passes the tag.
+VERSION ?= 0.0.0
+ARCHES ?= amd64 arm64
+DIST ?= dist
+NFPM_VERSION ?= v2.48.0
+NFPM ?= $(CURDIR)/bin/nfpm
+SUDO ?= sudo
+
+.PHONY: build-agent
+build-agent:  ## Static trica-agent (CGO_ENABLED=0) for each of ARCHES, into dist/
+	@mkdir -p $(DIST)
+	@for a in $(ARCHES); do \
+	  echo "building $(DIST)/trica-agent_linux_$$a"; \
+	  CGO_ENABLED=0 GOOS=linux GOARCH=$$a $(GO) build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" \
+	    -o $(DIST)/trica-agent_linux_$$a ./cmd/trica-agent || exit 1; \
+	done
+
+$(NFPM):
+	GOBIN=$(dir $(NFPM)) $(GO) install github.com/goreleaser/nfpm/v2/cmd/nfpm@$(NFPM_VERSION)
+
+.PHONY: package-agent
+package-agent: build-agent $(NFPM)  ## deb and rpm of trica-agent for each of ARCHES, into dist/ (unsigned)
+	@for a in $(ARCHES); do for p in deb rpm; do \
+	  VERSION=$(VERSION) ARCH=$$a BINARY=$(DIST)/trica-agent_linux_$$a \
+	    $(NFPM) package --config packaging/nfpm.yaml --packager $$p --target $(DIST)/ || exit 1; \
+	done; done
+
+.PHONY: agent-footprint
+agent-footprint:  ## Measure the real agent's RSS and CPU over a full cycle (30 s); fails above 50 MB or 1 %
+	@mkdir -p $(DIST)
+	CGO_ENABLED=0 $(GO) build -trimpath -o $(DIST)/trica-agent ./cmd/trica-agent
+	$(GO) test -c -o $(DIST)/agent-footprint.test ./cmd/trica-agent
+	$(SUDO) env TRICA_REQUIRE_FOOTPRINT=1 TRICA_FOOTPRINT_BIN=$(abspath $(DIST)/trica-agent) \
+	  $(abspath $(DIST)/agent-footprint.test) -test.run 'Footprint|Proc' -test.v
+
 .PHONY: clean
 clean:  ## Remove build and coverage outputs
 	rm -rf bin dist coverage.out coverage.html

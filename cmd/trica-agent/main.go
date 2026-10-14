@@ -18,14 +18,23 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/VargaFoundation/trica/internal/agent"
+	"github.com/VargaFoundation/trica/internal/agent/update"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
 // version is set at build time: -ldflags "-X main.version=1.2.3".
 var version = "dev"
+
+// execFn replaces the process with a staged binary; tests replace it.
+var execFn = update.Exec
+
+// errUnhealthy ends a run that stayed on probation past its health timeout.
+var errUnhealthy = errors.New("no healthy collection before the health timeout")
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -46,6 +55,10 @@ read-only commands (rpm, systemctl, smartctl, lldpctl) when they are installed.
 Run as root to see everything; without root the root-only data (DMI serial,
 other users' sockets, SMART) is skipped and said so in the batch's health.
 
+With --state-dir the agent can run a staged version of itself (remote update,
+docs/reference/agent.md): the first start of a new version must complete a
+collection within --health-timeout, or the previous version is restored.
+
 Transport is not wired yet: batches go to --output only. Sending them to the
 server over mTLS, with an on-disk spool, comes in a later release.
 
@@ -62,6 +75,8 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	interval := fl.Duration("interval", agent.DefaultInterval, "time between runs (minimum "+agent.MinInterval.String()+")")
 	once := fl.Bool("once", false, "run once and exit")
 	output := fl.String("output", "-", `where batches go: "-" is stdout, one JSON object per line; a file path keeps the latest batch, rewritten atomically`)
+	stateDir := fl.String("state-dir", "", "directory of staged versions and update state; empty disables running staged versions")
+	healthTimeout := fl.Duration("health-timeout", 2*time.Minute, "how long a newly staged version has to complete a collection before it is rolled back")
 	fl.Usage = func() {
 		fmt.Fprint(stderr, usage)
 		fl.PrintDefaults()
@@ -82,6 +97,15 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	}
 
 	logger := slog.New(slog.NewJSONHandler(stderr, nil))
+	var store *update.Store
+	if *stateDir != "" {
+		store = update.NewStore(*stateDir)
+		if os.Getenv(update.BootedEnv) == "" {
+			if code, done := boot(store, *healthTimeout, args, logger); done {
+				return code
+			}
+		}
+	}
 	a, err := agent.New(agent.Config{Root: *root, Version: version, Logger: logger})
 	if err != nil {
 		logger.Error("cannot start", "collector", agent.CollectorName, "error", err)
@@ -90,6 +114,11 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	defer a.Close()
 
 	emit := emitter(*output, stdout)
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	if store != nil {
+		emit = probation(cancel, store, version, *healthTimeout, emit, logger)
+	}
 	if *once {
 		if err := a.Collect(ctx, emit); err != nil {
 			return 1
@@ -100,7 +129,59 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		logger.Error("stopped", "collector", agent.CollectorName, "error", err)
 		return 1
 	}
+	if errors.Is(context.Cause(ctx), errUnhealthy) {
+		logger.Error("stopped", "collector", agent.CollectorName, "error", errUnhealthy)
+		return 1
+	}
 	return 0
+}
+
+// boot decides which binary runs: this one, or a staged version it replaces
+// itself with. done is true when run must return code.
+func boot(store *update.Store, healthTimeout time.Duration, args []string, logger *slog.Logger) (code int, done bool) {
+	d, err := store.Boot(time.Now(), healthTimeout)
+	if err != nil {
+		logger.Error("cannot read the update state", "collector", agent.CollectorName, "error", err)
+		return 1, true
+	}
+	if d.RolledBack {
+		logger.Warn("staged version rolled back", "collector", agent.CollectorName, "reason", d.Reason, "running", d.Version)
+	}
+	if d.Exec == "" {
+		return 0, false
+	}
+	// Exec returns only on failure: this binary then runs, and the staged one
+	// loses a start, so a binary that cannot be executed is rolled back too.
+	err = execFn(d.Exec, append([]string{d.Exec}, args...), os.Environ())
+	logger.Error("cannot start the staged version", "collector", agent.CollectorName, "version", d.Version, "error", err)
+	return 0, false
+}
+
+// probation wraps emit for a version that is on probation: its first emitted
+// batch confirms it, and if none comes within healthTimeout the run is
+// cancelled with errUnhealthy, so that the next start rolls back. A version
+// that is not on probation is returned unchanged.
+func probation(cancel context.CancelCauseFunc, store *update.Store, version string, healthTimeout time.Duration, emit sdk.Emitter, logger *slog.Logger) sdk.Emitter {
+	st, err := store.Load()
+	if err != nil || st.Pending == nil || st.Pending.Version != version {
+		return emit
+	}
+	t := time.AfterFunc(healthTimeout, func() { cancel(errUnhealthy) })
+	var once sync.Once
+	return sdk.EmitterFunc(func(c context.Context, b *sdk.Batch) error {
+		if err := emit.Emit(c, b); err != nil {
+			return err
+		}
+		once.Do(func() {
+			t.Stop()
+			if ok, err := store.Confirm(version); err != nil {
+				logger.Error("cannot confirm the new version", "collector", agent.CollectorName, "error", err)
+			} else if ok {
+				logger.Info("new version confirmed", "collector", agent.CollectorName, "version", version)
+			}
+		})
+		return nil
+	})
 }
 
 // emitter writes batches to stdout as JSON lines, or to a file that always

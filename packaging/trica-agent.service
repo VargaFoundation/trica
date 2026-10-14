@@ -1,0 +1,71 @@
+# trica host inventory agent (docs/reference/agent.md, ADR-0022).
+#
+# It runs as an unprivileged user and holds only the three capabilities its
+# probes need. Each one is justified here and checked by packaging_test.go:
+#
+#   CAP_DAC_READ_SEARCH  read /sys/class/dmi/id/{product_serial,product_uuid,
+#                        board_serial,chassis_serial} (mode 0400 root), and open
+#                        the block devices smartctl is given (root:disk 0660).
+#   CAP_SYS_PTRACE       readlink /proc/<pid>/fd/* of other users' processes, to
+#                        name the process that owns a socket. The kernel asks for
+#                        ptrace access for that, not for file access.
+#   CAP_SYS_RAWIO        SG_IO pass-through for `smartctl --json -a /dev/sdX`
+#                        (SMART on SATA/SAS disks).
+#
+# Not granted, on purpose:
+#   CAP_SYS_ADMIN  would be needed for NVMe SMART (admin command pass-through).
+#                  Without it NVMe wear is skipped and said so in the batch's
+#                  health; grant it with a drop-in if you want it (see the doc).
+#   lldpd socket   /run/lldpd.socket is root:_lldpd 0660: add the user to that
+#                  group with a drop-in (SupplementaryGroups=_lldpd); not done
+#                  here because most hosts have no lldpd and a group that does
+#                  not exist stops the unit from starting.
+#   Network netlink needs no capability: RTM_GETADDR is an unprivileged dump.
+#   systemctl list-units goes through the system D-Bus socket, also open to all.
+[Unit]
+Description=trica host inventory agent
+Documentation=https://github.com/VargaFoundation/trica
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=trica-agent
+Group=trica-agent
+StateDirectory=trica-agent
+StateDirectoryMode=0750
+UMask=0077
+ExecStart=/usr/bin/trica-agent --interval=5m --state-dir=/var/lib/trica-agent --output=/var/lib/trica-agent/batch.json
+# A new staged version that crashes or hangs is rolled back at the next start
+# (internal/agent/update): the agent must be restarted whatever the exit status.
+Restart=always
+RestartSec=5s
+
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_SYS_PTRACE CAP_SYS_RAWIO
+AmbientCapabilities=CAP_DAC_READ_SEARCH CAP_SYS_PTRACE CAP_SYS_RAWIO
+NoNewPrivileges=yes
+
+# The whole file system is read-only except StateDirectory.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+# No PrivateDevices (smartctl opens /dev/sdX), no PrivateUsers and no hidepid
+# (the process table of other users is what the socket probe reads).
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+# AF_NETLINK: addresses. AF_UNIX: D-Bus and lldpd. AF_INET*: the transport, later.
+RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
