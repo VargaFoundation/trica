@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"regexp"
 	"strings"
@@ -16,7 +17,9 @@ import (
 
 // ------------------------------------------------------------------ schema
 
-func (s *Server) hSchema(c *call) error {
+func (s *Server) hSchema(c *call) error { return c.json(200, s.schemaDoc()) }
+
+func (s *Server) schemaDoc() SchemaDoc {
 	reg := s.registry()
 	doc := SchemaDoc{Types: []TypeDoc{}, Relations: []RelationDoc{}}
 	for _, n := range reg.TypeNames() {
@@ -25,7 +28,7 @@ func (s *Server) hSchema(c *call) error {
 	for _, n := range sdk.SortedKeys(reg.Relations) {
 		doc.Relations = append(doc.Relations, relationDoc(reg.Relations[n]))
 	}
-	return c.json(200, doc)
+	return doc
 }
 
 func (s *Server) hSchemaType(c *call) error {
@@ -51,13 +54,8 @@ func (c *call) searchQuery(q, sortParam, typeParam string, requireQ bool) (*tql.
 	if err != nil {
 		return nil, err
 	}
-	for _, f := range parsed.Fields() {
-		if Sensitive(f) {
-			return nil, newErr(403, "sensitive-attribute", "the attribute %q is not exposed and cannot be queried", f)
-		}
-	}
-	if hasSensitiveHas(parsed.Where) {
-		return nil, newErr(403, "sensitive-attribute", "a queried attribute is not exposed")
+	if err := checkSensitive(parsed); err != nil {
+		return nil, err
 	}
 	if sortParam != "" {
 		if len(parsed.Sort) > 0 {
@@ -76,20 +74,48 @@ func (c *call) searchQuery(q, sortParam, typeParam string, requireQ bool) (*tql.
 		}
 	}
 
+	if err := c.restrictTypes(parsed, typeParam); err != nil {
+		return nil, err
+	}
+	return parsed, nil
+}
+
+// checkSensitive refuses a query that names a sensitive attribute, in a
+// condition, a has: predicate or a sort key.
+func checkSensitive(parsed *tql.Query) error {
+	for _, f := range parsed.Fields() {
+		if Sensitive(f) {
+			return newErr(403, "sensitive-attribute", "the attribute %q is not exposed and cannot be queried", f)
+		}
+	}
+	if hasSensitiveHas(parsed.Where) {
+		return newErr(403, "sensitive-attribute", "a queried attribute is not exposed")
+	}
+	for _, k := range parsed.Sort {
+		if Sensitive(k.Field) {
+			return newErr(403, "sensitive-attribute", "the attribute %q is not exposed and cannot be queried", k.Field)
+		}
+	}
+	return nil
+}
+
+// restrictTypes narrows parsed, in its syntax tree, to typeParam when set and
+// to the types the caller may read.
+func (c *call) restrictTypes(parsed *tql.Query, typeParam string) error {
 	var types []string
 	switch {
 	case typeParam != "":
 		if _, ok := c.s.registry().Types[typeParam]; !ok {
-			return nil, badRequest("unknown object type %q", typeParam)
+			return badRequest("unknown object type %q", typeParam)
 		}
 		if !c.s.auth.Allow(c.p, ActionRead, typeParam, "") {
-			return nil, forbidden("reading %s objects across all sites is not granted", typeParam)
+			return forbidden("reading %s objects across all sites is not granted", typeParam)
 		}
 		types = []string{typeParam}
 	default:
 		allowed, all := c.readableTypes()
 		if len(allowed) == 0 {
-			return nil, forbidden("no object type is readable across all sites; read objects by id")
+			return forbidden("no object type is readable across all sites; read objects by id")
 		}
 		if !all {
 			types = allowed
@@ -103,7 +129,7 @@ func (c *call) searchQuery(q, sortParam, typeParam string, requireQ bool) (*tql.
 			parsed.Where = tql.And{Terms: []tql.Node{pred, parsed.Where}}
 		}
 	}
-	return parsed, nil
+	return nil
 }
 
 func hasSensitiveHas(n tql.Node) bool {
@@ -180,23 +206,33 @@ func (s *Server) hObject(c *call) error {
 	if err != nil {
 		return err
 	}
-	o, site, err := c.loadObject(id)
+	view, err := c.objectAt(id, at)
 	if err != nil {
 		return err
+	}
+	return c.json(200, view)
+}
+
+// objectAt loads an object the caller may read, as it is now or at a date.
+func (c *call) objectAt(id string, at *time.Time) (*ObjectView, error) {
+	o, site, err := c.loadObject(id)
+	if err != nil {
+		return nil, err
 	}
 	view := objectView(o)
 	view.SiteID = site
 	if at == nil {
-		return c.json(200, view)
+		return &view, nil
 	}
-	state, err := s.st.AsOf(c.ctx(), id, *at)
+	state, err := c.s.st.AsOf(c.ctx(), id, *at)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(state) == 0 {
-		return notFound("object %s had no state at %s", id, at.Format(time.RFC3339))
+		return nil, notFound("object %s had no state at %s", id, at.Format(time.RFC3339))
 	}
-	return c.json(200, s.asOfView(view, o.Type, state, *at))
+	v := c.s.asOfView(view, o.Type, state, *at)
+	return &v, nil
 }
 
 // asOfView replaces the current state of view by the one at time at. System
@@ -239,19 +275,29 @@ func (s *Server) hProvenance(c *call) error {
 	if _, _, err := c.loadObject(id); err != nil {
 		return err
 	}
-	vals, err := s.st.Provenance(c.ctx(), id)
+	out, err := s.provenance(c.ctx(), id)
 	if err != nil {
 		return err
 	}
-	claims, err := s.st.Claims(c.ctx(), id)
+	return c.json(200, out)
+}
+
+// provenance reads where each attribute of an object comes from, sensitive
+// attributes removed. It does not check the caller's rights.
+func (s *Server) provenance(ctx context.Context, id string) (*Provenance, error) {
+	vals, err := s.st.Provenance(ctx, id)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	claims, err := s.st.Claims(ctx, id)
+	if err != nil {
+		return nil, err
 	}
 	byKey := map[string][]store.Claim{}
 	for _, cl := range redactClaims(claims) {
 		byKey[cl.Key] = append(byKey[cl.Key], cl)
 	}
-	out := Provenance{ObjectID: id, Attributes: []ProvenanceEntry{}}
+	out := &Provenance{ObjectID: id, Attributes: []ProvenanceEntry{}}
 	for _, v := range redactValues(vals) {
 		e := ProvenanceEntry{Key: v.Key, Value: v.Value, Source: v.Source, Confidence: v.Confidence, Author: v.Author,
 			ValidFrom: v.ValidFrom, LastSeen: v.LastSeen}
@@ -269,7 +315,7 @@ func (s *Server) hProvenance(c *call) error {
 		}
 		out.Attributes = append(out.Attributes, e)
 	}
-	return c.json(200, out)
+	return out, nil
 }
 
 func (s *Server) hHistory(c *call) error {

@@ -375,17 +375,27 @@ func (s *Server) hDiscrepancies(c *call) error {
 			return err
 		}
 	}
+	page, err := c.discrepancies(f, pp)
+	if err != nil {
+		return err
+	}
+	return c.json(http.StatusOK, page)
+}
+
+// discrepancies lists the discrepancies matching f that the caller may see, as one page.
+func (c *call) discrepancies(f reconcile.DiscrepancyFilter, pp pageParams) (Page[reconcile.Discrepancy], error) {
+	s := c.s
 	if _, readsAll := c.readableTypes(); readsAll {
 		f.Limit, f.Offset = pp.Limit, pp.Offset
 		items, total, err := reconcile.ListDiscrepancies(c.ctx(), s.st, f)
 		if err != nil {
-			return err
+			return Page[reconcile.Discrepancy]{}, err
 		}
 		out := make([]reconcile.Discrepancy, 0, len(items))
 		for _, d := range items {
 			out = append(out, discrepancyView(d))
 		}
-		return c.json(http.StatusOK, Page[reconcile.Discrepancy]{Total: total, Limit: pp.Limit, Offset: pp.Offset, Items: out})
+		return Page[reconcile.Discrepancy]{Total: total, Limit: pp.Limit, Offset: pp.Offset, Items: out}, nil
 	}
 	// Some objects are off limits: read what the scan bound allows, keep what
 	// the caller may see, then page, so that the total is exact.
@@ -395,7 +405,7 @@ func (s *Server) hDiscrepancies(c *call) error {
 		f.Limit, f.Offset = MaxLimit, off
 		items, total, err := reconcile.ListDiscrepancies(c.ctx(), s.st, f)
 		if err != nil {
-			return err
+			return Page[reconcile.Discrepancy]{}, err
 		}
 		all = append(all, items...)
 		if off+MaxLimit >= total {
@@ -418,7 +428,7 @@ func (s *Server) hDiscrepancies(c *call) error {
 	}
 	refs, err := c.visibleRefs(ids)
 	if err != nil {
-		return err
+		return Page[reconcile.Discrepancy]{}, err
 	}
 	out := []reconcile.Discrepancy{}
 	for _, d := range all {
@@ -430,7 +440,7 @@ func (s *Server) hDiscrepancies(c *call) error {
 		}
 		out = append(out, discrepancyView(d))
 	}
-	return c.json(http.StatusOK, pageOf(out, pp, truncated))
+	return pageOf(out, pp, truncated), nil
 }
 
 // AcceptOutcome is the answer to accepting a discrepancy.
