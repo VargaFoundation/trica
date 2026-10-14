@@ -77,6 +77,15 @@ jobs:
         with: { go-version-file: go.mod }
       - uses: golangci/golangci-lint-action@v9
         with: { version: v2.14.0 }
+      - name: PostgreSQL 17 client tools (the backup tests run pg_dump and pg_restore)
+        run: |
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+          # The postgresql-common wrappers on PATH may pick another major
+          # version for pg_restore: use the 17 binaries directly.
+          echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
+          /usr/lib/postgresql/17/bin/pg_dump --version
       - run: make vet
       - run: make test-cov
       - uses: actions/upload-artifact@v7
@@ -155,6 +164,32 @@ jobs:
           curl -fsS --retry 60 --retry-delay 2 --retry-all-errors http://127.0.0.1:8080/readyz
           curl -fsS http://127.0.0.1:8080/metrics | grep -q 'trica_build_info{version="ci"} 1'
           echo "ready after $(( $(date +%s) - t0 ))s"
+      - name: backup, lose the database, restore from the archive (under 15 minutes)
+        # ADR 0021, the packaged path: the ops image, the compose `ops` service
+        # and the real postgres:17 container. The dataset proof (2,000
+        # devices, identical tables, history) is the Go test in internal/backup;
+        # this step proves the operator's commands and the 15-minute budget.
+        env:
+          TRICA_DB_PASSWORD: ci
+          TRICA_IMAGE: trica:ci
+          TRICA_OPS_IMAGE: trica-ops:ci
+        run: |
+          dc="docker compose -f deploy/compose/compose.yaml -p trica-ci"
+          docker build --target ops --build-arg VERSION=ci -t trica-ops:ci .
+          before=$($dc run -T --rm ops migrate status)
+          $dc run -T --rm ops backup --file /backups/ci.dump
+          $dc stop trica
+          $dc exec -T postgres psql -U trica -d postgres -c 'DROP DATABASE trica WITH (FORCE)' -c 'CREATE DATABASE trica'
+          t0=$(date +%s)
+          $dc run -T --rm ops restore --file /backups/ci.dump
+          secs=$(( $(date +%s) - t0 ))
+          echo "restore took ${secs}s (budget 900s)"
+          test "$secs" -le 900
+          test "$($dc run -T --rm ops migrate status)" = "$before"
+          $dc up -d --no-build --wait --wait-timeout 300 trica
+          curl -fsS --retry 60 --retry-delay 2 --retry-all-errors http://127.0.0.1:8080/readyz
+          # A second restore over a populated database is refused, not applied.
+          if $dc run -T --rm ops restore --file /backups/ci.dump; then echo "restore over a populated database was accepted"; exit 1; fi
       - name: compose logs on failure
         if: failure()
         run: TRICA_DB_PASSWORD=ci docker compose -f deploy/compose/compose.yaml -p trica-ci logs

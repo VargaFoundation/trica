@@ -102,3 +102,29 @@ serviceMonitor:
 podDisruptionBudget:
   enabled: false
   minAvailable: 1
+
+# Scheduled logical backup (`trica backup`, ADR 0021) for standalone installs:
+# a plain PostgreSQL the chart does not manage. A deployment on Zalando with
+# WAL-G already has physical backups and point-in-time recovery: leave this off.
+# The CronJob never deletes old archives; prune them on the volume side.
+backup:
+  enabled: false
+  schedule: "17 2 * * *"
+  # The ops image carries pg_dump 17 (docker build --target ops).
+  image:
+    repository: ghcr.io/vargafoundation/trica-ops
+    tag: ""
+  # An existing PersistentVolumeClaim receiving the archives. For an
+  # S3-compatible target, use a claim backed by an S3 CSI driver or copy the
+  # archives off with the tool of your choice; the chart holds no credentials.
+  existingClaim: ""
+  # Subdirectory of the claim.
+  subPath: ""
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi

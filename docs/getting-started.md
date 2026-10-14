@@ -39,6 +39,13 @@ and push it to a registry the cluster can pull from.
 
 The chart's values are documented in [`charts/trica/README.md`](../charts/trica/README.md).
 
+## Backup and restore
+
+`trica backup` and `trica restore` take and load a consistent archive of the database. The
+procedure for Compose is in [`deploy/compose/README.md`](../deploy/compose/README.md); on Kubernetes
+the reference deployment relies on the PostgreSQL operator's WAL archiving, and the chart has an
+optional CronJob for standalone installs ([chart README](../charts/trica/README.md)).
+
 ## What you get today
 
 The server, its health and metrics endpoints, the migrations and the absence sweep. The REST
