@@ -1,0 +1,39 @@
+# nfpm configuration for the deb and rpm of trica-agent (`make package-agent`).
+# VERSION (MAJOR.MINOR.PATCH), ARCH (amd64 or arm64) and BINARY (the static
+# binary built for ARCH) come from the environment. The packages are NOT signed
+# here: signing belongs to the release pipeline (PR #17), which also holds the key.
+name: trica-agent
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+section: admin
+priority: optional
+maintainer: Varga Foundation <noreply@vargafoundation.invalid>
+description: |
+  trica host inventory agent.
+  Reads the Linux host it runs on (identity, OS, network, packages, services,
+  disks) and reports it as an inventory batch. Read-only, runs unprivileged.
+homepage: https://github.com/VargaFoundation/trica
+license: Apache-2.0
+
+contents:
+  - src: ${BINARY}
+    dst: /usr/bin/trica-agent
+    expand: true
+    file_info: { mode: 0755 }
+  - src: packaging/trica-agent.service
+    dst: /usr/lib/systemd/system/trica-agent.service
+    file_info: { mode: 0644 }
+  - src: packaging/trica-agent.sysusers
+    dst: /usr/lib/sysusers.d/trica-agent.conf
+    file_info: { mode: 0644 }
+  - src: LICENSE
+    dst: /usr/share/doc/trica-agent/LICENSE
+    file_info: { mode: 0644 }
+
+scripts:
+  postinstall: packaging/postinstall.sh
+  preremove: packaging/preremove.sh
+
+# The probes that need these tools skip quietly when they are absent.
+suggests: [smartmontools, lldpd]
