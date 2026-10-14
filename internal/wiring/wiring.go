@@ -76,6 +76,9 @@ func (w *Wiring) Components() []server.Component {
 	if w.cfg.Transport.Addr != "" {
 		cs = append(cs, server.Component{Name: "transport", Run: w.runTransport})
 	}
+	if w.cfg.Collect.TargetsFile != "" {
+		cs = append(cs, server.Component{Name: "collect", Run: w.runCollect})
+	}
 	cs = append(cs, server.Component{Name: "devicetypes", Run: w.runDeviceTypes})
 	return cs
 }

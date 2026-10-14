@@ -50,6 +50,17 @@ type Config struct {
 	Deduce DeduceConfig `yaml:"deduce"`
 	// Web configures the embedded UI, mounted at /.
 	Web WebConfig `yaml:"web"`
+	// Collect runs collectors inside the server (ADR 0026).
+	Collect CollectConfig `yaml:"collect"`
+}
+
+// CollectConfig is the "collect" section: collectors run by the server itself,
+// for targets it can reach. Sites it cannot reach run `trica collector`.
+type CollectConfig struct {
+	// TargetsFile is a YAML file listing the targets (docs/reference/collectors.md).
+	// Empty disables in-server collection. Credentials in it are file: or env:
+	// references.
+	TargetsFile string `yaml:"targets_file"`
 }
 
 // AuthConfig is the "auth" section. It holds references (a file), never

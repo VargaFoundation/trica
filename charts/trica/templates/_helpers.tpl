@@ -49,6 +49,9 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- $_ := set $t "hosts" .Values.transport.hosts -}}
 {{- $_ := set $cfg "transport" $t -}}
 {{- end -}}
+{{- if .Values.collect.enabled -}}
+{{- $_ := set $cfg "collect" (dict "targets_file" "/etc/trica/collect/targets.yaml") -}}
+{{- end -}}
 {{- if .Values.schemaOverlays -}}
 {{- $paths := list -}}
 {{- range $name, $_ := .Values.schemaOverlays -}}

@@ -1,6 +1,12 @@
 {{- if not .Values.database.existingSecret }}
 {{- fail "database.existingSecret is required: the name of a Secret holding the PostgreSQL URL" }}
 {{- end }}
+{{- if and .Values.collect.enabled (not .Values.collect.targets) (not .Values.collect.targetsConfigMap) }}
+{{- fail "collect.targets or collect.targetsConfigMap is required when collect.enabled: what to collect from" }}
+{{- end }}
+{{- if and .Values.collect.kubernetes.rbac.enabled (not .Values.collect.enabled) }}
+{{- fail "collect.kubernetes.rbac.enabled needs collect.enabled: the role is for the in-server collectors" }}
+{{- end }}
 {{- if .Values.transport.enabled }}
 {{- if not .Values.transport.hosts }}
 {{- fail "transport.hosts is required when transport.enabled: the names agents dial" }}
@@ -34,7 +40,8 @@ spec:
         {{- end }}
     spec:
       serviceAccountName: {{ include "trica.serviceAccountName" . }}
-      automountServiceAccountToken: false
+      # Only the in-cluster kubernetes collector needs the API token.
+      automountServiceAccountToken: {{ and .Values.collect.enabled .Values.collect.kubernetes.rbac.enabled }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -87,6 +94,18 @@ spec:
             - name: database
               mountPath: /var/run/secrets/trica
               readOnly: true
+            {{- if .Values.collect.enabled }}
+            - name: collect-targets
+              mountPath: /etc/trica/collect/targets.yaml
+              subPath: {{ default "targets.yaml" .Values.collect.targetsKey }}
+              readOnly: true
+            {{- range .Values.collect.secrets }}
+            # Targets refer to these with password: "file:/var/run/secrets/collect/<secret>/<key>".
+            - name: collect-secret-{{ .name }}
+              mountPath: /var/run/secrets/collect/{{ .name }}
+              readOnly: true
+            {{- end }}
+            {{- end }}
             - name: tmp
               mountPath: /tmp
             {{- if .Values.transport.enabled }}
@@ -108,6 +127,21 @@ spec:
                 path: database-url
         - name: tmp
           emptyDir: {}
+        {{- if .Values.collect.enabled }}
+        - name: collect-targets
+          configMap:
+            name: {{ default (include "trica.fullname" .) .Values.collect.targetsConfigMap }}
+            {{- if not .Values.collect.targetsConfigMap }}
+            items:
+              - {key: targets.yaml, path: targets.yaml}
+            {{- end }}
+        {{- range .Values.collect.secrets }}
+        - name: collect-secret-{{ .name }}
+          secret:
+            secretName: {{ .name }}
+            defaultMode: 0440
+        {{- end }}
+        {{- end }}
         {{- if .Values.transport.enabled }}
         - name: transport-ca
           persistentVolumeClaim:

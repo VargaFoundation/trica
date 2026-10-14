@@ -7,6 +7,10 @@ metadata:
 data:
   trica.yaml: |
     {{- include "trica.config" . | nindent 4 }}
+  {{- if and .Values.collect.enabled (not .Values.collect.targetsConfigMap) }}
+  targets.yaml: |
+    {{- toYaml (dict "targets" .Values.collect.targets) | nindent 4 }}
+  {{- end }}
   {{- range $name, $body := .Values.schemaOverlays }}
   schema-{{ $name }}: |
     {{- $body | nindent 4 }}
