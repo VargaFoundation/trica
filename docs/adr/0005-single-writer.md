@@ -27,3 +27,19 @@ re-implemented in each, and diverge.
 - One place to test the rules (`internal/reconcile/engine_test.go`).
 - No package other than `internal/reconcile` and `internal/store` migrations writes to the
   inventory tables.
+
+## Addendum: `observed_at` is bounded (2026-10)
+
+A batch's `observed_at` becomes the first/last seen time of its claims, so an arbitrarily old
+value lets a caller backdate what it says (absence detection, history order). The engine now:
+
+- **Clamps** a future or zero `observed_at` to the engine clock (unchanged).
+- **Rejects** a batch whose `observed_at` is older than a maximum age, with `ErrRejected`
+  (the API answers 422, not 400: the batch is well formed, the engine refuses it). Nothing is
+  applied.
+- The maximum age is `Policy.MaxObservedAge`, **per source kind** (the part of the source before
+  the first `:`; `*` is the fallback). Defaults: `user` and `token` 15 minutes (API callers have
+  no spool, they observe "now"); every other kind 7 days, to cover a collector or agent replaying
+  its disk spool after an outage (ADR 0008).
+- The check runs when a batch is submitted (`Apply`, `Propose`), not when a stored proposal is
+  approved: a proposal waiting days for a human is not stale for that reason.
