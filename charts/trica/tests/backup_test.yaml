@@ -1,0 +1,36 @@
+suite: scheduled backup
+templates:
+  - templates/backup-cronjob.yaml
+set:
+  database.existingSecret: trica-db
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments: {count: 0}
+  - it: refuses to render enabled without a claim to write to
+    set: {backup.enabled: true}
+    asserts:
+      - failedTemplate:
+          errorMessage: "backup.existingClaim is required when backup.enabled: the PersistentVolumeClaim receiving the archives"
+  - it: runs trica backup on the schedule, never two at once, from the ops image
+    set: {backup.enabled: true, backup.existingClaim: trica-backups, backup.schedule: "5 1 * * *"}
+    asserts:
+      - equal: {path: "spec.schedule", value: "5 1 * * *"}
+      - equal: {path: "spec.concurrencyPolicy", value: Forbid}
+      - equal: {path: "spec.jobTemplate.spec.template.spec.containers[0].args[0]", value: backup}
+      - matchRegex: {path: "spec.jobTemplate.spec.template.spec.containers[0].image", pattern: "trica-ops:"}
+      - equal: {path: "spec.jobTemplate.spec.template.spec.volumes[2].persistentVolumeClaim.claimName", value: trica-backups}
+  - it: holds the database URL as a mounted secret reference, never a value
+    set: {backup.enabled: true, backup.existingClaim: trica-backups}
+    asserts:
+      - equal: {path: "spec.jobTemplate.spec.template.spec.volumes[1].secret.secretName", value: trica-db}
+      - notExists: {path: "spec.jobTemplate.spec.template.spec.containers[0].env"}
+  - it: does not carry the labels the Service selects on
+    set: {backup.enabled: true, backup.existingClaim: trica-backups}
+    asserts:
+      - equal: {path: 'spec.jobTemplate.spec.template.metadata.labels["app.kubernetes.io/name"]', value: trica-backup}
+  - it: keeps the server's hardened security context
+    set: {backup.enabled: true, backup.existingClaim: trica-backups}
+    asserts:
+      - equal: {path: "spec.jobTemplate.spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem", value: true}
+      - equal: {path: "spec.jobTemplate.spec.template.spec.securityContext.runAsNonRoot", value: true}

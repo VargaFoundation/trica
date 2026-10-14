@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -95,6 +97,23 @@ func (s *Store) SchemaVersion(ctx context.Context) (int64, error) {
 		return err
 	})
 	return v, err
+}
+
+// KnownVersion is the version of the newest migration this binary embeds: the
+// schema it knows how to run against.
+func KnownVersion() int64 {
+	entries, err := migrations.ReadDir("migrations")
+	if err != nil {
+		return 0
+	}
+	var newest int64
+	for _, e := range entries {
+		n, _, _ := strings.Cut(e.Name(), "_")
+		if v, err := strconv.ParseInt(n, 10, 64); err == nil && v > newest {
+			newest = v
+		}
+	}
+	return newest
 }
 
 // goose runs fn with a migration provider of its own: goose's package-level

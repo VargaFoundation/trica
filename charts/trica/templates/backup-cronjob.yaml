@@ -1,0 +1,70 @@
+{{- if .Values.backup.enabled }}
+{{- if not .Values.backup.existingClaim }}
+{{- fail "backup.existingClaim is required when backup.enabled: the PersistentVolumeClaim receiving the archives" }}
+{{- end }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "trica.fullname" . }}-backup
+  labels:
+    {{- include "trica.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.backup.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.backup.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            {{- /* Not the server's selector labels: the Service must not pick this pod up. */}}
+            app.kubernetes.io/name: {{ include "trica.name" . }}-backup
+            app.kubernetes.io/instance: {{ .Release.Name }}
+        spec:
+          restartPolicy: Never
+          serviceAccountName: {{ include "trica.serviceAccountName" . }}
+          automountServiceAccountToken: false
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: backup
+              image: {{ .Values.backup.image.repository }}:{{ default .Chart.AppVersion .Values.backup.image.tag }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args: ["backup", "--config", "/etc/trica/trica.yaml", "--dir", "/backups"]
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              resources:
+                {{- toYaml .Values.backup.resources | nindent 16 }}
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/trica/trica.yaml
+                  subPath: trica.yaml
+                  readOnly: true
+                - name: database
+                  mountPath: /var/run/secrets/trica
+                  readOnly: true
+                - name: archives
+                  mountPath: /backups
+                  {{- with .Values.backup.subPath }}
+                  subPath: {{ . }}
+                  {{- end }}
+          volumes:
+            - name: config
+              configMap:
+                name: {{ include "trica.fullname" . }}
+            - name: database
+              secret:
+                secretName: {{ .Values.database.existingSecret }}
+                items:
+                  - key: {{ .Values.database.urlKey }}
+                    path: database-url
+            - name: archives
+              persistentVolumeClaim:
+                claimName: {{ .Values.backup.existingClaim }}
+{{- end }}

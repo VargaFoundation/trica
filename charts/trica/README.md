@@ -28,6 +28,24 @@ No chart or image is published yet; see [getting started](../../docs/getting-sta
 | `resources` | 100m / 128Mi requested, 512Mi limit | |
 | `podSecurityContext`, `securityContext` | non-root 65532, read-only root, no capabilities, RuntimeDefault seccomp | |
 | `serviceAccount.create` / `name` / `annotations` | `true` / `""` / `{}` | The token is not mounted: the server does not call the Kubernetes API. |
+| `backup.enabled` | `false` | Renders the backup CronJob below. |
+| `backup.schedule` | `17 2 * * *` | Cron schedule. |
+| `backup.existingClaim` | `""` (required when enabled) | PersistentVolumeClaim receiving the archives. |
+| `backup.subPath` | `""` | Subdirectory of the claim. |
+| `backup.image.repository` / `tag` | `ghcr.io/vargafoundation/trica-ops` / appVersion | The `ops` image (`docker build --target ops .`): the server binary plus `pg_dump` 17. Not published yet. |
+
+## Backup
+
+The reference deployment (Zalando operator with WAL-G) takes its own physical backups with
+point-in-time recovery: leave `backup.enabled` off there. The CronJob is for standalone
+installs, where PostgreSQL has nothing of its own: it runs `trica backup --dir /backups` on the
+schedule with the same database Secret as the server (a mounted file, no credential in values) and
+writes `trica-<timestamp>.dump` to the claim. It never deletes: prune the volume yourself. For an
+S3-compatible target use a claim backed by an S3 CSI driver, or copy the archives off with a job of
+your own; the chart holds no object-storage credentials. Restore is attended, not scheduled:
+see [`deploy/compose/README.md`](../../deploy/compose/README.md) for the procedure, which is the same
+command with the same image (`kubectl run`, scale the server to 0 first) and
+[ADR 0021](../../docs/adr/0021-backup-restore.md).
 
 ## Tests
 

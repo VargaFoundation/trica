@@ -4,6 +4,8 @@
 //	trica migrate [--config FILE] up|down|status   (down rolls back one step)
 //	trica export  write the inventory as JSON or YAML
 //	trica import  submit a JSON or YAML file to the reconciliation engine
+//	trica backup  [--config FILE] (--file F | --dir D)
+//	trica restore [--config FILE] --file F [--replace]
 //	trica version
 //
 // Logic lives in internal packages; this package only wires flags.
@@ -18,8 +20,11 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
+	"time"
 
+	"github.com/VargaFoundation/trica/internal/backup"
 	"github.com/VargaFoundation/trica/internal/server"
 	"github.com/VargaFoundation/trica/internal/store"
 )
@@ -51,6 +56,10 @@ commands:
            or print the schema version (status)
   export   write the inventory (objects, attributes, relations) as JSON or YAML
   import   submit a JSON or YAML file to the reconciliation engine
+  backup   write a consistent archive of the database (--file F, or --dir D
+           for a timestamped name); needs pg_dump 17
+  restore  load an archive into an empty database (--file F), or over an
+           existing one (--replace, server stopped); runs migrations up
   version  print the version
 
 server and migrate read the database URL from TRICA_DATABASE_URL or the file
@@ -71,7 +80,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return runExport(ctx, args, stdout, stderr, getenv)
 	case "import":
 		return runImport(ctx, args, stdin, stdout, stderr, getenv)
-	case "server", "migrate":
+	case "server", "migrate", "backup", "restore":
 	case "help", "-h", "--help":
 		fmt.Fprintln(stdout, usage)
 		return nil
@@ -83,6 +92,9 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	cfgPath := fs.String("config", getenv("TRICA_CONFIG"), "configuration file (YAML)")
+	file := fs.String("file", "", "backup: archive to write; restore: archive to read")
+	dir := fs.String("dir", "", "backup: directory for a timestamped archive name")
+	replace := fs.Bool("replace", false, "restore: drop the target database's tables first")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -92,8 +104,13 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	}
 	log := newLogger(stderr, cfg.LogLevel)
 
-	if cmd == "migrate" {
+	switch cmd {
+	case "migrate":
 		return migrate(ctx, cfg, fs.Args(), stdout)
+	case "backup":
+		return runBackup(ctx, cfg, log, *file, *dir, stdout)
+	case "restore":
+		return runRestore(ctx, cfg, log, *file, *replace, stdout)
 	}
 	return server.New(cfg, log, version, components()...).Run(ctx)
 }
@@ -135,5 +152,40 @@ func migrate(ctx context.Context, cfg *server.Config, args []string, stdout io.W
 		return err
 	}
 	fmt.Fprintf(stdout, "schema version %d\n", v)
+	return nil
+}
+
+func runBackup(ctx context.Context, cfg *server.Config, log *slog.Logger, file, dir string, stdout io.Writer) error {
+	if (file == "") == (dir == "") {
+		return errors.New("backup: give exactly one of --file and --dir")
+	}
+	if file == "" {
+		file = filepath.Join(dir, "trica-"+time.Now().UTC().Format("20060102T150405Z")+".dump")
+	}
+	url, err := cfg.DatabaseURL()
+	if err != nil {
+		return err
+	}
+	info, err := backup.Backup(ctx, url, file, backup.Tools{}, log)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "backup %s schema version %d, %d bytes, %.1fs\n", info.File, info.Version, info.Bytes, info.Duration.Seconds())
+	return nil
+}
+
+func runRestore(ctx context.Context, cfg *server.Config, log *slog.Logger, file string, replace bool, stdout io.Writer) error {
+	if file == "" {
+		return errors.New("restore: --file is required")
+	}
+	url, err := cfg.DatabaseURL()
+	if err != nil {
+		return err
+	}
+	info, err := backup.Restore(ctx, url, file, backup.RestoreOptions{Replace: replace}, log)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "restored %s: archive schema version %d, now %d, %.1fs\n", info.File, info.Version, info.Migrated, info.Duration.Seconds())
 	return nil
 }

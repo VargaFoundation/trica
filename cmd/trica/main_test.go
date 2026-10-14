@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -130,4 +132,43 @@ func TestNewLogger(t *testing.T) {
 // fmtSscan reads the version out of "schema version N".
 func fmtSscan(out string, v *int) (int, error) {
 	return fmt.Sscanf(strings.TrimSpace(out[strings.LastIndex(strings.TrimSpace(out), "\n")+1:]), "schema version %d", v)
+}
+
+func TestBackupRestoreCommands(t *testing.T) {
+	if os.Getenv("TRICA_PG_DUMP") == "" || os.Getenv("TRICA_PG_RESTORE") == "" {
+		for _, bin := range []string{"pg_dump", "pg_restore"} {
+			if _, err := exec.LookPath(bin); err != nil {
+				if os.Getenv("TRICA_REQUIRE_DB") == "1" {
+					t.Fatalf("TRICA_REQUIRE_DB=1 but %s is not available", bin)
+				}
+				t.Skipf("%s not available", bin)
+			}
+		}
+	}
+	t.Setenv(server.EnvDatabaseURL, testdb.NewURL(t))
+	t.Setenv("TRICA_CONFIG", "")
+	if _, err := runCmd(t, "migrate", "up"); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	for _, args := range [][]string{{"backup"}, {"backup", "--file", dir + "/a", "--dir", dir}, {"restore"}} {
+		if _, err := runCmd(t, args...); err == nil {
+			t.Errorf("%v accepted", args)
+		}
+	}
+	out, err := runCmd(t, "backup", "--dir", dir)
+	if err != nil || !strings.Contains(out, "schema version 1") {
+		t.Fatalf("backup: %q %v", out, err)
+	}
+	files, _ := filepath.Glob(dir + "/trica-*.dump")
+	if len(files) != 1 {
+		t.Fatalf("timestamped archive not written: %v", files)
+	}
+	t.Setenv(server.EnvDatabaseURL, testdb.NewURL(t))
+	if out, err = runCmd(t, "restore", "--file", files[0]); err != nil || !strings.Contains(out, "now 1") {
+		t.Fatalf("restore: %q %v", out, err)
+	}
+	if _, err = runCmd(t, "restore", "--file", files[0]); err == nil {
+		t.Fatal("restore into a populated database accepted without --replace")
+	}
 }

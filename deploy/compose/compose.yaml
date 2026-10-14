@@ -41,5 +41,27 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
 
+  # Backup and restore (deploy/compose/README.md). Never started by
+  # `up`: `docker compose run --rm ops backup --dir /backups`.
+  ops:
+    profiles: ["ops"]
+    image: ${TRICA_OPS_IMAGE:-trica-ops:local}
+    build:
+      context: ../..
+      target: ops
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TRICA_DATABASE_URL: postgres://trica:${TRICA_DB_PASSWORD}@postgres:5432/trica?sslmode=disable
+    volumes:
+      # A named volume by default; TRICA_BACKUP_DIR=/srv/trica-backups (owned
+      # by uid 65532) writes to the host instead.
+      - ${TRICA_BACKUP_DIR:-backups}:/backups
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
 volumes:
   pgdata:
+  backups:
