@@ -35,6 +35,9 @@ Group=trica-agent
 StateDirectory=trica-agent
 StateDirectoryMode=0750
 UMask=0077
+# Server, CA and enrolment token file (TRICA_AGENT_SERVER, TRICA_AGENT_CA_FILE,
+# TRICA_AGENT_ENROL_TOKEN_FILE): /etc/trica-agent/agent.env, see docs/reference/agent.md.
+EnvironmentFile=-/etc/trica-agent/agent.env
 ExecStart=/usr/bin/trica-agent --interval=5m --state-dir=/var/lib/trica-agent --output=/var/lib/trica-agent/batch.json
 # A new staged version that crashes or hangs is rolled back at the next start
 # (internal/agent/update): the agent must be restarted whatever the exit status.
@@ -64,7 +67,7 @@ LockPersonality=yes
 MemoryDenyWriteExecute=yes
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
-# AF_NETLINK: addresses. AF_UNIX: D-Bus and lldpd. AF_INET*: the transport, later.
+# AF_NETLINK: addresses. AF_UNIX: D-Bus and lldpd. AF_INET*: the transport.
 RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
 
 [Install]

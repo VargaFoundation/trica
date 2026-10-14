@@ -235,21 +235,34 @@ func TestDaemonSetIsAsNarrowAsTheProbesAllow(t *testing.T) {
 	if !slices.Equal(add, []string{"DAC_READ_SEARCH", "SYS_PTRACE"}) {
 		t.Errorf("capabilities added: %v (no SMART in the image, so no SYS_RAWIO)", add)
 	}
-	// Host files are an allow-list, and every mount of one is read-only.
-	allowed := map[string]bool{"/etc/os-release": true, "/etc/machine-id": true, "/var/lib/dpkg": true}
+	// Host files are an allow-list, and every mount of one is read-only, except
+	// the agent's own state directory (client certificate and spool: it must
+	// outlive the pod, or each restart would need a new enrolment token).
+	const stateDir = "/var/lib/trica-agent"
+	allowed := map[string]bool{"/etc/os-release": true, "/etc/machine-id": true, "/var/lib/dpkg": true, stateDir: true}
 	for name, p := range hostPaths {
 		if !allowed[p] {
 			t.Errorf("hostPath %s (%s) is not one the probes read", name, p)
 		}
 	}
 	for _, m := range c.VolumeMounts {
-		if _, host := hostPaths[m.Name]; host && !m.ReadOnly {
+		if p, host := hostPaths[m.Name]; host && !m.ReadOnly && p != stateDir {
 			t.Errorf("host path %s is mounted read-write", m.Name)
 		}
 	}
+	// The only writable host path is the state directory, and the agent is told
+	// to use exactly that one.
 	for _, a := range c.Args {
-		if strings.HasPrefix(a, "--state-dir") {
-			t.Error("a DaemonSet updates by rollout of the image, not by staging binaries")
+		if v, ok := strings.CutPrefix(a, "--state-dir="); ok && v != stateDir {
+			t.Errorf("--state-dir=%s: a DaemonSet updates by rollout of the image, and keeps only %s", v, stateDir)
+		}
+		if strings.HasPrefix(a, "--output") {
+			t.Error("--output would write the inventory to the node's disk for nothing: the batches go to the server")
+		}
+	}
+	for _, want := range []string{"--ca-file=/etc/trica-agent/ca.pem", "--enrol-token-file=" + stateDir + "/enrol-token", "--state-dir=" + stateDir} {
+		if !slices.Contains(c.Args, want) {
+			t.Errorf("the DaemonSet does not pass %s", want)
 		}
 	}
 }
@@ -261,4 +274,40 @@ func TestEveryCapabilityIsDocumented(t *testing.T) {
 			t.Errorf("docs/reference/agent.md does not document %s", c)
 		}
 	}
+}
+
+func TestUnitSendsToTheServerFromItsEnvironmentFile(t *testing.T) {
+	u := unit(t)
+	if !strings.Contains(u["EnvironmentFile"], "/etc/trica-agent/agent.env") {
+		t.Errorf("EnvironmentFile = %q, want the packaged /etc/trica-agent/agent.env", u["EnvironmentFile"])
+	}
+	// A token is a reference to a file, never a value of the configuration.
+	env := read(t, "agent.env")
+	for _, want := range []string{"TRICA_AGENT_SERVER", "TRICA_AGENT_CA_FILE", "TRICA_AGENT_ENROL_TOKEN_FILE"} {
+		if !strings.Contains(env, want) {
+			t.Errorf("agent.env does not document %s", want)
+		}
+	}
+	if strings.Contains(env, "TRICA_AGENT_ENROL_TOKEN=") {
+		t.Error("agent.env takes a token value: only a file reference is allowed")
+	}
+	var cfg struct {
+		Contents []struct {
+			Src  string `yaml:"src"`
+			Dst  string `yaml:"dst"`
+			Type string `yaml:"type"`
+		} `yaml:"contents"`
+	}
+	if err := yaml.Unmarshal([]byte(read(t, "nfpm.yaml")), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range cfg.Contents {
+		if c.Dst == "/etc/trica-agent/agent.env" {
+			if c.Src != "packaging/agent.env" || c.Type != "config|noreplace" {
+				t.Errorf("agent.env is shipped as %+v: it must be config|noreplace so that an upgrade keeps the operator's edits", c)
+			}
+			return
+		}
+	}
+	t.Error("nfpm does not ship /etc/trica-agent/agent.env")
 }

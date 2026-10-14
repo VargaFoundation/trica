@@ -4,7 +4,8 @@
 //
 // The agent is read-only. It reads /proc, /sys and a few files below --root,
 // and runs, when installed, only allow-listed read-only commands (rpm,
-// systemctl, smartctl, lldpctl). It writes nothing but its own --output.
+// systemctl, smartctl, lldpctl). It writes nothing but its own --output and its
+// state directory (client identity, spool, staged versions).
 package main
 
 import (
@@ -15,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -24,6 +26,7 @@ import (
 
 	"github.com/VargaFoundation/trica/internal/agent"
 	"github.com/VargaFoundation/trica/internal/agent/update"
+	"github.com/VargaFoundation/trica/internal/transport"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -32,6 +35,19 @@ var version = "dev"
 
 // execFn replaces the process with a staged binary; tests replace it.
 var execFn = update.Exec
+
+// flushEvery is how often the transport retries the spool and checks the
+// certificate between two collections.
+var flushEvery = time.Minute
+
+// Environment variables that stand for the transport flags, so that a packaged
+// unit or a pod sets them without editing the command line. There is none for
+// the enrolment token itself: only a reference to a file is accepted.
+const (
+	envServer         = "TRICA_AGENT_SERVER"
+	envCAFile         = "TRICA_AGENT_CA_FILE"
+	envEnrolTokenFile = "TRICA_AGENT_ENROL_TOKEN_FILE"
+)
 
 // errUnhealthy ends a run that stayed on probation past its health timeout.
 var errUnhealthy = errors.New("no healthy collection before the health timeout")
@@ -59,8 +75,11 @@ With --state-dir the agent can run a staged version of itself (remote update,
 docs/reference/agent.md): the first start of a new version must complete a
 collection within --health-timeout, or the previous version is restored.
 
-Transport is not wired yet: batches go to --output only. Sending them to the
-server over mTLS, with an on-disk spool, comes in a later release.
+With --server the batches are sent to a trica server over mutual TLS. The agent
+enrols once with a one-time token (--enrol-token-file), keeps its client
+certificate and an on-disk spool in --state-dir, and spools batches while the
+server is unreachable. --output then only adds a local copy when given.
+Environment: TRICA_AGENT_SERVER, TRICA_AGENT_CA_FILE, TRICA_AGENT_ENROL_TOKEN_FILE.
 
 Usage:
   trica-agent [flags]
@@ -76,6 +95,9 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	once := fl.Bool("once", false, "run once and exit")
 	output := fl.String("output", "-", `where batches go: "-" is stdout, one JSON object per line; a file path keeps the latest batch, rewritten atomically`)
 	stateDir := fl.String("state-dir", "", "directory of staged versions and update state; empty disables running staged versions")
+	server := fl.String("server", os.Getenv(envServer), "https://host:port of the trica transport listener; batches are sent there over mTLS (needs --ca-file and --state-dir) [$"+envServer+"]")
+	caFile := fl.String("ca-file", os.Getenv(envCAFile), "PEM file of the CA certificate that signs the server certificate [$"+envCAFile+"]")
+	tokenFile := fl.String("enrol-token-file", os.Getenv(envEnrolTokenFile), "file holding the one-time enrolment token, read only while the agent has no certificate [$"+envEnrolTokenFile+"]")
 	healthTimeout := fl.Duration("health-timeout", 2*time.Minute, "how long a newly staged version has to complete a collection before it is rolled back")
 	fl.Usage = func() {
 		fmt.Fprint(stderr, usage)
@@ -96,6 +118,13 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
+	if msg := checkServerFlags(*server, *caFile, *stateDir); msg != "" {
+		fmt.Fprintln(stderr, msg)
+		return 2
+	}
+	outputSet := false
+	fl.Visit(func(f *flag.Flag) { outputSet = outputSet || f.Name == "output" })
+
 	logger := slog.New(slog.NewJSONHandler(stderr, nil))
 	var store *update.Store
 	if *stateDir != "" {
@@ -113,9 +142,37 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	}
 	defer a.Close()
 
-	emit := emitter(*output, stdout)
 	ctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
+	var emit sdk.Emitter
+	if *server == "" {
+		emit = emitter(*output, stdout)
+	} else {
+		client, err := transport.NewClient(transport.ClientConfig{
+			ServerURL: *server, CAFile: *caFile, Dir: *stateDir, EnrolTokenFile: *tokenFile, Logger: logger,
+		})
+		if err != nil {
+			logger.Error("cannot start the transport", "collector", agent.CollectorName, "error", err)
+			return 1
+		}
+		var wg sync.WaitGroup
+		defer func() { // runs before the cancel above: stop the flush loop, then release connections
+			cancel(nil)
+			wg.Wait()
+			client.Close()
+		}()
+		if !*once {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				client.Run(ctx, flushEvery)
+			}()
+		}
+		emit = client
+		if outputSet { // a local copy, for whoever wants to look at what was sent
+			emit = both(client, emitter(*output, stdout))
+		}
+	}
 	if store != nil {
 		emit = probation(cancel, store, version, *healthTimeout, emit, logger)
 	}
@@ -134,6 +191,35 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// checkServerFlags returns what is wrong with the transport flags, or "".
+func checkServerFlags(server, caFile, stateDir string) string {
+	if server == "" {
+		return ""
+	}
+	u, err := url.Parse(server)
+	if err != nil || u.Scheme != "https" || u.Host == "" {
+		return fmt.Sprintf("--server %q must be https://host:port", server)
+	}
+	if caFile == "" {
+		return "--server needs --ca-file: the agent only trusts a server whose CA it was given"
+	}
+	if stateDir == "" {
+		return "--server needs --state-dir: the client certificate and the spool live there"
+	}
+	return ""
+}
+
+// both emits to every emitter, even when one fails, and returns all the errors.
+func both(emitters ...sdk.Emitter) sdk.Emitter {
+	return sdk.EmitterFunc(func(ctx context.Context, b *sdk.Batch) error {
+		var errs []error
+		for _, e := range emitters {
+			errs = append(errs, e.Emit(ctx, b))
+		}
+		return errors.Join(errs...)
+	})
 }
 
 // boot decides which binary runs: this one, or a staged version it replaces

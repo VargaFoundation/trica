@@ -27,6 +27,10 @@ contents:
   - src: packaging/trica-agent.sysusers
     dst: /usr/lib/sysusers.d/trica-agent.conf
     file_info: { mode: 0644 }
+  - src: packaging/agent.env
+    dst: /etc/trica-agent/agent.env
+    type: config|noreplace
+    file_info: { mode: 0644 }
   - src: LICENSE
     dst: /usr/share/doc/trica-agent/LICENSE
     file_info: { mode: 0644 }

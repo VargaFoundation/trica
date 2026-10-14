@@ -1,9 +1,22 @@
 # Example: trica-agent on every node of a cluster (docs/reference/agent.md, ADR-0022).
 #
 # It is an example, not a release artifact: the image below does not exist yet
-# (the release pipeline builds it, PR #17), the transport to the server is not
-# wired (batches go to a file in an emptyDir), and it has not been applied to a
+# (the release pipeline builds it, PR #17) and it has not been applied to a
 # cluster. packaging_test.go checks the security fields of this file.
+#
+# Sending to the server (docs/reference/agent.md, "Sending to a server"):
+#   server URL and CA   the ConfigMap below (replace both values), mounted at
+#                       /etc/trica-agent; the URL is passed as TRICA_AGENT_SERVER.
+#   identity and spool  /var/lib/trica-agent on the node (hostPath, the one writable
+#                       host path): the client certificate must outlive the pod, or
+#                       every restart would need a new one-time token.
+#   enrolment token     ONE PER NODE, because a token grants one binding and the
+#                       binding of a node is agent:<its hostname> (pki.ValidBinding
+#                       refuses a wildcard). Put it in the file
+#                       /var/lib/trica-agent/enrol-token of the node (mode 0600) before
+#                       the pod starts, when you provision the node; it is read only
+#                       while the node has no certificate and is useless once used.
+#                       A Secret cannot do this: a Secret is the same for every node.
 #
 # What the agent reads, and so what the pod needs from the host:
 #   hostPID: true      /proc/<pid>/fd and comm of the node's processes name the owner
@@ -21,7 +34,8 @@
 # No `rpm`, `systemctl`, `smartctl` or `lldpctl` in the image: those probes are skipped and
 # say so in the batch's health. So CAP_SYS_RAWIO (SMART) is not granted.
 #
-# Updates: no --state-dir, so the agent never runs a staged binary here. In a
+# Updates: --state-dir holds the identity and the spool here, but nothing ever
+# stages a binary in it, so the agent never runs anything but the image. In a
 # cluster the way to update is the DaemonSet's own rollout, below.
 apiVersion: v1
 kind: Namespace
@@ -31,6 +45,20 @@ metadata:
     # hostPID, hostNetwork, hostPath and root are refused by the "baseline" and
     # "restricted" Pod Security levels: this namespace has to be "privileged".
     pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trica-agent
+  namespace: trica-system
+data:
+  # https://host:port of the server's transport listener (transport.addr).
+  server: https://trica.example.invalid:8443
+  # The public CA certificate of the server (ca.pem in transport.ca_dir).
+  ca.pem: |
+    -----BEGIN CERTIFICATE-----
+    replace with the contents of the server's ca.pem
+    -----END CERTIFICATE-----
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -65,7 +93,13 @@ spec:
           image: ghcr.io/vargafoundation/trica-agent:0.0.0 # placeholder, see above
           args:
             - --interval=5m
-            - --output=/var/lib/trica-agent/batch.json
+            - --state-dir=/var/lib/trica-agent
+            - --ca-file=/etc/trica-agent/ca.pem
+            - --enrol-token-file=/var/lib/trica-agent/enrol-token
+          env:
+            - name: TRICA_AGENT_SERVER
+              valueFrom:
+                configMapKeyRef: { name: trica-agent, key: server }
           securityContext:
             privileged: false
             allowPrivilegeEscalation: false
@@ -86,13 +120,16 @@ spec:
             requests: { cpu: 10m, memory: 32Mi }
             limits: { cpu: 200m, memory: 64Mi }
           volumeMounts:
-            - { name: out, mountPath: /var/lib/trica-agent }
+            - { name: state, mountPath: /var/lib/trica-agent }
+            - { name: config, mountPath: /etc/trica-agent, readOnly: true }
             - { name: os-release, mountPath: /etc/os-release, readOnly: true }
             - { name: machine-id, mountPath: /etc/machine-id, readOnly: true }
             - { name: dpkg, mountPath: /var/lib/dpkg, readOnly: true }
       volumes:
-        - name: out
-          emptyDir: { sizeLimit: 16Mi }
+        - name: state
+          hostPath: { path: /var/lib/trica-agent, type: DirectoryOrCreate }
+        - name: config
+          configMap: { name: trica-agent, items: [{ key: ca.pem, path: ca.pem }] }
         - name: os-release
           hostPath: { path: /etc/os-release, type: File }
         - name: machine-id
