@@ -28,12 +28,12 @@ func builtFS(t *testing.T) fs.FS {
 }
 
 var (
-	scriptTag    = regexp.MustCompile(`(?is)<script\b[^>]*>`)
-	inlineStyle  = regexp.MustCompile(`(?is)<style\b`)
-	styleAttr    = regexp.MustCompile(`(?is)\sstyle\s*=`)
-	eventAttr    = regexp.MustCompile(`(?is)\son[a-z]+\s*=`)
-	assetRef     = regexp.MustCompile(`(?:src|href)="(/assets/[^"]+)"`)
-	hashedName   = regexp.MustCompile(`^assets/.+-[A-Za-z0-9_-]{8}\.[a-z0-9]+$`)
+	scriptTag   = regexp.MustCompile(`(?is)<script\b[^>]*>`)
+	inlineStyle = regexp.MustCompile(`(?is)<style\b`)
+	styleAttr   = regexp.MustCompile(`(?is)\sstyle\s*=`)
+	eventAttr   = regexp.MustCompile(`(?is)\son[a-z]+\s*=`)
+	assetRef    = regexp.MustCompile(`(?:src|href)="(/assets/[^"]+)"`)
+	hashedName  = regexp.MustCompile(`^assets/.+-[A-Za-z0-9_-]{8}\.[a-z0-9]+$`)
 )
 
 func TestBuiltIndexWorksUnderTheCSP(t *testing.T) {
