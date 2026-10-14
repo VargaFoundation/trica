@@ -1,0 +1,128 @@
+# REST API
+
+`internal/api` serves the inventory over HTTP under `/api/v1`. The OpenAPI 3.1 document is **not
+written by hand**: `GET /api/v1/openapi.json` generates it, at each request, from the route table
+and the schema registry, so a custom type or attribute is in the document (and in `/schema`) as
+soon as it is in the registry, with no restart. A test compares the document with the routes the
+server actually serves, and validates real traffic (requests and responses) against the document.
+
+The package is a library: it is not mounted in a binary yet (the `trica` server comes with the
+auth PR). `api.New(Config)` returns a `*Server`; `Handler()` serves paths under `api.Prefix`.
+
+## Endpoints
+
+| Method and path | Action | What it does |
+|---|---|---|
+| `GET /healthz`, `GET /readyz` | none | Liveness; readiness (the database answers). No credential needed |
+| `GET /openapi.json` | read | The generated OpenAPI document |
+| `GET /health/collection` | read | Last run of every source |
+| `GET /schema`, `GET /schema/types/{type}` | read | Types, attributes, relation types (built-in and overlay) |
+| `GET /objects` | read | List, with `q` (TQL), `type`, `sort`. Pages |
+| `GET /objects/{id}` | read | One object; `at=<RFC 3339>` for the state at a date |
+| `GET /objects/{id}/provenance` | read | Source, confidence and age of each attribute |
+| `GET /objects/{id}/history` | read | Values over time; `key` restricts to one attribute |
+| `GET /objects/{id}/relations` | read | Relations now, or `at` a date |
+| `GET /objects/{id}/timeline` | read | Changes that touched the object (`from`, `to`) |
+| `GET /search` | read | `q` free text or TQL: counts per type first, then a page |
+| `GET /whohad` | read | `key`, `value`, optional `at`: which objects had it |
+| `GET /changes` | read | Change feed between `from` and `to` (optional `object`) |
+| `POST /batches` | propose | Submit an `sdk.Batch`; 200 when applied, 202 when queued as a proposal |
+| `POST /batches/preview` | propose | What the batch would do, nothing written |
+| `GET /proposals`, `GET /proposals/{id}` | read | Proposals; a pending one carries a preview against the current state |
+| `POST /proposals/{id}/approve`, `.../reject` | approve | Decide a pending proposal (409 if already decided) |
+| `GET /discrepancies` | read | Declared versus observed, filters `status`, `kind`, `object` |
+| `POST /discrepancies/{id}/accept` | approve | Accept the difference, with a reason |
+| `GET/POST /saved-queries`, `GET/DELETE /saved-queries/{name}` | read / propose | Saved queries; delete by the owner, or by an `admin` |
+
+## Writes go through the engine
+
+The API never writes the inventory itself: `POST /batches` hands an `sdk.Batch` to the
+reconciliation engine, which decides to create, update, propose or flag.
+
+- **The source comes from the credential, never from the body.** A user's batch is attributed to
+  `user:<subject>` and is forced to `declared` confidence, whatever confidence the batch or its
+  objects claim (a person declares; only collectors observe, and a person must not outrank a
+  collector by saying so). A machine token's batch is attributed to the source the token is bound
+  to. A token without a source gets 403. Whatever `source` the body claims is overwritten.
+- Objects and relations are checked one by one against the caller's rights (type, and site for a
+  grant limited to sites); one refused object refuses the whole batch (403), nothing is applied.
+- Attributes with a sensitive name are refused at the door (400 `secret-attribute`).
+
+## Authentication, authorization, audit
+
+There is no anonymous mode: `api.New` returns an error without an `Authorizer` and an `Auditor`.
+
+```go
+type Authorizer interface {
+    Principal(r *http.Request) (Principal, error)
+    Allow(p Principal, action, objType, site string) bool
+}
+type Auditor interface {
+    Record(ctx context.Context, e AuditEntry) error
+}
+```
+
+- `Principal` fails (any error) → 401 with `WWW-Authenticate: Bearer`.
+- Every handler first asks `Allow(p, action, "", "")` (does the caller hold the action at all),
+  then `Allow(p, action, type, site)` for each object it reads or writes. An empty `site` means
+  unknown: a grant limited to sites must not match it. The site of an object is found through its
+  parents, or for a device the rack it is mounted in; an object in two sites is unknown.
+- Actions: `read`, `propose`, `approve`, `admin`.
+- Every mutating call is recorded once with its outcome (`ok`, `denied`, `error`): batch
+  submission, proposal approval and rejection, discrepancy acceptance, saved-query creation and
+  deletion. A refusal at the first gate is recorded too. Reads and previews are not. A failing
+  auditor is logged and does not undo a mutation that already committed.
+- `StaticAuthorizer` and `MemoryAuditor` exist for tests and development only (plain tokens in
+  memory, no expiry). Production uses `internal/auth` and `internal/audit` (later PRs).
+
+## Errors
+
+Every failure, including an unknown path and a wrong method, is an RFC 9457 problem
+(`application/problem+json`) with `type` (`urn:trica:problem:<slug>`), `title`, `status`,
+`detail` and `instance`.
+
+| Status | Slug | When |
+|---|---|---|
+| 400 | `invalid-request`, `invalid-query`, `invalid-batch`, `secret-attribute` | Bad parameter, bad TQL, a batch the SDK or the engine refuses |
+| 401 | `unauthenticated` | No valid credential |
+| 403 | `forbidden`, `sensitive-attribute` | The action or the object is not allowed; a query on a sensitive attribute |
+| 404 | `not-found` | Unknown object, proposal, saved query or path |
+| 405 | `method-not-allowed` | With an `Allow` header |
+| 409 | `conflict` | Proposal already decided; saved query exists |
+| 413 | `too-large` | Body over 8 MiB |
+| 422 | `rejected` | A well-formed batch the engine refuses: `observed_at` too old, or a value or relation type the schema refuses from a `user:` or `token:` source (ADR 0005); nothing applied |
+| 500 | `internal` | The cause is logged, never returned |
+
+A panic in a handler is a 500 problem; the process keeps serving.
+
+## Pagination
+
+Every list answers `{"items": [...], "total": N, "limit": N, "offset": N}`. `limit` is 1 to 1000
+(default 50), `offset` is 0 or more; anything else is a 400, never a silent clamp. `total` is the
+size of the whole result for the caller, not of the page. Lists that are post-filtered by rights
+(`/changes`, `/whohad`, history, relations, discrepancies) scan at most 5,000 candidates (200 for
+`/whohad`) and say `truncated: true` when the cap was hit.
+
+## What the API never returns
+
+- No credential: an attribute whose name marks a secret (`password`, `passwd`, `passphrase`,
+  `secret`, `token`, `credential`, `private_key`, `api_key`, `community`, `psk`, and the
+  variants) is removed from objects, history, search results, discrepancies and proposals, and
+  cannot be queried, sorted on or written. The rule is on the name, so it over-approximates on
+  purpose; a test checks that no built-in attribute trips it.
+- A caller who cannot read all types does not learn object ids from a batch result: `objects` and
+  `touched` are empty for them.
+- Error answers do not carry driver or panic messages; the access log has no query string and
+  no token; every answer has `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`.
+
+## Limits of this version
+
+- List endpoints (`/objects`, `/search`) are limited to types the caller may read in every
+  site: a caller whose rights are limited to some sites reads by id (and gets history, relations,
+  `/whohad`, `/changes`, discrepancies filtered per object), but cannot list.
+- A free-text search could match a custom searchable attribute whose name is sensitive (the
+  query is refused only when it names the attribute).
+- No rate limit; no CORS; no TLS (the binary will terminate it).
+- A batch result may carry warnings with status 200: the engine downgrades a value that does not
+  fit its kind, or an unknown relation type, to a warning instead of refusing the batch.
+- Approval is not four-eyes: the submitter of a proposal may approve it if they hold `approve`.

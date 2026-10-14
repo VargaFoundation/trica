@@ -74,14 +74,21 @@ func (s *Searcher) now() time.Time {
 // "top 10"); the page then slices within it. Free text matches exactly
 // first; only when that finds nothing is it retried tolerating typos.
 func (s *Searcher) Search(ctx context.Context, query string, page Page) (*Result, error) {
-	start := time.Now()
 	q, err := tql.Parse(query)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrQuery, err)
 	}
-	res, err := s.run(ctx, q, query, page, false)
+	return s.SearchQuery(ctx, q, query, page)
+}
+
+// SearchQuery runs an already parsed query; label is echoed in Result.Query.
+// Callers that must add conditions (the API restricts a search to the types a
+// caller may read) build the syntax tree instead of splicing query text.
+func (s *Searcher) SearchQuery(ctx context.Context, q *tql.Query, label string, page Page) (*Result, error) {
+	start := time.Now()
+	res, err := s.run(ctx, q, label, page, false)
 	if err == nil && res.Total == 0 && len(q.Texts()) > 0 {
-		res, err = s.run(ctx, q, query, page, true)
+		res, err = s.run(ctx, q, label, page, true)
 	}
 	if err != nil {
 		return nil, err

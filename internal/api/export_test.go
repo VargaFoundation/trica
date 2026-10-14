@@ -1,0 +1,11 @@
+package api
+
+// RouteKeys lists the routes the server serves as "METHOD /path" (the path
+// is relative to Prefix), for tests that compare the table with the document.
+func (s *Server) RouteKeys() []string {
+	keys := make([]string, 0, len(s.routes))
+	for _, rt := range s.routes {
+		keys = append(keys, rt.Method+" "+rt.Path)
+	}
+	return keys
+}
