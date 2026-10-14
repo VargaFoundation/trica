@@ -266,6 +266,7 @@ types:
       native_vlan: {kind: int, label: {en: Native VLAN, fr: VLAN natif}, description: "Untagged VLAN."}
       lldp_enabled: {kind: bool, label: {en: LLDP enabled, fr: LLDP actif}, description: "Whether LLDP runs on the port."}
       face: {kind: enum, values: [front, rear], label: {en: Face, fr: Face}, description: "Physical face of the port."}
+      learned_macs: {kind: list, label: {en: Learned MACs, fr: MAC apprises}, description: "MAC addresses in the switch forwarding table on this port, as vlan/mac. Collectors report it only on ports with few addresses (edge ports); trunks are left out, they say nothing about cabling."}
   front_port:
     layer: cabling
     label: {en: Front port, fr: Port avant}
