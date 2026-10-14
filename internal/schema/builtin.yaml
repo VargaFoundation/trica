@@ -713,6 +713,9 @@ relations:
     from: [interface, front_port, rear_port]
     to: [interface, front_port, rear_port]
     impact: link
+    attributes:
+      evidence: {kind: enum, values: [lldp, lldp_one_sided, mac_table], label: {en: Evidence, fr: Preuve}, description: "What a deduced cable rests on: LLDP seen from both ends, LLDP seen from one end, or a switch forwarding table."}
+      level: {kind: enum, values: [high, medium, low], label: {en: Confidence level, fr: Niveau de confiance}, description: "Confidence of a deduced cable: high for LLDP seen from both ends, medium from one end, low from a forwarding table."}
   maps_to:
     label: {en: maps to, fr: correspond à}
     inverse: {en: is mapped from, fr: est la cible de}
