@@ -19,6 +19,10 @@ pull requests, issues.
   `TRICA_TEST_DATABASE_URL` to export. Without it they are skipped; with `TRICA_REQUIRE_DB=1`
   (set in CI) a skip is a failure.
 - `make tools` installs the pinned golangci-lint.
+- On a cluster: `.github/workflows/e2e.yml` (nightly, and on PRs touching the chart, the
+  Dockerfile or the migrations) runs `test/e2e/kind/run.sh` on kind with Calico. Locally, with
+  a kind cluster built from `test/e2e/kind/kind.yaml` and Calico installed:
+  `docker build -t trica:e2e . && kind load docker-image trica:e2e --name trica-e2e && IMAGE=trica:e2e test/e2e/kind/run.sh`.
 
 ## Architecture rules
 - **Only `internal/reconcile` writes the inventory.** Collectors, the agent, declaration files,
