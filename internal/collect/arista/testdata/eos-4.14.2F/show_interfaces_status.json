@@ -1,0 +1,44 @@
+{
+  "interfaceStatuses": {
+    "Ethernet1": {
+      "vlanInformation": {"interfaceMode": "bridged", "vlanId": 100, "interfaceForwardingModel": "bridged"},
+      "bandwidth": 10000000000, "interfaceType": "10GBASE-SR", "description": "srv-01 eno1",
+      "autoNegotiateActive": false, "duplex": "duplexFull", "linkStatus": "connected"
+    },
+    "Ethernet2": {
+      "vlanInformation": {"interfaceMode": "bridged", "vlanId": 100, "interfaceForwardingModel": "bridged"},
+      "bandwidth": 10000000000, "interfaceType": "10GBASE-CR", "description": "srv-02 eth0",
+      "autoNegotiateActive": false, "duplex": "duplexFull", "linkStatus": "connected"
+    },
+    "Ethernet3": {
+      "vlanInformation": {"interfaceMode": "bridged", "vlanId": 1, "interfaceForwardingModel": "bridged"},
+      "bandwidth": 10000000000, "interfaceType": "Not Present", "description": "",
+      "autoNegotiateActive": false, "duplex": "duplexFull", "linkStatus": "notconnect"
+    },
+    "Ethernet49": {
+      "vlanInformation": {"vlanExplanation": "in Po1", "interfaceForwardingModel": "bridged"},
+      "bandwidth": 40000000000, "interfaceType": "40GBASE-SR4", "description": "mlag peer sw-a2 Ethernet49",
+      "autoNegotiateActive": false, "duplex": "duplexFull", "linkStatus": "connected"
+    },
+    "Ethernet50": {
+      "vlanInformation": {"vlanExplanation": "in Po1", "interfaceForwardingModel": "bridged"},
+      "bandwidth": 40000000000, "interfaceType": "40GBASE-SR4", "description": "mlag peer sw-a2 Ethernet50",
+      "autoNegotiateActive": false, "duplex": "duplexFull", "linkStatus": "connected"
+    },
+    "Ethernet51": {
+      "vlanInformation": {"vlanExplanation": "trunk", "interfaceMode": "trunk", "interfaceForwardingModel": "bridged"},
+      "bandwidth": 40000000000, "interfaceType": "40GBASE-SR4", "description": "uplink sw-b1 Ethernet49",
+      "autoNegotiateActive": false, "duplex": "duplexFull", "linkStatus": "connected"
+    },
+    "Management1": {
+      "vlanInformation": {"vlanExplanation": "routed", "interfaceMode": "routed", "interfaceForwardingModel": "routed"},
+      "bandwidth": 1000000000, "interfaceType": "1000BASE-T", "description": "oob",
+      "autoNegotiateActive": true, "duplex": "duplexFull", "linkStatus": "connected"
+    },
+    "Port-Channel1": {
+      "vlanInformation": {"vlanExplanation": "trunk", "interfaceMode": "trunk", "interfaceForwardingModel": "bridged"},
+      "bandwidth": 80000000000, "interfaceType": "N/A", "description": "mlag peer-link",
+      "autoNegotiateActive": false, "duplex": "duplexFull", "linkStatus": "connected"
+    }
+  }
+}

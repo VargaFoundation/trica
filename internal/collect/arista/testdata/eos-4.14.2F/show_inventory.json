@@ -1,0 +1,27 @@
+{
+  "systemInformation": {
+    "name": "DCS-7050SX-64-F",
+    "description": "Arista DCS-7050SX-64-F, 48-port SFP+ 10GigE + 4-port QSFP+ 40GigE, 1RU",
+    "hardwareRev": "01.02",
+    "deviations": "",
+    "serialNum": "FAKE7050A0001",
+    "mfgDate": "2014-01-01"
+  },
+  "powerSupplySlots": {
+    "1": {"name": "PWR-460AC-F", "serialNum": "FAKEPSU0001", "hardwareRev": "02.00", "mfgDate": "2014-01-01"},
+    "2": {"name": "PWR-460AC-F", "serialNum": "FAKEPSU0002", "hardwareRev": "02.00", "mfgDate": "2014-01-01"}
+  },
+  "fanTraySlots": {
+    "1": {"name": "FAN-7000-F", "serialNum": "", "hardwareRev": "", "mfgDate": ""},
+    "2": {"name": "FAN-7000-F", "serialNum": "", "hardwareRev": "", "mfgDate": ""}
+  },
+  "xcvrSlots": {
+    "1": {"mfgName": "Arista Networks", "modelName": "SFP-10G-SR", "serialNum": "FAKEXCVR0001", "hardwareRev": "0003"},
+    "2": {"mfgName": "Arista Networks", "modelName": "CAB-SFP-SFP-3M", "serialNum": "FAKEXCVR0002", "hardwareRev": "0001"},
+    "3": {"mfgName": "Not Present", "modelName": "", "serialNum": "", "hardwareRev": ""},
+    "49": {"mfgName": "Arista Networks", "modelName": "QSFP-40G-SR4", "serialNum": "FAKEXCVR0049", "hardwareRev": "0002"},
+    "50": {"mfgName": "Arista Networks", "modelName": "QSFP-40G-SR4", "serialNum": "FAKEXCVR0050", "hardwareRev": "0002"},
+    "51": {"mfgName": "Arista Networks", "modelName": "QSFP-40G-SR4", "serialNum": "FAKEXCVR0051", "hardwareRev": "0002"}
+  },
+  "storageDevices": {}
+}

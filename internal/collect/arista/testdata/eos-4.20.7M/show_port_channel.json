@@ -1,0 +1,13 @@
+{
+  "portChannels": {
+    "Port-Channel10": {
+      "activePorts": {
+        "Ethernet3": {"timeBecameActive": 1759000100.0, "protocol": "lacp", "lacpMode": "active"}
+      },
+      "inactivePorts": {
+        "Ethernet4": {"reasonUnconfigured": "LACP PDUs not received", "lacpMode": "active"}
+      },
+      "recircFeature": []
+    }
+  }
+}

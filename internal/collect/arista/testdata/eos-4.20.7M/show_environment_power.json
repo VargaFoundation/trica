@@ -1,0 +1,8 @@
+{
+  "powerSupplies": {
+    "1": {"state": "ok", "modelName": "PWR-511-AC-RED", "capacity": 500.0, "outputPower": 160.0, "inputPower": 178.5, "inputCurrent": 0.8, "outputCurrent": 13.3, "managed": true, "uptime": 2230000.0},
+    "2": {"state": "powerLoss", "modelName": "PWR-511-AC-RED", "capacity": 500.0, "outputPower": 0.0, "inputPower": 0.0, "inputCurrent": 0.0, "outputCurrent": 0.0, "managed": true, "uptime": 0.0}
+  },
+  "voltageSensors": {},
+  "currentSensors": {}
+}

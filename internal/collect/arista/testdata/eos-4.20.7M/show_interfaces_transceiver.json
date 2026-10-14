@@ -1,0 +1,8 @@
+{
+  "interfaces": {
+    "Ethernet1": {"vendorSn": "FAKEXCVR1001", "vendorName": "Arista Networks", "mediaType": "10GBASE-SR", "temperature": 29.8, "voltage": 3.3, "txBias": 6.0, "txPower": -2.1, "rxPower": -2.9, "updateTime": 1759100000.0},
+    "Ethernet3": {"vendorSn": "FAKEXCVR1003", "vendorName": "Arista Networks", "mediaType": "10GBASE-CR", "temperature": 28.0, "voltage": 3.3, "txBias": 0.0, "txPower": "-inf", "rxPower": "-inf", "updateTime": 1759100000.0},
+    "Ethernet4": {"vendorSn": "FAKEXCVR1004", "vendorName": "Arista Networks", "mediaType": "10GBASE-CR", "temperature": 28.5, "voltage": 3.3, "txBias": 0.0, "txPower": "-inf", "rxPower": "-inf", "updateTime": 1759100000.0},
+    "Ethernet49": {"vendorSn": "FAKEXCVR1049", "vendorName": "Arista Networks", "mediaType": "40GBASE-SR4", "temperature": 32.0, "voltage": 3.28, "txBias": 7.0, "txPower": -1.0, "rxPower": -2.0, "updateTime": 1759100000.0}
+  }
+}

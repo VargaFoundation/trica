@@ -1,0 +1,24 @@
+{
+  "systemStatus": "temperatureOk",
+  "shutdownOnOverheat": "True",
+  "tempSensors": [
+    {"name": "TempSensor0", "description": "Cpu temp sensor", "currentTemperature": 41.0, "overheatThreshold": 95.0, "criticalThreshold": 105.0, "targetTemperature": 50.0, "hwStatus": "ok", "inAlertState": false, "alertCount": 0},
+    {"name": "TempSensor1", "description": "Board sensor", "currentTemperature": 33.5, "overheatThreshold": 75.0, "criticalThreshold": 85.0, "targetTemperature": 45.0, "hwStatus": "ok", "inAlertState": false, "alertCount": 0},
+    {"name": "TempSensor2", "description": "Front-panel temp sensor", "currentTemperature": 24.5, "overheatThreshold": 65.0, "criticalThreshold": 75.0, "targetTemperature": 40.0, "hwStatus": "ok", "inAlertState": false, "alertCount": 0}
+  ],
+  "powerSupplySlots": [
+    {
+      "entPhysicalClass": "PowerSupply", "relPos": "1",
+      "tempSensors": [
+        {"name": "TempSensor1", "description": "Power supply 1 hotspot sensor", "currentTemperature": 36.0, "overheatThreshold": 75.0, "criticalThreshold": 85.0, "hwStatus": "ok", "inAlertState": false}
+      ]
+    },
+    {
+      "entPhysicalClass": "PowerSupply", "relPos": "2",
+      "tempSensors": [
+        {"name": "TempSensor1", "description": "Power supply 2 hotspot sensor", "currentTemperature": 35.0, "overheatThreshold": 75.0, "criticalThreshold": 85.0, "hwStatus": "ok", "inAlertState": false}
+      ]
+    }
+  ],
+  "cardSlots": []
+}

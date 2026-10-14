@@ -1,0 +1,27 @@
+{
+  "systemInformation": {
+    "name": "DCS-7280SE-64-F",
+    "description": "Arista DCS-7280SE-64-F, 48-port SFP+ 10GigE + 4-port QSFP+ 40GigE, 1RU",
+    "hardwareRev": "11.02",
+    "deviations": "",
+    "serialNum": "FAKE7280B0001",
+    "mfgDate": "2017-01-01"
+  },
+  "powerSupplySlots": {
+    "1": {"name": "PWR-511-AC-RED", "serialNum": "FAKEPSU1001", "hardwareRev": "03.00", "mfgDate": "2017-01-01"},
+    "2": {"name": "PWR-511-AC-RED", "serialNum": "FAKEPSU1002", "hardwareRev": "03.00", "mfgDate": "2017-01-01"}
+  },
+  "fanTraySlots": {
+    "1": {"name": "FAN-7000-R", "serialNum": "FAKEFAN1001", "hardwareRev": "01.00", "mfgDate": "2017-01-01"},
+    "2": {"name": "FAN-7000-R", "serialNum": "FAKEFAN1002", "hardwareRev": "01.00", "mfgDate": "2017-01-01"}
+  },
+  "xcvrSlots": {
+    "1": {"mfgName": "Arista Networks", "modelName": "SFP-10G-SR", "serialNum": "FAKEXCVR1001", "hardwareRev": "0003"},
+    "2": {"mfgName": "", "modelName": "", "serialNum": "", "hardwareRev": ""},
+    "3": {"mfgName": "Arista Networks", "modelName": "CAB-SFP-SFP-3M", "serialNum": "FAKEXCVR1003", "hardwareRev": "0001"},
+    "4": {"mfgName": "Arista Networks", "modelName": "CAB-SFP-SFP-3M", "serialNum": "FAKEXCVR1004", "hardwareRev": "0001"},
+    "49": {"mfgName": "Arista Networks", "modelName": "QSFP-40G-SR4", "serialNum": "FAKEXCVR1049", "hardwareRev": "0002"}
+  },
+  "storageDevices": {},
+  "cardSlots": {}
+}

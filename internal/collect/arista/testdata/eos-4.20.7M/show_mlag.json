@@ -1,0 +1,16 @@
+{
+  "state": "disabled",
+  "domainId": "",
+  "localInterface": "",
+  "peerAddress": "",
+  "peerLink": "",
+  "negStatus": "unknown",
+  "peerLinkStatus": "unknown",
+  "localIntfStatus": "unknown",
+  "systemId": "",
+  "reloadDelay": 300,
+  "reloadDelayNonMlag": 300,
+  "configSanity": "unknown",
+  "portsErrdisabled": false,
+  "mlagPorts": {}
+}

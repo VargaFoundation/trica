@@ -1,0 +1,32 @@
+{
+  "sourceDetail": "",
+  "vlans": {
+    "1": {
+      "status": "active", "name": "default", "dynamic": false,
+      "interfaces": {
+        "Ethernet2": {"privatePromoted": false, "blocked": null}
+      }
+    },
+    "99": {
+      "status": "active", "name": "TRANSIT", "dynamic": false,
+      "interfaces": {
+        "Ethernet49": {"privatePromoted": false, "blocked": null}
+      }
+    },
+    "100": {
+      "status": "active", "name": "SERVERS", "dynamic": false,
+      "interfaces": {
+        "Cpu": {"privatePromoted": false, "blocked": null},
+        "Ethernet1": {"privatePromoted": false, "blocked": null},
+        "Ethernet49": {"privatePromoted": false, "blocked": null},
+        "Port-Channel10": {"privatePromoted": false, "blocked": null}
+      }
+    },
+    "200": {
+      "status": "active", "name": "STORAGE", "dynamic": false,
+      "interfaces": {
+        "Ethernet49": {"privatePromoted": false, "blocked": null}
+      }
+    }
+  }
+}

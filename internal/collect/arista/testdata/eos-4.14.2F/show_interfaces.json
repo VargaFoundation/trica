@@ -1,0 +1,117 @@
+{
+  "interfaces": {
+    "Ethernet1": {
+      "name": "Ethernet1", "hardware": "ethernet", "forwardingModel": "bridged",
+      "interfaceStatus": "connected", "lineProtocolStatus": "up",
+      "physicalAddress": "02:1c:73:00:00:01", "burnedInAddress": "02:1c:73:00:00:01",
+      "description": "srv-01 eno1", "bandwidth": 10000000000, "mtu": 9214,
+      "duplex": "duplexFull", "autoNegotiate": "off", "interfaceAddress": [],
+      "interfaceType": "10GBASE-SR", "l2Mru": 0
+    },
+    "Ethernet2": {
+      "name": "Ethernet2", "hardware": "ethernet", "forwardingModel": "bridged",
+      "interfaceStatus": "connected", "lineProtocolStatus": "up",
+      "physicalAddress": "02:1c:73:00:00:01", "burnedInAddress": "02:1c:73:00:00:01",
+      "description": "srv-02 eth0", "bandwidth": 10000000000, "mtu": 9214,
+      "duplex": "duplexFull", "autoNegotiate": "off", "interfaceAddress": [],
+      "interfaceType": "10GBASE-CR", "l2Mru": 0
+    },
+    "Ethernet3": {
+      "name": "Ethernet3", "hardware": "ethernet", "forwardingModel": "bridged",
+      "interfaceStatus": "notconnect", "lineProtocolStatus": "notPresent",
+      "physicalAddress": "02:1c:73:00:00:01", "burnedInAddress": "02:1c:73:00:00:01",
+      "description": "", "bandwidth": 10000000000, "mtu": 9214,
+      "duplex": "duplexFull", "autoNegotiate": "off", "interfaceAddress": [],
+      "interfaceType": "Not Present", "l2Mru": 0
+    },
+    "Ethernet49": {
+      "name": "Ethernet49", "hardware": "ethernet", "forwardingModel": "bridged",
+      "interfaceStatus": "connected", "lineProtocolStatus": "up",
+      "physicalAddress": "02:1c:73:00:00:01", "burnedInAddress": "02:1c:73:00:00:01",
+      "description": "mlag peer sw-a2 Ethernet49", "bandwidth": 40000000000, "mtu": 9214,
+      "duplex": "duplexFull", "autoNegotiate": "off", "interfaceAddress": [],
+      "interfaceType": "40GBASE-SR4", "l2Mru": 0
+    },
+    "Ethernet50": {
+      "name": "Ethernet50", "hardware": "ethernet", "forwardingModel": "bridged",
+      "interfaceStatus": "connected", "lineProtocolStatus": "up",
+      "physicalAddress": "02:1c:73:00:00:01", "burnedInAddress": "02:1c:73:00:00:01",
+      "description": "mlag peer sw-a2 Ethernet50", "bandwidth": 40000000000, "mtu": 9214,
+      "duplex": "duplexFull", "autoNegotiate": "off", "interfaceAddress": [],
+      "interfaceType": "40GBASE-SR4", "l2Mru": 0
+    },
+    "Ethernet51": {
+      "name": "Ethernet51", "hardware": "ethernet", "forwardingModel": "bridged",
+      "interfaceStatus": "connected", "lineProtocolStatus": "up",
+      "physicalAddress": "02:1c:73:00:00:01", "burnedInAddress": "02:1c:73:00:00:01",
+      "description": "uplink sw-b1 Ethernet49", "bandwidth": 40000000000, "mtu": 9214,
+      "duplex": "duplexFull", "autoNegotiate": "off", "interfaceAddress": [],
+      "interfaceType": "40GBASE-SR4", "l2Mru": 0
+    },
+    "Management1": {
+      "name": "Management1", "hardware": "ethernet", "forwardingModel": "routed",
+      "interfaceStatus": "connected", "lineProtocolStatus": "up",
+      "physicalAddress": "02:1c:73:00:00:ff", "burnedInAddress": "02:1c:73:00:00:ff",
+      "description": "oob", "bandwidth": 1000000000, "mtu": 1500,
+      "duplex": "duplexFull", "autoNegotiate": "on",
+      "interfaceAddress": [
+        {
+          "primaryIp": {"address": "192.0.2.11", "maskLen": 24},
+          "secondaryIps": {}, "secondaryIpsOrderedList": [],
+          "virtualIp": {"address": "0.0.0.0", "maskLen": 0},
+          "broadcastAddress": "255.255.255.255", "dhcp": false
+        }
+      ],
+      "interfaceType": "1000BASE-T"
+    },
+    "Port-Channel1": {
+      "name": "Port-Channel1", "hardware": "portChannel", "forwardingModel": "bridged",
+      "interfaceStatus": "connected", "lineProtocolStatus": "up",
+      "physicalAddress": "02:1c:73:00:00:01", "burnedInAddress": "00:00:00:00:00:00",
+      "description": "mlag peer-link", "bandwidth": 80000000000, "mtu": 9214,
+      "duplex": "duplexFull", "interfaceAddress": []
+    },
+    "Vlan100": {
+      "name": "Vlan100", "hardware": "vlan", "forwardingModel": "routed",
+      "interfaceStatus": "connected", "lineProtocolStatus": "up",
+      "physicalAddress": "02:1c:73:00:00:01", "burnedInAddress": "00:00:00:00:00:00",
+      "description": "servers gateway", "bandwidth": 0, "mtu": 1500,
+      "interfaceAddress": [
+        {
+          "primaryIp": {"address": "198.51.100.2", "maskLen": 24},
+          "secondaryIps": {}, "secondaryIpsOrderedList": [],
+          "virtualIp": {"address": "198.51.100.1", "maskLen": 24},
+          "broadcastAddress": "255.255.255.255", "dhcp": false
+        }
+      ]
+    },
+    "Vlan4094": {
+      "name": "Vlan4094", "hardware": "vlan", "forwardingModel": "routed",
+      "interfaceStatus": "connected", "lineProtocolStatus": "up",
+      "physicalAddress": "02:1c:73:00:00:01", "burnedInAddress": "00:00:00:00:00:00",
+      "description": "mlag peering", "bandwidth": 0, "mtu": 1500,
+      "interfaceAddress": [
+        {
+          "primaryIp": {"address": "203.0.113.1", "maskLen": 30},
+          "secondaryIps": {}, "secondaryIpsOrderedList": [],
+          "virtualIp": {"address": "0.0.0.0", "maskLen": 0},
+          "broadcastAddress": "255.255.255.255", "dhcp": false
+        }
+      ]
+    },
+    "Loopback0": {
+      "name": "Loopback0", "hardware": "loopback", "forwardingModel": "routed",
+      "interfaceStatus": "connected", "lineProtocolStatus": "up",
+      "physicalAddress": "00:00:00:00:00:00", "burnedInAddress": "00:00:00:00:00:00",
+      "description": "router id", "bandwidth": 0, "mtu": 65535,
+      "interfaceAddress": [
+        {
+          "primaryIp": {"address": "203.0.113.101", "maskLen": 32},
+          "secondaryIps": {}, "secondaryIpsOrderedList": [],
+          "virtualIp": {"address": "0.0.0.0", "maskLen": 0},
+          "broadcastAddress": "255.255.255.255", "dhcp": false
+        }
+      ]
+    }
+  }
+}

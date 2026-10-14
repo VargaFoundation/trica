@@ -1,0 +1,32 @@
+{
+  "systemStatus": "temperatureOk",
+  "shutdownOnOverheat": "True",
+  "tempSensors": [
+    {"name": "TempSensor0", "description": "Cpu temp sensor", "currentTemperature": 44.0, "overheatThreshold": 95.0, "criticalThreshold": 105.0, "targetTemperature": 50.0, "hwStatus": "ok", "inAlertState": false, "alertCount": 0},
+    {"name": "TempSensor1", "description": "Board sensor", "currentTemperature": 36.0, "overheatThreshold": 75.0, "criticalThreshold": 85.0, "targetTemperature": 45.0, "hwStatus": "ok", "inAlertState": false, "alertCount": 0},
+    {"name": "TempSensor2", "description": "Switch chip inlet sensor", "currentTemperature": 27.5, "overheatThreshold": 65.0, "criticalThreshold": 75.0, "targetTemperature": 40.0, "hwStatus": "ok", "inAlertState": false, "alertCount": 0},
+    {"name": "TempSensor3", "description": "Switch chip exhaust sensor", "currentTemperature": 38.0, "overheatThreshold": 80.0, "criticalThreshold": 90.0, "targetTemperature": 50.0, "hwStatus": "ok", "inAlertState": false, "alertCount": 0}
+  ],
+  "powerSupplySlots": [
+    {
+      "entPhysicalClass": "PowerSupply", "relPos": "1",
+      "tempSensors": [
+        {"name": "TempSensor1", "description": "Power supply 1 primary sensor", "currentTemperature": 38.0, "overheatThreshold": 75.0, "criticalThreshold": 85.0, "hwStatus": "ok", "inAlertState": false}
+      ]
+    },
+    {
+      "entPhysicalClass": "PowerSupply", "relPos": "2",
+      "tempSensors": [
+        {"name": "TempSensor1", "description": "Power supply 2 primary sensor", "currentTemperature": 37.0, "overheatThreshold": 75.0, "criticalThreshold": 85.0, "hwStatus": "ok", "inAlertState": false}
+      ]
+    }
+  ],
+  "cardSlots": [
+    {
+      "entPhysicalClass": "Card", "relPos": "1",
+      "tempSensors": [
+        {"name": "TempSensor1", "description": "Phy sensor", "currentTemperature": 52.0, "overheatThreshold": 100.0, "criticalThreshold": 110.0, "hwStatus": "ok", "inAlertState": false}
+      ]
+    }
+  ]
+}

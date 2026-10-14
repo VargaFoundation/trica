@@ -1,0 +1,22 @@
+{
+  "multicastTable": {"tableEntries": []},
+  "unicastTable": {
+    "tableEntries": [
+      {"macAddress": "02aa.0000.0101", "vlanId": 100, "interface": "Ethernet1", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "02aa.0000.0201", "vlanId": 100, "interface": "Ethernet2", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "02aa.0000.0202", "vlanId": 100, "interface": "Ethernet2", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "02aa.0000.0301", "vlanId": 1, "interface": "Ethernet3", "entryType": "static", "moves": 0, "lastMove": 0.0},
+      {"macAddress": "02bb.0000.0001", "vlanId": 100, "interface": "Ethernet51", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "02bb.0000.0002", "vlanId": 100, "interface": "Ethernet51", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "02bb.0000.0003", "vlanId": 100, "interface": "Ethernet51", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "02bb.0000.0004", "vlanId": 200, "interface": "Ethernet51", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "02bb.0000.0005", "vlanId": 200, "interface": "Ethernet51", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "02cc.0000.0001", "vlanId": 100, "interface": "Port-Channel1", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "02cc.0000.0002", "vlanId": 100, "interface": "Port-Channel1", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "02cc.0000.0003", "vlanId": 100, "interface": "Port-Channel1", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "02cc.0000.0004", "vlanId": 200, "interface": "Port-Channel1", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "02cc.0000.0005", "vlanId": 200, "interface": "Port-Channel1", "entryType": "dynamic", "moves": 1, "lastMove": 1758100000.0},
+      {"macAddress": "021c.7300.0001", "vlanId": 100, "interface": "Cpu", "entryType": "static", "moves": 0, "lastMove": 0.0}
+    ]
+  }
+}
