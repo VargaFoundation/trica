@@ -8,7 +8,7 @@ GOLANGCI_LINT_VERSION ?= v2.14.0
 GOLANGCI_LINT ?= golangci-lint
 COVERAGE_MIN ?= 80
 # Packages whose coverage counts: everything but command entry points and test helpers.
-COVER_PKGS = $(shell $(GO) list ./... | grep -vE '/cmd/|/internal/testdb' | paste -sd, -)
+COVER_PKGS = $(shell $(GO) list ./... | grep -vE '/cmd/|/internal/testdb|/node_modules/' | paste -sd, -)
 
 # Local PostgreSQL for the integration tests (`make db`). The port is not 5432 on
 # purpose: a developer machine usually has one already.
@@ -51,6 +51,53 @@ test-cov:  ## Tests with coverage across packages; fails under COVERAGE_MIN %
 .PHONY: tools
 tools:  ## Install the pinned golangci-lint
 	$(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+
+# ─────────────────────────── web ───────────────────────────
+# The UI lives in web/ (React + TypeScript + Vite, see docs/reference/ui.md). It
+# is optional for the Go gate above: without the `webui` build tag the binary
+# embeds a placeholder page, so `make ci` needs no Node.
+WEB_DIR := web
+NPM ?= npm
+
+.PHONY: web
+web: web-install web-lint web-typecheck web-api-check web-test web-build web-embed-test  ## Everything the web CI job runs
+
+.PHONY: web-install
+web-install:  ## Install the UI dependencies from the lockfile
+	$(NPM) --prefix $(WEB_DIR) ci
+
+.PHONY: web-lint
+web-lint:  ## ESLint on the UI
+	$(NPM) --prefix $(WEB_DIR) run lint
+
+.PHONY: web-typecheck
+web-typecheck:  ## TypeScript, strict
+	$(NPM) --prefix $(WEB_DIR) run typecheck
+
+.PHONY: web-api-check
+web-api-check:  ## The generated API types match web/openapi.json
+	$(NPM) --prefix $(WEB_DIR) run gen:api:check
+
+.PHONY: web-test
+web-test:  ## Vitest (components, API contract, i18n, accessibility)
+	$(NPM) --prefix $(WEB_DIR) test
+
+.PHONY: web-audit
+web-audit:  ## Known vulnerabilities in what ships to the browser (dev tools excluded)
+	$(NPM) --prefix $(WEB_DIR) audit --omit=dev --audit-level=high
+
+.PHONY: web-build
+web-build:  ## Build the UI into internal/web/dist (what -tags webui embeds)
+	$(NPM) --prefix $(WEB_DIR) run build
+
+.PHONY: web-embed-test
+web-embed-test:  ## Go tests of the handler against the real build (needs web-build first)
+	$(GO) test -tags webui -count=1 ./internal/web
+
+.PHONY: web-api-update
+web-api-update:  ## Re-export web/openapi.json from the Go API, then regenerate the types
+	TRICA_UPDATE_OPENAPI=1 $(GO) test ./internal/api -run TestWebOpenAPISnapshotIsCurrent
+	$(NPM) --prefix $(WEB_DIR) run gen:api
 
 # ─────────────────────────── dev ───────────────────────────
 .PHONY: db
@@ -105,4 +152,4 @@ agent-footprint:  ## Measure the real agent's RSS and CPU over a full cycle (30 
 
 .PHONY: clean
 clean:  ## Remove build and coverage outputs
-	rm -rf bin dist coverage.out coverage.html
+	rm -rf bin dist coverage.out coverage.html internal/web/dist
