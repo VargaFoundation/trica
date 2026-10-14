@@ -1,0 +1,185 @@
+# Release: a semver tag publishes signed multi-arch images, the binaries, the
+# Helm chart in OCI and the changelog. Nothing else publishes anything.
+#
+# Versions are set in the repository BEFORE tagging (charts/trica/Chart.yaml
+# `version` and `appVersion`); a tag that disagrees with them stops the release
+# before anything is pushed.
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: the tag is the version in the repository
+        run: scripts/release-version-check.sh "$GITHUB_REF_NAME"
+
+  images:
+    name: image (${{ matrix.platform }})
+    needs: check
+    # One architecture per native runner, pushed by digest, then one manifest
+    # list: QEMU emulation of a Go build is slow for nothing.
+    runs-on: ${{ matrix.platform == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [amd64, arm64]
+    env:
+      IMAGE: ghcr.io/vargafoundation/trica
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        id: build
+        with:
+          context: .
+          platforms: linux/${{ matrix.platform }}
+          build-args: VERSION=${{ github.ref_name }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          sbom: true
+          provenance: mode=max
+          cache-from: type=gha,scope=trica-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=trica-${{ matrix.platform }}
+      - name: record the digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digest-${{ matrix.platform }}
+          path: /tmp/digests/*
+          retention-days: 1
+
+  manifest:
+    needs: images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # keyless cosign (GitHub OIDC)
+    env:
+      IMAGE: ghcr.io/vargafoundation/trica
+    steps:
+      - uses: docker/setup-buildx-action@v4
+      - uses: sigstore/cosign-installer@v3
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: digest-*
+          merge-multiple: true
+          path: /tmp/digests
+      - uses: docker/metadata-action@v6
+        id: meta
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+      - name: assemble the manifest list
+        working-directory: /tmp/digests
+        run: |
+          # Word splitting is intended: one -t per tag, one reference per digest.
+          # shellcheck disable=SC2046
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf "${IMAGE}@sha256:%s " *)
+      - name: Trivy scan of the published image (no fixable CRITICAL)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ steps.meta.outputs.version }}
+          exit-code: "1"
+          severity: CRITICAL
+          ignore-unfixed: true
+      - name: sign the manifest list
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          digest=$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{json .Manifest}}' | jq -r .digest)
+          cosign sign --yes "${IMAGE}@${digest}"
+
+  chart:
+    # After the images: a published chart never points at a missing image.
+    needs: manifest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+        with: { version: v3.20.1 }
+      - name: push the chart to OCI
+        env:
+          HELM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.repository_owner }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          helm package charts/trica
+          echo "$HELM_TOKEN" | helm registry login ghcr.io -u "$ACTOR" --password-stdin
+          helm push "trica-$version.tgz" oci://ghcr.io/vargafoundation/charts
+
+  binaries:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with: { go-version-file: go.mod }
+      - name: build static binaries
+        run: |
+          mkdir -p dist
+          for arch in amd64 arm64; do
+            for cmd in cmd/*/; do
+              name=$(basename "$cmd")
+              CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath \
+                -ldflags "-s -w -X main.version=${GITHUB_REF_NAME}" \
+                -o "dist/${name}_${GITHUB_REF_NAME#v}_linux_${arch}" "./$cmd"
+            done
+          done
+          (cd dist && sha256sum * > SHA256SUMS)
+      - uses: actions/upload-artifact@v7
+        with: { name: binaries, path: dist/*, retention-days: 1 }
+
+  publish:
+    needs: [chart, binaries]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write # keyless signature of the checksums
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - uses: sigstore/cosign-installer@v3
+      - uses: actions/download-artifact@v8
+        with: { name: binaries, path: dist }
+      - name: sign the checksums
+        run: cosign sign-blob --yes --bundle dist/SHA256SUMS.sigstore.json dist/SHA256SUMS
+      - uses: orhun/git-cliff-action@v4
+        id: cliff
+        with: { args: --latest --strip header }
+      - uses: softprops/action-gh-release@v3
+        with:
+          body: ${{ steps.cliff.outputs.content }}
+          files: dist/*
