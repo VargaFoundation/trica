@@ -106,7 +106,7 @@ func TestServerCollectsTheConfiguredTargets(t *testing.T) {
 // would discover nothing in silence.
 func TestServerRefusesAnUnreadableTargetsFile(t *testing.T) {
 	for name, content := range map[string]string{
-		"unknown key":  "targets:\n  - kind: arista\n    name: sw-a1\n    adress: x\n",
+		"unknown key":  "targets:\n  - kind: arista\n    name: sw-a1\n    addr_typo: x\n",
 		"unknown kind": "targets:\n  - kind: nope\n    name: sw-a1\n",
 	} {
 		t.Run(name, func(t *testing.T) {

@@ -24,7 +24,7 @@ targets:
 	}
 
 	for name, body := range map[string]string{
-		"unknown key":     "targets:\n  - {kind: arista, name: a, adress: x}\n",
+		"unknown key":     "targets:\n  - {kind: arista, name: a, addr_typo: x}\n",
 		"unknown section": "target: []\n",
 		"no kind":         "targets:\n  - {name: a}\n",
 		"no name":         "targets:\n  - {kind: arista}\n",
