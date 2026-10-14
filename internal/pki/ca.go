@@ -37,6 +37,10 @@ const (
 	caKeyFile  = "ca-key.pem"
 )
 
+// CACertFile is the name, inside the CA directory, of the public CA
+// certificate a client needs to trust the server.
+const CACertFile = caCertFile
+
 // CA signs certificates. It is safe for concurrent use.
 type CA struct {
 	cert *x509.Certificate

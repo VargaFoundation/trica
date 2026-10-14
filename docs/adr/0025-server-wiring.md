@@ -88,9 +88,9 @@ page and logs a warning at start.
 
 - New components register in `internal/wiring` (`Components()`), not in `cmd/trica`; they still
   do not open their own store.
-- A deployment has no way yet to mint the first API token or an enrolment token: `TokenStore`
-  needs a user principal and `NewEnrolmentToken` is a Go call. Until a `trica token` command or
-  an endpoint exists, the usable credential is an OIDC JWT, or a token inserted by hand.
+- A deployment had no way to mint the first API token or an enrolment token (`TokenStore` needs a
+  user principal, `NewEnrolmentToken` is a Go call). `trica token` and `trica enrol` now do, run
+  next to the server and against the policy `wiring.Policy` builds (STATUS row 36).
 - Audit entries are written by the API and MCP handlers for mutating or denied calls; a 401 or a
   429 never reaches them, and the chain is still not anchored outside the database (ADR 0013).
 - The graph of a replica is at most `mcp.graph_refresh` behind a commit made by another one.

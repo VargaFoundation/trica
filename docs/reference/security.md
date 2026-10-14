@@ -51,6 +51,34 @@ A scope is a ceiling, never an extension. A token is allowed an action only if i
 it **and** its owner roles grant it. Creating a token whose scope needs an action the creator's
 roles cannot perform is refused. Only a user, not a token, can create a token.
 
+#### Minting the first token
+
+A fresh deployment has no credential, and nobody to sign in through OIDC yet: the first token
+comes from the command line, run next to the server (`kubectl exec`, `docker compose exec`, or a
+Job; see [getting started](../getting-started.md#first-credentials)).
+
+```bash
+trica token create --name claude-code --owner vincent --roles admin --scopes write \
+  [--types device,rack] [--sites paris-1] [--expires 720h]   # the token alone on stdout
+trica token list                                            # no secret, no hash
+trica token revoke --id 7                                   # marks revoked_at, keeps the row
+```
+
+- **Who may run it.** Whoever can run `trica` against the database. The command does not
+  authenticate anyone: it reads the database URL (`TRICA_DATABASE_URL` or `database.url_file`),
+  and whoever holds that URL, or can `kubectl exec` into the pod, can already read and change
+  every table, tokens included. Protect that access (cluster RBAC, the Secret holding the URL) as
+  you would the database itself. The audit log does not record these commands; the token row
+  records its owner and creation time.
+- **The owner is a name you give.** `--owner` is a subject (stored as `user:<owner>`, the same
+  form an OIDC user has), `--roles` its roles. The roles must exist in the policy the server
+  loads (`auth.policy_file` and `auth.group_roles`, the same code path): an unknown role is
+  refused. The ceiling above applies: `--scopes admin` with roles that cannot `approve` and
+  `admin` is refused, nothing is stored.
+- **The secret.** Printed once, alone, on stdout (metadata goes to stderr), so
+  `TOKEN=$(trica token create ...)` works. It is never logged and never in an error. Only its
+  SHA-256 is stored: a lost token cannot be recovered, revoke it and create another.
+
 ### OIDC
 
 | Setting | Meaning |
