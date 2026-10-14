@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -61,6 +62,26 @@ func TestSpoolSurvivesServerOutageAndFlushesInOrder(t *testing.T) {
 	}
 	if st := c.Stats(); st.Spooled != 0 || st.Sent != 5 {
 		t.Fatalf("stats after = %+v", st)
+	}
+}
+
+// TestOutageKeepsThePort guards the test environment itself: while the server
+// is stopped, nobody else may listen on its address (#67).
+func TestOutageKeepsThePort(t *testing.T) {
+	e := newEnv(t)
+	stop := e.start()
+	stop()
+	if ln, err := net.Listen("tcp", e.addr); err == nil {
+		_ = ln.Close()
+		t.Fatalf("%s was free during the outage: another process could serve on it", e.addr)
+	}
+	e.start()
+	c := e.client("agent:host-01")
+	if err := c.Emit(context.Background(), batch("agent:host-01:1")); err != nil {
+		t.Fatal(err)
+	}
+	if st := c.Stats(); st.Sent != 1 {
+		t.Fatalf("after the restart on the held port: %+v", st)
 	}
 }
 

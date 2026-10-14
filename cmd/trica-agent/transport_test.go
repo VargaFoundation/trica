@@ -56,6 +56,9 @@ type srvEnv struct {
 	srv    *transport.Server
 	addr   string
 	caFile string
+	// hold keeps addr bound while the server is stopped, so that a test
+	// process of another package cannot serve on it during the outage (#67).
+	hold net.Listener
 }
 
 func newSrvEnv(t *testing.T) *srvEnv {
@@ -77,6 +80,7 @@ func newSrvEnv(t *testing.T) *srvEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(e.release)
 	e.caFile = filepath.Join(t.TempDir(), "ca.pem")
 	if err := os.WriteFile(e.caFile, ca.CertPEM(), 0o600); err != nil {
 		t.Fatal(err)
@@ -88,6 +92,7 @@ func newSrvEnv(t *testing.T) *srvEnv {
 // and returns the function that stops the server.
 func (e *srvEnv) start() (stop func()) {
 	e.t.Helper()
+	e.release()
 	listen := "127.0.0.1:0"
 	if e.addr != "" {
 		listen = e.addr
@@ -103,7 +108,9 @@ func (e *srvEnv) start() (stop func()) {
 	if err != nil {
 		e.t.Fatal(err)
 	}
-	e.addr = ln.Addr().String()
+	if e.addr == "" { // a restart keeps it: tests read url() from other goroutines
+		e.addr = ln.Addr().String()
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- e.srv.Serve(ctx, ln) }()
@@ -114,10 +121,39 @@ func (e *srvEnv) start() (stop func()) {
 			if err := <-done; err != nil {
 				e.t.Errorf("serve: %v", err)
 			}
+			e.holdPort()
 		})
 	}
 	e.t.Cleanup(stop)
 	return stop
+}
+
+// holdPort binds addr again once the server is down, with a listener that
+// closes every connection.
+func (e *srvEnv) holdPort() {
+	ln, err := net.Listen("tcp", e.addr)
+	if err != nil {
+		e.t.Errorf("hold %s during the outage: %v", e.addr, err)
+		return
+	}
+	e.hold = ln
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			_ = c.Close()
+		}
+	}()
+}
+
+// release frees the port held by holdPort, if any.
+func (e *srvEnv) release() {
+	if e.hold != nil {
+		_ = e.hold.Close()
+		e.hold = nil
+	}
 }
 
 func (e *srvEnv) url() string { return "https://" + e.addr }

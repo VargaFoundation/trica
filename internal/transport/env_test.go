@@ -111,6 +111,11 @@ type env struct {
 	regTime *fakeClock // the server side clock
 	addr    string
 	caFile  string
+	// hold keeps addr bound while the server is stopped. Without it, a test
+	// process of another package (go test ./... runs them side by side) may
+	// listen on the freed port during the outage, and the client then talks
+	// to that server instead of finding nobody (#67).
+	hold net.Listener
 }
 
 func newEnv(t *testing.T, mut ...func(*ServerConfig)) *env {
@@ -138,6 +143,7 @@ func newEnv(t *testing.T, mut ...func(*ServerConfig)) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(e.release)
 	e.caFile = filepath.Join(t.TempDir(), "ca.pem")
 	if err := os.WriteFile(e.caFile, ca.CertPEM(), 0o600); err != nil {
 		t.Fatal(err)
@@ -149,6 +155,7 @@ func newEnv(t *testing.T, mut ...func(*ServerConfig)) *env {
 // after a restart) and returns the function that stops the server.
 func (e *env) start() func() {
 	e.t.Helper()
+	e.release()
 	listen := "127.0.0.1:0"
 	if e.addr != "" {
 		listen = e.addr
@@ -164,7 +171,9 @@ func (e *env) start() func() {
 	if err != nil {
 		e.t.Fatal(err)
 	}
-	e.addr = ln.Addr().String()
+	if e.addr == "" { // a restart keeps it: tests read url() from other goroutines
+		e.addr = ln.Addr().String()
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- e.srv.Serve(ctx, ln) }()
@@ -175,10 +184,40 @@ func (e *env) start() func() {
 			if err := <-done; err != nil {
 				e.t.Errorf("serve: %v", err)
 			}
+			e.holdPort()
 		})
 	}
 	e.t.Cleanup(stop)
 	return stop
+}
+
+// holdPort binds addr again once the server is down, with a listener that
+// closes every connection: what a client meets is an outage, on a port no one
+// else can take.
+func (e *env) holdPort() {
+	ln, err := net.Listen("tcp", e.addr)
+	if err != nil {
+		e.t.Errorf("hold %s during the outage: %v", e.addr, err)
+		return
+	}
+	e.hold = ln
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			_ = c.Close()
+		}
+	}()
+}
+
+// release frees the port held by holdPort, if any.
+func (e *env) release() {
+	if e.hold != nil {
+		_ = e.hold.Close()
+		e.hold = nil
+	}
 }
 
 func (e *env) url() string { return "https://" + e.addr }
