@@ -43,14 +43,17 @@ func TestBuiltinEveryTypeIsIdentifiable(t *testing.T) {
 
 func TestParseRejects(t *testing.T) {
 	cases := map[string]string{
-		"bad kind":       "types: {x: {attributes: {a: {kind: nope}}}}",
-		"enum no values": "types: {x: {attributes: {a: {kind: enum}}}}",
-		"bad identity":   "types: {x: {attributes: {a: {kind: string, identity: maybe}}}}",
-		"bad name":       "types: {X: {attributes: {}}}",
-		"unknown parent": "types: {x: {parents: [y]}}",
-		"unknown end":    "types: {x: {}}\nrelations: {r: {from: [x], to: [y]}}",
-		"empty end":      "types: {x: {}}\nrelations: {r: {from: [x], to: []}}",
-		"bad impact":     "types: {x: {}}\nrelations: {r: {from: [x], to: [x], impact: sideways}}",
+		"bad kind":                   "types: {x: {attributes: {a: {kind: nope}}}}",
+		"enum no values":             "types: {x: {attributes: {a: {kind: enum}}}}",
+		"bad identity":               "types: {x: {attributes: {a: {kind: string, identity: maybe}}}}",
+		"bad name":                   "types: {X: {attributes: {}}}",
+		"unknown parent":             "types: {x: {parents: [y]}}",
+		"unknown end":                "types: {x: {}}\nrelations: {r: {from: [x], to: [y]}}",
+		"empty end":                  "types: {x: {}}\nrelations: {r: {from: [x], to: []}}",
+		"bad impact":                 "types: {x: {}}\nrelations: {r: {from: [x], to: [x], impact: sideways}}",
+		"searchable secret":          "types: {x: {attributes: {snmp_community: {kind: string, search: true}}}}",
+		"identifying secret":         "types: {x: {attributes: {api_token: {kind: string, identity: weak}}}}",
+		"searchable relation secret": "types: {x: {}}\nrelations: {r: {from: [x], to: [x], attributes: {Wifi_PSK: {kind: string, search: true}}}}",
 	}
 	for name, y := range cases {
 		if _, err := Parse([]byte(y), false); err == nil {
@@ -188,5 +191,21 @@ func TestAllows(t *testing.T) {
 	}
 	if !r.Types["interface"].AllowsParent("device") || r.Types["interface"].AllowsParent("rack") {
 		t.Error("interface parents")
+	}
+}
+
+// A sensitive attribute may exist (a reference, a flag) as long as it stays
+// out of the search index.
+func TestSensitiveAttributeAllowedWhenNotIndexed(t *testing.T) {
+	if _, err := Parse([]byte("types: {x: {attributes: {password_ref: {kind: string}}}}"), true); err != nil {
+		t.Fatalf("plain sensitive attribute refused: %v", err)
+	}
+	for _, n := range []string{"bmc_password", "API_KEY", "snmp_community"} {
+		if !Sensitive(n) {
+			t.Errorf("%s not sensitive", n)
+		}
+	}
+	if Sensitive("serial_number") {
+		t.Error("serial_number sensitive")
 	}
 }

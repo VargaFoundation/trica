@@ -248,7 +248,35 @@ func validAttr(name string, a *Attribute) error {
 	if a.Identity != "" && a.Identity != Strong && a.Identity != Weak {
 		return fmt.Errorf("attribute %s: identity must be strong or weak", name)
 	}
+	// Searchable and identity attributes feed the search index, where a
+	// free-text query would reveal by presence or absence a value the API
+	// never returns (issue #25).
+	if Sensitive(name) && (a.Search || a.Identity != "") {
+		return fmt.Errorf("attribute %s: a sensitive attribute cannot be searchable or identifying", name)
+	}
 	return nil
+}
+
+// sensitiveMarkers are substrings of attribute names that hold secrets.
+// The model has no secret kind (credentials are references, AGENTS.md), but
+// custom types are user-defined: names are the last line of defence. A false
+// positive hides one attribute, a false negative leaks a credential.
+var sensitiveMarkers = []string{
+	"password", "passwd", "passphrase", "secret", "token", "credential",
+	"private_key", "privatekey", "api_key", "apikey", "community", "psk",
+}
+
+// Sensitive reports whether an attribute name says it holds a secret. Such an
+// attribute is never searchable nor identifying; readers (API, MCP, UI) must
+// never return it.
+func Sensitive(name string) bool {
+	n := strings.ToLower(name)
+	for _, m := range sensitiveMarkers {
+		if strings.Contains(n, m) {
+			return true
+		}
+	}
+	return false
 }
 
 // Merge returns a new registry with overlay applied on top of r. Overlay types
