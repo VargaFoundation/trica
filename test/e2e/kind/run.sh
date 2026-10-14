@@ -40,10 +40,15 @@ probe() { # probe NAMESPACE: exit status of a GET /readyz from a pod there
 }
 probe "$ns"
 echo "== reachable from its namespace"
-if probe trica-e2e-outside; then
+if out=$(probe trica-e2e-outside 2>&1); then
   echo "FAIL: reachable from another namespace despite the NetworkPolicy" >&2; exit 1
 fi
-echo "== unreachable from another namespace"
+# A probe that failed for another reason (image pull, DNS) proves nothing:
+# only a dropped connection is the policy at work.
+if ! printf '%s' "$out" | grep -q 'timed out'; then
+  echo "FAIL: the outside probe failed without a timeout: $out" >&2; exit 1
+fi
+echo "== unreachable from another namespace (connection dropped)"
 
 kubectl -n "$ns" exec deploy/postgres -- psql -U trica -tAc 'SELECT max(version_id) FROM goose_db_version' | grep -qE '^[1-9]'
 echo "== migrations applied"
