@@ -1,0 +1,9 @@
+{
+  "id": 2,
+  "username": "alice",
+  "email": "",
+  "is_superuser": false,
+  "is_local": true,
+  "last_name": "",
+  "date_joined": "2026-01-01T00:00:00+00:00"
+}

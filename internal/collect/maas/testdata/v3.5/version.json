@@ -1,0 +1,13 @@
+{
+  "version": "3.5.2",
+  "subversion": "16000-g.fake",
+  "capabilities": [
+    "networks-management",
+    "static-ipaddresses",
+    "ipv6-deployment-ubuntu",
+    "devices-management",
+    "storage-deployment-ubuntu",
+    "network-deployment-ubuntu",
+    "authenticate-api"
+  ]
+}
