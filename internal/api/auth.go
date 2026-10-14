@@ -63,6 +63,15 @@ func (p Principal) BatchSource() string {
 // this one only documents the intent.
 var ErrUnauthenticated = errors.New("unauthenticated")
 
+// ErrAuthUnavailable is what Authorizer.Principal returns (wrapped) when the
+// credential could not be checked: the token store or the identity provider
+// does not answer. It is answered with 503 and Retry-After, not 401, so that a
+// client keeps a credential that may well be valid. Both fail closed.
+var ErrAuthUnavailable = errors.New("authentication unavailable")
+
+// AuthRetryAfter is the Retry-After, in seconds, sent with ErrAuthUnavailable.
+const AuthRetryAfter = "5"
+
 // Authorizer authenticates a request and answers rights questions. The server
 // refuses to start without one: there is no anonymous mode.
 //

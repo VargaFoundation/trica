@@ -37,20 +37,39 @@ func (s *Server) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		// The request is authenticated here, once, rather than in verify:
+		// auth.RequireBearerToken answers 500 to any verifier error that is
+		// not an invalid token, and an authentication backend that does not
+		// answer must be a 503 with Retry-After (the REST API's answer).
+		p, err := s.auth.Principal(r)
+		if errors.Is(err, api.ErrAuthUnavailable) {
+			s.log.Error("mcp: authentication unavailable", "error", err.Error())
+			w.Header().Set("Retry-After", api.AuthRetryAfter)
+			http.Error(w, "authentication unavailable", http.StatusServiceUnavailable)
+			return
+		}
 		w.Header().Set("WWW-Authenticate", "Bearer")
-		guarded.ServeHTTP(w, r)
+		guarded.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), authResultKey{}, authResult{p, err})))
 	})
 }
 
-// verify asks the Authorizer who the request is from. The bearer string is not
-// interpreted here: the Authorizer reads the whole request, as it does for the
-// REST API.
-func (s *Server) verify(_ context.Context, _ string, r *http.Request) (*auth.TokenInfo, error) {
-	p, err := s.auth.Principal(r)
-	if err != nil {
+// authResultKey carries Handler's authentication of the request to verify.
+type authResultKey struct{}
+
+type authResult struct {
+	p   api.Principal
+	err error
+}
+
+// verify returns what Handler's Authorizer said about the request. The bearer
+// string is not interpreted here: the Authorizer reads the whole request, as
+// it does for the REST API.
+func (s *Server) verify(ctx context.Context, _ string, _ *http.Request) (*auth.TokenInfo, error) {
+	res, ok := ctx.Value(authResultKey{}).(authResult)
+	if !ok || res.err != nil {
 		return nil, auth.ErrInvalidToken
 	}
-	return &auth.TokenInfo{UserID: p.Subject, Extra: map[string]any{principalKey: p}}, nil
+	return &auth.TokenInfo{UserID: res.p.Subject, Extra: map[string]any{principalKey: res.p}}, nil
 }
 
 // serverFor picks the MCP server for a request: the one with the write tool

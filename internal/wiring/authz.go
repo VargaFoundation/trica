@@ -12,6 +12,7 @@ package wiring
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -43,9 +44,20 @@ func (a *Authorizer) Principal(r *http.Request) (api.Principal, error) {
 	}
 	p, err := a.Auth.Authenticate(r.Context(), raw)
 	if err != nil {
-		return api.Principal{}, api.ErrUnauthenticated
+		return api.Principal{}, credentialError(err)
 	}
 	return toAPI(p)
+}
+
+// credentialError maps an authentication failure: a bad credential is
+// api.ErrUnauthenticated (401), anything else (the token store or the identity
+// provider does not answer) is api.ErrAuthUnavailable (503), so that a client
+// does not throw away a credential that may be valid.
+func credentialError(err error) error {
+	if auth.IsCredentialError(err) {
+		return api.ErrUnauthenticated
+	}
+	return fmt.Errorf("%w: %w", api.ErrAuthUnavailable, err)
 }
 
 // Allow answers from the policy. The action is passed through as is: the

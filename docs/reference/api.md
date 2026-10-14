@@ -67,7 +67,9 @@ type Auditor interface {
 }
 ```
 
-- `Principal` fails (any error) → 401 with `WWW-Authenticate: Bearer`.
+- `Principal` fails with `ErrAuthUnavailable` (wrapped: the token store or the identity provider
+  does not answer) → 503 `auth-unavailable` with `Retry-After`; any other error → 401 with
+  `WWW-Authenticate: Bearer`.
 - Every handler first asks `Allow(p, action, "", "")` (does the caller hold the action at all),
   then `Allow(p, action, type, site)` for each object it reads or writes. An empty `site` means
   unknown: a grant limited to sites must not match it. The site of an object is found through its
@@ -100,6 +102,7 @@ Every failure, including an unknown path and a wrong method, is an RFC 9457 prob
 | 413 | `too-large` | Body over 8 MiB |
 | 422 | `rejected` | A well-formed batch the engine refuses: `observed_at` too old, or a value or relation type the schema refuses from a `user:` or `token:` source (ADR 0005); nothing applied |
 | 500 | `internal` | The cause is logged, never returned |
+| 503 | `auth-unavailable` | The credential could not be checked (token store or identity provider down); with `Retry-After` |
 
 A panic in a handler is a 500 problem; the process keeps serving.
 
@@ -134,8 +137,7 @@ size of the whole result for the caller, not of the page. Lists that are post-fi
 - A free-text search could match a custom searchable attribute whose name is sensitive (the
   query is refused only when it names the attribute).
 - The server rate-limits per principal (`auth.rate_limit`, a 429 over it) but has no CORS and no
-  TLS (a reverse proxy or an ingress terminates it). An authentication backend that fails (the
-  database) answers 401, not 503: the `Authorizer` interface has one error for both.
+  TLS (a reverse proxy or an ingress terminates it).
 - A batch result may carry warnings with status 200: the engine downgrades a value that does not
   fit its kind, or an unknown relation type, to a warning instead of refusing the batch.
 - Approval is not four-eyes: the submitter of a proposal may approve it if they hold `approve`.
