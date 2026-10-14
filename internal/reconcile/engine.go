@@ -61,6 +61,26 @@ type PlannedChange struct {
 // ErrInvalid wraps batch validation errors (client errors, HTTP 400).
 var ErrInvalid = errors.New("invalid batch")
 
+// ErrRejected wraps batches that are well formed but that the engine refuses
+// on policy grounds (HTTP 422 for the API), as opposed to ErrInvalid (400).
+var ErrRejected = errors.New("batch rejected")
+
+// checkObservedAge rejects a batch observed longer ago than the policy allows
+// for its source kind. A future or zero observed_at is clamped later, not
+// rejected. It runs when a batch is submitted (Apply, Propose), not when a
+// stored proposal is approved: that one was checked when it was proposed.
+func (e *Engine) checkObservedAge(b *sdk.Batch) error {
+	if b.ObservedAt.IsZero() {
+		return nil
+	}
+	limit := e.Policy.maxObservedAge(b.Source)
+	if age := e.now().Sub(b.ObservedAt); age > limit {
+		return fmt.Errorf("%w: observed_at is %s old, the maximum for source %q is %s",
+			ErrRejected, age.Round(time.Second), b.Source, limit)
+	}
+	return nil
+}
+
 const maxRecordedChanges = 2000
 
 func (e *Engine) now() time.Time {
@@ -80,6 +100,9 @@ func (e *Engine) Submit(ctx context.Context, b *sdk.Batch, author, reason string
 
 // Apply reconciles b and commits.
 func (e *Engine) Apply(ctx context.Context, b *sdk.Batch, author, reason string) (*Result, error) {
+	if err := e.checkObservedAge(b); err != nil {
+		return nil, err
+	}
 	var res *Result
 	err := e.Store.InTx(ctx, func(tx pgx.Tx) error {
 		var err error

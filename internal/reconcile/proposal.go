@@ -38,6 +38,9 @@ var ErrConflict = errors.New("conflict")
 // same content is not duplicated: the deducer re-proposes the same cables on
 // every pass.
 func (e *Engine) Propose(ctx context.Context, b *sdk.Batch, author, reason string) (*Result, error) {
+	if err := e.checkObservedAge(b); err != nil {
+		return nil, err
+	}
 	preview, err := e.Preview(ctx, b)
 	if err != nil {
 		return nil, err

@@ -33,6 +33,40 @@ type Policy struct {
 	// AbsentAfter is how long an observed object may go unseen before it is
 	// marked absent. Zero means 30 minutes.
 	AbsentAfter time.Duration `yaml:"absent_after" json:"absent_after"`
+	// MaxObservedAge bounds how old a batch's observed_at may be, per source
+	// kind (the part of the source before the first ':'; "*" is the fallback
+	// for kinds other than user and token). An older batch is rejected with
+	// ErrRejected. Kinds not listed use the defaults below.
+	MaxObservedAge map[string]time.Duration `yaml:"max_observed_age" json:"max_observed_age"`
+}
+
+// Default observed_at windows. API callers (user, token) have no spool, so a
+// batch is observed "now"; collectors and the agent may replay a transport
+// disk spool after an outage (ADR 0008), hence a week.
+const (
+	DefaultMaxObservedAge    = 7 * 24 * time.Hour
+	DefaultAPIMaxObservedAge = 15 * time.Minute
+)
+
+// sourceKind is the part of a source before its first ':'.
+func sourceKind(source string) string {
+	kind, _, _ := strings.Cut(source, ":")
+	return kind
+}
+
+func (p Policy) maxObservedAge(source string) time.Duration {
+	kind := sourceKind(source)
+	if d, ok := p.MaxObservedAge[kind]; ok && d > 0 {
+		return d
+	}
+	switch kind {
+	case "user", "token":
+		return DefaultAPIMaxObservedAge
+	}
+	if d, ok := p.MaxObservedAge["*"]; ok && d > 0 {
+		return d
+	}
+	return DefaultMaxObservedAge
 }
 
 // DefaultAbsentAfter applies when Policy.AbsentAfter is zero.
