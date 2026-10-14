@@ -1,0 +1,48 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": "wan",
+      "if": "igb0",
+      "descr": "WAN",
+      "enable": true,
+      "typev4": "dhcp",
+      "typev6": "none",
+      "ipaddr": "dhcp",
+      "mtu": null,
+      "spoofmac": ""
+    },
+    {
+      "id": "lan",
+      "if": "igb1",
+      "descr": "LAN",
+      "enable": true,
+      "typev4": "staticv4",
+      "ipaddr": "192.0.2.1",
+      "subnet": 24,
+      "typev6": "none",
+      "mtu": null
+    },
+    {
+      "id": "opt1",
+      "if": "igb1.20",
+      "descr": "IOT",
+      "enable": true,
+      "typev4": "staticv4",
+      "ipaddr": "198.51.100.1",
+      "subnet": 25,
+      "typev6": "none"
+    },
+    {
+      "id": "opt2",
+      "if": "igb2",
+      "descr": "SPARE",
+      "enable": false,
+      "typev4": "none",
+      "typev6": "none"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "name": "WAN_GW",
+      "monitorip": "203.0.113.1",
+      "srcip": "203.0.113.50",
+      "status": "delay",
+      "delay": "85.5ms",
+      "stddev": "4.2ms",
+      "loss": "2.5%",
+      "substatus": "highdelay"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": 0,
+      "tracker": 1700000001,
+      "type": "pass",
+      "interface": [
+        "lan"
+      ],
+      "ipprotocol": "inet",
+      "protocol": null,
+      "source": "192.0.2.0/24",
+      "source_port": null,
+      "destination": "any",
+      "destination_port": null,
+      "descr": "Default allow LAN to any",
+      "disabled": false,
+      "floating": false
+    },
+    {
+      "id": 1,
+      "tracker": 1700000002,
+      "type": "block",
+      "interface": [
+        "wan"
+      ],
+      "ipprotocol": "inet",
+      "protocol": "tcp",
+      "source": "any",
+      "destination": "(self)",
+      "destination_port": "22",
+      "descr": "Block SSH from WAN",
+      "disabled": false,
+      "floating": false
+    },
+    {
+      "id": 2,
+      "tracker": 1700000003,
+      "type": "pass",
+      "interface": [
+        "opt1",
+        "lan"
+      ],
+      "ipprotocol": "inet",
+      "protocol": "udp",
+      "source": "198.51.100.0/25",
+      "destination": "192.0.2.53",
+      "destination_port": "53",
+      "descr": "IoT DNS",
+      "disabled": true,
+      "floating": true
+    }
+  ]
+}

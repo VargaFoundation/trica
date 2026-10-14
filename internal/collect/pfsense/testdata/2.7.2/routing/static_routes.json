@@ -1,0 +1,22 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": 0,
+      "network": "198.51.100.128/25",
+      "gateway": "BACKUP_GW",
+      "descr": "Branch office",
+      "disabled": false
+    },
+    {
+      "id": 1,
+      "network": "203.0.113.128/25",
+      "gateway": "BACKUP_GW",
+      "descr": "Old route",
+      "disabled": true
+    }
+  ]
+}

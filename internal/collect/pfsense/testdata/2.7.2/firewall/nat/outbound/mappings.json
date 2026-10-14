@@ -1,0 +1,33 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": 0,
+      "interface": "wan",
+      "protocol": null,
+      "source": "192.0.2.0/24",
+      "destination": "any",
+      "target": "wan:ip",
+      "target_subnet": null,
+      "nonat": false,
+      "descr": "LAN outbound NAT",
+      "disabled": false,
+      "created_time": 1700000200
+    },
+    {
+      "id": 1,
+      "interface": "wan",
+      "protocol": null,
+      "source": "198.51.100.0/25",
+      "destination": "192.0.2.0/24",
+      "target": "",
+      "nonat": true,
+      "descr": "No NAT IoT to LAN",
+      "disabled": false,
+      "created_time": 1700000201
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": 0,
+      "vpnid": 2,
+      "mode": "p2p_tls",
+      "protocol": "UDP4",
+      "interface": "wan",
+      "server_addr": "198.51.100.200",
+      "server_port": 1194,
+      "description": "Site to site",
+      "disabled": true,
+      "tunnel_network": "",
+      "remote_network": "203.0.113.128/25"
+    }
+  ]
+}

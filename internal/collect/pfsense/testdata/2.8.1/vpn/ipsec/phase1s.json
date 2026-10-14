@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": 0,
+      "ikeid": 5,
+      "iketype": "ikev2",
+      "interface": "wan",
+      "remote_gateway": "198.51.100.77",
+      "descr": "To HQ",
+      "disabled": false,
+      "mobile": false
+    }
+  ]
+}

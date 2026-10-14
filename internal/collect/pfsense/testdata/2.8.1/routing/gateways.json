@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": 0,
+      "name": "WAN_GW",
+      "interface": "wan",
+      "ipprotocol": "inet",
+      "gateway": "203.0.113.1",
+      "monitor": "203.0.113.1",
+      "disabled": false,
+      "defaultgw": true,
+      "descr": "Default gateway"
+    }
+  ]
+}

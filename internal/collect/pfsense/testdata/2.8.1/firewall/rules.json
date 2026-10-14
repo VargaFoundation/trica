@@ -1,0 +1,35 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": 0,
+      "tracker": "1750000001",
+      "type": "reject",
+      "interface": "lan",
+      "ipprotocol": "inet",
+      "protocol": "tcp/udp",
+      "source": "any",
+      "destination": "any",
+      "destination_port": "25",
+      "descr": "No outbound SMTP",
+      "disabled": false
+    },
+    {
+      "id": 1,
+      "tracker": "1750000002",
+      "type": "pass",
+      "interface": [
+        "lan"
+      ],
+      "ipprotocol": "inet",
+      "protocol": null,
+      "source": "lan",
+      "destination": "any",
+      "descr": "",
+      "disabled": false
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "vpnid": 1,
+      "name": "Road warriors UDP4:1194",
+      "mode": "server_tls",
+      "status": "server_tls_listening",
+      "conns": [],
+      "mgmt": "server1"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": {
+    "platform": "Netgate 4100",
+    "serial": "FAKE-NG4100-0001",
+    "netgate_id": "fakenetgateid0001",
+    "cpu_model": "Intel(R) Atom(TM) CPU C3338R @ 1.80GHz",
+    "cpu_count": 2,
+    "uptime": "12 Days 03 Hours 04 Minutes 05 Seconds",
+    "cpu_load_avg": [
+      0.12,
+      0.09,
+      0.05
+    ],
+    "mem_usage": 9,
+    "swap_usage": 0,
+    "disk_usage": 4,
+    "temp_c": 41.0
+  }
+}

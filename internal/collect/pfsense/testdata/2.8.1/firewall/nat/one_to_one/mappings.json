@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": 0,
+      "interface": "wan",
+      "external": "203.0.113.60",
+      "source": "192.0.2.60",
+      "destination": "any",
+      "natreflection": "disable",
+      "descr": "Mail server 1:1",
+      "disabled": false,
+      "created_time": 1750000300
+    }
+  ]
+}

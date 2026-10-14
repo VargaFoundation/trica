@@ -1,0 +1,17 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "con_id": "con1",
+      "uniqueid": "1",
+      "version": 2,
+      "state": "ESTABLISHED",
+      "local_host": "203.0.113.18",
+      "remote_host": "198.51.100.201",
+      "child_sas": []
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "name": "wan",
+      "descr": "WAN",
+      "hwif": "igb0",
+      "enable": true,
+      "status": "up",
+      "macaddr": "02:00:00:aa:01:00",
+      "ipaddr": "203.0.113.18",
+      "subnet": "28",
+      "gateway": "203.0.113.17",
+      "media": "1000baseT <full-duplex>",
+      "mtu": "1500",
+      "ipaddrv6": "",
+      "linklocal": "fe80::ff:feaa:100"
+    },
+    {
+      "name": "lan",
+      "descr": "LAN",
+      "hwif": "igb1",
+      "enable": true,
+      "status": "up",
+      "macaddr": "02:00:00:aa:01:01",
+      "ipaddr": "192.0.2.1",
+      "subnet": "24",
+      "media": "2500Base-T <full-duplex>",
+      "mtu": "1500"
+    },
+    {
+      "name": "opt1",
+      "descr": "IOT",
+      "hwif": "igb1.20",
+      "enable": true,
+      "status": "up",
+      "macaddr": "02:00:00:aa:01:01",
+      "ipaddr": "198.51.100.1",
+      "subnet": "25",
+      "mtu": "1500"
+    },
+    {
+      "name": "opt2",
+      "descr": "SPARE",
+      "hwif": "igb2",
+      "enable": false,
+      "status": "no carrier",
+      "macaddr": "02:00:00:aa:01:02",
+      "media": "1000baseT <full-duplex>",
+      "mtu": "1500"
+    }
+  ]
+}

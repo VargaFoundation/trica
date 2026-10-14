@@ -1,0 +1,13 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": {
+    "version": "2.7.2-RELEASE",
+    "patch": "0",
+    "buildtime": "Wed Dec  6 21:00:00 UTC 2023",
+    "lastcommit": "0000000000",
+    "program": "2.7.2"
+  }
+}

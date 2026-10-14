@@ -1,0 +1,30 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": 0,
+      "ikeid": 1,
+      "iketype": "ikev2",
+      "interface": "wan",
+      "remote_gateway": "198.51.100.201",
+      "descr": "To branch",
+      "disabled": false,
+      "mobile": false,
+      "protocol": "inet"
+    },
+    {
+      "id": 1,
+      "ikeid": 2,
+      "iketype": "ikev2",
+      "interface": "wan",
+      "remote_gateway": "",
+      "descr": "Mobile clients",
+      "disabled": false,
+      "mobile": true,
+      "protocol": "inet"
+    }
+  ]
+}
