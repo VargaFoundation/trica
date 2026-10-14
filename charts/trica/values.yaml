@@ -62,6 +62,35 @@ transport:
   # (LoadBalancer or a TLS-passthrough route): list their source here.
   ingressFrom: []
 
+# Collectors run by the server (docs/reference/collectors.md). Off by default.
+# Each target is an entry of the targets file; credentials are references to
+# files mounted from existing Secrets (collect.secrets), never values.
+collect:
+  enabled: false
+  # Inline targets, rendered into the chart's ConfigMap (no secret in them).
+  targets: []
+  #  - kind: arista
+  #    name: sw-a1
+  #    address: https://192.0.2.10
+  #    username: monitor
+  #    password: file:/var/run/secrets/collect/arista/password
+  #    interval: 5m
+  # Alternative: an existing ConfigMap holding the targets file, under
+  # targetsKey (default targets.yaml). Replaces collect.targets.
+  targetsConfigMap: ""
+  targetsKey: targets.yaml
+  # Existing Secrets to mount, each at /var/run/secrets/collect/<name>/ (one
+  # file per key).
+  secrets: []
+  #  - name: arista-credentials
+  kubernetes:
+    # Read-only access for a kubernetes target with address "in-cluster": a
+    # ClusterRole limited to get/list/watch on what the collector reads, bound
+    # to the chart's service account. No Secrets, no ConfigMaps, no write verbs.
+    # Mounts the service account token in the pod (otherwise it is not).
+    rbac:
+      enabled: false
+
 serviceAccount:
   create: true
   name: ""

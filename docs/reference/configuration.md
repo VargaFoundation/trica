@@ -43,6 +43,7 @@ secret does not exist (the UI is a public PKCE client).
 | `deduce.interval` | | `5m` | Time between deduction passes; one replica deduces at a time. |
 | `web.disabled` | | `false` | Leave `/` unmounted. |
 | `web.oidc.client_id` | | none | Public client of the UI; with `issuer` (defaults to `auth.oidc.issuer`), `scopes` and `bearer` (`access_token` or `id_token`), enables "Sign in with SSO" in the browser. |
+| `collect.targets_file` | | none (no collector runs) | Targets the server collects from, on schedule, one replica at a time ([collectors](collectors.md), ADR 0026). A file that does not parse stops the start. |
 | `transport.addr` | `TRICA_TRANSPORT_ADDR` | none (transport off) | Listen address of the mutual-TLS endpoint, a port apart from `http.addr` (ADR 0025). |
 | `transport.ca_dir` | | none, required with `transport.addr` | Directory holding `ca.pem` and `ca-key.pem`, created on first start. Mount a persistent volume: losing the CA un-enrols every agent. |
 | `transport.hosts` | | none, required with `transport.addr` | Names and IPs of the server certificate: what agents dial. |

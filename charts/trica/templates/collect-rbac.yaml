@@ -1,0 +1,41 @@
+{{- if and .Values.collect.enabled .Values.collect.kubernetes.rbac.enabled }}
+# Read-only: what the in-cluster kubernetes collector lists, nothing else. No
+# Secrets, no ConfigMaps, no write verb (collectors never write).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "trica.fullname" . }}-collector
+  labels:
+    {{- include "trica.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: [nodes, namespaces, pods, services]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets, daemonsets, replicasets]
+    verbs: [get, list, watch]
+  - apiGroups: [batch]
+    resources: [jobs, cronjobs]
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch]
+  - apiGroups: [kubevirt.io]
+    resources: [virtualmachineinstances]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "trica.fullname" . }}-collector
+  labels:
+    {{- include "trica.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "trica.fullname" . }}-collector
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "trica.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

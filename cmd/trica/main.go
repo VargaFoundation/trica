@@ -2,6 +2,7 @@
 //
 //	trica server  [--config FILE]   serve the inventory
 //	trica migrate [--config FILE] up|down|status   (down rolls back one step)
+//	trica collector --config FILE   run collectors remotely, sending over mTLS
 //	trica export  write the inventory as JSON or YAML
 //	trica import  submit a JSON or YAML file to the reconciliation engine
 //	trica backup  [--config FILE] (--file F | --dir D)
@@ -56,6 +57,7 @@ commands:
   server   serve the inventory (HTTP, background loops)
   migrate  apply pending migrations (up), roll the latest one back (down)
            or print the schema version (status)
+  collector run collectors at a site the server cannot reach (--config FILE)
   export   write the inventory (objects, attributes, relations) as JSON or YAML
   import   submit a JSON or YAML file to the reconciliation engine
   backup   write a consistent archive of the database (--file F, or --dir D
@@ -89,6 +91,8 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return runToken(ctx, args, stdout, stderr, getenv)
 	case "enrol":
 		return runEnrol(ctx, args, stdout, stderr, getenv)
+	case "collector":
+		return runCollector(ctx, args, stderr, getenv)
 	case "server", "migrate", "backup", "restore":
 	case "help", "-h", "--help":
 		fmt.Fprintln(stdout, usage)

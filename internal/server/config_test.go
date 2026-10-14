@@ -61,9 +61,10 @@ func TestLoadConfigRejects(t *testing.T) {
 	t.Setenv("TRICA_HTTP_ADDR", "")
 	t.Setenv("TRICA_LOG_LEVEL", "")
 	for name, body := range map[string]string{
-		"unknown field": "htp: {addr: x}\n",
-		"bad level":     "log_level: loud\n",
-		"bad duration":  "sweep_interval: often\n",
+		"unknown field":       "htp: {addr: x}\n",
+		"bad level":           "log_level: loud\n",
+		"bad duration":        "sweep_interval: often\n",
+		"unknown collect key": "collect: {targets: x}\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := LoadConfig(writeFile(t, "c.yaml", body)); err == nil {
@@ -73,6 +74,18 @@ func TestLoadConfigRejects(t *testing.T) {
 	}
 	if _, err := LoadConfig(filepath.Join(t.TempDir(), "missing.yaml")); err == nil {
 		t.Fatal("missing file accepted")
+	}
+}
+
+func TestCollectTargetsFile(t *testing.T) {
+	t.Setenv("TRICA_HTTP_ADDR", "")
+	t.Setenv("TRICA_LOG_LEVEL", "")
+	c, err := LoadConfig(writeFile(t, "c.yaml", "collect: {targets_file: /etc/trica/collect/targets.yaml}\n"))
+	if err != nil || c.Collect.TargetsFile != "/etc/trica/collect/targets.yaml" {
+		t.Fatalf("%+v %v", c.Collect, err)
+	}
+	if c, err = LoadConfig(writeFile(t, "d.yaml", "log_level: info\n")); err != nil || c.Collect.TargetsFile != "" {
+		t.Fatalf("collecting must be off by default: %+v %v", c.Collect, err)
 	}
 }
 

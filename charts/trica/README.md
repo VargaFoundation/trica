@@ -31,7 +31,12 @@ No chart or image is published yet; see [getting started](../../docs/getting-sta
 | `podDisruptionBudget.enabled` / `minAvailable` | `false` / `1` | |
 | `resources` | 100m / 128Mi requested, 512Mi limit | |
 | `podSecurityContext`, `securityContext` | non-root 65532, read-only root, no capabilities, RuntimeDefault seccomp | |
-| `serviceAccount.create` / `name` / `annotations` | `true` / `""` / `{}` | The token is not mounted: the server does not call the Kubernetes API. |
+| `serviceAccount.create` / `name` / `annotations` | `true` / `""` / `{}` | The token is not mounted, except with `collect.kubernetes.rbac.enabled`. |
+| `collect.enabled` | `false` | The server runs collectors on schedule ([reference](../../docs/reference/collectors.md)). Needs `collect.targets` or `collect.targetsConfigMap`. |
+| `collect.targets` | `[]` | Targets, rendered into the chart ConfigMap as the targets file. Credentials are `file:` references, never values. |
+| `collect.targetsConfigMap` / `targetsKey` | `""` / `targets.yaml` | An existing ConfigMap holding the targets file instead of `collect.targets`. |
+| `collect.secrets` | `[]` | Existing Secrets to mount at `/var/run/secrets/collect/<name>/` (one file per key), for targets' `file:` references. |
+| `collect.kubernetes.rbac.enabled` | `false` | ClusterRole and binding, read-only (`get`/`list`/`watch`, no Secrets, no ConfigMaps), for a `kubernetes` target with address `in-cluster`; mounts the service account token. |
 | `backup.enabled` | `false` | Renders the backup CronJob below. |
 | `backup.schedule` | `17 2 * * *` | Cron schedule. |
 | `backup.existingClaim` | `""` (required when enabled) | PersistentVolumeClaim receiving the archives. |
@@ -56,6 +61,27 @@ Whoever may `kubectl exec` into the pod already has the database URL, so limit t
 cluster RBAC ([security](../../docs/reference/security.md#minting-the-first-token)). The server
 must have started once (it migrates). `kubectl exec` without `-t` keeps stdout and stderr apart,
 so `$(…)` captures the token only. No chart change is needed.
+
+## Collectors
+
+With `collect.enabled`, the server collects from the listed targets (one replica at a time: the
+others wait on an advisory lock). Devices are reached from the server pod: with
+`networkPolicy.egressTo` set, list them there. Example, an Arista switch whose password lives in a
+Secret you created (`kubectl create secret generic arista-credentials --from-file=password`):
+
+```yaml
+collect:
+  enabled: true
+  secrets: [{name: arista-credentials}]
+  targets:
+    - kind: arista
+      name: sw-a1
+      address: https://192.0.2.10
+      username: monitor
+      password: file:/var/run/secrets/collect/arista-credentials/password
+```
+
+For devices the cluster cannot reach, run `trica collector` next to them instead.
 
 ## Backup
 
