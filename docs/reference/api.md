@@ -67,6 +67,9 @@ type Auditor interface {
   then `Allow(p, action, type, site)` for each object it reads or writes. An empty `site` means
   unknown: a grant limited to sites must not match it. The site of an object is found through its
   parents, or for a device the rack it is mounted in; an object in two sites is unknown.
+- A batch is checked on every object it touches: its objects, and the two ends of each relation
+  and unrelation (parents included). An end designated by id counts with the type and site stored
+  for that id, not the type the caller wrote. A denied end is a 403, like a denied object.
 - Actions: `read`, `propose`, `approve`, `admin`.
 - Every mutating call is recorded once with its outcome (`ok`, `denied`, `error`): batch
   submission, proposal approval and rejection, discrepancy acceptance, saved-query creation and
@@ -110,6 +113,9 @@ size of the whole result for the caller, not of the page. Lists that are post-fi
   variants) is removed from objects, history, search results, discrepancies and proposals, and
   cannot be queried, sorted on or written. The rule is on the name, so it over-approximates on
   purpose; a test checks that no built-in attribute trips it.
+- No id of an object the caller may not read, in the change feed: a relation change on a readable
+  object stays in `/changes`, but its `other_id` is blank when the caller may not read the other
+  end (by type or by site). The change is kept, only the id is redacted.
 - A caller who cannot read all types does not learn object ids from a batch result: `objects` and
   `touched` are empty for them.
 - Error answers do not carry driver or panic messages; the access log has no query string and

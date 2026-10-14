@@ -96,11 +96,45 @@ func (c *call) readableTypes() (types []string, all bool) {
 	return types, len(types) == len(reg.Types)
 }
 
-// batchTypes returns the distinct object types of a batch, sorted.
+// batchEndpoints returns every endpoint a batch's relations and unrelations
+// point at, parents included.
+func batchEndpoints(b *sdk.Batch) []sdk.Endpoint {
+	var out []sdk.Endpoint
+	var add func(e sdk.Endpoint)
+	add = func(e sdk.Endpoint) {
+		out = append(out, e)
+		if e.Parent != nil {
+			add(*e.Parent)
+		}
+	}
+	for _, r := range b.Relations {
+		if r != nil {
+			add(r.From)
+			add(r.To)
+		}
+	}
+	for _, r := range b.Unrelations {
+		if r != nil {
+			add(r.From)
+			add(r.To)
+		}
+	}
+	return out
+}
+
+// batchTypes returns the distinct object types of a batch, sorted: those of
+// its objects and those the relations and unrelations point at. An endpoint
+// designated by ref has the type of the batch object it names (already in the
+// set); one designated by identity carries its own type.
 func batchTypes(b *sdk.Batch) []string {
 	set := map[string]bool{}
 	for _, o := range b.Objects {
 		set[o.Type] = true
+	}
+	for _, e := range batchEndpoints(b) {
+		if e.Ref == "" && e.Type != "" {
+			set[e.Type] = true
+		}
 	}
 	out := make([]string, 0, len(set))
 	for t := range set {

@@ -91,7 +91,8 @@ func (c *call) bindBatch() (b *sdk.Batch, claimed string, err error) {
 
 // checkBatch applies the rules that do not need the engine: no secret is
 // written, types exist, and the caller holds each action on every type the
-// batch touches (and on the existing objects it designates by id).
+// batch touches (objects, and the ends of relations and unrelations) and on
+// the existing objects it designates by id.
 func (c *call) checkBatch(b *sdk.Batch, actions ...string) error {
 	if k := sensitiveInBatch(b); k != "" {
 		return newErr(http.StatusBadRequest, "secret-attribute",
@@ -113,6 +114,17 @@ func (c *call) checkBatch(b *sdk.Batch, actions ...string) error {
 	for _, o := range b.Objects {
 		if id := o.Identity[sdk.IDKey]; id != "" {
 			id, err := parseUUID(id, "an object identity id")
+			if err != nil {
+				return err
+			}
+			ids = append(ids, id)
+		}
+	}
+	// Likewise the objects a relation or unrelation designates by id: the
+	// type stored for the id counts, not the one the caller wrote.
+	for _, e := range batchEndpoints(b) {
+		if id := e.Identity[sdk.IDKey]; e.Ref == "" && id != "" {
+			id, err := parseUUID(id, "an endpoint identity id")
 			if err != nil {
 				return err
 			}
