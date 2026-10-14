@@ -1,5 +1,5 @@
 # gitleaks: the default rules. Test fixtures are anonymised before they are
-# committed (see test/fixtures/README.md); an allowlist entry here must name a
+# committed (see each package's testdata/README.md); an allowlist entry must name a
 # path and say why, never a commit fingerprint, which breaks on the next edit.
 title = "trica"
 

@@ -30,7 +30,9 @@ pull requests, issues.
 - **Collectors are read-only.** A collector never writes to a device, whatever the protocol
   allows. A collector that needs a write is a design error.
 - **Fakes are mandatory**: every integration has a `Fake*` serving recorded, anonymised
-  responses (`test/fixtures/`), so that tests and the simulated lab never need real equipment.
+  responses from its package's `testdata/` directory, so that tests and the simulated lab never
+  need real equipment. That directory has a `README.md` saying, per file, whether it was
+  recorded or synthesised, from which version, and what was anonymised.
 - **No secret in code, fixtures or logs.** Device credentials are references (a Kubernetes
   Secret, a file); the API never returns them. Fixtures are anonymised before commit.
 - Logs are JSON (`log/slog`), with the keys `source`, `collector`, `target`, `object_id` when
