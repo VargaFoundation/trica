@@ -53,6 +53,12 @@ export function mockApi(routes: Record<string, Handler>) {
   const unmatched: string[] = [];
   const spy = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, "http://localhost");
+    // The page asks the server for its start-up settings before anything else;
+    // unless a test declares "GET /ui-config.json", there is no single sign-on
+    // and the request is not part of what the test counts.
+    if (url.pathname === "/ui-config.json" && !("GET /ui-config.json" in routes)) {
+      return Promise.resolve(new Response(JSON.stringify({ oidc: null }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    }
     const call: Call = {
       method: init?.method ?? "GET",
       path: url.pathname.replace(/^\/api\/v1/, ""),

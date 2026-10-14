@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { api } from "../api/endpoints";
 import type { Change, ObjectView, Provenance, ProvenanceEntry, RelationView } from "../api/types";
 import { Async, ErrorBox } from "../components/Async";
@@ -31,6 +31,16 @@ function ObjectDetail({ obj }: { obj: ObjectView }) {
   return (
     <>
       <h1>{obj.display}</h1>
+      {obj.type === "rack" ? (
+        <p>
+          <Link to={`/racks/${encodeURIComponent(obj.id)}`}>{t("object.openElevation")}</Link>
+        </p>
+      ) : null}
+      {obj.type === "room" ? (
+        <p>
+          <Link to={`/rooms/${encodeURIComponent(obj.id)}`}>{t("object.openFloorPlan")}</Link>
+        </p>
+      ) : null}
       <dl className="facts">
         <div>
           <dt>{t("object.type")}</dt>

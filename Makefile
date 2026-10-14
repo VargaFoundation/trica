@@ -94,6 +94,10 @@ web-build:  ## Build the UI into internal/web/dist (what -tags webui embeds)
 web-embed-test:  ## Go tests of the handler against the real build (needs web-build first)
 	$(GO) test -tags webui -count=1 ./internal/web
 
+.PHONY: web-e2e
+web-e2e:  ## Playwright (Chromium) against cmd/trica-e2e-server; needs web-build and `npm --prefix web run e2e:install` once
+	cd $(WEB_DIR) && npx playwright test
+
 .PHONY: web-api-update
 web-api-update:  ## Re-export web/openapi.json from the Go API, then regenerate the types
 	TRICA_UPDATE_OPENAPI=1 $(GO) test ./internal/api -run TestWebOpenAPISnapshotIsCurrent

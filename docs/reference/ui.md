@@ -1,7 +1,7 @@
 # Web UI
 
 A single-page application in `web/` (React 19, TypeScript strict, Vite, react-router 7, TanStack
-Query 5), served by `internal/web`. Structural choices: ADR 0018. This page is what a user, a
+Query 5), served by `internal/web`. Structural choices: ADR 0018 and ADR 0019. This page is what a user, a
 developer and an operator need; when it and the code disagree, the code wins.
 
 ## What it shows
@@ -14,6 +14,8 @@ developer and an operator need; when it and the code disagree, the code wins.
 | `/discrepancies?status=&kind=&offset=` | Declared against observed; open by default |
 | `/proposals?status=&offset=` | Proposals waiting for a decision (pending by default); `/proposals/<id>` shows the preview of what it would change |
 | `/health` | Last run of each source, failing sources first |
+| `/rooms`, `/rooms/<id>` | Every room; the floor plan of one room (SVG, racks on a grid of 600 mm tiles, the bar on a rack is its front) with a table of its racks. Racks stand in the room directly or through a row |
+| `/racks/<id>` | Front and rear elevations of one rack (SVG, U 1 at the bottom) with free units, a table of what is mounted, and the devices mounted without a position. Opened from the floor plan, from a rack's object page, or from the room page |
 
 Every address is a deep link: filters, the open type and the page are in the URL, and the
 application answers any of them (the server returns the shell for client routes). The search field
@@ -21,6 +23,22 @@ reads its query from the address on `/search`.
 
 The query is the language of `docs/reference/tql.md`: free text (exact first, typo-tolerant when
 nothing matches) or `type:device vendor:arista os_version<4.20`.
+
+### Racks and rooms: what the drawing relies on
+
+From the schema as it is (`internal/schema/builtin.yaml`): the `mounted_in` relation carries
+`position` (U of the lowest unit, 1 = bottom) and `face` (`front`, `rear`); the device's model
+(`device_type`, through `instance_of`) carries `u_height` and `full_depth`; the rack carries
+`u_height`, `floor_x`, `floor_y` (tiles) and `facing`; the room carries `width_mm`, `depth_mm`.
+
+- A **full-depth** device is drawn on its face and as a dashed shadow on the other; it blocks both.
+- What the data does not say is shown, never hidden: no rack height means 42 U assumed (with a
+  note), no device height means 1 U, no face means front, no position lists the device apart.
+- A device that overlaps another on the same face, or sticks out of the rack, has a red outline, a
+  `!` and a note in the table; two racks on one tile, or racks outside the room's size, are flagged.
+- Known limits: one request per mounted device to learn its model (finding #42); the 600 mm tile is
+  an assumption the schema does not define (finding #43); at most 1000 relations per rack and 1000
+  racks per room are read (the page says when it is cut).
 
 ## Keyboard and accessibility
 
@@ -37,15 +55,28 @@ nothing matches) or `type:device vendor:arista os_version<4.20`.
   from the browser. Object and attribute labels come from the schema (`label.fr`).
 - Checked in the tests: axe-core (WCAG 2.0, 2.1, 2.2 A and AA rules and best practices) on every
   page and on the interactive states, and the contrast ratio of every colour pair of both themes
-  computed from the tokens in `src/styles/tokens.css`. **Not checked**: rendered contrast, real
-  screen readers, phone layout in a real browser.
+  computed from the tokens in `src/styles/tokens.css`. In a real browser (Playwright, below) axe
+  also checks rendered contrast on every page, in English and French. **Not checked**: real screen
+  readers, phone layout, browsers other than Chromium.
 
 ## Signing in and permissions
 
 The API takes bearer credentials only. The UI asks for one (an API token `trica_<id>_<secret>` or
 an OIDC access token), keeps it in memory and in `sessionStorage` (gone when the tab closes), and
 sends it as `Authorization: Bearer`. A 401 drops it and returns to the form. Cookies are not
-used (`credentials: "omit"`). The browser OIDC login flow is not part of this slice.
+used (`credentials: "omit"`).
+
+**Single sign-on** (ADR 0019) appears when the server is configured with an OIDC provider: the
+browser is a public client doing the authorisation code flow with PKCE (S256), with no client
+secret. The API still verifies the bearer token itself. The page learns the provider from
+`GET /ui-config.json` (`{"oidc": {"issuer", "client_id", "scopes", "bearer"}}` or `{"oidc": null}`;
+unauthenticated, `no-store`, nothing secret). The pasted-token form stays below the SSO button.
+
+Register in the provider (Keycloak): a **public** client (client authentication off), standard flow
+on, PKCE method `S256`, valid redirect URI **`https://<host>/oidc/callback`**, and the UI's origin
+under *Web origins* (the page calls the discovery and token endpoints itself). `bearer` is
+`access_token` (default) or `id_token`: the API checks the audience of whichever is sent, so with
+Keycloak either add an audience mapper to the access token or choose `id_token`.
 
 `GET /api/v1/me` returns the actions the caller holds (`read`, `propose`, `approve`, `admin`). The
 UI shows **Approve** and **Reject** only to a caller who holds `approve`, only on pending
@@ -74,6 +105,7 @@ generated schemas; they are written by hand, not recorded from a server.
 | `make web-install` | `npm ci` from the lockfile |
 | `make web` | install, lint, typecheck, generated-types check, tests, build, Go tests on the build |
 | `make web-lint`, `web-typecheck`, `web-test`, `web-build`, `web-audit` | One step each |
+| `make web-e2e` | Playwright (Chromium) on every page against `cmd/trica-e2e-server`; needs `make web-build` and, once, `npm --prefix web run e2e:install` (the `e2e` CI job does both) |
 | `npm --prefix web run dev` | Vite dev server; `/api` is proxied to `TRICA_API` (default `http://127.0.0.1:8080`) |
 
 Node 20.19 or newer (CI and the image use 22.23.3). `make web-build` writes `internal/web/dist`.
@@ -81,7 +113,9 @@ Node 20.19 or newer (CI and the image use 22.23.3). `make web-build` writes `int
 ## Serving it (`internal/web`)
 
 `web.New(fsys)` / `web.Default()` return an `http.Handler` for the server to mount at `/` (it is
-not wired into a binary in this PR).
+not wired into a binary yet); `web.NewWithConfig` / `web.DefaultWithConfig(web.Config{OIDC: ...})`
+also serve `GET /ui-config.json` and add the issuer's origin to `connect-src`. An invalid
+configuration is an error at start-up.
 
 | Request | Answer |
 |---|---|
@@ -89,13 +123,14 @@ not wired into a binary in this PR).
 | `/assets/<name>-<hash>.<ext>` | The file, `Cache-Control: public, max-age=31536000, immutable` |
 | Another existing file (`/favicon.svg`) | The file, `no-cache`, ETag |
 | `/api`, `/api/...`, a missing file with an extension, a missing `/assets/...` | 404, never the shell (a stale hashed asset must fail, not load HTML as a script) |
+| `/ui-config.json` | The sign-in configuration, JSON, `no-store`, no authentication |
 | Methods other than GET and HEAD | 405 |
 
 Every response carries `Content-Security-Policy: default-src 'none'; script-src 'self'; style-src
 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none';
 form-action 'none'; frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `X-Frame-Options:
 DENY`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy` and same-origin
-opener/resource policies. The application therefore uses no inline script or style, no web font
+opener/resource policies (with SSO configured, `connect-src` also lists the issuer's origin). The application therefore uses no inline script or style, no web font
 and no remote origin; the tests enforce it.
 
 Two builds: without a tag the binary embeds `internal/web/placeholder/index.html` (a page that says
@@ -103,8 +138,17 @@ the UI is not built in; `web.Built` is false); `go build -tags webui` embeds the
 Dockerfile builds the UI in a Node stage and compiles with the tag, so the image ships the UI on
 distroless.
 
+## Browser tests (`web/e2e`)
+
+`make web-e2e` runs Playwright (Chromium only) against `cmd/trica-e2e-server`: the real `internal/web`
+handler with the built UI, a read-only mock of `/api/v1` over an invented inventory, and a fake
+OpenID provider on one self-signed TLS origin (`https://127.0.0.1:18443`, `TRICA_E2E_PORT` changes
+it). The specs cover every page in English (and a rack page in French) with `@axe-core/playwright`
+(WCAG 2.0 to 2.2 A and AA, contrast included), the full SSO flow with the provider verifying PKCE,
+forged and refused callbacks, the pasted-token fallback, the CSP and `/ui-config.json`, rack
+drawing, and the render time of a 48 U rack with 96 devices (budget: under one second).
+
 ## Not in this version
 
-Rack elevations, floor plan, L2 topology (Cytoscape + ELK), PNG/PDF export, the browser OIDC flow,
-saved queries, history ("which device had this address on 3 March"), end-to-end tests in a real
-browser (Playwright).
+L2 topology (Cytoscape + ELK), PNG/PDF export, saved queries, history ("which device had this
+address on 3 March"), a rack-contents endpoint (finding #42), a defined floor tile (finding #43).

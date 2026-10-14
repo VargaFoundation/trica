@@ -19,6 +19,8 @@ export default defineConfig({
     proxy: { "/api": process.env.TRICA_API ?? "http://127.0.0.1:8080" },
   },
   test: {
+    // The Playwright specs in e2e/ run with `npm run e2e`, not here.
+    include: ["src/**/*.test.{ts,tsx}"],
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],

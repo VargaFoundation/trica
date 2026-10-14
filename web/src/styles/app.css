@@ -451,3 +451,86 @@ tr[data-ok="false"] {
     animation: none !important;
   }
 }
+
+/* ---- racks and floor plans ---- */
+.rack-faces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+.rack-face,
+.floor-plan {
+  margin: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.rack-face figcaption,
+.floor-plan figcaption {
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+.rack-svg,
+.floor-svg {
+  max-width: 100%;
+  height: auto;
+  font: 11px/1 system-ui, sans-serif;
+}
+.rack-frame,
+.floor-room {
+  fill: var(--surface);
+  stroke: var(--input-border);
+  stroke-width: 1.5;
+}
+.rack-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.rack-u {
+  fill: var(--muted);
+  font-size: 9px;
+}
+.rack-slot rect,
+.floor-rack rect {
+  fill: var(--blue-bg);
+  stroke: var(--blue-fg);
+  stroke-width: 1;
+}
+.rack-slot text,
+.floor-rack text {
+  fill: var(--blue-fg);
+  font-weight: 600;
+}
+a.rack-slot:hover rect,
+a.rack-slot:focus-visible rect,
+a.floor-rack:hover rect,
+a.floor-rack:focus-visible rect {
+  stroke-width: 3;
+}
+a.rack-slot:focus-visible,
+a.floor-rack:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.rack-shadow rect {
+  fill: var(--gray-bg);
+  stroke: var(--gray-fg);
+  stroke-dasharray: 4 3;
+}
+.rack-shadow text {
+  fill: var(--gray-fg);
+  font-weight: 400;
+}
+.rack-problem rect {
+  fill: var(--red-bg);
+  stroke: var(--red-fg);
+  stroke-width: 2;
+}
+.rack-problem text {
+  fill: var(--red-fg);
+}
+.floor-front {
+  stroke: var(--blue-fg);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
