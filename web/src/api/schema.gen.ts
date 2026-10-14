@@ -398,6 +398,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The current relations of some types across the inventory, both ends named (the bulk read behind topology views). A relation is listed only if the caller may read both ends.
+         * @description Requires the "read" action.
+         */
+        get: operations["listRelations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/saved-queries": {
         parameters: {
             query?: never;
@@ -3334,6 +3354,13 @@ export interface components {
             total: number;
             truncated?: boolean;
         };
+        PageRelationLink: {
+            items: components["schemas"]["RelationLink"][];
+            limit: number;
+            offset: number;
+            total: number;
+            truncated?: boolean;
+        };
         PageRelationView: {
             items: components["schemas"]["RelationView"][];
             limit: number;
@@ -3432,6 +3459,30 @@ export interface components {
             label: components["schemas"]["Label"];
             name: string;
             to: string[];
+        };
+        RelationEnd: {
+            display: string;
+            id: string;
+            parent_id?: string;
+            site_id?: string;
+            type: string;
+        };
+        RelationLink: {
+            attributes?: {
+                [key: string]: unknown;
+            };
+            confidence: string;
+            from: components["schemas"]["RelationEnd"];
+            from_id: string;
+            id: number;
+            source: string;
+            to: components["schemas"]["RelationEnd"];
+            to_id: string;
+            type: string;
+            /** Format: date-time */
+            valid_from: string;
+            /** Format: date-time */
+            valid_to?: string;
         };
         RelationView: {
             attributes?: {
@@ -4243,6 +4294,37 @@ export interface operations {
             };
             500: components["responses"]["Problem500"];
             503: components["responses"]["Problem503"];
+        };
+    };
+    listRelations: {
+        parameters: {
+            query: {
+                /** @description Relation types, comma separated (at most 8), e.g. cabled_to,connects,neighbor_of. */
+                type: string;
+                /** @description Page size, 1 to 1000 (default 50). */
+                limit?: number;
+                /** @description Items to skip (default 0). */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageRelationLink"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            500: components["responses"]["Problem500"];
         };
     };
     listSavedQueries: {

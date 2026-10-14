@@ -19,6 +19,7 @@ auth PR). `api.New(Config)` returns a `*Server`; `Handler()` serves paths under 
 | `GET /health/collection` | read | Last run of every source |
 | `GET /schema`, `GET /schema/types/{type}` | read | Types, attributes, relation types (built-in and overlay) |
 | `GET /objects` | read | List, with `q` (TQL), `type`, `sort`. Pages |
+| `GET /relations` | read | The current relations of some types across the inventory, both ends named (`from`, `to`: id, type, display, parent, site). `type` is required: a comma list of at most 8 registered relation types. Listed only if the caller may read both ends. Pages, ordered by id; scans at most 5,000 candidates. Built for views that need the links in bulk (the topology page) |
 | `GET /objects/{id}` | read | One object; `at=<RFC 3339>` for the state at a date |
 | `GET /objects/{id}/provenance` | read | Source, confidence and age of each attribute |
 | `GET /objects/{id}/history` | read | Values over time; `key` restricts to one attribute |
@@ -104,7 +105,7 @@ A panic in a handler is a 500 problem; the process keeps serving.
 Every list answers `{"items": [...], "total": N, "limit": N, "offset": N}`. `limit` is 1 to 1000
 (default 50), `offset` is 0 or more; anything else is a 400, never a silent clamp. `total` is the
 size of the whole result for the caller, not of the page. Lists that are post-filtered by rights
-(`/changes`, `/whohad`, history, relations, discrepancies) scan at most 5,000 candidates (200 for
+(`/changes`, `/whohad`, `/relations`, history, relations, discrepancies) scan at most 5,000 candidates (200 for
 `/whohad`) and say `truncated: true` when the cap was hit.
 
 ## What the API never returns

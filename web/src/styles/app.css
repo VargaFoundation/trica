@@ -534,3 +534,69 @@ a.floor-rack:focus-visible {
   stroke-width: 4;
   stroke-linecap: round;
 }
+
+/* ---- topology and exports ---- */
+.topology-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: flex-end;
+  margin-bottom: 0.75rem;
+}
+.topology-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.topology-filters fieldset {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  gap: 1rem;
+  padding: 0.3rem 0.75rem;
+}
+.topology-filters label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+}
+.topology-filters .hint {
+  flex-basis: 100%;
+  margin: 0;
+}
+.topology-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.5rem;
+  padding: 0;
+  margin: 0.5rem 0;
+}
+.topology-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+/* The drawing is on its own white paper in both themes: the exported image is the screen's. */
+/* The rule cytoscape would inject as an inline style, which the page's policy refuses (see claimCytoscapeStyle). */
+.__________cytoscape_container {
+  position: relative;
+}
+.topology-canvas {
+  background: #ffffff;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  height: min(70vh, 640px);
+  min-height: 320px;
+  width: 100%;
+}
+.export-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.75rem 0;
+}
+.export-status {
+  color: var(--muted);
+}

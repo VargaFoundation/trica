@@ -153,6 +153,25 @@ type RelationView struct {
 	Other     ObjectRef `json:"other"`
 }
 
+// RelationEnd is one end of a relation listed in bulk: the object, and where
+// it stands, so that a client can group without one more request per object.
+type RelationEnd struct {
+	ID      string `json:"id"`
+	Type    string `json:"type"`
+	Display string `json:"display"`
+	// ParentID is the object's parent (an interface's device).
+	ParentID string `json:"parent_id,omitempty"`
+	// SiteID is the site the object is in, when it has exactly one.
+	SiteID string `json:"site_id,omitempty"`
+}
+
+// RelationLink is a relation with both of its ends named.
+type RelationLink struct {
+	store.Relation
+	From RelationEnd `json:"from"`
+	To   RelationEnd `json:"to"`
+}
+
 // ChangeView is a change with its object's rights already checked.
 type ChangeView = store.Change
 

@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { ApiError } from "./api/client";
 import { AuthGate } from "./auth";
 import { takeLanding } from "./auth/oidc";
 import { Layout } from "./components/Layout";
-import { I18nProvider, type Locale } from "./i18n";
+import { I18nProvider, useI18n, type Locale } from "./i18n";
 import { DiscrepanciesPage } from "./pages/DiscrepanciesPage";
 import { HealthPage } from "./pages/HealthPage";
 import { HomePage } from "./pages/HomePage";
@@ -16,6 +16,27 @@ import { SearchPage } from "./pages/SearchPage";
 import { RackPage } from "./racks/RackPage";
 import { RoomPage, RoomsPage } from "./racks/RoomPages";
 import { ThemeProvider, type ThemePreference } from "./theme";
+
+// The topology page carries cytoscape and the ELK layout engine (about 1.5 MB):
+// a separate chunk, fetched when the page is opened, not on every visit.
+const TopologyPage = lazy(() =>
+  import("./topology/TopologyPage").then((m) => ({ default: m.TopologyPage })),
+);
+
+function Lazy({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
+  return (
+    <Suspense
+      fallback={
+        <p role="status" className="loading">
+          {t("app.loading")}
+        </p>
+      }
+    >
+      {children}
+    </Suspense>
+  );
+}
 
 export function makeQueryClient(): QueryClient {
   return new QueryClient({
@@ -58,7 +79,7 @@ function AfterSignIn() {
   return <Navigate to={to} replace />;
 }
 
-/** Every page has its own address: /objects/:id, /search?q=, /discrepancies, /proposals/:id, /health. */
+/** Every page has its own address: /objects/:id, /search?q=, /discrepancies, /proposals/:id, /topology, /health. */
 export function App() {
   return (
     <AuthGate>
@@ -73,6 +94,14 @@ export function App() {
           <Route path="rooms" element={<RoomsPage />} />
           <Route path="rooms/:id" element={<RoomPage />} />
           <Route path="racks/:id" element={<RackPage />} />
+          <Route
+            path="topology"
+            element={
+              <Lazy>
+                <TopologyPage />
+              </Lazy>
+            }
+          />
           <Route path="health" element={<HealthPage />} />
           <Route path="oidc/callback" element={<AfterSignIn />} />
           <Route path="*" element={<NotFoundPage />} />

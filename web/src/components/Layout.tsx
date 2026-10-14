@@ -35,6 +35,7 @@ export function Layout() {
         <nav aria-label={t("nav.main")} className="app-nav">
           <NavLink to="/discrepancies">{t("nav.discrepancies")}</NavLink>
           <NavLink to="/rooms">{t("nav.rooms")}</NavLink>
+          <NavLink to="/topology">{t("nav.topology")}</NavLink>
           <NavLink to="/proposals">{t("nav.proposals")}</NavLink>
           <NavLink to="/health">{t("nav.health")}</NavLink>
         </nav>

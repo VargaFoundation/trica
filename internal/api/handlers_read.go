@@ -405,7 +405,20 @@ func otherEnd(r store.Relation, self string) string {
 // visibleRefs loads the objects with these ids and keeps the ones the caller
 // may read (type and site checked).
 func (c *call) visibleRefs(ids []string) (map[string]ObjectRef, error) {
-	out := map[string]ObjectRef{}
+	ends, err := c.visibleEnds(ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]ObjectRef, len(ends))
+	for id, e := range ends {
+		out[id] = ObjectRef{ID: e.ID, Type: e.Type, Display: e.Display}
+	}
+	return out, nil
+}
+
+// visibleEnds is visibleRefs with the parent and the site of each object.
+func (c *call) visibleEnds(ids []string) (map[string]RelationEnd, error) {
+	out := map[string]RelationEnd{}
 	if len(ids) == 0 {
 		return out, nil
 	}
@@ -423,10 +436,64 @@ func (c *call) visibleRefs(ids []string) (map[string]ObjectRef, error) {
 	}
 	for _, o := range objs {
 		if c.s.auth.Allow(c.p, ActionRead, o.Type, sites[o.ID]) {
-			out[o.ID] = ObjectRef{ID: o.ID, Type: o.Type, Display: o.Display}
+			e := RelationEnd{ID: o.ID, Type: o.Type, Display: o.Display, SiteID: sites[o.ID]}
+			if o.ParentID != nil {
+				e.ParentID = *o.ParentID
+			}
+			out[o.ID] = e
 		}
 	}
 	return out, nil
+}
+
+// maxRelationTypes bounds the type list of a bulk relation read.
+const maxRelationTypes = 8
+
+// hRelations lists the current relations of some types across the inventory,
+// with both ends named. A relation is listed only when the caller may read
+// both of its ends, like the relations of one object.
+func (s *Server) hRelations(c *call) error {
+	pp, err := parsePage(c.r)
+	if err != nil {
+		return err
+	}
+	raw := c.r.URL.Query().Get("type")
+	if raw == "" {
+		return badRequest("type is required: one or more relation types, comma separated")
+	}
+	names := strings.Split(raw, ",")
+	if len(names) > maxRelationTypes {
+		return badRequest("type lists at most %d relation types", maxRelationTypes)
+	}
+	reg := s.registry()
+	for i, n := range names {
+		names[i] = strings.TrimSpace(n)
+		if _, ok := reg.Relations[names[i]]; !ok {
+			return badRequest("%q is not a relation type of the registry", names[i])
+		}
+	}
+	rels, err := s.st.CurrentRelationsOfTypes(c.ctx(), names, maxScan)
+	if err != nil {
+		return err
+	}
+	rels = redactRelations(rels)
+	ids := make([]string, 0, 2*len(rels))
+	for _, r := range rels {
+		ids = append(ids, r.FromID, r.ToID)
+	}
+	ends, err := c.visibleEnds(ids)
+	if err != nil {
+		return err
+	}
+	out := []RelationLink{}
+	for _, r := range rels {
+		from, okF := ends[r.FromID]
+		to, okT := ends[r.ToID]
+		if okF && okT {
+			out = append(out, RelationLink{Relation: r, From: from, To: to})
+		}
+	}
+	return c.json(200, pageOf(out, pp, len(rels) >= maxScan))
 }
 
 // changeParams reads from and to; from is required for the global feed.
