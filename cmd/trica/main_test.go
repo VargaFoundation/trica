@@ -158,10 +158,11 @@ func TestBackupRestoreCommands(t *testing.T) {
 	}
 	out, err := runCmd(t, "backup", "--dir", dir)
 	var v int
-	if err != nil || !strings.Contains(out, "schema version ") {
+	_, after, found := strings.Cut(out, "schema version ")
+	if err != nil || !found {
 		t.Fatalf("backup: %q %v", out, err)
 	}
-	if _, err := fmt.Sscanf(out[strings.Index(out, "schema version "):], "schema version %d", &v); err != nil || v < 1 {
+	if _, err := fmt.Sscanf(after, "%d", &v); err != nil || v < 1 {
 		t.Fatalf("backup: no schema version in %q", out)
 	}
 	files, _ := filepath.Glob(dir + "/trica-*.dump")
