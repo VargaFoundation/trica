@@ -137,6 +137,22 @@ jobs:
       - run: docker build --build-arg VERSION=ci -t trica:ci .
       - run: test "$(docker run --rm trica:ci version)" = ci
       - run: TRICA_DB_PASSWORD=ci docker compose -f deploy/compose/compose.yaml config --quiet
+      - name: the compose install serves a ready server
+        # The getting-started path, end to end: PostgreSQL starts, trica
+        # migrates and answers /readyz. The elapsed time is printed, not
+        # asserted: a runner is not the operator's machine.
+        env:
+          TRICA_DB_PASSWORD: ci
+          TRICA_IMAGE: trica:ci
+        run: |
+          t0=$(date +%s)
+          docker compose -f deploy/compose/compose.yaml -p trica-ci up -d --no-build --wait --wait-timeout 300
+          curl -fsS --retry 60 --retry-delay 2 --retry-all-errors http://127.0.0.1:8080/readyz
+          curl -fsS http://127.0.0.1:8080/metrics | grep -q 'trica_build_info{version="ci"} 1'
+          echo "ready after $(( $(date +%s) - t0 ))s"
+      - name: compose logs on failure
+        if: failure()
+        run: TRICA_DB_PASSWORD=ci docker compose -f deploy/compose/compose.yaml -p trica-ci logs
 
   secrets:
     # A committed secret cannot be taken back: it is already in the history.
