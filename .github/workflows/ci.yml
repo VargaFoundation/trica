@@ -82,7 +82,10 @@ jobs:
           sudo apt-get install -y postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y postgresql-client-17
-          pg_dump --version
+          # The postgresql-common wrappers on PATH may pick another major
+          # version for pg_restore: use the 17 binaries directly.
+          echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
+          /usr/lib/postgresql/17/bin/pg_dump --version
       - run: make vet
       - run: make test-cov
       - uses: actions/upload-artifact@v7
