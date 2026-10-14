@@ -157,15 +157,19 @@ func TestBackupRestoreCommands(t *testing.T) {
 		}
 	}
 	out, err := runCmd(t, "backup", "--dir", dir)
-	if err != nil || !strings.Contains(out, "schema version 1") {
+	var v int
+	if err != nil || !strings.Contains(out, "schema version ") {
 		t.Fatalf("backup: %q %v", out, err)
+	}
+	if _, err := fmt.Sscanf(out[strings.Index(out, "schema version "):], "schema version %d", &v); err != nil || v < 1 {
+		t.Fatalf("backup: no schema version in %q", out)
 	}
 	files, _ := filepath.Glob(dir + "/trica-*.dump")
 	if len(files) != 1 {
 		t.Fatalf("timestamped archive not written: %v", files)
 	}
 	t.Setenv(server.EnvDatabaseURL, testdb.NewURL(t))
-	if out, err = runCmd(t, "restore", "--file", files[0]); err != nil || !strings.Contains(out, "now 1") {
+	if out, err = runCmd(t, "restore", "--file", files[0]); err != nil || !strings.Contains(out, fmt.Sprintf("now %d", v)) {
 		t.Fatalf("restore: %q %v", out, err)
 	}
 	if _, err = runCmd(t, "restore", "--file", files[0]); err == nil {
