@@ -40,7 +40,7 @@ secret does not exist (the UI is a public PKCE client).
 | `mcp.graph_refresh` | | `1m` | The dependency graph is rebuilt on the next graph tool call after a commit made by this server, and at most this late after a commit made by another replica. |
 | `mcp.disable_localhost_protection` | | `false` | Accept loopback `Host` headers behind a same-host proxy. |
 | `deduce.disabled` | | `false` | Stop the cabling deducer. |
-| `deduce.interval` | | `5m` | Time between deduction passes; one replica deduces at a time. |
+| `deduce.interval` | | `5m` | Time between deduction passes; one replica deduces at a time. Also the time between device type library passes. |
 | `web.disabled` | | `false` | Leave `/` unmounted. |
 | `web.oidc.client_id` | | none | Public client of the UI; with `issuer` (defaults to `auth.oidc.issuer`), `scopes` and `bearer` (`access_token` or `id_token`), enables "Sign in with SSO" in the browser. |
 | `collect.targets_file` | | none (no collector runs) | Targets the server collects from, on schedule, one replica at a time ([collectors](collectors.md), ADR 0026). A file that does not parse stops the start. |
@@ -50,8 +50,10 @@ secret does not exist (the UI is a public PKCE client).
 | `transport.cert_ttl` | | `168h` | Validity of agent certificates. |
 | `transport.server_cert_ttl` | | `2160h` | Validity of the server certificate; the listener reopens on the same address with a new one after two thirds of it. |
 
-The device type library (ADR 0020) is matched against the devices once at start, after the
-migrations; a failure there is logged and does not stop the server.
+The device type library (ADR 0020) is matched against the devices at start, after the
+migrations, then every `deduce.interval` (also when the deducer is disabled), so a device
+discovered later gets its device type without a restart; a failed pass is logged, retried at the
+next tick, and does not stop the server.
 
 ## Endpoints
 

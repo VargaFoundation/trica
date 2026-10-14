@@ -387,7 +387,9 @@ transport:
 // The device type library is applied once, at start: a device known before the
 // restart is linked to its model, and a library that fails would not stop the
 // server (its failure is logged, see runDeviceTypes).
-func TestServerSyncsTheDeviceTypeLibraryAtStart(t *testing.T) {
+// A device that appears while the server runs gets its device type without a
+// restart (#55): the library is matched again every deduce.interval.
+func TestServerSyncsTheDeviceTypeLibrary(t *testing.T) {
 	r := newRig(t, "")
 	models, err := devicetypes.Default()
 	if err != nil || len(models) == 0 {
@@ -401,7 +403,6 @@ func TestServerSyncsTheDeviceTypeLibraryAtStart(t *testing.T) {
 	if code, body := r.do("POST", "/api/v1/batches", r.token, string(raw)); code != http.StatusOK {
 		t.Fatalf("submit: %d %s", code, body)
 	}
-	r.start("") // restart: the library is matched against the devices that exist now
 
 	deadline := time.Now().Add(patience)
 	for {
@@ -410,7 +411,7 @@ func TestServerSyncsTheDeviceTypeLibraryAtStart(t *testing.T) {
 			return
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("the device type library was not synced at start: %s", body)
+			t.Fatalf("a device submitted after the start got no device type: %s", body)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
