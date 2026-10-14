@@ -1,0 +1,4 @@
+{
+  "json_format_version": [1, 0],
+  "smartctl": {"version": [7, 3], "argv": ["smartctl", "--json", "-a", "/dev/sdb"], "messages": [{"string": "Smartctl open device: /dev/sdb failed: Permission denied", "severity": "error"}], "exit_status": 2}
+}

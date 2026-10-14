@@ -1,0 +1,6 @@
+# recorded as `ip -o addr`, one "interface address/prefix [flags]" per line
+lo 127.0.0.1/8
+lo ::1/128
+ens3 198.51.100.30/24
+ens3 2001:db8:1::30/64
+ens3 fe80::ff:fe00:1e/64

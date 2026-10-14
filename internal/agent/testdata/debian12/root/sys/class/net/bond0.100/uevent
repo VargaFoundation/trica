@@ -1,0 +1,2 @@
+DEVTYPE=vlan
+INTERFACE=bond0.100

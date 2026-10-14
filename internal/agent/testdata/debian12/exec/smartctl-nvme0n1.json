@@ -1,0 +1,27 @@
+{
+  "json_format_version": [1, 0],
+  "smartctl": {"version": [7, 3], "svn_revision": "5338", "platform_info": "x86_64-linux-6.1.0-28-amd64", "build_info": "(local build)", "argv": ["smartctl", "--json", "-a", "/dev/nvme0n1"], "exit_status": 0},
+  "device": {"name": "/dev/nvme0n1", "info_name": "/dev/nvme0n1", "type": "nvme", "protocol": "NVMe"},
+  "model_name": "EXAMPLE NVMe 960GB",
+  "serial_number": "SN-TEST-NVME-0001",
+  "firmware_version": "EXN10001",
+  "nvme_pci_vendor": {"id": 4660, "subsystem_id": 4660},
+  "user_capacity": {"blocks": 1875385008, "bytes": 960197124096},
+  "smart_status": {"passed": true, "nvme": {"value": 0}},
+  "nvme_smart_health_information_log": {
+    "critical_warning": 0,
+    "temperature": 35,
+    "available_spare": 98,
+    "available_spare_threshold": 10,
+    "percentage_used": 7,
+    "data_units_read": 1000000,
+    "data_units_written": 2000000,
+    "power_cycles": 12,
+    "power_on_hours": 4321,
+    "unsafe_shutdowns": 3,
+    "media_errors": 0,
+    "num_err_log_entries": 0
+  },
+  "power_on_time": {"hours": 4321},
+  "temperature": {"current": 35}
+}

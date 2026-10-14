@@ -101,6 +101,7 @@ types:
       name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Hostname or label."}
       serial: {kind: string, identity: strong, search: true, label: {en: Serial number, fr: Numéro de série}, description: "Chassis serial number, the primary identity."}
       hw_uuid: {kind: string, identity: strong, search: true, label: {en: Hardware UUID, fr: UUID matériel}, description: "SMBIOS system UUID."}
+      machine_id: {kind: string, identity: weak, search: true, label: {en: Machine ID, fr: Identifiant machine}, description: "Linux /etc/machine-id. Weak: a cloned image shares it until it is regenerated."}
       asset_tag: {kind: string, identity: strong, search: true, label: {en: Asset tag, fr: Étiquette d'inventaire}, description: "Asset tag."}
       base_mac: {kind: mac, identity: strong, search: true, label: {en: Base MAC, fr: MAC de base}, description: "Chassis base MAC address (LLDP chassis ID on switches)."}
       role: {kind: enum, values: [server, switch, router, firewall, storage, pdu, ups, patch_panel, sensor, nas, kvm, other], search: true, label: {en: Role, fr: Rôle}, description: "Function of the device."}
@@ -437,6 +438,9 @@ types:
     attributes:
       name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "VM name."}
       uuid: {kind: string, identity: strong, search: true, label: {en: UUID, fr: UUID}, description: "VM UUID."}
+      machine_id: {kind: string, identity: weak, search: true, label: {en: Machine ID, fr: Identifiant machine}, description: "Linux /etc/machine-id. Weak: a cloned image shares it until it is regenerated."}
+      kernel: {kind: string, label: {en: Kernel, fr: Noyau}, description: "Kernel version (Linux guests)."}
+      primary_ip: {kind: ip, search: true, label: {en: Primary IP, fr: IP principale}, description: "Main address of the guest, as seen from inside."}
       namespace: {kind: string, label: {en: Namespace, fr: Namespace}, description: "Kubernetes namespace for KubeVirt VMs."}
       vcpus: {kind: int, label: {en: vCPUs, fr: vCPU}, description: "Virtual CPUs."}
       memory_bytes: {kind: int, unit: B, label: {en: Memory, fr: Mémoire}, description: "Memory."}

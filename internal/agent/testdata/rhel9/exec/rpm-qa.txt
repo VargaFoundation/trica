@@ -1,0 +1,8 @@
+bash	5.1.8-9.el9	x86_64
+glibc	2.34-100.el9	x86_64
+glibc	2.34-100.el9	i686
+kernel-core	5.14.0-427.el9	x86_64
+openssh-server	8.7p1-38.el9	x86_64
+tzdata	2024a-1.el9	noarch
+gpg-pubkey	5a6340b3-6229229e	(none)
+bind-libs	32:9.16.23-18.el9	x86_64
