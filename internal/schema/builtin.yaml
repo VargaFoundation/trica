@@ -140,6 +140,12 @@ types:
       mlag_domain: {kind: string, search: true, label: {en: MLAG domain, fr: Domaine MLAG}, description: "MLAG domain ID the switch belongs to, as configured (Arista). Two peers share it."}
       mlag_state: {kind: string, label: {en: MLAG state, fr: État MLAG}, description: "MLAG state as reported by the switch: active, inactive, disabled."}
       mlag_peer: {kind: string, search: true, label: {en: MLAG peer, fr: Pair MLAG}, description: "Address of the MLAG peer switch, as configured on the peer link."}
+      firmware_inventory: {kind: list, search: true, label: {en: Firmware inventory, fr: Inventaire des firmwares}, description: "Firmware components reported by the BMC, as name=version strings (BIOS, BMC, RAID controller, NIC, PSU)."}
+      log_window_days: {kind: int, unit: d, label: {en: Event log window, fr: Fenêtre du journal}, description: "Number of days the event log counters below look back."}
+      log_critical_count: {kind: int, label: {en: Critical events, fr: Événements critiques}, description: "Critical entries of the hardware event log (iLO IML, iDRAC SEL) within the window."}
+      log_warning_count: {kind: int, label: {en: Warning events, fr: Événements d'avertissement}, description: "Warning entries of the hardware event log within the window."}
+      log_last_critical: {kind: text, label: {en: Latest critical event, fr: Dernier événement critique}, description: "Message of the most recent critical entry of the hardware event log within the window."}
+      log_last_critical_at: {kind: time, label: {en: Latest critical event time, fr: Date du dernier événement critique}, description: "Time of the most recent critical entry of the hardware event log within the window."}
   module:
     layer: physical
     label: {en: Module, fr: Module}

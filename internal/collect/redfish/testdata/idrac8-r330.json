@@ -1,0 +1,138 @@
+{
+  "/redfish/v1": {
+    "@odata.id": "/redfish/v1", "@odata.type": "#ServiceRoot.v1_0_2.ServiceRoot", "Id": "RootService", "Name": "Root Service",
+    "RedfishVersion": "1.0.2",
+    "Systems": {"@odata.id": "/redfish/v1/Systems"},
+    "Chassis": {"@odata.id": "/redfish/v1/Chassis"},
+    "Managers": {"@odata.id": "/redfish/v1/Managers"},
+    "UpdateService": {"@odata.id": "/redfish/v1/UpdateService"}
+  },
+  "/redfish/v1/Systems": {"Members": [{"@odata.id": "/redfish/v1/Systems/System.Embedded.1"}], "Members@odata.count": 1},
+  "/redfish/v1/Systems/System.Embedded.1": {
+    "@odata.id": "/redfish/v1/Systems/System.Embedded.1", "Id": "System.Embedded.1", "Name": "System",
+    "Manufacturer": "Dell Inc.", "Model": "PowerEdge R330", "SKU": "SYNTH003", "SerialNumber": "SYNTH-IDRAC8-0003",
+    "UUID": "33333333-4444-4555-8666-777777770003", "HostName": "srv-03.example.invalid",
+    "PowerState": "On", "IndicatorLED": "Blinking", "BiosVersion": "2.10.5",
+    "Status": {"Health": "OK", "HealthRollup": "Critical", "State": "Enabled"},
+    "ProcessorSummary": {"Count": 1, "Model": "Intel(R) Xeon(R) CPU E3-1230 v5 @ 3.40GHz", "Status": {"HealthRollup": "OK"}},
+    "MemorySummary": {"TotalSystemMemoryGiB": 16, "Status": {"HealthRollup": "OK"}},
+    "Processors": {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Processors"},
+    "Memory": {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Memory"},
+    "Storage": {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage"},
+    "EthernetInterfaces": {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces"},
+    "Links": {
+      "Chassis": [{"@odata.id": "/redfish/v1/Chassis/System.Embedded.1"}],
+      "ManagedBy": [{"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1"}]
+    }
+  },
+
+  "/redfish/v1/Systems/System.Embedded.1/Processors": {"Members": [{"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1"}], "Members@odata.count": 1},
+  "/redfish/v1/Systems/System.Embedded.1/Processors/CPU.Socket.1": {
+    "Id": "CPU.Socket.1", "Name": "CPU 1", "Socket": "CPU.Socket.1", "ProcessorType": "CPU", "Model": "Intel(R) Xeon(R) CPU E3-1230 v5 @ 3.40GHz",
+    "TotalCores": 4, "TotalThreads": 8, "MaxSpeedMHz": 4000, "Status": {"Health": "OK", "State": "Enabled"}
+  },
+
+  "/redfish/v1/Systems/System.Embedded.1/Memory": {"Members": [
+    {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Memory/DIMM.Socket.A1"},
+    {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Memory/DIMM.Socket.A2"},
+    {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Memory/DIMM.Socket.B1"}], "Members@odata.count": 3},
+  "/redfish/v1/Systems/System.Embedded.1/Memory/DIMM.Socket.A1": {"Id": "DIMM.Socket.A1", "Name": "DIMM A1", "DeviceLocator": "DIMM A1", "CapacityMiB": 8192, "OperatingSpeedMhz": 2133, "PartNumber": "M391A1G43EB1-CPB", "SerialNumber": "SYNTH-DIMM-0301", "Manufacturer": "Synthetic Memory", "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/Systems/System.Embedded.1/Memory/DIMM.Socket.A2": {"Id": "DIMM.Socket.A2", "Name": "DIMM A2", "DeviceLocator": "DIMM A2", "CapacityMiB": 8192, "OperatingSpeedMhz": 2133, "PartNumber": "M391A1G43EB1-CPB", "SerialNumber": "SYNTH-DIMM-0302", "Manufacturer": "Synthetic Memory", "Status": {"Health": "Critical", "State": "Enabled"}},
+  "/redfish/v1/Systems/System.Embedded.1/Memory/DIMM.Socket.B1": {"Id": "DIMM.Socket.B1", "Name": "DIMM B1", "DeviceLocator": "DIMM B1", "CapacityMiB": 0, "Status": {"Health": null, "State": "Absent"}},
+
+  "/redfish/v1/Systems/System.Embedded.1/Storage": {"Members": [{"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/RAID.Integrated.1-1"}], "Members@odata.count": 1},
+  "/redfish/v1/Systems/System.Embedded.1/Storage/RAID.Integrated.1-1": {
+    "Id": "RAID.Integrated.1-1", "Name": "PERC H330 Mini",
+    "StorageControllers": [{"MemberId": "0", "Name": "PERC H330 Mini", "Model": "PERC H330 Mini", "FirmwareVersion": "25.5.5.0005", "Manufacturer": "Synthetic RAID Vendor", "Status": {"Health": "OK", "State": "Enabled"}}],
+    "Drives": [
+      {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/Drives/Disk.Bay.0:Enclosure.Internal.0-1:RAID.Integrated.1-1"},
+      {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/Drives/Disk.Bay.1:Enclosure.Internal.0-1:RAID.Integrated.1-1"}
+    ]
+  },
+  "/redfish/v1/Systems/System.Embedded.1/Storage/Drives/Disk.Bay.0:Enclosure.Internal.0-1:RAID.Integrated.1-1": {
+    "Id": "Disk.Bay.0:Enclosure.Internal.0-1:RAID.Integrated.1-1", "Name": "Physical Disk 0:1:0", "Model": "ST1200MM0099", "SerialNumber": "SYNTH-HDD-0301",
+    "CapacityBytes": 1199101181952, "MediaType": "HDD", "Protocol": "SAS", "Revision": "ST31", "Status": {"Health": "OK", "State": "Enabled"},
+    "Identifiers": [{"DurableNameFormat": "NAA", "DurableName": "5000C500A1B2C301"}]
+  },
+  "/redfish/v1/Systems/System.Embedded.1/Storage/Drives/Disk.Bay.1:Enclosure.Internal.0-1:RAID.Integrated.1-1": {
+    "Id": "Disk.Bay.1:Enclosure.Internal.0-1:RAID.Integrated.1-1", "Name": "Solid State Disk 0:1:1", "Model": "SSDSC2KB480G7R", "SerialNumber": "SYNTH-SSD-0301",
+    "CapacityBytes": 479559942144, "MediaType": "SSD", "Protocol": "SATA", "Revision": "SCV1", "PredictedMediaLifeLeftPercent": 91,
+    "Status": {"Health": "OK", "State": "Enabled"},
+    "Identifiers": [{"DurableNameFormat": "NAA", "DurableName": "5000C500A1B2C302"}]
+  },
+
+  "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces": {"Members": [
+    {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Integrated.1-1-1"},
+    {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Integrated.1-2-1"}], "Members@odata.count": 2},
+  "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Integrated.1-1-1": {"Id": "NIC.Integrated.1-1-1", "Name": "System Ethernet Interface", "Description": "Integrated NIC 1 Port 1 Partition 1", "MACAddress": "02:00:5e:30:01:01", "LinkStatus": "LinkUp", "SpeedMbps": 1000, "FullDuplex": true, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Integrated.1-2-1": {"Id": "NIC.Integrated.1-2-1", "Name": "System Ethernet Interface", "Description": "Integrated NIC 1 Port 2 Partition 1", "MACAddress": "02:00:5e:30:01:02", "LinkStatus": "LinkDown", "SpeedMbps": 0, "FullDuplex": false, "Status": {"Health": "OK", "State": "Enabled"}},
+
+  "/redfish/v1/UpdateService": {"Id": "UpdateService", "Name": "Update Service", "FirmwareInventory": {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory"}},
+  "/redfish/v1/UpdateService/FirmwareInventory": {"Members": [
+    {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/Installed-0-2.83.83.83"},
+    {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/Installed-1-2.10.5"},
+    {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/Previous-0-2.75.75.75"}], "Members@odata.count": 3},
+  "/redfish/v1/UpdateService/FirmwareInventory/Installed-0-2.83.83.83": {"Id": "Installed-0-2.83.83.83", "Name": "Integrated Dell Remote Access Controller", "Version": "2.83.83.83", "Updateable": true, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/UpdateService/FirmwareInventory/Installed-1-2.10.5": {"Id": "Installed-1-2.10.5", "Name": "BIOS", "Version": "2.10.5", "Updateable": true, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/UpdateService/FirmwareInventory/Previous-0-2.75.75.75": {"Id": "Previous-0-2.75.75.75", "Name": "Integrated Dell Remote Access Controller", "Version": "2.75.75.75", "Updateable": false, "Status": {"Health": "OK", "State": "StandbyOffline"}},
+
+  "/redfish/v1/Chassis": {"Members": [{"@odata.id": "/redfish/v1/Chassis/System.Embedded.1"}], "Members@odata.count": 1},
+  "/redfish/v1/Chassis/System.Embedded.1": {
+    "@odata.id": "/redfish/v1/Chassis/System.Embedded.1", "Id": "System.Embedded.1", "Name": "Computer System Chassis", "ChassisType": "RackMount",
+    "Power": {"@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Power"}, "Thermal": {"@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Thermal"}
+  },
+  "/redfish/v1/Chassis/System.Embedded.1/Power": {
+    "Id": "Power", "Name": "Power",
+    "PowerControl": [{"MemberId": "PowerControl", "Name": "System Power Control", "PowerConsumedWatts": 98, "PowerCapacityWatts": 495}],
+    "PowerSupplies": [
+      {"MemberId": "PSU.Slot.1", "Name": "PS1 Status", "Model": "PWR SPLY,350W,RDNT,DLTA", "SerialNumber": "SYNTH-PSU-D001", "FirmwareVersion": "00.1D.7D", "PowerCapacityWatts": 350, "PowerInputWatts": 95, "LineInputVoltage": 230, "Status": {"Health": "OK", "State": "Enabled"}},
+      {"MemberId": "PSU.Slot.2", "Name": "PS2 Status", "Status": {"State": "Absent"}}
+    ]
+  },
+  "/redfish/v1/Chassis/System.Embedded.1/Thermal": {
+    "Id": "Thermal", "Name": "Thermal",
+    "Temperatures": [
+      {"MemberId": "iDRAC.Embedded.1#SystemBoardInletTemp", "Name": "System Board Inlet Temp", "ReadingCelsius": 22, "UpperThresholdNonCritical": 42, "UpperThresholdCritical": 47, "Status": {"Health": "OK", "State": "Enabled"}},
+      {"MemberId": "iDRAC.Embedded.1#SystemBoardExhaustTemp", "Name": "System Board Exhaust Temp", "ReadingCelsius": 31, "UpperThresholdNonCritical": 70, "UpperThresholdCritical": 75, "Status": {"Health": "OK", "State": "Enabled"}},
+      {"MemberId": "iDRAC.Embedded.1#CPU1Temp", "Name": "CPU1 Temp", "ReadingCelsius": 41, "UpperThresholdNonCritical": 83, "UpperThresholdCritical": 88, "Status": {"Health": "OK", "State": "Enabled"}}
+    ],
+    "Fans": [
+      {"MemberId": "0", "Name": "System Board Fan1A", "Reading": 4320, "ReadingUnits": "RPM", "Status": {"Health": "OK", "State": "Enabled"}},
+      {"MemberId": "1", "Name": "System Board Fan2A", "Reading": 4200, "ReadingUnits": "RPM", "Status": {"Health": "Critical", "State": "Enabled"}}
+    ]
+  },
+
+  "/redfish/v1/Managers": {"Members": [{"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1"}], "Members@odata.count": 1},
+  "/redfish/v1/Managers/iDRAC.Embedded.1": {
+    "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1", "Id": "iDRAC.Embedded.1", "Name": "Manager", "ManagerType": "BMC", "FirmwareVersion": "2.83.83.83",
+    "EthernetInterfaces": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/EthernetInterfaces"},
+    "LogServices": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices"}
+  },
+  "/redfish/v1/Managers/iDRAC.Embedded.1/EthernetInterfaces": {"Members": [{"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/EthernetInterfaces/NIC.1"}], "Members@odata.count": 1},
+  "/redfish/v1/Managers/iDRAC.Embedded.1/EthernetInterfaces/NIC.1": {
+    "Id": "NIC.1", "Name": "Manager Ethernet Interface", "MACAddress": "02:00:5e:30:00:01", "SpeedMbps": 1000, "FullDuplex": true,
+    "Status": {"Health": "OK", "State": "Enabled"},
+    "IPv4Addresses": [{"Address": "203.0.113.31", "SubnetMask": "255.255.255.0", "Gateway": "203.0.113.1", "AddressOrigin": "Static"}]
+  },
+  "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices": {"Members": [
+    {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel"},
+    {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog"}], "Members@odata.count": 2},
+  "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel": {"Id": "Sel", "Name": "System Event Log", "Entries": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel/Entries"}},
+  "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel/Entries": {
+    "Members": [
+      {"Id": "1", "EntryType": "SEL", "Severity": "Warning", "Created": "{{now-2d@-05:00}}", "Message": "The power input for power supply 2 is lost."},
+      {"Id": "2", "EntryType": "SEL", "Severity": "OK", "Created": "{{now-3d}}", "Message": "Power supply redundancy is restored."}
+    ],
+    "Members@odata.count": 4,
+    "Members@odata.nextLink": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel/Entries?$skip=2"
+  },
+  "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel/Entries?$skip=2": {
+    "Members": [
+      {"Id": "3", "EntryType": "SEL", "Severity": "Critical", "Created": "{{now-12h}}", "Message": "Fan 2 has failed."},
+      {"Id": "4", "EntryType": "SEL", "Severity": "Critical", "Created": "{{now-60d}}", "Message": "Older critical outside the window."}
+    ],
+    "Members@odata.count": 4
+  },
+  "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog": {"Id": "Lclog", "Name": "Lifecycle Log", "Entries": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries"}},
+  "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries": {"Members": [{"Id": "1", "Severity": "Critical", "Created": "{{now-1d}}", "Message": "This entry must never be read: Lifecycle log."}]}
+}

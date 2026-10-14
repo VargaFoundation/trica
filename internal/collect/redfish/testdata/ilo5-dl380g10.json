@@ -1,0 +1,143 @@
+{
+  "/redfish/v1": {
+    "@odata.id": "/redfish/v1/", "@odata.type": "#ServiceRoot.v1_1_0.ServiceRoot", "Id": "RootService",
+    "Name": "HPE RESTful Root Service", "RedfishVersion": "1.6.0",
+    "Systems": {"@odata.id": "/redfish/v1/Systems/"},
+    "Chassis": {"@odata.id": "/redfish/v1/Chassis/"},
+    "Managers": {"@odata.id": "/redfish/v1/Managers/"},
+    "UpdateService": {"@odata.id": "/redfish/v1/UpdateService/"},
+    "Oem": {"Hpe": {"Manager": [{"ManagerType": "iLO 5", "FirmwareVersion": "2.72"}]}}
+  },
+  "/redfish/v1/Systems": {"Members": [{"@odata.id": "/redfish/v1/Systems/1/"}], "Members@odata.count": 1, "Name": "Computer Systems"},
+  "/redfish/v1/Systems/1": {
+    "@odata.id": "/redfish/v1/Systems/1/", "@odata.type": "#ComputerSystem.v1_4_0.ComputerSystem", "Id": "1",
+    "Name": "Computer System", "Manufacturer": "HPE", "Model": "ProLiant DL380 Gen10", "SKU": "868703-B21",
+    "SerialNumber": "SYNTH-ILO5-0002", "UUID": "11111111-2222-4333-8444-5555555500b2", "HostName": "srv-02.example.invalid",
+    "PowerState": "On", "IndicatorLED": "Lit", "BiosVersion": "U30 v2.72 (07/09/2021)",
+    "Status": {"Health": "Warning", "HealthRollup": "Warning", "State": "Enabled"},
+    "ProcessorSummary": {"Count": 2, "Model": "Intel(R) Xeon(R) Gold 6130 CPU @ 2.10GHz", "Status": {"HealthRollup": "OK"}},
+    "MemorySummary": {"TotalSystemMemoryGiB": 64, "Status": {"HealthRollup": "OK"}},
+    "Processors": {"@odata.id": "/redfish/v1/Systems/1/Processors/"},
+    "Memory": {"@odata.id": "/redfish/v1/Systems/1/Memory/"},
+    "Storage": {"@odata.id": "/redfish/v1/Systems/1/Storage/"},
+    "EthernetInterfaces": {"@odata.id": "/redfish/v1/Systems/1/EthernetInterfaces/"},
+    "LogServices": {"@odata.id": "/redfish/v1/Systems/1/LogServices/"},
+    "Links": {
+      "Chassis": [{"@odata.id": "/redfish/v1/Chassis/1/"}],
+      "ManagedBy": [{"@odata.id": "/redfish/v1/Managers/1/"}]
+    },
+    "Oem": {"Hpe": {
+      "Links": {"SmartStorage": {"@odata.id": "/redfish/v1/Systems/1/SmartStorage/"}}
+    }}
+  },
+
+  "/redfish/v1/Systems/1/Processors": {"Members": [{"@odata.id": "/redfish/v1/Systems/1/Processors/1/"}, {"@odata.id": "/redfish/v1/Systems/1/Processors/2/"}], "Members@odata.count": 2},
+  "/redfish/v1/Systems/1/Processors/1": {"Id": "1", "Name": "Processors", "Socket": "Proc 1", "Model": "Intel(R) Xeon(R) Gold 6130 CPU @ 2.10GHz", "ProcessorType": "CPU", "TotalCores": 16, "TotalThreads": 32, "MaxSpeedMHz": 3700, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/Systems/1/Processors/2": {"Id": "2", "Name": "Processors", "Socket": "Proc 2", "Model": "Intel(R) Xeon(R) Gold 6130 CPU @ 2.10GHz", "ProcessorType": "CPU", "TotalCores": 16, "TotalThreads": 32, "MaxSpeedMHz": 3700, "Status": {"Health": "OK", "State": "Enabled"}},
+
+  "/redfish/v1/Systems/1/Memory": {"Members": [
+    {"@odata.id": "/redfish/v1/Systems/1/Memory/proc1dimm1/"}, {"@odata.id": "/redfish/v1/Systems/1/Memory/proc1dimm3/"},
+    {"@odata.id": "/redfish/v1/Systems/1/Memory/proc2dimm1/"}, {"@odata.id": "/redfish/v1/Systems/1/Memory/proc2dimm3/"}], "Members@odata.count": 4},
+  "/redfish/v1/Systems/1/Memory/proc1dimm1": {"Id": "proc1dimm1", "Name": "proc1dimm1", "DeviceLocator": "PROC 1 DIMM 1", "CapacityMiB": 0, "Status": {"State": "Absent"}},
+  "/redfish/v1/Systems/1/Memory/proc1dimm3": {"Id": "proc1dimm3", "Name": "proc1dimm3", "DeviceLocator": "PROC 1 DIMM 3", "CapacityMiB": 32768, "OperatingSpeedMhz": 2666, "MemoryDeviceType": "DDR4", "PartNumber": "HMA84GR7CJR4N-WM", "SerialNumber": "SYNTH-DIMM-0001", "Manufacturer": "HPE", "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/Systems/1/Memory/proc2dimm1": {"Id": "proc2dimm1", "Name": "proc2dimm1", "DeviceLocator": "PROC 2 DIMM 1", "CapacityMiB": 0, "Status": {"State": "Absent"}},
+  "/redfish/v1/Systems/1/Memory/proc2dimm3": {"Id": "proc2dimm3", "Name": "proc2dimm3", "DeviceLocator": "PROC 2 DIMM 3", "CapacityMiB": 32768, "OperatingSpeedMhz": 2666, "MemoryDeviceType": "DDR4", "PartNumber": "HMA84GR7CJR4N-WM", "SerialNumber": "SYNTH-DIMM-0002", "Manufacturer": "HPE", "Status": {"Health": "OK", "State": "Enabled"}},
+
+  "/redfish/v1/Systems/1/Storage": {"Members": [{"@odata.id": "/redfish/v1/Systems/1/Storage/DE00A000/"}], "Members@odata.count": 1},
+  "/redfish/v1/Systems/1/Storage/DE00A000": {
+    "Id": "DE00A000", "Name": "HPE Smart Array P408i-a SR Gen10",
+    "StorageControllers": [{"MemberId": "0", "Name": "HPE Smart Array P408i-a SR Gen10", "Model": "HPE Smart Array P408i-a SR Gen10", "SerialNumber": "SYNTH-P408IA-02", "FirmwareVersion": "2.62", "Manufacturer": "HPE", "Location": {"Info": "Slot 0"}, "Status": {"Health": "OK", "State": "Enabled"}}],
+    "Drives": [{"@odata.id": "/redfish/v1/Chassis/1/Drives/0/"}, {"@odata.id": "/redfish/v1/Chassis/1/Drives/1/"}, {"@odata.id": "/redfish/v1/Chassis/1/Drives/2/"}]
+  },
+  "/redfish/v1/Chassis/1/Drives/0": {
+    "Id": "0", "Name": "HpeSmartStorageDiskDrive", "Model": "VK000480GWSRQ", "SerialNumber": "SYNTH-SSD-0002", "CapacityBytes": 480103981056,
+    "MediaType": "SSD", "Protocol": "SATA", "Revision": "HPG3", "Status": {"Health": "OK", "State": "Enabled"},
+    "Location": [{"Info": "Port=1I:Box=1:Bay=1", "InfoFormat": "Port:Box:Bay"}],
+    "Oem": {"Hpe": {"DriveStatus": {"Health": "OK"}, "SSDEnduranceUtilizationPercentage": 12}}
+  },
+  "/redfish/v1/Chassis/1/Drives/1": {
+    "Id": "1", "Name": "HpeSmartStorageDiskDrive", "Model": "MB001200GWFGF", "SerialNumber": "SYNTH-HDD-0002", "CapacityBytes": 1200243695616,
+    "MediaType": "HDD", "Protocol": "SAS", "Revision": "HPD5", "Status": {"Health": "Critical", "State": "Enabled"},
+    "Location": [{"Info": "Port=1I:Box=1:Bay=2", "InfoFormat": "Port:Box:Bay"}]
+  },
+  "/redfish/v1/Chassis/1/Drives/2": {
+    "Id": "2", "Name": "HpeSmartStorageDiskDrive", "Model": "EMPTY", "Status": {"State": "Absent"},
+    "Location": [{"Info": "Port=1I:Box=1:Bay=3", "InfoFormat": "Port:Box:Bay"}]
+  },
+
+  "/redfish/v1/Systems/1/EthernetInterfaces": {"Members": [{"@odata.id": "/redfish/v1/Systems/1/EthernetInterfaces/1/"}, {"@odata.id": "/redfish/v1/Systems/1/EthernetInterfaces/2/"}], "Members@odata.count": 2},
+  "/redfish/v1/Systems/1/EthernetInterfaces/1": {"Id": "1", "Name": "", "MACAddress": "02:00:5e:20:01:01", "LinkStatus": "LinkUp", "SpeedMbps": 10000, "FullDuplex": true, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/Systems/1/EthernetInterfaces/2": {"Id": "2", "Name": "", "MACAddress": "02:00:5e:20:01:02", "LinkStatus": "NoLink", "Status": {"Health": "OK", "State": "Enabled"}},
+
+  "/redfish/v1/UpdateService": {"Id": "UpdateService", "Name": "Update Service", "FirmwareInventory": {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/"}},
+  "/redfish/v1/UpdateService/FirmwareInventory": {"Members": [
+    {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/1/"}, {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/2/"},
+    {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/3/"}, {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/4/"}], "Members@odata.count": 4},
+  "/redfish/v1/UpdateService/FirmwareInventory/1": {"Id": "1", "Name": "iLO 5", "Version": "2.72 Aug 24 2022", "Updateable": true, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/UpdateService/FirmwareInventory/2": {"Id": "2", "Name": "System ROM", "Version": "U30 v2.72 (07/09/2021)", "Updateable": true, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/UpdateService/FirmwareInventory/3": {"Id": "3", "Name": "Smart Array P408i-a SR Gen10", "Version": "2.62", "Updateable": true, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/UpdateService/FirmwareInventory/4": {"Id": "4", "Name": "Unversioned component", "Version": "", "Updateable": false},
+
+  "/redfish/v1/Systems/1/LogServices": {"Members": [{"@odata.id": "/redfish/v1/Systems/1/LogServices/IML/"}], "Members@odata.count": 1},
+  "/redfish/v1/Systems/1/LogServices/IML": {"Id": "IML", "Name": "Integrated Management Log", "Entries": {"@odata.id": "/redfish/v1/Systems/1/LogServices/IML/Entries/"}},
+  "/redfish/v1/Systems/1/LogServices/IML/Entries": {
+    "Members": [
+      {"Id": "1", "EntryType": "Oem", "Severity": "Warning", "Created": "{{now-5d}}", "Message": "Drive Array Controller Cache Battery is not fully charged."},
+      {"Id": "2", "EntryType": "Oem", "Severity": "Critical", "Created": "{{now-4d}}", "Message": "Drive Failure (Bay 2)."},
+      {"Id": "3", "EntryType": "Oem", "Severity": "OK", "Created": "{{now-2d}}", "Message": "Maintenance note."}
+    ],
+    "Members@odata.count": 3
+  },
+
+  "/redfish/v1/Chassis": {"Members": [{"@odata.id": "/redfish/v1/Chassis/1/"}], "Members@odata.count": 1},
+  "/redfish/v1/Chassis/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/", "Id": "1", "Name": "Computer System Chassis", "ChassisType": "RackMount",
+    "Power": {"@odata.id": "/redfish/v1/Chassis/1/Power/"}, "Thermal": {"@odata.id": "/redfish/v1/Chassis/1/Thermal/"}
+  },
+  "/redfish/v1/Chassis/1/Power": {
+    "Id": "Power", "Name": "Power",
+    "PowerControl": [{"MemberId": "0", "PowerConsumedWatts": 214, "PowerCapacityWatts": 1600, "PowerMetrics": {"AverageConsumedWatts": 210}}],
+    "PowerSupplies": [
+      {"MemberId": "0", "Name": "HpeServerPowerSupply", "Model": "865408-B21", "SerialNumber": "SYNTH-PSU-B001", "FirmwareVersion": "1.00", "PowerCapacityWatts": 800, "LastPowerOutputWatts": 107, "Status": {"Health": "OK", "State": "Enabled"}},
+      {"MemberId": "1", "Name": "HpeServerPowerSupply", "Model": "865408-B21", "SerialNumber": "SYNTH-PSU-B002", "FirmwareVersion": "1.00", "PowerCapacityWatts": 800, "LastPowerOutputWatts": 107, "Status": {"Health": "Warning", "State": "Enabled"}}
+    ]
+  },
+  "/redfish/v1/Chassis/1/Thermal": {
+    "Id": "Thermal", "Name": "Thermal",
+    "Temperatures": [
+      {"MemberId": "0", "Name": "01-Inlet Ambient", "PhysicalContext": "Intake", "ReadingCelsius": 24, "UpperThresholdCritical": 42, "UpperThresholdFatal": 47, "Status": {"Health": "OK", "State": "Enabled"}},
+      {"MemberId": "1", "Name": "02-CPU 1", "PhysicalContext": "CPU", "ReadingCelsius": 45, "UpperThresholdCritical": 100, "Status": {"Health": "OK", "State": "Enabled"}},
+      {"MemberId": "2", "Name": "03-CPU 2", "PhysicalContext": "CPU", "ReadingCelsius": 46, "UpperThresholdCritical": 100, "Status": {"Health": "OK", "State": "Enabled"}},
+      {"MemberId": "3", "Name": "04-P1 DIMM 1-6", "PhysicalContext": "Memory", "ReadingCelsius": 33, "UpperThresholdCritical": 90, "Status": {"Health": "OK", "State": "Enabled"}}
+    ],
+    "Fans": [
+      {"MemberId": "0", "Name": "Fan 1", "Reading": 21, "ReadingUnits": "Percent", "Status": {"Health": "OK", "State": "Enabled"}},
+      {"MemberId": "1", "Name": "Fan 2", "Reading": 21, "ReadingUnits": "Percent", "Status": {"Health": "OK", "State": "Enabled"}},
+      {"MemberId": "2", "Name": "Fan 3", "Reading": 4800, "ReadingUnits": "RPM", "Status": {"Health": "OK", "State": "Enabled"}}
+    ]
+  },
+
+  "/redfish/v1/Managers": {"Members": [{"@odata.id": "/redfish/v1/Managers/1/"}], "Members@odata.count": 1},
+  "/redfish/v1/Managers/1": {
+    "@odata.id": "/redfish/v1/Managers/1/", "Id": "1", "Name": "Manager", "ManagerType": "BMC", "FirmwareVersion": "iLO 5 v2.72",
+    "EthernetInterfaces": {"@odata.id": "/redfish/v1/Managers/1/EthernetInterfaces/"},
+    "LogServices": {"@odata.id": "/redfish/v1/Managers/1/LogServices/"}
+  },
+  "/redfish/v1/Managers/1/EthernetInterfaces": {"Members": [{"@odata.id": "/redfish/v1/Managers/1/EthernetInterfaces/2/"}, {"@odata.id": "/redfish/v1/Managers/1/EthernetInterfaces/1/"}], "Members@odata.count": 2},
+  "/redfish/v1/Managers/1/EthernetInterfaces/1": {
+    "Id": "1", "Name": "Manager Dedicated Network Interface", "MACAddress": "02:00:5e:20:00:01", "SpeedMbps": 1000, "FullDuplex": true, "LinkStatus": "LinkUp",
+    "Status": {"Health": "OK", "State": "Enabled"},
+    "IPv4Addresses": [{"Address": "198.51.100.21", "SubnetMask": "255.255.255.128", "Gateway": "198.51.100.1", "AddressOrigin": "Static"}]
+  },
+  "/redfish/v1/Managers/1/EthernetInterfaces/2": {
+    "Id": "2", "Name": "Manager Shared Network Interface", "MACAddress": "02:00:5e:20:00:02", "LinkStatus": "LinkDown",
+    "Status": {"Health": "OK", "State": "Enabled"}, "IPv4Addresses": [{"Address": "", "SubnetMask": "", "AddressOrigin": "DHCP"}]
+  },
+  "/redfish/v1/Managers/1/LogServices": {"Members": [{"@odata.id": "/redfish/v1/Managers/1/LogServices/IEL/"}], "Members@odata.count": 1},
+  "/redfish/v1/Managers/1/LogServices/IEL": {"Id": "IEL", "Name": "iLO Event Log", "Entries": {"@odata.id": "/redfish/v1/Managers/1/LogServices/IEL/Entries/"}},
+  "/redfish/v1/Managers/1/LogServices/IEL/Entries": {"Members": [{"Id": "1", "Severity": "Critical", "Created": "{{now-1d}}", "Message": "This entry must never be read: it is the iLO's own log."}]},
+
+  "/redfish/v1/Systems/1/SmartStorage": {"Id": "smartstorage", "Links": {"ArrayControllers": {"@odata.id": "/redfish/v1/Systems/1/SmartStorage/ArrayControllers/"}}},
+  "/redfish/v1/Systems/1/SmartStorage/ArrayControllers": {"Members": [{"@odata.id": "/redfish/v1/Systems/1/SmartStorage/ArrayControllers/0/"}]},
+  "/redfish/v1/Systems/1/SmartStorage/ArrayControllers/0": {"Id": "0", "Model": "must never be read: the standard Storage resource already answered", "SerialNumber": "SYNTH-SHOULD-NOT-APPEAR"}
+}
