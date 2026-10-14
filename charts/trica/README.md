@@ -38,6 +38,25 @@ No chart or image is published yet; see [getting started](../../docs/getting-sta
 | `backup.subPath` | `""` | Subdirectory of the claim. |
 | `backup.image.repository` / `tag` | `ghcr.io/vargafoundation/trica-ops` / appVersion | The `ops` image (`docker build --target ops .`): the server binary plus `pg_dump` 17. Not published yet. |
 
+## First token
+
+A new release has no credential. Create one in the running pod (the image is distroless: call
+`trica` directly, and pass the configuration the chart mounts). The token is the only thing on
+stdout, shown once; metadata goes to stderr:
+
+```bash
+TOKEN=$(kubectl -n trica exec deploy/trica -- trica token create --config /etc/trica/trica.yaml \
+  --name claude-code --owner you --roles admin --scopes write)
+kubectl -n trica exec deploy/trica -- trica token list --config /etc/trica/trica.yaml
+kubectl -n trica exec deploy/trica -- trica enrol create --config /etc/trica/trica.yaml \
+  --binding agent:host-01 --ttl 24h        # needs transport.enabled; prints where ca.pem is
+```
+
+Whoever may `kubectl exec` into the pod already has the database URL, so limit that right with
+cluster RBAC ([security](../../docs/reference/security.md#minting-the-first-token)). The server
+must have started once (it migrates). `kubectl exec` without `-t` keeps stdout and stderr apart,
+so `$(…)` captures the token only. No chart change is needed.
+
 ## Backup
 
 The reference deployment (Zalando operator with WAL-G) takes its own physical backups with

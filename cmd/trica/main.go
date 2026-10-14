@@ -6,6 +6,8 @@
 //	trica import  submit a JSON or YAML file to the reconciliation engine
 //	trica backup  [--config FILE] (--file F | --dir D)
 //	trica restore [--config FILE] --file F [--replace]
+//	trica token   [--config FILE] create|list|revoke   (API tokens)
+//	trica enrol   [--config FILE] create   (agent and collector enrolment tokens)
 //	trica version
 //
 // Logic lives in internal packages; this package only wires flags.
@@ -60,9 +62,12 @@ commands:
            for a timestamped name); needs pg_dump 17
   restore  load an archive into an empty database (--file F), or over an
            existing one (--replace, server stopped); runs migrations up
+  token    create (prints the token once on stdout), list or revoke API tokens
+  enrol    create an enrolment token for an agent or collector (prints it once
+           on stdout)
   version  print the version
 
-server and migrate read the database URL from TRICA_DATABASE_URL or the file
+server, migrate, backup, restore, token and enrol read the database URL from TRICA_DATABASE_URL or the file
 named by database.url_file in the configuration; export and import from
 --database-url or TRICA_DATABASE_URL.`
 
@@ -80,6 +85,10 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return runExport(ctx, args, stdout, stderr, getenv)
 	case "import":
 		return runImport(ctx, args, stdin, stdout, stderr, getenv)
+	case "token":
+		return runToken(ctx, args, stdout, stderr, getenv)
+	case "enrol":
+		return runEnrol(ctx, args, stdout, stderr, getenv)
 	case "server", "migrate", "backup", "restore":
 	case "help", "-h", "--help":
 		fmt.Fprintln(stdout, usage)

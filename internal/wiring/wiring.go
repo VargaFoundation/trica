@@ -115,12 +115,16 @@ func (w *Wiring) build(d server.Deps) (*core, error) {
 	}, nil
 }
 
-// policy is the default policy, or the configured file, with the configured
-// group-to-role mappings added. A mapping to a role that does not exist is an
-// error: a typo must not silently drop or widen access.
-func (w *Wiring) policy() (*auth.Policy, error) {
+func (w *Wiring) policy() (*auth.Policy, error) { return Policy(w.cfg) }
+
+// Policy is the RBAC policy a server started with cfg enforces: the default
+// policy, or the configured file, with the configured group-to-role mappings
+// added. A mapping to a role that does not exist is an error: a typo must not
+// silently drop or widen access. The administration commands of cmd/trica call
+// it too, so that a token is minted against the policy the server will apply.
+func Policy(cfg *server.Config) (*auth.Policy, error) {
 	pol := auth.DefaultPolicy()
-	if f := w.cfg.Auth.PolicyFile; f != "" {
+	if f := cfg.Auth.PolicyFile; f != "" {
 		fh, err := os.Open(f) //nolint:gosec // the operator names the policy file
 		if err != nil {
 			return nil, fmt.Errorf("auth.policy_file: %w", err)
@@ -134,7 +138,7 @@ func (w *Wiring) policy() (*auth.Policy, error) {
 	if pol.GroupRoles == nil {
 		pol.GroupRoles = map[string][]string{}
 	}
-	for group, roles := range w.cfg.Auth.GroupRoles {
+	for group, roles := range cfg.Auth.GroupRoles {
 		for _, r := range roles {
 			if !slices.Contains(known, r) {
 				return nil, fmt.Errorf("auth.group_roles: group %q maps to unknown role %q", group, r)

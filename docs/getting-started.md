@@ -39,6 +39,40 @@ and push it to a registry the cluster can pull from.
 
 The chart's values are documented in [`charts/trica/README.md`](../charts/trica/README.md).
 
+## First credentials
+
+A fresh deployment has no credential. The `token` and `enrol` commands create them from next to
+the server; whoever can run them has database access, which already is everything
+([security](reference/security.md#minting-the-first-token)). The secret is the only thing on
+stdout, shown once; metadata goes to stderr. The server must have started once (it migrates), or
+run `trica migrate up`.
+
+An API token, for the MCP client (Claude Code) or a script:
+
+```bash
+# Compose, from deploy/compose
+TOKEN=$(docker compose exec -T trica trica token create --name claude-code --owner you --roles admin --scopes write)
+# Kubernetes (the chart's pod reads its configuration from /etc/trica/trica.yaml)
+TOKEN=$(kubectl -n trica exec deploy/trica -- trica token create --config /etc/trica/trica.yaml \
+  --name claude-code --owner you --roles admin --scopes write)
+curl -fsS -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8080/api/v1/me
+```
+
+The roles must exist in the server's RBAC policy (`admin`, `operator`, `viewer`, or your
+`auth.policy_file`), and a scope cannot exceed them: use `--roles operator --scopes write` for a
+client that should only propose. `trica token list` shows tokens (never a secret),
+`trica token revoke --id N` disables one at once.
+
+An enrolment token, for each agent or collector (needs `transport.addr`):
+
+```bash
+docker compose exec -T trica trica enrol create --binding agent:host-01 --ttl 24h
+kubectl -n trica exec deploy/trica -- trica enrol create --config /etc/trica/trica.yaml --binding agent:host-01 --ttl 24h
+```
+
+Hand the token and the CA certificate (`<transport.ca_dir>/ca.pem`, public; the command says where) to the
+machine over a channel you trust. The token works once.
+
 ## Backup and restore
 
 `trica backup` and `trica restore` take and load a consistent archive of the database. The
@@ -57,6 +91,6 @@ One server process with the migrations, the absence sweep, `/healthz`, `/readyz`
   at start;
 - the mutual-TLS endpoint for agents, on its own port, when `transport.addr` is set.
 
-There is no anonymous access, and no command yet to create the first API token or an agent
-enrolment token: sign in through OIDC to use the API today ([configuration](reference/configuration.md)).
+There is no anonymous access: create the first API token with `trica token create`
+([below](#first-credentials)), or sign in through OIDC ([configuration](reference/configuration.md)).
 The collectors and the agent are not started by the server; see [`plan/STATUS.md`](plan/STATUS.md).

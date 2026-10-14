@@ -57,7 +57,14 @@ the client. The transport package never writes inventory tables.
 
 ## Operator: create an enrolment token
 
-There is no CLI yet. From Go, with a `Registry` on the server's pool:
+```bash
+trica enrol create --binding agent:host-01 --ttl 24h   # the token alone on stdout
+```
+
+Run it next to the server, with the server's configuration ([getting started](../getting-started.md#first-credentials)).
+The binding is validated with `pki.ValidBinding`; `--ttl` defaults to one hour. On stderr it says
+where the CA certificate is for the client (`<transport.ca_dir>/ca.pem` on the server, public) and
+what the client dials. From Go, with a `Registry` on the server's pool:
 
 ```go
 reg := transport.NewRegistry(pool)
