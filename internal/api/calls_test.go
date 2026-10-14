@@ -57,6 +57,7 @@ func (e *env) calls(t testing.TB, proposalID, discrepancyID int64) map[string]ca
 		"getReadyz":           {"GET", "/api/v1/readyz", ""},
 		"getOpenAPI":          {"GET", "/api/v1/openapi.json", ""},
 		"getCollectionHealth": {"GET", "/api/v1/health/collection", ""},
+		"getMe":               {"GET", "/api/v1/me", ""},
 		"getSchema":           {"GET", "/api/v1/schema", ""},
 		"getSchemaType":       {"GET", "/api/v1/schema/types/device", ""},
 		"listObjects":         {"GET", "/api/v1/objects?type=device", ""},

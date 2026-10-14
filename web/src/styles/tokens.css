@@ -1,0 +1,105 @@
+/*
+ * Colour tokens, light and dark. Three blocks carry the same dark values:
+ * the explicit choice (data-theme="dark"), and the system preference when no
+ * choice was made. src/styles/tokens.test.ts computes the WCAG contrast of every
+ * foreground/background pair below (4.5:1 for text, 3:1 for interface parts) in
+ * both themes and checks the two dark blocks are identical: change a colour here
+ * and the test says whether it still passes.
+ */
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #f6f8fa;
+  --text: #1f2328;
+  --muted: #57606a;
+  --border: #d0d7de;
+  --input-border: #6e7781;
+  --link: #0550ae;
+  --focus: #0969da;
+  --primary-bg: #1d4ed8;
+  --primary-fg: #ffffff;
+  --danger-bg: #b42318;
+  --danger-fg: #ffffff;
+  --button-bg: #f6f8fa;
+  --button-fg: #1f2328;
+  --notice-bg: #fff8c5;
+  --notice-fg: #4d2d00;
+  --error-bg: #ffebe9;
+  --error-fg: #82071e;
+  --green-bg: #dafbe1;
+  --green-fg: #116329;
+  --red-bg: #ffebe9;
+  --red-fg: #a40e26;
+  --amber-bg: #fff8c5;
+  --amber-fg: #7d4e00;
+  --blue-bg: #ddf4ff;
+  --blue-fg: #0550ae;
+  --gray-bg: #eaeef2;
+  --gray-fg: #424a53;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --surface: #161b22;
+  --text: #e6edf3;
+  --muted: #9198a1;
+  --border: #30363d;
+  --input-border: #8b949e;
+  --link: #58a6ff;
+  --focus: #79c0ff;
+  --primary-bg: #1f6feb;
+  --primary-fg: #ffffff;
+  --danger-bg: #da3633;
+  --danger-fg: #ffffff;
+  --button-bg: #21262d;
+  --button-fg: #e6edf3;
+  --notice-bg: #3b2e00;
+  --notice-fg: #f2cc60;
+  --error-bg: #4c1215;
+  --error-fg: #ffa198;
+  --green-bg: #0f3d1f;
+  --green-fg: #7ee787;
+  --red-bg: #4c1215;
+  --red-fg: #ffa198;
+  --amber-bg: #4a3300;
+  --amber-fg: #f2cc60;
+  --blue-bg: #0c2d57;
+  --blue-fg: #79c0ff;
+  --gray-bg: #30363d;
+  --gray-fg: #c9d1d9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+    --bg: #0d1117;
+    --surface: #161b22;
+    --text: #e6edf3;
+    --muted: #9198a1;
+    --border: #30363d;
+    --input-border: #8b949e;
+    --link: #58a6ff;
+    --focus: #79c0ff;
+    --primary-bg: #1f6feb;
+    --primary-fg: #ffffff;
+    --danger-bg: #da3633;
+    --danger-fg: #ffffff;
+    --button-bg: #21262d;
+    --button-fg: #e6edf3;
+    --notice-bg: #3b2e00;
+    --notice-fg: #f2cc60;
+    --error-bg: #4c1215;
+    --error-fg: #ffa198;
+    --green-bg: #0f3d1f;
+    --green-fg: #7ee787;
+    --red-bg: #4c1215;
+    --red-fg: #ffa198;
+    --amber-bg: #4a3300;
+    --amber-fg: #f2cc60;
+    --blue-bg: #0c2d57;
+    --blue-fg: #79c0ff;
+    --gray-bg: #30363d;
+    --gray-fg: #c9d1d9;
+  }
+}

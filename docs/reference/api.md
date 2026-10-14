@@ -15,6 +15,7 @@ auth PR). `api.New(Config)` returns a `*Server`; `Handler()` serves paths under 
 |---|---|---|
 | `GET /healthz`, `GET /readyz` | none | Liveness; readiness (the database answers). No credential needed |
 | `GET /openapi.json` | read | The generated OpenAPI document |
+| `GET /me` | read | Who the caller is and which actions it holds globally (`actions`). The web UI uses it to decide which controls to offer; a grant limited to some types or sites can still be refused on one object, and every call is checked again |
 | `GET /health/collection` | read | Last run of every source |
 | `GET /schema`, `GET /schema/types/{type}` | read | Types, attributes, relation types (built-in and overlay) |
 | `GET /objects` | read | List, with `q` (TQL), `type`, `sort`. Pages |

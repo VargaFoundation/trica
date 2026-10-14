@@ -9,6 +9,7 @@
 !.env.example
 /web/node_modules/
 /web/dist/
+/internal/web/dist/
 /web/playwright-report/
 /web/test-results/
 /charts/*/charts/
@@ -17,3 +18,4 @@
 .vscode/
 *.swp
 .DS_Store
+/web/coverage/
