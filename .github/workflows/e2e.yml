@@ -1,0 +1,50 @@
+# What is only true on a real cluster: the chart installs, the pod starts
+# non-root and read-only against a real PostgreSQL, and the NetworkPolicy is
+# enforced (Calico, not kindnet). Nightly, and on PRs touching the packaging.
+name: e2e
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "charts/**"
+      - "Dockerfile"
+      - "test/e2e/kind/**"
+      - "internal/store/migrations/**"
+      - ".github/workflows/e2e.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  kind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+        with: { version: v3.20.1 }
+      - uses: helm/kind-action@v1
+        with:
+          config: test/e2e/kind/kind.yaml
+          cluster_name: trica-e2e
+      - name: Calico, so that NetworkPolicies are enforced
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.2/manifests/calico.yaml
+          kubectl -n kube-system rollout status ds/calico-node --timeout=300s
+      - name: image
+        run: |
+          docker build --build-arg VERSION=e2e -t trica:e2e .
+          kind load docker-image trica:e2e --name trica-e2e
+      - name: install the chart and check it on the cluster
+        env:
+          IMAGE: trica:e2e
+        run: test/e2e/kind/run.sh
+      - name: cluster state on failure
+        if: failure()
+        run: |
+          kubectl get pods -A -o wide
+          kubectl -n trica-e2e describe pods
+          kubectl -n trica-e2e logs deploy/trica --tail=200 || true

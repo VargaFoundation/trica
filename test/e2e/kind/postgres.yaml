@@ -1,0 +1,36 @@
+# A throwaway PostgreSQL for the e2e test. Not a deployment model: in real
+# installs the database is a Zalando or CloudNativePG cluster.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector: {app: postgres}
+  ports:
+    - {port: 5432, targetPort: 5432}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: postgres}
+  template:
+    metadata:
+      labels: {app: postgres}
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          env:
+            - {name: POSTGRES_USER, value: trica}
+            - {name: POSTGRES_DB, value: trica}
+            - {name: POSTGRES_PASSWORD, value: e2e-only}
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, trica]
+            periodSeconds: 3
