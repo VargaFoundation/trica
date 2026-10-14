@@ -46,7 +46,7 @@ var flushEvery = time.Minute
 const (
 	envServer         = "TRICA_AGENT_SERVER"
 	envCAFile         = "TRICA_AGENT_CA_FILE"
-	envEnrolTokenFile = "TRICA_AGENT_ENROL_TOKEN_FILE"
+	envEnrolTokenFile = "TRICA_AGENT_ENROL_TOKEN_FILE" //nolint:gosec // G101: the name of a variable holding a file path, not a credential
 )
 
 // errUnhealthy ends a run that stayed on probation past its health timeout.

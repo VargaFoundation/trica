@@ -126,7 +126,7 @@ mcp: {disable_localhost_protection: true}
 	for {
 		if a := srv.Addr(); a != "" {
 			r.base = "http://" + a
-			if res, err := http.Get(r.base + "/readyz"); err == nil { //nolint:noctx // local probe
+			if res, err := http.Get(r.base + "/readyz"); err == nil {
 				_ = res.Body.Close()
 				if res.StatusCode == http.StatusOK {
 					break
