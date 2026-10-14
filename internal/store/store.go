@@ -5,11 +5,11 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -50,25 +50,67 @@ func Open(ctx context.Context, url string) (*Store, error) {
 // Close releases the pool.
 func (s *Store) Close() { s.Pool.Close() }
 
-// Migrate applies every pending migration.
+// migrateLock is the advisory lock key serialising migrations.
+const migrateLock = 7426202
+
+// Migrate applies every pending migration. Several replicas starting at once
+// take turns: the first migrates, the others find nothing left to apply.
 func (s *Store) Migrate(ctx context.Context) error {
-	return s.goose(ctx, func(db *sql.DB) error { return goose.UpContext(ctx, db, "migrations") })
+	conn, err := s.Pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock($1)`, migrateLock); err != nil {
+		return fmt.Errorf("store: migration lock: %w", err)
+	}
+	defer func() { _, _ = conn.Exec(context.WithoutCancel(ctx), `SELECT pg_advisory_unlock($1)`, migrateLock) }()
+	return s.goose(func(p *goose.Provider) error {
+		_, err := p.Up(ctx)
+		return err
+	})
 }
 
 // MigrateDown rolls every migration back. Used by the reversibility test.
 func (s *Store) MigrateDown(ctx context.Context) error {
-	return s.goose(ctx, func(db *sql.DB) error { return goose.DownToContext(ctx, db, "migrations", 0) })
+	return s.goose(func(p *goose.Provider) error {
+		_, err := p.DownTo(ctx, 0)
+		return err
+	})
 }
 
-func (s *Store) goose(_ context.Context, fn func(*sql.DB) error) error {
-	goose.SetBaseFS(migrations)
-	goose.SetLogger(goose.NopLogger())
-	if err := goose.SetDialect("postgres"); err != nil {
+// MigrateDownOne rolls the latest migration back, and only that one.
+func (s *Store) MigrateDownOne(ctx context.Context) error {
+	return s.goose(func(p *goose.Provider) error {
+		_, err := p.Down(ctx)
+		return err
+	})
+}
+
+// SchemaVersion returns the version of the latest applied migration.
+func (s *Store) SchemaVersion(ctx context.Context) (int64, error) {
+	var v int64
+	err := s.goose(func(p *goose.Provider) (err error) {
+		v, err = p.GetDBVersion(ctx)
+		return err
+	})
+	return v, err
+}
+
+// goose runs fn with a migration provider of its own: goose's package-level
+// API keeps global state and races when two stores migrate in one process.
+func (s *Store) goose(fn func(*goose.Provider) error) error {
+	fsys, err := fs.Sub(migrations, "migrations")
+	if err != nil {
 		return err
 	}
 	db := stdlib.OpenDBFromPool(s.Pool)
 	defer db.Close()
-	return fn(db)
+	p, err := goose.NewProvider(goose.DialectPostgres, db, fsys)
+	if err != nil {
+		return fmt.Errorf("store: migrations: %w", err)
+	}
+	return fn(p)
 }
 
 // InTx runs fn in a transaction, committing on success.

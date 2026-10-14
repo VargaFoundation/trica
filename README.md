@@ -31,6 +31,11 @@ parent), resolves each attribute by per-attribute source priorities, records his
 discrepancies, and marks unseen objects absent, never deleted. Everything lives in PostgreSQL.
 Decisions are in [`docs/adr/`](docs/adr/).
 
+## Running
+
+[`docs/getting-started.md`](docs/getting-started.md): Docker Compose on one machine, or the
+Helm chart in [`charts/trica`](charts/trica).
+
 ## Developing
 
 ```bash

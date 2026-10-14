@@ -1,0 +1,104 @@
+# Default values for trica. Every key is documented in charts/trica/README.md.
+
+image:
+  repository: ghcr.io/vargafoundation/trica
+  # Defaults to the chart's appVersion.
+  tag: ""
+  # Set to pin by digest (sha256:...); takes precedence over tag.
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# More than one replica is safe: migrations and the absence sweep take
+# PostgreSQL advisory locks.
+replicaCount: 1
+
+# PostgreSQL is external (a Zalando or CloudNativePG cluster, a managed
+# instance). The connection URL is read from an existing Secret, mounted as a
+# file; the chart never holds it.
+database:
+  existingSecret: ""
+  # Key of the Secret holding postgres://user:password@host:5432/db?sslmode=...
+  urlKey: database-url
+
+# Server configuration (docs/reference/configuration.md). http.addr is set by
+# the chart.
+config:
+  log_level: info
+  sweep_interval: 1m
+  migrate_on_start: true
+  policy:
+    absent_after: 30m
+    propose: ["mcp:*"]
+    priorities: []
+
+# Extra schema overlays: custom types and attributes, one key per file.
+schemaOverlays: {}
+#  site.yaml: |
+#    types:
+#      device:
+#        attributes:
+#          cost_center: {kind: string, search: true}
+
+service:
+  type: ClusterIP
+  port: 8080
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+terminationGracePeriodSeconds: 30
+
+networkPolicy:
+  enabled: true
+  # Who may reach the HTTP port. Empty: any pod in the release namespace.
+  ingressFrom: []
+  #  - namespaceSelector:
+  #      matchLabels: {kubernetes.io/metadata.name: ingress-nginx}
+  # Where the server may connect besides DNS. The database must be listed;
+  # empty allows all egress.
+  egressTo: []
+  #  - to:
+  #      - podSelector: {matchLabels: {application: spilo}}
+  #    ports:
+  #      - {port: 5432, protocol: TCP}
+
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  labels: {}
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1

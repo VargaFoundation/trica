@@ -24,6 +24,8 @@ jobs:
       pull-requests: read
     outputs:
       go: ${{ steps.filter.outputs.go }}
+      chart: ${{ steps.filter.outputs.chart }}
+      image: ${{ steps.filter.outputs.image }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -40,6 +42,16 @@ jobs:
               - 'packaging/**'
               - 'deploy/**'
               - '.golangci.yml'
+            chart:
+              - 'charts/**'
+            image:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - '**/*.go'
+              - '**/*.sql'
+              - 'go.mod'
+              - 'go.sum'
+              - 'deploy/compose/**'
 
   go:
     needs: changes
@@ -93,6 +105,38 @@ jobs:
           done
           test "$(ls dist/*.rpm | wc -l)" -eq 2
       - run: make agent-footprint
+  chart:
+    # The chart renders, validates against the Kubernetes schemas and keeps
+    # its guards (helm-unittest): no database Secret, no render.
+    needs: changes
+    if: needs.changes.outputs.chart == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+        with: { version: v3.20.1 }
+      - run: helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.1.2
+      - run: helm lint charts/trica --set database.existingSecret=ci
+      - run: helm unittest charts/trica
+      - name: kubeconform
+        run: |
+          curl -fsSL https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz | tar xz kubeconform
+          helm template ci charts/trica --set database.existingSecret=ci \
+            --set serviceMonitor.enabled=true --set podDisruptionBudget.enabled=true \
+            | ./kubeconform -strict -summary -kubernetes-version 1.31.0 \
+                -schema-location default \
+                -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+
+  image:
+    # The image builds, its binary runs, and the compose file is valid.
+    needs: changes
+    if: needs.changes.outputs.image == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build --build-arg VERSION=ci -t trica:ci .
+      - run: test "$(docker run --rm trica:ci version)" = ci
+      - run: TRICA_DB_PASSWORD=ci docker compose -f deploy/compose/compose.yaml config --quiet
 
   secrets:
     # A committed secret cannot be taken back: it is already in the history.
@@ -140,7 +184,7 @@ jobs:
     # only `success` and `skipped`: whatever else GitHub reports closes the gate.
     # `changes` is in the list because a failed filter skips every job after
     # it, and a gate that only sees skipped jobs is green.
-    needs: [changes, go, agent, secrets, dco]
+    needs: [changes, go, agent, chart, image, secrets, dco]
     if: always()
     runs-on: ubuntu-latest
     steps:

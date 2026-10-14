@@ -23,6 +23,21 @@ import (
 // New returns a store on a new, migrated database dropped at test end.
 func New(t testing.TB) *store.Store {
 	t.Helper()
+	s, err := store.Open(context.Background(), NewURL(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(s.Close)
+	if err := s.Migrate(context.Background()); err != nil {
+		t.Fatalf("testdb: migrate: %v", err)
+	}
+	return s
+}
+
+// NewURL creates a new, empty database dropped at test end and returns its
+// URL, for tests that open their own connections (the server, migrations).
+func NewURL(t testing.TB) string {
+	t.Helper()
 	base := os.Getenv("TRICA_TEST_DATABASE_URL")
 	if base == "" {
 		if os.Getenv("TRICA_REQUIRE_DB") == "1" {
@@ -47,15 +62,8 @@ func New(t testing.TB) *store.Store {
 		t.Fatal(err)
 	}
 	u.Path = "/" + name
-	s, err := store.Open(ctx, u.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := s.Migrate(ctx); err != nil {
-		t.Fatalf("testdb: migrate: %v", err)
-	}
+	// Registered first, so it runs after the cleanups that close connections.
 	t.Cleanup(func() {
-		s.Close()
 		c, err := pgx.Connect(context.Background(), base)
 		if err != nil {
 			return
@@ -63,5 +71,5 @@ func New(t testing.TB) *store.Store {
 		defer c.Close(context.Background())
 		_, _ = c.Exec(context.Background(), "DROP DATABASE IF EXISTS "+name+" WITH (FORCE)")
 	})
-	return s
+	return u.String()
 }

@@ -1,0 +1,9 @@
+.git
+.claude
+bin
+dist
+coverage.out
+coverage.html
+charts
+deploy
+docs

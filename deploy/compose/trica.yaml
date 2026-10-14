@@ -1,0 +1,10 @@
+# Server configuration. Every key is documented in docs/reference/configuration.md.
+http:
+  addr: ":8080"
+log_level: info
+sweep_interval: 1m
+policy:
+  # An observed object unseen for this long is marked absent (never deleted).
+  absent_after: 30m
+  # Batches from these sources wait for a human approval.
+  propose: ["mcp:*"]

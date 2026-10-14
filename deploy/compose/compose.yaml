@@ -1,0 +1,45 @@
+# trica on one machine: PostgreSQL and the server.
+#   cp .env.example .env   # then change the password
+#   docker compose up -d
+#   curl -fsS http://127.0.0.1:8080/readyz
+# See docs/getting-started.md.
+name: trica
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: trica
+      POSTGRES_DB: trica
+      POSTGRES_PASSWORD: ${TRICA_DB_PASSWORD:?set TRICA_DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "trica"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 120s
+
+  trica:
+    image: ${TRICA_IMAGE:-trica:local}
+    build:
+      context: ../..
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TRICA_DATABASE_URL: postgres://trica:${TRICA_DB_PASSWORD}@postgres:5432/trica?sslmode=disable
+      TRICA_CONFIG: /etc/trica/trica.yaml
+    volumes:
+      - ./trica.yaml:/etc/trica/trica.yaml:ro
+    ports:
+      - "${TRICA_BIND:-127.0.0.1}:8080:8080"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+volumes:
+  pgdata:

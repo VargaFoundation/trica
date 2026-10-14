@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "trica.fullname" . }}
+  labels:
+    {{- include "trica.labels" . | nindent 4 }}
+data:
+  trica.yaml: |
+    {{- include "trica.config" . | nindent 4 }}
+  {{- range $name, $body := .Values.schemaOverlays }}
+  schema-{{ $name }}: |
+    {{- $body | nindent 4 }}
+  {{- end }}
