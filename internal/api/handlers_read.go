@@ -462,10 +462,12 @@ func (s *Server) hChanges(c *call) error {
 	return c.json(200, pageOf(changes, pp, false))
 }
 
-// filterChanges keeps the changes on objects the caller may read.
+// filterChanges keeps the changes on objects the caller may read. A relation
+// change keeps its place in the feed but loses other_id when the caller may not
+// read the other end: the id of an unreadable object is not disclosed.
 func (c *call) filterChanges(in []store.Change) ([]store.Change, error) {
 	seen := map[string]bool{}
-	var ids []string
+	var ids, others []string
 	for _, ch := range in {
 		if !seen[ch.ObjectID] {
 			seen[ch.ObjectID] = true
@@ -476,13 +478,38 @@ func (c *call) filterChanges(in []store.Change) ([]store.Change, error) {
 	if err != nil {
 		return nil, err
 	}
-	out := []store.Change{}
+	kept := []store.Change{}
+	seenOther := map[string]bool{}
 	for _, ch := range in {
 		if c.s.auth.Allow(c.p, ActionRead, ch.Type, sites[ch.ObjectID]) {
-			out = append(out, ch)
+			kept = append(kept, ch)
+			if ch.OtherID != "" && !seenOther[ch.OtherID] {
+				seenOther[ch.OtherID] = true
+				others = append(others, ch.OtherID)
+			}
 		}
 	}
-	return out, nil
+	if len(others) == 0 {
+		return kept, nil
+	}
+	objs, err := c.s.st.Objects(c.ctx(), others)
+	if err != nil {
+		return nil, err
+	}
+	types := map[string]string{}
+	for _, o := range objs {
+		types[o.ID] = o.Type
+	}
+	osites, err := c.s.siteIDs(c.ctx(), others)
+	if err != nil {
+		return nil, err
+	}
+	for i := range kept {
+		if id := kept[i].OtherID; id != "" && !c.s.auth.Allow(c.p, ActionRead, types[id], osites[id]) {
+			kept[i].OtherID = ""
+		}
+	}
+	return kept, nil
 }
 
 func (s *Server) hWhoHad(c *call) error {
