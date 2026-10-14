@@ -1,0 +1,21 @@
+processor	: 0
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 85
+model name	: Example(R) Xeon(R) Gold 0000 CPU @ 2.00GHz
+physical id	: 0
+siblings	: 2
+core id		: 0
+cpu cores	: 2
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sse sse2 ht hypervisor lm
+
+processor	: 1
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 85
+model name	: Example(R) Xeon(R) Gold 0000 CPU @ 2.00GHz
+physical id	: 0
+siblings	: 2
+core id		: 1
+cpu cores	: 2
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sse sse2 ht hypervisor lm

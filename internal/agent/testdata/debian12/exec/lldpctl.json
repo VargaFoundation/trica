@@ -1,0 +1,31 @@
+{
+  "lldp": {
+    "interface": {
+      "eno1": {
+        "via": "LLDP",
+        "rid": "1",
+        "age": "12 days, 03:04:05",
+        "chassis": {
+          "sw-01": {
+            "id": {"type": "mac", "value": "02:00:00:00:aa:01"},
+            "descr": "Example Switch OS 1.2.3",
+            "mgmt-ip": ["192.0.2.2", "2001:db8::2"],
+            "capability": [{"type": "Bridge", "enabled": true}, {"type": "Router", "enabled": false}]
+          }
+        },
+        "port": {"id": {"type": "ifname", "value": "Ethernet12"}, "descr": "uplink host-01 eno1", "ttl": "120"}
+      },
+      "eno2": {
+        "via": "LLDP",
+        "rid": "2",
+        "age": "12 days, 03:04:06",
+        "chassis": {
+          "id": {"type": "mac", "value": "02:00:00:00:aa:02"},
+          "descr": "Example Switch OS 1.2.3",
+          "capability": [{"type": "Bridge", "enabled": true}]
+        },
+        "port": {"id": {"type": "local", "value": "Eth1/13"}, "descr": "Eth1/13", "ttl": "120"}
+      }
+    }
+  }
+}
