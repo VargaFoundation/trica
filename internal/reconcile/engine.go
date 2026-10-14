@@ -16,6 +16,7 @@ import (
 
 	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/internal/store"
+	"github.com/VargaFoundation/trica/internal/tql"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -77,6 +78,37 @@ func (e *Engine) checkObservedAge(b *sdk.Batch) error {
 	if age := e.now().Sub(b.ObservedAt); age > limit {
 		return fmt.Errorf("%w: observed_at is %s old, the maximum for source %q is %s",
 			ErrRejected, age.Round(time.Second), b.Source, limit)
+	}
+	return nil
+}
+
+// validateSelector checks the selector of a version_policy when it is written.
+// A selector is parsed as a TQL query (ADR 0012), and text that is not a query
+// does not fail to parse: it becomes free text and matches nothing, so a
+// mistyped policy would govern zero objects and a compliance report would read
+// "nothing is behind". A selector must therefore be made of field predicates
+// only: free text, sort and limit directives are refused.
+func validateSelector(o *sdk.Object) error {
+	if o.Type != "version_policy" {
+		return nil
+	}
+	raw, ok := o.Attributes["selector"]
+	if !ok || raw == nil {
+		return nil
+	}
+	s, ok := raw.(string)
+	if !ok {
+		return fmt.Errorf("selector must be a string")
+	}
+	if strings.TrimSpace(s) == "" {
+		return nil // no selector: the policy is not scoped by a query
+	}
+	q, err := tql.Parse(s)
+	if err != nil {
+		return fmt.Errorf("selector %q: %w", s, err)
+	}
+	if len(q.Fields()) == 0 || len(q.Texts()) > 0 || len(q.Sort) > 0 || q.Limit != 0 {
+		return fmt.Errorf("selector %q is not a TQL filter: use field terms such as \"type:device vendor:arista\" (free text, sort: and limit: are not allowed)", s)
 	}
 	return nil
 }
@@ -190,6 +222,9 @@ func (e *Engine) apply(ctx context.Context, tx pgx.Tx, b *sdk.Batch, author, rea
 	reg := e.Schema()
 	for _, o := range b.Objects {
 		if _, err := reg.Type(o.Type); err != nil {
+			return nil, fmt.Errorf("%w: object %s: %w", ErrInvalid, o.Ref, err)
+		}
+		if err := validateSelector(o); err != nil {
 			return nil, fmt.Errorf("%w: object %s: %w", ErrInvalid, o.Ref, err)
 		}
 	}
