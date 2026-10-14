@@ -114,7 +114,8 @@ proposal in trica. No tool approves, rejects, deletes or writes directly.
 
 - Streamable HTTP: `Authorization: Bearer <credential>` on every request, authenticated afresh
   by the `Authorizer` (the handler keeps no session, so a revoked credential stops working at once).
-  No credential: 401.
+  No credential: 401. A credential that cannot be checked (the token store or the identity
+  provider does not answer): 503 with `Retry-After`, so the client keeps it.
 - Every tool call is authorized per object type and site, with the same `Authorizer` and the same
   rules as the REST API (`api.Guard`): what a caller may not read is neither listed nor counted
   nor named in a relation. A grant limited to some sites reads objects of those sites by id only:

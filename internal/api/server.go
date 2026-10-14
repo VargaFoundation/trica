@@ -177,6 +177,12 @@ func (s *Server) wrap(rt route) http.Handler {
 		c := &call{s: s, w: w, r: r, auditAction: rt.Audit}
 		if rt.Action != "" {
 			p, err := s.auth.Principal(r)
+			if errors.Is(err, ErrAuthUnavailable) {
+				s.log.Error("api: authentication unavailable", slog.String("method", r.Method), slog.String("path", r.URL.Path), slog.Any("error", err))
+				w.Header().Set("Retry-After", AuthRetryAfter)
+				writeProblem(w, r, newErr(http.StatusServiceUnavailable, "auth-unavailable", "the credential could not be checked; retry later"))
+				return
+			}
 			if err != nil {
 				writeProblem(w, r, newErr(http.StatusUnauthorized, "unauthenticated", "authentication is required"))
 				return

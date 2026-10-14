@@ -56,9 +56,9 @@ func (a *Authenticator) Authenticate(ctx context.Context, raw string) (*Principa
 	return a.OIDC.Verify(ctx, raw)
 }
 
-// isCredentialError separates "the caller's credential is bad" (401) from "we could not
+// IsCredentialError separates "the caller's credential is bad" (401) from "we could not
 // check it" (503); both fail closed.
-func isCredentialError(err error) bool {
+func IsCredentialError(err error) bool {
 	for _, target := range []error{ErrUnauthenticated, ErrTokenInvalid, ErrTokenMalformed, ErrTokenUnknown, ErrTokenRevoked, ErrTokenExpired} {
 		if errors.Is(err, target) {
 			return true
@@ -82,7 +82,7 @@ func Middleware(a *Authenticator) func(http.Handler) http.Handler {
 			p, err := a.Authenticate(r.Context(), raw)
 			if err != nil {
 				recordReason(r.Context(), err.Error())
-				if isCredentialError(err) {
+				if IsCredentialError(err) {
 					unauthorized(w)
 					return
 				}
