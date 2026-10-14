@@ -43,3 +43,18 @@ value lets a caller backdate what it says (absence detection, history order). Th
   its disk spool after an outage (ADR 0008).
 - The check runs when a batch is submitted (`Apply`, `Propose`), not when a stored proposal is
   approved: a proposal waiting days for a human is not stale for that reason.
+
+## Addendum: schema violations are hard errors for API callers (2026-10)
+
+A value the schema refuses (invalid enum, wrong kind) or a relation type it does not know used to
+be dropped with a warning whatever the source, so an API client checking only the status code
+believed its data was recorded. Now, by source kind:
+
+- **`user` and `token`** (people and API clients): such a batch is **rejected** with
+  `ErrRejected` (the API answers 422), nothing is applied, including for a proposal at proposal
+  time. The caller can fix its input and resend.
+- **Every other kind** (collectors, agent, `deduce`, `declare`, `mcp`): unchanged, a warning in
+  `Result.Warnings`. A collector must not lose a whole inventory run on one odd value.
+
+Not covered, still a warning for everyone: an unknown attribute (dropped, declare it as a custom
+field first) and a relation between types the schema does not allow.
