@@ -1,0 +1,24 @@
+---
+# Written by the trica project (Apache-2.0), not taken from the upstream
+# library. Same format, so it can be contributed upstream as is.
+manufacturer: Generic
+model: Generic 1U pfSense appliance
+slug: generic-1u-pfsense-appliance
+u_height: 1
+is_full_depth: false
+airflow: front-to-rear
+console-ports:
+  - name: console
+    type: rj-45
+power-ports:
+  - name: PSU1
+    type: iec-60320-c14
+interfaces:
+  - name: igb0
+    type: 1000base-t
+  - name: igb1
+    type: 1000base-t
+  - name: igb2
+    type: 1000base-t
+  - name: igb3
+    type: 1000base-t
