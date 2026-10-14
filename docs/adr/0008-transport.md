@@ -24,3 +24,13 @@ outages, and must be updatable remotely in waves with rollback.
 
 - No bbolt dependency and no gRPC toolchain; the agent stays small.
 - Streaming is not needed: a batch is a complete report.
+
+## Details settled in the implementation
+
+Reference: [transport](../reference/transport.md).
+
+- The binding is a source prefix of at least two segments (`agent:host-01`); a batch source
+  equals it or starts with `binding:`. It travels in a URI SAN, `urn:trica:source:<binding>`.
+- 408 and 429 are retried through the spool like a 5xx; every other 4xx is final and not spooled.
+- Revocation is a PostgreSQL lookup on every request, failing closed.
+- Per-source rate limiting is not implemented yet; only body size limits are.
