@@ -39,3 +39,12 @@ JMESPath over JSON, would hand callers the schema of the store or a full evaluat
   predicate written as a correlated walk took 4.4 s there; it is compiled as a set built once.
 - Search in the past ("which device had this address on 3 March") reads the history tables
   and is not part of this grammar yet.
+
+## Addendum: a version policy's selector is validated when written (2026-10)
+
+A selector is parsed as TQL, and text that is not a query does not fail to parse: it becomes
+free text and matches nothing. The schema example (`device where vendor = 'Arista'`) was such a
+text, so a policy written from it governed zero objects and a compliance report read "nothing is
+behind". The engine now refuses, with `ErrInvalid`, a batch whose `version_policy.selector` does
+not parse **or** is not made of field predicates only (free text, `sort:` and `limit:` are
+refused). An empty selector stays allowed. The schema example is now `type:device vendor:arista`.

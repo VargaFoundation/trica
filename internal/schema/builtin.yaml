@@ -549,7 +549,7 @@ types:
       name: {kind: string, identity: strong, search: true, required: true, label: {en: Name, fr: Nom}, description: "Policy name."}
       software: {kind: string, required: true, label: {en: Software, fr: Logiciel}, description: "Software name the policy governs (matched against software.name or a device attribute)."}
       attribute: {kind: string, label: {en: Attribute, fr: Attribut}, description: "When set, the device attribute holding the version (os_version, bios_version, bmc_version) instead of a runs relation."}
-      selector: {kind: string, label: {en: Selector, fr: Sélecteur}, description: "TQL filter selecting the governed objects, e.g. \"device where vendor = 'Arista'\"."}
+      selector: {kind: string, label: {en: Selector, fr: Sélecteur}, description: "TQL filter selecting the governed objects, e.g. \"type:device vendor:arista\"."}
       reference_version: {kind: string, required: true, label: {en: Reference version, fr: Version de référence}, description: "Version every governed object should run."}
       max_minor_lag: {kind: int, label: {en: Tolerated minor lag, fr: Retard mineur toléré}, description: "Number of minor versions an object may lag behind."}
       max_patch_lag: {kind: int, label: {en: Tolerated patch lag, fr: Retard correctif toléré}, description: "Number of patch versions an object may lag behind."}
