@@ -1,0 +1,187 @@
+# The twelve questions of the product specification (section "Conçu pour l'IA"),
+# each with the MCP tool that answers it in ONE call, run by questions_test.go
+# against a real PostgreSQL through an in-memory MCP session.
+#
+# The data is invented: documentation addresses (192.0.2.0/24, 198.51.100.0/24),
+# made-up names and serials, locally administered MACs. The clock stands at
+# `now`; the seed is in questions_test.go.
+#
+# A question is "answerable" when ONE call of a lot 1 tool answers it. The
+# others say why they are not, and the Go test checks that the file claims
+# exactly what the tools do: it counts the answerable ones and fails when the
+# score differs from `answerable_count`.
+#
+# `arguments` strings may hold ${id:<ref>}: the id of a seeded object.
+# `expect` entries read the structured answer by a dot path (object keys,
+# list indexes, `*` for every element of a list) and compare it with
+#   equals   the whole value (a list for a `*` path)
+#   contains a substring, or a member of a list for a `*` path
+#   gte      a number
+#   present  whether the path exists with a value
+now: "2026-10-10T12:00:00Z"
+answerable_count: 10
+questions:
+  - id: 1
+    spec: "Find everything about 192.0.2.13"
+    tool: search
+    answerable: true
+    arguments: {query: "192.0.2.13"}
+    expect:
+      - {path: summary.total, equals: 1}
+      - {path: items.0.display, equals: sw-edge-02}
+      - {path: items.0.type, equals: device}
+
+  - id: 2
+    spec: "The 10 servers that consume the most this week"
+    tool: rank_filter
+    answerable: true
+    arguments: {type: device, attribute: power_w, n: 10, query: "role:server"}
+    expect:
+      - {path: summary.total, equals: 12}
+      - {path: summary.returned, equals: 10}
+      - {path: summary.truncated, equals: true}
+      - {path: items.0.display, equals: srv-12}
+      - {path: items.0.value, equals: 420}
+      - {path: items.9.display, equals: srv-03}
+    caveat: "The values are the current ones in the inventory, not a consumption over the week: lot 1 holds no metrics (they come with the metrics connectors)."
+
+  - id: 3
+    spec: "The switches whose firmware is behind the reference"
+    tool: version_compliance
+    answerable: true
+    arguments: {policy: switch-os}
+    expect:
+      - {path: summary.governed, equals: 5}
+      - {path: summary.compliant, equals: 1}
+      - {path: summary.within_tolerance, equals: 1}
+      - {path: summary.behind, equals: 2}
+      - {path: summary.unknown, equals: 1}
+      - {path: "items.*.display", equals: [sw-edge-01, sw-agg-02, sw-edge-02]}
+
+  - id: 4
+    spec: "The SSDs that will reach 80 % wear within six months"
+    tool: forecast_threshold
+    answerable: true
+    arguments:
+      type: disk
+      attribute: wear_pct
+      threshold: 80
+      direction: rising
+      horizon_days: 183
+      filters: [{attribute: media, op: in, value: "ssd,nvme"}]
+    expect:
+      - {path: summary.matching, equals: 5}
+      - {path: summary.will_cross, equals: 2}
+      - {path: summary.already_crossed, equals: 1}
+      - {path: summary.insufficient_history, equals: 1}
+      - {path: summary.beyond_horizon, equals: 1}
+      - {path: "items.*.display", equals: [ssd-03a, ssd-05a]}
+      - {path: items.0.points, equals: 3}
+      - {path: items.0.days_to_cross, gte: 22}
+      - {path: items.1.days_to_cross, gte: 134}
+      - {path: "already_crossed.*.display", equals: [ssd-09a]}
+      - {path: "insufficient_history.*.display", equals: [ssd-11a]}
+    caveat: "A straight-line estimate fitted to the values the inventory recorded (a value is recorded when it changes, so a drive that never changed has one point and is listed as insufficient_history), not a lifetime guarantee. The seed has the hard disk hdd-02a on the same trend: the media filter leaves it out. Six months is taken as 183 days. The specification places SSD wear forecasts in lot 2 (line 301): this tool answers the question on the history already stored, without the thermal and energy layers of that lot."
+
+  - id: 5
+    spec: "If I cut sw-core-01, which applications go down?"
+    tool: impact_analysis
+    answerable: true
+    arguments: {objects: [sw-core-01], affected_types: [application]}
+    expect:
+      - {path: summary.affected, equals: 4}
+      - {path: summary.listed.total, equals: 3}
+      - {path: summary.down_by_type.application, equals: 2}
+      - {path: summary.degraded_by_type.application, equals: 1}
+      - {path: "items.*.display", equals: [orders-api, orders-db, billing]}
+    caveat: "The dependency graph (internal/graph) is a separate PR: the answer comes from a canned graph standing in for it. This proves the tool's contract and its authorization, not the graph's propagation."
+
+  - id: 6
+    spec: "Which way does the traffic between the orders API and its database go?"
+    tool: network_path
+    answerable: true
+    arguments: {from: orders-api, to: orders-db}
+    expect:
+      - {path: summary.found, equals: true}
+      - {path: summary.hops, equals: 4}
+      - {path: "path.*.node.display", equals: [orders-api, srv-01, sw-agg-01, srv-02, orders-db]}
+    caveat: "A topological path over the declared and discovered relations (canned graph, as for question 5). Which flows actually use it needs traffic data (lot 3)."
+
+  - id: 7
+    spec: "Which links are the most loaded and what do they carry?"
+    tool: rank_filter
+    answerable: false
+    reason: "Needs link load and flows: no interface counters or flow data are collected in lot 1. The specification puts cable traffic, concentration and bottlenecks in lot 3 (Priorisation, lines 301-302)."
+
+  - id: 8
+    spec: "Is any equipment running with reversed airflow?"
+    tool: filter_objects
+    answerable: true
+    arguments:
+      type: device
+      filters: [{attribute: airflow, op: eq, value: rear_to_front}]
+    expect:
+      - {path: summary.total, equals: 2}
+      - {path: "items.*.display", equals: [sw-edge-01, sw-edge-02]}
+    caveat: "Reversed means rear_to_front, as the devices report it. It is not compared with each rack's cold aisle: the thermal model is a later lot."
+
+  - id: 9
+    spec: "What changed since yesterday that was not planned?"
+    tool: changes_since
+    answerable: true
+    arguments: {since: 24h}
+    expect:
+      - {path: summary.discrepancies.total, equals: 1}
+      - {path: summary.discrepancies_by_kind.value_mismatch, equals: 1}
+      - {path: discrepancies.0.key, equals: os_version}
+      - {path: summary.changes.total, gte: 1}
+      - {path: "changes.*.key", contains: os_version}
+    caveat: "Unplanned means differing from what was declared (a discrepancy): a change on an object nobody declared anything about is listed under changes, not flagged."
+
+  - id: 10
+    spec: "What was plugged into this port last month?"
+    tool: object_history
+    answerable: true
+    arguments:
+      object: sw-agg-01/Ethernet2
+      kind: relations
+      from: "2026-09-01"
+      to: "2026-09-30"
+    expect:
+      - {path: summary.total, equals: 1}
+      - {path: items.0.name, equals: cabled_to}
+      - {path: items.0.other.type, equals: interface}
+      - {path: items.0.valid_from, contains: "2026-09-02"}
+      - {path: items.0.valid_to, contains: "2026-09-20"}
+      - {path: items.0.other.id, equals: "${id:srv-01/eth0}"}
+
+  - id: 11
+    spec: "Show the metrics and the logs of this link during the 2 pm incident"
+    tool: object_history
+    answerable: false
+    reason: "Needs metrics and logs: the Prometheus and Loki connectors are not in lot 1, so there is nothing to correlate; the specification puts the correlation with metrics and logs in lot 3 (Priorisation, lines 301-302). object_history shows only what the inventory itself recorded."
+
+  - id: 12
+    spec: "Prepare the documentation of the new server in rack 2, U10"
+    tool: propose_change
+    answerable: true
+    creates_proposal: true
+    arguments:
+      reason: "New server srv-13 arrives next week: rack 2, U10"
+      objects:
+        - ref: srv
+          type: device
+          identity: {serial: SRV-13-SN, name: srv-13}
+          attributes: {role: server, vendor: Acme, power_w: 350}
+      relations:
+        - type: mounted_in
+          from: {ref: srv}
+          to: {type: rack, identity: {id: "${id:rack-2}"}}
+          attributes: {position: 10, face: front}
+    expect:
+      - {path: status, equals: proposed}
+      - {path: proposal_id, gte: 1}
+      - {path: source, equals: "mcp:assistant"}
+      - {path: preview.created, equals: 1}
+      - {path: preview.relations_opened, equals: 1}
+    caveat: "The answer is a proposal that a person approves; the inventory is unchanged until then (checked by the test)."
