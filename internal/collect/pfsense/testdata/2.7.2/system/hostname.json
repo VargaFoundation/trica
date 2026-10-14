@@ -1,0 +1,10 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": {
+    "hostname": "fw-a1",
+    "domain": "example.test"
+  }
+}

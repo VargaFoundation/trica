@@ -1,0 +1,21 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": 0,
+      "vpnid": 1,
+      "mode": "server_tls",
+      "protocol": "UDP4",
+      "interface": "wan",
+      "local_port": 1194,
+      "description": "Road warriors",
+      "disabled": false,
+      "tunnel_network": "198.51.100.192/26",
+      "local_network": "192.0.2.0/24",
+      "remote_network": ""
+    }
+  ]
+}

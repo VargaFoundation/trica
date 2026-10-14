@@ -1,0 +1,32 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "name": "wan",
+      "descr": "WAN",
+      "hwif": "vtnet0",
+      "status": "up",
+      "macaddr": "02:00:00:bb:02:00",
+      "ipaddr": "203.0.113.50",
+      "subnet": "24",
+      "ipaddrv6": "2001:db8::50",
+      "subnetv6": "64",
+      "linklocal": "fe80::ff:febb:200",
+      "media": "10Gbase-Twinax <full-duplex,rxpause,txpause>",
+      "mtu": "1500"
+    },
+    {
+      "name": "lan",
+      "descr": "",
+      "hwif": "vtnet1",
+      "status": "up",
+      "macaddr": "02:00:00:bb:02:01",
+      "ipaddr": "192.0.2.254",
+      "subnet": "24",
+      "mtu": "9000"
+    }
+  ]
+}

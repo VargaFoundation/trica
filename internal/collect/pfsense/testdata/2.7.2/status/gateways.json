@@ -1,0 +1,28 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "name": "WAN_DHCP",
+      "monitorip": "203.0.113.17",
+      "srcip": "203.0.113.18",
+      "status": "none",
+      "delay": "1.234ms",
+      "stddev": "0.101ms",
+      "loss": "0.0%",
+      "substatus": "none"
+    },
+    {
+      "name": "BACKUP_GW",
+      "monitorip": "192.0.2.2",
+      "srcip": "192.0.2.1",
+      "status": "down",
+      "delay": "0.0ms",
+      "stddev": "0.0ms",
+      "loss": "100.0%",
+      "substatus": "force_down"
+    }
+  ]
+}

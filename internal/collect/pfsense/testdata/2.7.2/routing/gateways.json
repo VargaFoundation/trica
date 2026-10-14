@@ -1,0 +1,30 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": 0,
+      "name": "WAN_GW6",
+      "interface": "wan",
+      "ipprotocol": "inet6",
+      "gateway": "dynamic",
+      "monitor": "",
+      "disabled": true,
+      "defaultgw": false,
+      "descr": ""
+    },
+    {
+      "id": 1,
+      "name": "BACKUP_GW",
+      "interface": "lan",
+      "ipprotocol": "inet",
+      "gateway": "192.0.2.2",
+      "monitor": "192.0.2.2",
+      "disabled": false,
+      "defaultgw": false,
+      "descr": "Backup path"
+    }
+  ]
+}

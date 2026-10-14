@@ -1,0 +1,31 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": [
+    {
+      "id": "wan",
+      "if": "vtnet0",
+      "descr": "WAN",
+      "enable": true,
+      "typev4": "staticv4",
+      "ipaddr": "203.0.113.50",
+      "subnet": "24",
+      "typev6": "staticv6",
+      "ipaddrv6": "2001:db8::50",
+      "subnetv6": "64"
+    },
+    {
+      "id": "lan",
+      "if": "vtnet1",
+      "descr": "",
+      "enable": true,
+      "typev4": "staticv4",
+      "ipaddr": "192.0.2.254",
+      "subnet": "24",
+      "typev6": "none",
+      "mtu": "9000"
+    }
+  ]
+}

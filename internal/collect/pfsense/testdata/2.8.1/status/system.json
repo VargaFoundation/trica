@@ -1,0 +1,14 @@
+{
+  "code": 200,
+  "status": "ok",
+  "response_id": "SUCCESS",
+  "message": "",
+  "data": {
+    "platform": "pfSense",
+    "serial": "none",
+    "netgate_id": "fakenetgateid0002",
+    "cpu_model": "Common KVM processor",
+    "cpu_count": "4",
+    "uptime": "0 Days 00 Hours 45 Minutes 10 Seconds"
+  }
+}
