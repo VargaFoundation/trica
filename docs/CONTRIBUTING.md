@@ -25,8 +25,12 @@ Read [`AGENTS.md`](../AGENTS.md): it is the short list of rules, for humans and 
 ## Writing a collector
 
 A collector implements `sdk.Collector` and emits `sdk.Batch` values. It never writes to the
-device. It ships with a `Fake*` that serves recorded responses from `test/fixtures/`, anonymised
-before commit (serial numbers, MAC addresses, names, addresses, anything secret).
+device. It ships with a `Fake*` that serves recorded responses from its package's `testdata/`
+directory, anonymised before commit (serial numbers, MAC addresses, names, addresses, anything
+secret). `testdata/README.md` says, per file, whether it was recorded or synthesised, from which
+version, and what was anonymised. Addresses come from the documentation ranges (192.0.2.0/24,
+198.51.100.0/24, 203.0.113.0/24, 2001:db8::/32) and MAC addresses are locally administered
+(`02:…`).
 
 ## Signing off: the DCO
 
