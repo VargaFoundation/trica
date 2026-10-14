@@ -36,6 +36,7 @@ describe("every call the client makes exists in the document", () => {
       "GET /objects/o-1/provenance": {},
       "GET /objects/o-1/relations": {},
       "GET /objects/o-1/timeline": {},
+      "GET /relations": {},
       "GET /proposals": {},
       "GET /proposals/3": {},
       "POST /proposals/3/approve": {},
@@ -51,6 +52,7 @@ describe("every call the client makes exists in the document", () => {
     await api.provenance("o-1");
     await api.relations("o-1", { limit: 200 });
     await api.timeline("o-1", { limit: 50, offset: 50 });
+    await api.relationLinks({ type: "cabled_to,connects", limit: 1000, offset: 0 });
     await api.proposals({ status: "pending", limit: 50, offset: 0 });
     await api.proposal(3);
     await api.approve(3);
@@ -59,7 +61,7 @@ describe("every call the client makes exists in the document", () => {
     await api.health();
     await api.schema();
 
-    expect(mock.calls).toHaveLength(14);
+    expect(mock.calls).toHaveLength(15);
     for (const c of mock.calls) {
       const tpl = templateOf(c.path);
       expect(tpl, `${c.method} ${c.path} is not a path of openapi.json`).toBeDefined();

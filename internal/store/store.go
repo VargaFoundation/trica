@@ -426,6 +426,20 @@ func (s *Store) RelationsOf(ctx context.Context, id string, at *time.Time) ([]Re
 	return scanRelations(rows)
 }
 
+// CurrentRelationsOfTypes returns the current relations of the given types,
+// oldest id first, at most limit of them. It is the bulk read behind the
+// topology views: one query instead of one per object.
+func (s *Store) CurrentRelationsOfTypes(ctx context.Context, types []string, limit int) ([]Relation, error) {
+	if limit <= 0 {
+		limit = 5000
+	}
+	rows, err := s.Pool.Query(ctx, `SELECT `+relationCols+` FROM relations WHERE type = ANY($1::text[]) AND upper_inf(valid) ORDER BY id LIMIT $2`, types, limit)
+	if err != nil {
+		return nil, err
+	}
+	return scanRelations(rows)
+}
+
 // RelationHistory returns every relation that ever touched an object, newest first.
 func (s *Store) RelationHistory(ctx context.Context, id string, limit int) ([]Relation, error) {
 	if limit <= 0 {

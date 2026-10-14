@@ -5,6 +5,9 @@ import { ApiError } from "../api/client";
 import { api } from "../api/endpoints";
 import type { ObjectView } from "../api/types";
 import { Async } from "../components/Async";
+import { fileSlug } from "../export/download";
+import { ExportButtons } from "../export/ExportButtons";
+import { rackRaster } from "../export/rackCanvas";
 import { ObjectLink } from "../components/ObjectLink";
 import { useI18n, type MessageKey } from "../i18n";
 import { NotFoundPage } from "../pages/NotFoundPage";
@@ -94,6 +97,24 @@ function Elevations({ rack, uHeight, contents }: { rack: ObjectView; uHeight: nu
         ))}
       </div>
       <p className="hint">{t("rack.legend")}</p>
+      <ExportButtons
+        basename={`trica-rack-${fileSlug(rack.display)}`}
+        title={t("rack.pageTitle", { rack: rack.display })}
+        render={(format) =>
+          rackRaster(
+            {
+              title: t("rack.pageTitle", { rack: rack.display }),
+              uHeight,
+              faces: [
+                { caption: t("rack.front"), slots: layout.front },
+                { caption: t("rack.rear"), slots: layout.rear },
+              ],
+              footer: t("export.footer", { date: new Date().toISOString().slice(0, 10) }),
+            },
+            format,
+          )
+        }
+      />
 
       {layout.unplaced.length > 0 ? (
         <section aria-labelledby="unplaced">

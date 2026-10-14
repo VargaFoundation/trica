@@ -1,7 +1,7 @@
 # Web UI
 
 A single-page application in `web/` (React 19, TypeScript strict, Vite, react-router 7, TanStack
-Query 5), served by `internal/web`. Structural choices: ADR 0018 and ADR 0019. This page is what a user, a
+Query 5), served by `internal/web`. Structural choices: ADR 0018, ADR 0019 and ADR 0024. This page is what a user, a
 developer and an operator need; when it and the code disagree, the code wins.
 
 ## What it shows
@@ -15,6 +15,7 @@ developer and an operator need; when it and the code disagree, the code wins.
 | `/proposals?status=&offset=` | Proposals waiting for a decision (pending by default); `/proposals/<id>` shows the preview of what it would change |
 | `/health` | Last run of each source, failing sources first |
 | `/rooms`, `/rooms/<id>` | Every room; the floor plan of one room (SVG, racks on a grid of 600 mm tiles, the bar on a rack is its front) with a table of its racks. Racks stand in the room directly or through a row |
+| `/topology?site=&rack=&vlan=&classes=` | The layer-2 links: a layered graph (Cytoscape + ELK) of the devices that have a link, a legend, filters, and the same links as a table. See "Topology" below |
 | `/racks/<id>` | Front and rear elevations of one rack (SVG, U 1 at the bottom) with free units, a table of what is mounted, and the devices mounted without a position. Opened from the floor plan, from a rack's object page, or from the room page |
 
 Every address is a deep link: filters, the open type and the page are in the URL, and the
@@ -39,6 +40,52 @@ From the schema as it is (`internal/schema/builtin.yaml`): the `mounted_in` rela
 - Known limits: one request per mounted device to learn its model (finding #42); the 600 mm tile is
   an assumption the schema does not define (finding #43); at most 1000 relations per rack and 1000
   racks per room are read (the page says when it is cut).
+
+### Topology: what the graph relies on
+
+The schema has no `connected_to` or `link` relation; the page reads what it has (code wins):
+
+| Relation | Becomes | Class |
+|---|---|---|
+| `cabled_to` (interface to interface) | a link | the relation's own confidence |
+| `connects` (cable to interface, `end` a or b) | one link per cable that has exactly two interface ends | the weakest of its two ends |
+| `neighbor_of` (LLDP adjacency) | a link | the relation's own confidence |
+| `mounted_in`, `member_of` (interface to VLAN) | not drawn: they feed the rack and VLAN filters | |
+
+- **Three classes, never told apart by colour alone.** Declared: solid, thick, dark. Observed:
+  dotted, blue. Deduced: dashed, amber, and its label says the level ("deduced, high"). The legend
+  and the table say the same in words. An unknown confidence counts as deduced.
+- **Deduced cables.** A deducer writes `cabled_to` with a `level` (`high`, `medium`, `low`) and an
+  `evidence` (`lldp`, `lldp_one_sided`, `mac_table`) attribute. They are shown when present; without
+  them the link is "deduced" with no level (the deducer is on its own branch, ADR 0024).
+- **Nodes are devices.** A port on a chassis module belongs to the module's device. A link between
+  two ports of one device is not drawn (counted in a note, kept in the table). A port whose device
+  is not listed is a dashed grey node named by the start of its id. Several links between the same
+  two devices of the same class (and level) are one line, labelled with their count.
+- **Filters** (address: `site`, `rack`, `vlan`, `classes`): a link is kept if at least one end
+  matches; the last class cannot be unticked; a value in the address that matches nothing is
+  ignored.
+- **Keyboard**: the canvas takes no focus; the table below it lists every link with links to both
+  devices, both ports and the cable. Clicking a node opens its object page.
+- **Size**: links are read 1000 per call, at most 10 000 per kind; the page says when it stopped.
+  The ELK layout runs in the page: about 1.5 s for 200 devices and 520 links in Chromium.
+- The page and its two libraries are a separate file (1.9 MB, 590 KB compressed), fetched when the
+  page is opened.
+
+### Exports
+
+`Export PNG` and `Export PDF` on the rack elevation and on the topology. Built in the page, nothing
+is sent anywhere, no change to the content security policy (the file is a `blob:` link made by
+the page's own script).
+
+- The rack sheet is drawn on a canvas, on white, with a fixed palette whatever the theme: both
+  faces side by side, the title, and "Exported from trica on <date>". The topology is Cytoscape's
+  own image of the whole graph, on white, up to 16 million pixels (the ratio drops for a very large
+  graph).
+- The PDF is one page holding the same image as a JPEG at its size (1 CSS px = 0.75 pt). **It is a
+  picture: the text in it cannot be selected or searched.** Use the PNG for slides, the PDF to print.
+- Files are named `trica-rack-<name>.png` and `trica-topology-<date>.png`; a failure is said in
+  words next to the buttons.
 
 ## Keyboard and accessibility
 
@@ -146,9 +193,13 @@ OpenID provider on one self-signed TLS origin (`https://127.0.0.1:18443`, `TRICA
 it). The specs cover every page in English (and a rack page in French) with `@axe-core/playwright`
 (WCAG 2.0 to 2.2 A and AA, contrast included), the full SSO flow with the provider verifying PKCE,
 forged and refused callbacks, the pasted-token fallback, the CSP and `/ui-config.json`, rack
-drawing, and the render time of a 48 U rack with 96 devices (budget: under one second).
+drawing, and the render time of a 48 U rack with 96 devices (budget: under one second). The
+topology specs check every kind of link, the filters, the table as keyboard path, PNG and PDF
+downloads of the rack and of the graph (signature, size, pixels inked, no content-security-policy
+violation), axe in English and French, and the time to draw 200 devices (budget: under 8 s from the
+menu click, of which layout under 6 s).
 
 ## Not in this version
 
-L2 topology (Cytoscape + ELK), PNG/PDF export, saved queries, history ("which device had this
+Selectable text in the PDF exports (they are pictures), patch-panel front/rear ports in the topology, saved queries, history ("which device had this
 address on 3 March"), a rack-contents endpoint (finding #42), a defined floor tile (finding #43).

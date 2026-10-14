@@ -32,6 +32,17 @@ const (
 	idTFull = 0xc3
 	idPDU   = 0xd1
 	firstR3 = 0x1000 // devices of r48
+
+	idSiteL    = 5 // lyon-1
+	idRackL    = 6 // rl1, in lyon-1
+	idVlan10   = 0x30
+	idVlan20   = 0x31
+	idCable1   = 0x40
+	idSwL1     = 0xe1
+	idSwL2     = 0xe2
+	firstIf    = 0x200   // interfaces of the small network
+	firstSyn   = 0x2000  // the synthetic fabric's devices
+	firstSynIf = 0x10000 // and their interfaces
 )
 
 const (
@@ -56,9 +67,26 @@ type relation struct {
 	attrs    obj
 }
 
+// link is a relation with its own provenance: the topology's cables are not
+// all declared.
+type link struct {
+	relation
+	source, confidence string
+}
+
 type inventory struct {
 	objects   []obj
-	relations []relation
+	relations []relation // declared in the lab file
+	links     []link     // the network: declared, observed and deduced
+}
+
+// all lists every relation with its provenance, plain ones as declared.
+func (inv *inventory) all() []link {
+	out := make([]link, 0, len(inv.relations)+len(inv.links))
+	for _, r := range inv.relations {
+		out = append(out, link{r, "declared:lab-file", "declared"})
+	}
+	return append(out, inv.links...)
 }
 
 func (inv *inventory) byID(id string) obj {
@@ -119,7 +147,118 @@ func buildInventory() *inventory {
 			inv.mount(n, idRack3, float64(u), face, idT1U)
 		}
 	}
+	buildNetwork(inv)
 	return inv
+}
+
+// ports hands out interfaces, numbered per device.
+type ports struct {
+	inv  *inventory
+	next int
+	n    map[int]int
+}
+
+func (p *ports) of(device int) int {
+	p.n[device]++
+	id := p.next
+	p.next++
+	name := fmt.Sprintf("Ethernet%d", p.n[device])
+	d := p.inv.byID(oid(device))
+	var site int
+	if s, ok := d["site_id"].(string); ok {
+		site = int(mustHex(s))
+	}
+	p.inv.add(object(id, "interface", name, device, site, obj{"name": name}))
+	return id
+}
+
+func mustHex(id string) int64 {
+	n, err := strconv.ParseInt(id[len(id)-12:], 16, 64)
+	if err != nil {
+		panic(err)
+	}
+	return n
+}
+
+func (inv *inventory) wire(typ string, from, to int, source, confidence string, attrs obj) {
+	inv.links = append(inv.links, link{relation{typ, from, to, attrs}, source, confidence})
+}
+
+// buildNetwork adds Lyon, the VLANs and the links: a small network in paris-1
+// that shows every kind of link once, then a synthetic leaf-spine fabric that
+// brings the topology to 200 linked devices.
+func buildNetwork(inv *inventory) {
+	inv.add(object(idSiteL, "site", "lyon-1", 0, 0, obj{"name": "lyon-1"}))
+	inv.add(object(idRackL, "rack", "rl1", idSiteL, idSiteL, obj{"name": "rl1", "u_height": 42}))
+	inv.add(object(idVlan10, "vlan", "vlan-10", 0, 0, obj{"name": "vlan-10", "vid": 10}))
+	inv.add(object(idVlan20, "vlan", "vlan-20", 0, 0, obj{"name": "vlan-20", "vid": 20}))
+	inv.add(object(idSwL1, "device", "sw-l1", idRackL, idSiteL, obj{"hostname": "sw-l1", "vendor": "arista"}))
+	inv.add(object(idSwL2, "device", "sw-l2", idRackL, idSiteL, obj{"hostname": "sw-l2", "vendor": "arista"}))
+	inv.mount(idSwL1, idRackL, 40, "front", idT1U)
+	inv.mount(idSwL2, idRackL, 39, "front", idT1U)
+
+	p := &ports{inv: inv, next: firstIf, n: map[int]int{}}
+	const lldp, ded = "collector:lldp", "deduce:cabling"
+	// A documented cable: the cable object, two connects.
+	inv.add(object(idCable1, "cable", "C-0001", 0, idSite, obj{"label": "C-0001"}))
+	a1e1, a2e1 := p.of(idSwA1), p.of(idSwA2)
+	inv.wire("connects", idCable1, a1e1, "declaration:cabling", "declared", obj{"end": "a"})
+	inv.wire("connects", idCable1, a2e1, "declaration:cabling", "declared", obj{"end": "b"})
+	// Deduced links, one per level, one across the two sites.
+	a1e2, srvEno1 := p.of(idSwA1), p.of(idSrv01)
+	inv.wire("cabled_to", a1e2, srvEno1, ded, "deduced", obj{"level": "high", "evidence": "lldp"})
+	a2e2, l1e1 := p.of(idSwA2), p.of(idSwL1)
+	inv.wire("cabled_to", a2e2, l1e1, ded, "deduced", obj{"level": "low", "evidence": "mac_table"})
+	a2e3, srvEno2 := p.of(idSwA2), p.of(idSrv01)
+	inv.wire("cabled_to", a2e3, srvEno2, ded, "deduced", obj{"level": "medium", "evidence": "lldp_one_sided"})
+	// Observed: an LLDP adjacency and an observed cable inside Lyon.
+	a1e3 := p.of(idSwA1)
+	inv.wire("neighbor_of", a1e3, a2e2, lldp, "observed", obj{"protocol": "lldp"})
+	l1e2, l2e1 := p.of(idSwL1), p.of(idSwL2)
+	inv.wire("cabled_to", l1e2, l2e1, lldp, "observed", obj{})
+	// VLAN membership, for the VLAN filter.
+	inv.wire("member_of", a1e1, idVlan10, lldp, "observed", obj{})
+	inv.wire("member_of", srvEno1, idVlan10, lldp, "observed", obj{})
+	inv.wire("member_of", l1e1, idVlan20, lldp, "observed", obj{})
+
+	// The fabric: 7 spines, 28 leaves, 160 servers = 195 devices, which with the
+	// five above make 200 linked devices. Every leaf has an uplink to every
+	// spine; every server has two, to two leaves.
+	const spines, leaves, servers = 7, 28, 160
+	sp := make([]int, spines)
+	lf := make([]int, leaves)
+	n := firstSyn
+	mk := func(name string) int {
+		id := n
+		n++
+		inv.add(object(id, "device", name, 0, idSite, obj{"hostname": name, "role": strings.TrimRight(name[:strings.IndexByte(name, '-')], "0123456789")}))
+		return id
+	}
+	for i := range sp {
+		sp[i] = mk(fmt.Sprintf("spine-%02d", i+1))
+	}
+	for i := range lf {
+		lf[i] = mk(fmt.Sprintf("leaf-%02d", i+1))
+	}
+	sp2 := &ports{inv: inv, next: firstSynIf, n: map[int]int{}}
+	levels := []string{"high", "medium", "low"}
+	k := 0
+	for _, l := range lf {
+		for _, s := range sp {
+			k++
+			switch k % 3 {
+			case 0:
+				inv.wire("cabled_to", sp2.of(l), sp2.of(s), "declaration:cabling", "declared", obj{})
+			default:
+				inv.wire("cabled_to", sp2.of(l), sp2.of(s), ded, "deduced", obj{"level": levels[(k/3)%3], "evidence": "lldp"})
+			}
+		}
+	}
+	for i := 0; i < servers; i++ {
+		srv := mk(fmt.Sprintf("srv-f%03d", i+1))
+		inv.wire("cabled_to", sp2.of(srv), sp2.of(lf[i%leaves]), lldp, "observed", obj{})
+		inv.wire("neighbor_of", sp2.of(srv), sp2.of(lf[(i+1)%leaves]), lldp, "observed", obj{"protocol": "lldp"})
+	}
 }
 
 func problem(w http.ResponseWriter, status int, slug, title string) {
@@ -159,6 +298,8 @@ func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, obj{"subject": "e2e-user", "kind": "token", "source": "e2e", "actions": []string{"read", "propose", "approve"}})
 	case path == "/objects":
 		writeJSON(w, http.StatusOK, a.list(r.URL.Query().Get("type")))
+	case path == "/relations":
+		a.relationLinks(w, r.URL.Query().Get("type"))
 	case path == "/search":
 		a.search(w, r.URL.Query().Get("q"))
 	case strings.HasPrefix(path, "/objects/"):
@@ -271,7 +412,7 @@ func (a *api) provenanceOf(o obj) []obj {
 func (a *api) relationsOf(id string) obj {
 	var items []obj
 	n := 0
-	for _, rel := range a.inv.relations {
+	for _, rel := range a.inv.all() {
 		dir, other := "", ""
 		switch {
 		case oid(rel.from) == id:
@@ -285,11 +426,49 @@ func (a *api) relationsOf(id string) obj {
 		o := a.inv.byID(other)
 		items = append(items, obj{
 			"id": n, "type": rel.typ, "from_id": oid(rel.from), "to_id": oid(rel.to), "direction": dir,
-			"source": "declared:lab-file", "confidence": "declared", "valid_from": t0, "attributes": rel.attrs,
+			"source": rel.source, "confidence": rel.confidence, "valid_from": t0, "attributes": rel.attrs,
 			"other": obj{"id": other, "type": o["type"], "display": o["display"]},
 		})
 	}
 	return page(items)
+}
+
+// end is the RelationEnd of GET /relations: the object, with the device or
+// rack it sits in and its site, so the page can group ports by device.
+func (a *api) end(n int) obj {
+	o := a.inv.byID(oid(n))
+	e := obj{"id": o["id"], "type": o["type"], "display": o["display"]}
+	for _, k := range []string{"parent_id", "site_id"} {
+		if v, ok := o[k]; ok {
+			e[k] = v
+		}
+	}
+	return e
+}
+
+// relationLinks answers GET /relations?type=a,b: every current relation of
+// those types, both ends described.
+func (a *api) relationLinks(w http.ResponseWriter, types string) {
+	if types == "" {
+		problem(w, http.StatusBadRequest, "invalid-request", "type is required")
+		return
+	}
+	want := map[string]bool{}
+	for _, t := range strings.Split(types, ",") {
+		want[t] = true
+	}
+	items := []obj{}
+	for i, rel := range a.inv.all() {
+		if !want[rel.typ] {
+			continue
+		}
+		items = append(items, obj{
+			"id": i + 1, "type": rel.typ, "from_id": oid(rel.from), "to_id": oid(rel.to),
+			"from": a.end(rel.from), "to": a.end(rel.to),
+			"source": rel.source, "confidence": rel.confidence, "valid_from": t0, "attributes": rel.attrs,
+		})
+	}
+	writeJSON(w, http.StatusOK, obj{"total": len(items), "limit": 1000, "offset": 0, "items": items})
 }
 
 func attr(name, kind, en, fr string, extra obj) obj {
@@ -328,10 +507,17 @@ func schemaDoc() obj {
 			typeDoc("room", "Room", "Salle", []string{"site"}, nil),
 			typeDoc("site", "Site", "Site", []string{}, nil),
 			typeDoc("device_type", "Device model", "Modèle d'équipement", []string{}, nil),
+			typeDoc("interface", "Interface", "Interface", []string{"device"}, nil),
+			typeDoc("vlan", "VLAN", "VLAN", []string{}, nil),
+			typeDoc("cable", "Cable", "Câble", []string{}, nil),
 		},
 		"relations": []obj{
 			{"name": "mounted_in", "label": obj{"en": "mounted in", "fr": "monté dans"}, "inverse": obj{"en": "hosts", "fr": "héberge"}, "description": "", "from": []string{"device"}, "to": []string{"rack"}, "attributes": []obj{}, "custom": false},
 			{"name": "instance_of", "label": obj{"en": "instance of", "fr": "instance de"}, "inverse": obj{"en": "instances", "fr": "instances"}, "description": "", "from": []string{"device"}, "to": []string{"device_type"}, "attributes": []obj{}, "custom": false},
+			{"name": "cabled_to", "label": obj{"en": "cabled to", "fr": "câblé à"}, "inverse": obj{"en": "cabled to", "fr": "câblé à"}, "description": "", "from": []string{"interface"}, "to": []string{"interface"}, "attributes": []obj{}, "custom": false},
+			{"name": "connects", "label": obj{"en": "connects", "fr": "relie"}, "inverse": obj{"en": "connected by", "fr": "relié par"}, "description": "", "from": []string{"cable"}, "to": []string{"interface"}, "attributes": []obj{}, "custom": false},
+			{"name": "neighbor_of", "label": obj{"en": "neighbor of", "fr": "voisin de"}, "inverse": obj{"en": "neighbor of", "fr": "voisin de"}, "description": "", "from": []string{"interface"}, "to": []string{"interface"}, "attributes": []obj{}, "custom": false},
+			{"name": "member_of", "label": obj{"en": "member of", "fr": "membre de"}, "inverse": obj{"en": "members", "fr": "membres"}, "description": "", "from": []string{"interface"}, "to": []string{"vlan"}, "attributes": []obj{}, "custom": false},
 		},
 	}
 }

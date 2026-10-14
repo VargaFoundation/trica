@@ -33,6 +33,14 @@ types:
       name: {kind: string, identity: strong}
       api_token: {kind: string}
       tunnel_count: {kind: int}
+relations:
+  tunnels_to:
+    label: {en: tunnels to}
+    from: [device]
+    to: [vpn_gateway]
+    attributes:
+      api_token: {kind: string}
+      note: {kind: string}
 `
 
 func overlayRegistry(t testing.TB) *schema.Registry {
@@ -60,6 +68,17 @@ func secretEnv(t *testing.T) *env {
 	b.Object("paris", "site").Identify("code", "PAR1")
 	b.Object("gw", "vpn_gateway").Identify("name", "gw-1").In("paris").Set("api_token", secretToken).Set("tunnel_count", 4)
 	e.apply(b)
+
+	// A link whose own attributes carry a secret: the relation listings must redact them too.
+	lb := sdk.NewBatch("agent:vpn-links", sdk.ScopePartial)
+	lb.ObservedAt = e.clk.now()
+	lb.Relations = append(lb.Relations, &sdk.Relation{Type: "tunnels_to", From: byID("device", e.ids["sw"]), To: byID("vpn_gateway", e.ids["gw"]),
+		Attributes: map[string]any{"api_token": secretToken, "note": "site to site"}})
+	e.apply(lb)
+	var stored int
+	if err := e.st.Pool.QueryRow(t.Context(), `SELECT count(*) FROM relations WHERE attrs::text LIKE '%' || $1 || '%'`, secretToken).Scan(&stored); err != nil || stored != 1 {
+		t.Fatalf("fixture: the secret is not on a stored relation (%d, %v)", stored, err)
+	}
 
 	e.clk.advance(1)
 	c := sdk.NewBatch("arista:sw-a1", sdk.ScopePartial)
@@ -108,6 +127,7 @@ func TestSecretLikeAttributesNeverLeave(t *testing.T) {
 		"/objects/" + sw + "/provenance", "/objects/" + gw + "/provenance",
 		"/objects/" + sw + "/history", "/objects/" + gw + "/history", "/objects/" + sw + "/history?key=os_version",
 		"/objects/" + sw + "/relations", "/objects/" + gw + "/relations",
+		"/relations?type=tunnels_to", "/relations?type=mounted_in,cabled_to,connects,neighbor_of,tunnels_to",
 		"/objects/" + sw + "/timeline", "/objects/" + gw + "/timeline",
 		"/changes?from=2026-01-01T00:00:00Z",
 		"/search?q=sw-a1", "/search?q=gw-1", "/search?q=second+floor",

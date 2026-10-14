@@ -14,6 +14,7 @@ import type {
   Proposal,
   Provenance,
   QueryOf,
+  RelationLink,
   RelationView,
   SchemaDoc,
   SearchPage,
@@ -35,6 +36,9 @@ export const api = {
     request<Provenance>(`/objects/${encodeURIComponent(id)}/provenance`, { signal }),
   relations: (id: string, q: Paging = {}, signal?: AbortSignal) =>
     request<Page<RelationView>>(`/objects/${encodeURIComponent(id)}/relations`, { query: q, signal }),
+  /** The current relations of some types across the inventory, both ends named (comma-separated types). */
+  relationLinks: (q: QueryOf<"/relations">, signal?: AbortSignal) =>
+    request<Page<RelationLink>>("/relations", { query: q, signal }),
   timeline: (id: string, q: Paging = {}, signal?: AbortSignal) =>
     request<Page<Change>>(`/objects/${encodeURIComponent(id)}/timeline`, { query: q, signal }),
 

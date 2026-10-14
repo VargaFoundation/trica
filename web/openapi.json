@@ -6067,6 +6067,35 @@
         ],
         "type": "object"
       },
+      "PageRelationLink": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RelationLink"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "total"
+        ],
+        "type": "object"
+      },
       "PageRelationView": {
         "properties": {
           "items": {
@@ -6444,6 +6473,83 @@
           "label",
           "name",
           "to"
+        ],
+        "type": "object"
+      },
+      "RelationEnd": {
+        "properties": {
+          "display": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "display",
+          "id",
+          "type"
+        ],
+        "type": "object"
+      },
+      "RelationLink": {
+        "properties": {
+          "attributes": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "confidence": {
+            "type": "string"
+          },
+          "from": {
+            "$ref": "#/components/schemas/RelationEnd"
+          },
+          "from_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "string"
+          },
+          "to": {
+            "$ref": "#/components/schemas/RelationEnd"
+          },
+          "to_id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "valid_to": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confidence",
+          "from",
+          "from_id",
+          "id",
+          "source",
+          "to",
+          "to_id",
+          "type",
+          "valid_from"
         ],
         "type": "object"
       },
@@ -8184,6 +8290,75 @@
           "operations"
         ],
         "x-trica-action": "public"
+      }
+    },
+    "/relations": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "listRelations",
+        "parameters": [
+          {
+            "description": "Relation types, comma separated (at most 8), e.g. cabled_to,connects,neighbor_of.",
+            "in": "query",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size, 1 to 1000 (default 50).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items to skip (default 0).",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageRelationLink"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "The current relations of some types across the inventory, both ends named (the bulk read behind topology views). A relation is listed only if the caller may read both ends.",
+        "tags": [
+          "inventory"
+        ],
+        "x-trica-action": "read"
       }
     },
     "/saved-queries": {

@@ -4,10 +4,10 @@ import { formatRange, type Face, type Slot } from "./layout";
 
 // Geometry, in SVG user units. U 1 is the bottom row.
 export const UNIT_PX = 22;
-const GUTTER = 34; // room for the U numbers
-const BODY = 280; // width of the mounting area
-const PAD = 6;
-const CHAR_PX = 6.4; // average advance of the 11 px label font
+export const GUTTER = 34; // room for the U numbers
+export const BODY = 280; // width of the mounting area
+export const PAD = 6;
+export const CHAR_PX = 6.4; // average advance of the 11 px label font
 
 /** One face of a rack, drawn from its slots. Devices are links to their object page. */
 export function RackElevation({ rack, uHeight, face, slots }: { rack: string; uHeight: number; face: Face; slots: readonly Slot[] }) {
