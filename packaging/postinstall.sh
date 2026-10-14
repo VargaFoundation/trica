@@ -8,4 +8,4 @@ fi
 if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
 	systemctl daemon-reload || true
 fi
-echo "trica-agent installed: 'systemctl enable --now trica-agent' to start it."
+echo "trica-agent installed: set the server in /etc/trica-agent/agent.env, then 'systemctl enable --now trica-agent'."

@@ -9,7 +9,7 @@ HTTP port ([configuration](configuration.md), [ADR 0025](../adr/0025-server-wiri
 is loaded from or created in `transport.ca_dir` (a persistent volume), the server certificate is
 issued for `transport.hosts` at start and renewed by reopening the listener after two thirds of
 `transport.server_cert_ttl`, and batches go to `reconcile.Engine.Submit` as source-bound by the
-certificate. The agent binary does not use the client yet (see [STATUS](../plan/STATUS.md)).
+certificate. The agent binary sends through the client with `--server` ([agent reference](agent.md#sending-to-a-server), [ADR 0027](../adr/0027-agent-sends-to-the-server.md)).
 
 ## Trust model
 

@@ -4,14 +4,18 @@
 full-scope `sdk.Batch` per run, from the source `agent:<hostname>`. Code:
 `internal/agent` (probes, mapping) and `cmd/trica-agent` (the binary).
 
-**Not in this release**: the mTLS transport and the disk spool (ADR-0008), and the
-network side of remote update (the `Source` that talks to the server). Today
-batches go to `--output` only (stdout or a file). Packaging, the DaemonSet
-example, the update machinery and the footprint benchmark are described below
-(ADR-0022).
+With `--server` the batches are sent to a trica server over mutual TLS, with an
+on-disk spool while it is unreachable ([below](#sending-to-a-server),
+[ADR-0027](../adr/0027-agent-sends-to-the-server.md)). Without it they go to
+`--output` (stdout or a file), for offline use.
+
+**Not in this release**: the network side of remote update (the `Source` that talks to
+the server). Packaging, the DaemonSet example, the update machinery and the footprint
+benchmark are described below (ADR-0022).
 
 ```
 trica-agent [--root /] [--interval 5m] [--once] [--output -] [--state-dir DIR] [--health-timeout 2m]
+            [--server https://host:port --ca-file ca.pem [--enrol-token-file FILE]]
 ```
 
 | Flag | Meaning |
@@ -19,13 +23,61 @@ trica-agent [--root /] [--interval 5m] [--once] [--output -] [--state-dir DIR] [
 | `--root` | Directory the probes read, default `/`. Any other root is a tree to describe (a test fixture, a mounted image): the agent then runs **no command** and asks **no netlink**, since both would describe the machine it runs on instead of the tree. |
 | `--interval` | Time between runs, default 5 m, minimum 30 s (`--once` ignores it). |
 | `--once` | Run once and exit. |
-| `--state-dir` | Directory of staged versions and update state (`/var/lib/trica-agent` in the packages). Empty (default): the agent never runs anything but itself. |
+| `--state-dir` | Directory of the agent's own state (`/var/lib/trica-agent` in the packages): staged versions and update state, and, with `--server`, the client certificate and the spool. Empty (default): the agent never runs anything but itself, and `--server` is refused. |
+| `--server` | `https://host:port` of the server's transport listener (`transport.addr`). Batches go there through `transport.Client`. `http://` is refused. Env `TRICA_AGENT_SERVER`. |
+| `--ca-file` | PEM file of the CA certificate that signs the server's certificate, required with `--server`. The agent trusts nothing else: there is no trust on first use. Env `TRICA_AGENT_CA_FILE`. |
+| `--enrol-token-file` | File holding the one-time enrolment token. Read only while the agent has no certificate. A path, never a value (no flag or variable takes the token itself). Env `TRICA_AGENT_ENROL_TOKEN_FILE`. |
 | `--health-timeout` | How long a newly staged version has to emit one batch before it is rolled back, default 2 m. |
-| `--output` | `-` (default): one JSON batch per line on stdout. A path: the latest batch, rewritten atomically (temporary file next to it, mode 0600, rename). |
+| `--output` | `-` (default): one JSON batch per line on stdout. A path: the latest batch, rewritten atomically (temporary file next to it, mode 0600, rename). With `--server`, nothing goes to stdout; a given `--output` is then a local copy written in addition to the send. |
 
 Logs are JSON (`log/slog`) on stderr, with the keys `source` and `collector`.
-Exit codes: 0 ok, 1 failure (bad root, output not writable, no host identity),
-2 bad invocation.
+Exit codes: 0 ok, 1 failure (bad root, output not writable, no host identity, the
+server refused the batch, transport cannot start), 2 bad invocation (including
+`--server` without `--ca-file` or `--state-dir`, or not `https://`).
+
+## Sending to a server
+
+```
+# once, on the server side: a one-time token for this host (see getting-started, "First credentials")
+#   trica enrol create --binding agent:<hostname> --ttl 24h
+# on the host: the CA certificate and the token as files, then
+trica-agent --server https://trica.example.com:8443 --ca-file /etc/trica-agent/ca.pem \
+            --enrol-token-file /etc/trica-agent/enrol-token --state-dir /var/lib/trica-agent
+```
+
+- **Source and binding.** The batch source stays `agent:<hostname>`, the hostname the
+  probe read. The token must be for exactly that binding (`agent:<hostname>`): the
+  certificate carries it, and the server refuses (403) any batch whose source is not the
+  binding or an extension of it (`pki.Allows`). A host whose name differs from the one the
+  token was made for **enrols, then every batch is refused**: the agent logs the 403 and
+  exits 1 (a 4xx is never spooled, it would fail again).
+- **Enrolment.** At the first send there is no certificate: the agent generates an
+  ECDSA P-256 key, sends a CSR with the token, and keeps key and certificate in
+  `<state-dir>/identity.pem` (mode 0600, written atomically). The token is then used up
+  server side. At the next start the agent finds the certificate and **never reads the
+  token again** (the file may be deleted, or still be there and used up). The certificate
+  is short-lived (7 days by default) and renewed by the agent itself, with a new key, when
+  a third of its life is left.
+- **Spool.** `<state-dir>/spool/` (directory 0700, one file per batch, 0600), bounded to
+  64 MiB, oldest dropped first. When the server is down, a 5xx, 408 or 429, the batch is
+  spooled and the run **succeeds** (exit 0). The next send, or the background flush of a
+  long-running agent (every minute, a directory listing when the spool is empty), resends
+  the spooled batches oldest first, before anything newer. This also covers the very first
+  start: the batch is spooled, and enrolment happens when the server is back.
+- **Secrets.** Neither the token nor the key is ever logged; tests assert it.
+- **Read-only.** The agent writes only `--output` and its state directory.
+
+### Troubleshooting
+
+| What you see (stderr, JSON) | Cause | What to do |
+|---|---|---|
+| `server unreachable or failing, batch spooled` | network, TLS or 5xx failure | nothing: it is delivered when the server is back; check `spool/` growing if it stays |
+| `read enrolment token file` | no certificate yet and the token file is missing or unreadable | create the file, readable by the agent's user |
+| `server answered 401` at enrolment | token unknown, used or expired (the server does not say which) | ask for a new token |
+| `server answered 403` on a batch | the token was for another binding than `agent:<hostname>` | revoke, then a token for the right binding; `hostname` is what the agent reads, not what DNS says |
+| `x509: certificate signed by unknown authority` | `--ca-file` is not the CA of that server (it was recreated?) | copy the current `ca.pem` |
+| `certificate expired and renewal failed` | the agent was off longer than the certificate lived | new token (the old binding can enrol again) |
+| spool files that never leave | a 401 stops the flush and keeps the spool | the certificate was revoked: enrol again with a new token, delete `identity.pem` first |
 
 ## Guarantees
 
@@ -159,8 +211,15 @@ Two measurements, both in CI:
   (`utime + stime` over the wall-clock window). The CI job `agent` runs it on the
   GitHub runner. A development machine (non-root, shared) gave 9.7 MB and 0.10 %.
 
+- `TestRealFootprintWithTransport` (same file): the same binary and window with the
+  transport on (identity already in the state directory, mutual TLS and HTTP/2 to a
+  local stand-in server, plus the one-minute flush goroutine). Same thresholds. A
+  development machine gave 15.6 MB and 0.10 % (against 15.8 MB and 0.10 % without it).
+
 What is not measured: a host with tens of thousands of processes or sockets (the
-runner has a few hundred), and the cost of the transport, which does not exist yet.
+runner has a few hundred), enrolment and certificate renewal (a one-off key generation
+and two requests), a spool being flushed (a few hundred KiB to a few MiB to send), and
+a real network latency.
 
 ## Packaging
 
@@ -174,11 +233,15 @@ The package ships `/usr/bin/trica-agent`, the unit
 `/usr/lib/systemd/system/trica-agent.service` and a `sysusers.d` entry for the
 `trica-agent` system user (nologin). The post-install script creates the user and
 reloads systemd; it does **not** start the service, since the agent needs its
-server and update key configured first. Removal stops the service and deletes
+server and update key configured first. The server settings are in
+`/etc/trica-agent/agent.env` (`TRICA_AGENT_SERVER`, `TRICA_AGENT_CA_FILE`,
+`TRICA_AGENT_ENROL_TOKEN_FILE`, read by the unit's `EnvironmentFile=`; a conffile,
+kept on upgrade, no secret in it). The CA and the token are files you place, readable by
+the `trica-agent` user (`install -m 0640 -o root -g trica-agent`). Removal stops the service and deletes
 nothing (the user and `/var/lib/trica-agent` stay).
 
 The unit runs as `trica-agent`, not root, with `ProtectSystem=strict` (only
-`/var/lib/trica-agent` is writable), `NoNewPrivileges`, and the capability set
+`/var/lib/trica-agent` is writable: identity, spool, staged versions), `NoNewPrivileges`, and the capability set
 below, derived from what the probes read. Nothing else is granted, and
 `packaging/packaging_test.go` fails if the set changes.
 
@@ -211,7 +274,7 @@ sandbox directive that blocks a probe on some distribution would show only there
 
 `deploy/kubernetes/trica-agent-daemonset.yaml` is an **example**: the image does not
 exist yet and the manifest has not been applied to a cluster (`kubectl apply
---dry-run=client` only). It sets `hostPID` (the node's process table names a
+--dry-run=client` only, and not even that for the transport settings). It sets `hostPID` (the node's process table names a
 socket's owner) and `hostNetwork` (addresses, `/proc/net/*` and `/sys/class/net`
 describe the namespace they are read from), because the probes need both; mounts
 three host files read-only (`/etc/os-release`, `/etc/machine-id`, `/var/lib/dpkg`)
@@ -221,18 +284,48 @@ effective for uid 0 in Kubernetes), a read-only root file system, no privilege
 escalation and the runtime default seccomp profile. The image has no `rpm`,
 `systemctl`, `smartctl` or `lldpctl`, so RPM packages, services, SMART and LLDP
 are not inventoried in this mode. Updates are the DaemonSet's rolling update
-(`maxUnavailable: 10 %`), not `--state-dir`. The namespace needs the `privileged`
+(`maxUnavailable: 10 %`); `--state-dir` is there for the identity and the spool, and
+nothing stages a binary in it. The namespace needs the `privileged`
 Pod Security level. If the node's AppArmor profile denies reading
 `/proc/<pid>/fd` of host processes, process names come back empty; relaxing the
 profile is the cluster operator's call.
+
+**Sending to the server from a DaemonSet.** The CA and the server URL are in the
+`trica-agent` ConfigMap of the manifest (replace both). The identity and the spool live in
+`/var/lib/trica-agent` on the node (`hostPath`, the one writable host path, checked by
+`packaging_test.go`): without it every pod restart would need a new token.
+
+The enrolment token is the awkward part. A token grants **one binding**, a node's binding
+is `agent:<its hostname>`, and `pki.ValidBinding` refuses a wildcard (`agent:*`) or a
+prefix that is not the source. So a token shared by the DaemonSet (one Secret) cannot
+work, and a Secret per node cannot be mounted by a DaemonSet. The least-bad option that
+weakens nothing: **one token per node, as a file on the node**
+(`/var/lib/trica-agent/enrol-token`, mode 0600), placed when the node is provisioned
+(cloud-init, Ansible, a node-setup job with the token minted for that node). It is read
+once and useless afterwards. It scales with the number of nodes, it is manual, and today
+there is not even a command to mint the tokens (see "Known gaps"); a clean answer needs a
+server change, listed there.
+
+Not verified: that a pod with `hostNetwork` reads the node's hostname in
+`/proc/sys/kernel/hostname` on every runtime (the batch source depends on it).
+
+## Known gaps of the transport
+
+- **Per-node tokens for a fleet** (a DaemonSet of hundreds of nodes) do not scale. A server
+  change would fix it without a wildcard, e.g. an enrolment that derives the binding from
+  something the server can verify about the node (a Kubernetes TokenReview of the pod's
+  service account plus the node name), or a class token that mints bindings only under a
+  prefix and only once per hostname. Either touches `internal/pki` and `internal/transport`.
+- The agent's `--output` with `--server` is written even when the batch could not be sent;
+  a failing local copy fails the run.
 
 ## Remote update
 
 Code: `internal/agent/update`. The agent updates itself in waves, rolls back when
 the new version does not prove itself, and **never installs what it cannot
 verify**. The network side is not here: the contract with the server is the
-`Source` interface (`Desired`, `Open`), with `FakeSource` for tests, until the
-transport exists (PR #19). `--state-dir` turns on the start-up side (running a
+`Source` interface (`Desired`, `Open`), with `FakeSource` for tests: the transport
+(this page, above) carries batches only, the update endpoints do not exist yet. `--state-dir` turns on the start-up side (running a
 staged version, probation, rollback); the periodic check (`Updater.Run`) is **not
 yet started by the binary**, since there is nothing to ask.
 
@@ -275,6 +368,14 @@ failure : crash (3 starts) or no batch within --health-timeout -> Boot() restore
   restarts it, which is when the rollback happens. Three starts without a healthy
   batch roll back too.
 
+**Health with a server.** A collection is healthy when the batch was **accepted by the
+server or spooled** (`Emit` returned nil). A server outage must not roll back a good
+version, since the new version did its job: it collected and handed over. A batch the
+server refuses (4xx), or a failing `--output`, is not healthy, and the version is not
+confirmed. What this does not catch: a new version whose transport is broken in a way
+that only spools (a bad certificate, a changed protocol) is confirmed, and the spool
+grows silently. Alert on the spool, not on the probation.
+
 Not verified: the staged binary has been executed in tests through a simulated
 service manager, not through systemd; whether a real cosign produces a signature
 this code accepts has not been tried (the tests sign the way cosign documents).
@@ -284,6 +385,10 @@ this code accepts has not been tried (the tests sign the way cosign documents).
 ```
 # one run, to stdout
 sudo trica-agent --once | jq .
+
+# one run, sent to a server (first run enrols with the token file)
+sudo trica-agent --once --server https://trica.example.com:8443 --ca-file ca.pem \
+     --enrol-token-file token --state-dir /var/lib/trica-agent
 
 # describe a mounted image without running anything of this machine
 trica-agent --once --root /mnt/image

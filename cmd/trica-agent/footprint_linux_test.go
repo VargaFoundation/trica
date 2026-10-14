@@ -1,15 +1,24 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/VargaFoundation/trica/internal/pki"
+	"github.com/VargaFoundation/trica/internal/transport"
 )
 
 // The footprint the agent promises (ADR-0015, ADR-0022): under 50 MB resident
@@ -123,7 +132,97 @@ func TestRealFootprint(t *testing.T) {
 		t.Skip("TRICA_FOOTPRINT_BIN not set")
 	}
 	out := filepath.Join(t.TempDir(), "batch.json")
-	cmd := exec.Command(bin, "--interval", "30s", "--output", out)
+	// The window ends when the batch file has been replaced once.
+	var first time.Time
+	measureFootprint(t, bin, []string{"--interval", "30s", "--output", out}, func() bool {
+		st, err := os.Stat(out)
+		if err != nil {
+			return false
+		}
+		if first.IsZero() {
+			first = st.ModTime()
+			return false
+		}
+		return !st.ModTime().Equal(first)
+	})
+}
+
+// TestRealFootprintWithTransport is the same measurement with the transport
+// on: the agent enrolled earlier (an identity is in its state directory), and
+// every batch goes over mutual TLS and HTTP/2 to a local server, on top of the
+// background flush loop. The window ends at the server's second batch. The
+// server is a stand-in that checks the client certificate against the CA and
+// answers 204: the registry and the database are not part of the agent's cost.
+func TestRealFootprintWithTransport(t *testing.T) {
+	bin := os.Getenv("TRICA_FOOTPRINT_BIN")
+	if bin == "" {
+		if os.Getenv("TRICA_REQUIRE_FOOTPRINT") == "1" {
+			t.Fatal("TRICA_FOOTPRINT_BIN is not set: the footprint is not measured")
+		}
+		t.Skip("TRICA_FOOTPRINT_BIN not set")
+	}
+	now := time.Now()
+	ca, err := pki.NewCA("footprint CA", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srvCert, err := ca.IssueServer([]string{"127.0.0.1"}, time.Hour, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batches atomic.Int32
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		if r.URL.Path == transport.PathBatches && r.TLS != nil && len(r.TLS.VerifiedChains) > 0 {
+			batches.Add(1)
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	srv.EnableHTTP2 = true
+	srv.TLS = &tls.Config{MinVersion: tls.VersionTLS13, Certificates: []tls.Certificate{srvCert}, ClientAuth: tls.RequireAndVerifyClientCert, ClientCAs: ca.Pool()}
+	srv.StartTLS()
+	t.Cleanup(srv.Close)
+
+	dir := t.TempDir()
+	key, err := pki.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	csrPEM, err := pki.NewCSR(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	csr, err := pki.ParseCSRPEM(csrPEM)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert, err := ca.IssueClient(csr, "agent:footprint", 24*time.Hour, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyPEM, err := pki.MarshalKeyPEM(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "identity.pem"), slices.Concat(keyPEM, pki.CertPEM(cert)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	caFile := filepath.Join(dir, "ca.pem")
+	if err := os.WriteFile(caFile, ca.CertPEM(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	measureFootprint(t, bin, []string{"--interval", "30s", "--server", srv.URL, "--ca-file", caFile, "--state-dir", dir},
+		func() bool { return batches.Load() >= 2 })
+}
+
+// measureFootprint starts bin with args against the real host, waits until
+// ended returns true (the second batch), and checks peak resident memory and
+// CPU over that window against the promise.
+func measureFootprint(t *testing.T, bin string, args []string, ended func() bool) {
+	t.Helper()
+	cmd := exec.Command(bin, args...)
 	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
 	start := time.Now()
 	if err := cmd.Start(); err != nil {
@@ -133,22 +232,12 @@ func TestRealFootprint(t *testing.T) {
 	go func() { done <- cmd.Wait() }()
 	t.Cleanup(func() { _ = cmd.Process.Signal(syscall.SIGTERM) })
 
-	// The window ends when the batch file has been replaced once: two
-	// collections, one interval apart.
-	var first time.Time
 	deadline := time.Now().Add(3 * time.Minute)
-	for {
+	for !ended() {
 		select {
 		case err := <-done:
 			t.Fatalf("the agent exited during the window: %v", err)
 		default:
-		}
-		if st, err := os.Stat(out); err == nil {
-			if first.IsZero() {
-				first = st.ModTime()
-			} else if !st.ModTime().Equal(first) {
-				break
-			}
 		}
 		if time.Now().After(deadline) {
 			t.Fatal("no second batch within 3 minutes")

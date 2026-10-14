@@ -105,12 +105,12 @@ func TestBadInvocations(t *testing.T) {
 	}
 }
 
-func TestHelpSaysTransportComesLater(t *testing.T) {
+func TestHelpDescribesTheTransport(t *testing.T) {
 	code, out, errs := runArgs(t, "--help")
 	if code != 0 || out != "" {
 		t.Fatalf("exit %d, stdout %q", code, out)
 	}
-	for _, want := range []string{"mTLS", "later release", "-root", "-interval", "-once", "-output", "read-only"} {
+	for _, want := range []string{"mTLS", "-server", "-ca-file", "-enrol-token-file", "-state-dir", "-root", "-interval", "-once", "-output", "read-only"} {
 		if !strings.Contains(errs, want) {
 			t.Errorf("--help does not mention %q:\n%s", want, errs)
 		}
