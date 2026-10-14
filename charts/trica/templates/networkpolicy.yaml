@@ -24,6 +24,17 @@ spec:
       ports:
         - port: http
           protocol: TCP
+    {{- if .Values.transport.enabled }}
+    - from:
+        {{- if .Values.transport.ingressFrom }}
+        {{- toYaml .Values.transport.ingressFrom | nindent 8 }}
+        {{- else }}
+        - podSelector: {}
+        {{- end }}
+      ports:
+        - port: transport
+          protocol: TCP
+    {{- end }}
   {{- if .Values.networkPolicy.egressTo }}
   egress:
     - ports:

@@ -4,7 +4,12 @@ Packages `internal/transport` (server, client, spool, registry) and `internal/pk
 Design: [ADR 0008](../adr/0008-transport.md). Status of what is and is not proven:
 [STATUS](../plan/STATUS.md), row 15.
 
-No binary wires this yet: the server and the client are libraries, exercised by tests.
+`trica server` serves it when `transport.addr` is set, on a listener of its own, apart from the
+HTTP port ([configuration](configuration.md), [ADR 0025](../adr/0025-server-wiring.md)). The CA
+is loaded from or created in `transport.ca_dir` (a persistent volume), the server certificate is
+issued for `transport.hosts` at start and renewed by reopening the listener after two thirds of
+`transport.server_cert_ttl`, and batches go to `reconcile.Engine.Submit` as source-bound by the
+certificate. The agent binary does not use the client yet (see [STATUS](../plan/STATUS.md)).
 
 ## Trust model
 
@@ -45,7 +50,8 @@ Every request with a certificate is checked against `revoked_certs` in PostgreSQ
 request. If the query fails the request is refused with a 503 (fail closed).
 
 The sink is an injected `transport.Sink` (`Ingest(ctx, *sdk.Batch, Identity) error`). Production
-wiring: `transport.EmitterSink(emitter)` where the emitter calls `reconcile.Engine.Submit`. A sink
+wiring (`internal/wiring/transport.go`): a sink that calls `reconcile.Engine.Submit` with the
+binding as the submitter, mapping `reconcile.ErrRejected` and `ErrInvalid` to `ErrRejected`. A sink
 returning `transport.ErrRejected` yields a 422; any other error a 500 whose detail is not sent to
 the client. The transport package never writes inventory tables.
 

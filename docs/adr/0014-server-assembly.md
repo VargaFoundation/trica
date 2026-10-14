@@ -28,7 +28,8 @@ operators forget. Several replicas may start at the same time.
 
 ## Consequences
 
-- New components register in `cmd/trica/components.go`; they do not open their own store.
+- New components are listed by `internal/wiring` (`Components()`, called from
+  `cmd/trica/components.go`, [ADR 0025](0025-server-wiring.md)); they do not open their own store.
 - The image is a static binary on distroless, non-root, read-only root filesystem.
 - The sweep and the migrations are safe with several replicas; components with their own
   singleton loops (the deducer) must take their own advisory lock or run in one replica.

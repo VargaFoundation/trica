@@ -159,8 +159,10 @@ Node 20.19 or newer (CI and the image use 22.23.3). `make web-build` writes `int
 
 ## Serving it (`internal/web`)
 
-`web.New(fsys)` / `web.Default()` return an `http.Handler` for the server to mount at `/` (it is
-not wired into a binary yet); `web.NewWithConfig` / `web.DefaultWithConfig(web.Config{OIDC: ...})`
+`web.New(fsys)` / `web.Default()` return an `http.Handler` for the server to mount at `/`
+(`trica server` does, from `internal/wiring`, with `web.oidc` of the server configuration; a
+build without the `webui` tag serves a placeholder page and logs a warning at start);
+`web.NewWithConfig` / `web.DefaultWithConfig(web.Config{OIDC: ...})`
 also serve `GET /ui-config.json` and add the issuer's origin to `connect-src`. An invalid
 configuration is an error at start-up.
 

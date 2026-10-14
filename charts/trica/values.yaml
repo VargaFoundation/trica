@@ -45,6 +45,23 @@ service:
   type: ClusterIP
   port: 8080
 
+# Mutual-TLS ingestion for agents and collectors (ADR 0008, 0025), on a port of
+# its own. Off by default. The CA lives on a persistent volume: losing it
+# invalidates every enrolled agent, so a claim is required (an emptyDir is not
+# offered). With several replicas the claim must be ReadWriteMany.
+transport:
+  enabled: false
+  port: 8443
+  # Names and IPs the server certificate is valid for: what agents dial.
+  hosts: []
+  # An existing PersistentVolumeClaim holding the CA (ca.pem, ca-key.pem).
+  existingClaim: ""
+  subPath: ""
+  # Who may reach the transport port. Empty: any pod in the release namespace.
+  # Agents outside the cluster arrive through the Service you expose
+  # (LoadBalancer or a TLS-passthrough route): list their source here.
+  ingressFrom: []
+
 serviceAccount:
   create: true
   name: ""
