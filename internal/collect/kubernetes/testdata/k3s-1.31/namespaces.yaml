@@ -1,0 +1,114 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+  uid: 00000000-0000-4000-8000-000000000001
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: default
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-node-lease
+  uid: 00000000-0000-4000-8000-000000000002
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: kube-node-lease
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-public
+  uid: 00000000-0000-4000-8000-000000000003
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: kube-public
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-system
+  uid: 00000000-0000-4000-8000-000000000004
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: kube-system
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubevirt
+  uid: 00000000-0000-4000-8000-000000000005
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: kubevirt
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  uid: 00000000-0000-4000-8000-000000000006
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: monitoring
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shop
+  uid: 00000000-0000-4000-8000-000000000007
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: shop
+    team: retail
+    environment: prod
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vms
+  uid: 00000000-0000-4000-8000-000000000008
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubernetes.io/metadata.name: vms
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active

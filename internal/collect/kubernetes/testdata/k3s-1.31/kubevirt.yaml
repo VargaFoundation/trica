@@ -1,0 +1,133 @@
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachineInstance
+metadata:
+  name: app-vm-01
+  namespace: vms
+  uid: 00000000-0000-4000-8000-000000000030
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubevirt.io/nodeName: kube-wk-01
+    app: app-vm-01
+  ownerReferences:
+  - apiVersion: kubevirt.io/v1
+    kind: VirtualMachine
+    name: app-vm-01
+    uid: 00000000-0000-4000-8000-000000000031
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  domain:
+    cpu:
+      cores: 2
+    firmware:
+      uuid: 00000000-0000-4000-a000-000000000101
+    memory:
+      guest: 4Gi
+    machine:
+      type: q35
+    devices:
+      disks:
+      - name: rootdisk
+        disk:
+          bus: virtio
+      interfaces:
+      - name: default
+        masquerade: {}
+      - name: lan
+        bridge: {}
+    resources:
+      requests:
+        memory: 4Gi
+  networks:
+  - name: default
+    pod: {}
+  - name: lan
+    multus:
+      networkName: vms/lan
+status:
+  phase: Running
+  nodeName: kube-wk-01
+  interfaces:
+  - name: default
+    mac: 02:00:00:aa:01:01
+    ipAddress: 203.0.113.71
+    ipAddresses:
+    - 203.0.113.71
+    interfaceName: enp1s0
+    infoSource: domain, guest-agent
+  - name: lan
+    mac: 02:00:00:aa:01:02
+    ipAddress: 192.0.2.51
+    ipAddresses:
+    - 192.0.2.51
+    interfaceName: enp2s0
+    infoSource: domain, guest-agent, multus-status
+  conditions:
+  - type: Ready
+    status: 'True'
+    lastTransitionTime: '2026-09-02T08:14:07Z'
+  launcherContainerImageVersion: quay.io/kubevirt/virt-launcher:v1.4.0
+  guestOSInfo:
+    id: ubuntu
+    name: Ubuntu
+    prettyName: Ubuntu 24.04.1 LTS
+    version: '24.04'
+    kernelRelease: 6.8.0-48-generic
+    machine: x86_64
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachineInstance
+metadata:
+  name: db-vm-01
+  namespace: vms
+  uid: 00000000-0000-4000-8000-000000000033
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    kubevirt.io/nodeName: kube-wk-02
+    app: db-vm-01
+  ownerReferences:
+  - apiVersion: kubevirt.io/v1
+    kind: VirtualMachine
+    name: db-vm-01
+    uid: 00000000-0000-4000-8000-000000000034
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  domain:
+    cpu:
+      cores: 2
+      sockets: 2
+      threads: 1
+    machine:
+      type: q35
+    devices:
+      disks:
+      - name: rootdisk
+        disk:
+          bus: virtio
+      interfaces:
+      - name: default
+        masquerade: {}
+    resources:
+      requests:
+        memory: 8Gi
+  networks:
+  - name: default
+    pod: {}
+status:
+  phase: Running
+  nodeName: kube-wk-02
+  interfaces:
+  - name: default
+    mac: 02:00:00:aa:02:01
+    ipAddress: 203.0.113.72
+    ipAddresses:
+    - 203.0.113.72
+    interfaceName: enp1s0
+    infoSource: domain
+  conditions:
+  - type: Ready
+    status: 'True'
+    lastTransitionTime: '2026-09-02T08:14:07Z'
+  launcherContainerImageVersion: quay.io/kubevirt/virt-launcher:v1.4.0

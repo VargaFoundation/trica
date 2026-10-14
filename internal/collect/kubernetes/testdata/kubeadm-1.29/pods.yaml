@@ -1,0 +1,207 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: coredns-76f75df574-xk2lp
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000003d
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: kube-dns
+    pod-template-hash: 76f75df574
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: ReplicaSet
+    name: coredns-76f75df574
+    uid: 00000000-0000-4000-8000-00000000003c
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: coredns
+    image: registry.k8s.io/coredns/coredns:v1.11.1
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: node-a1
+status:
+  phase: Running
+  hostIP: 198.51.100.101
+  podIP: 203.0.113.11
+  podIPs:
+  - ip: 203.0.113.11
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: coredns
+    image: registry.k8s.io/coredns/coredns:v1.11.1
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: coredns-76f75df574-q8m4z
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-00000000003e
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: kube-dns
+    pod-template-hash: 76f75df574
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: ReplicaSet
+    name: coredns-76f75df574
+    uid: 00000000-0000-4000-8000-00000000003c
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: coredns
+    image: registry.k8s.io/coredns/coredns:v1.11.1
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: node-a2
+status:
+  phase: Running
+  hostIP: 198.51.100.102
+  podIP: 203.0.113.12
+  podIPs:
+  - ip: 203.0.113.12
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: coredns
+    image: registry.k8s.io/coredns/coredns:v1.11.1
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-proxy-4gk7d
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000040
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: kube-proxy
+    controller-revision-hash: 5d8f6b7c9
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: DaemonSet
+    name: kube-proxy
+    uid: 00000000-0000-4000-8000-00000000003f
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: kube-proxy
+    image: registry.k8s.io/kube-proxy:v1.29.9
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: node-a1
+  hostNetwork: true
+status:
+  phase: Running
+  hostIP: 198.51.100.101
+  podIP: 198.51.100.101
+  podIPs:
+  - ip: 198.51.100.101
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: kube-proxy
+    image: registry.k8s.io/kube-proxy:v1.29.9
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-proxy-bz9xv
+  namespace: kube-system
+  uid: 00000000-0000-4000-8000-000000000041
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    k8s-app: kube-proxy
+    controller-revision-hash: 5d8f6b7c9
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: DaemonSet
+    name: kube-proxy
+    uid: 00000000-0000-4000-8000-00000000003f
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: kube-proxy
+    image: registry.k8s.io/kube-proxy:v1.29.9
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: node-a2
+  hostNetwork: true
+status:
+  phase: Running
+  hostIP: 198.51.100.102
+  podIP: 198.51.100.102
+  podIPs:
+  - ip: 198.51.100.102
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: kube-proxy
+    image: registry.k8s.io/kube-proxy:v1.29.9
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: wiki-5f6d8c7b9-xk2lp
+  namespace: tools
+  uid: 00000000-0000-4000-8000-000000000044
+  creationTimestamp: '2026-09-02T08:14:07Z'
+  labels:
+    app: wiki
+    pod-template-hash: 5f6d8c7b9
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: ReplicaSet
+    name: wiki-5f6d8c7b9
+    uid: 00000000-0000-4000-8000-000000000043
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  containers:
+  - name: wiki
+    image: registry.example.test/tools/wiki:3.2
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  nodeName: node-a2
+status:
+  phase: Running
+  hostIP: 198.51.100.102
+  podIP: 203.0.113.13
+  podIPs:
+  - ip: 203.0.113.13
+  startTime: '2026-09-02T08:14:07Z'
+  containerStatuses:
+  - name: wiki
+    image: registry.example.test/tools/wiki:3.2
+    imageID: ''
+    ready: true
+    restartCount: 0
+    state:
+      running:
+        startedAt: '2026-09-02T08:14:07Z'
