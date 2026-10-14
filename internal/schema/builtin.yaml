@@ -1,0 +1,821 @@
+# Built-in object and relation types.
+#
+# Every description is written for two readers: the operator browsing the UI,
+# and an AI agent reading the schema through MCP. Keep them short, concrete,
+# and say what the value is, in which unit, and where it usually comes from.
+#
+# Identity: `identity: strong` attributes are unique per type across the whole
+# inventory and are matched first; `identity: weak` attributes are matched
+# only when no strong identifier matched, and only inside the same parent when
+# the object has one (an interface name is unique inside its device).
+
+types:
+  # ---------------------------------------------------------------- locations
+  site:
+    layer: location
+    label: {en: Site, fr: Site}
+    description: A geographical site (datacenter, office, colocation).
+    attributes:
+      name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Short site name."}
+      code: {kind: string, identity: strong, search: true, label: {en: Code, fr: Code}, description: "Unique site code, e.g. MOJI-FR1."}
+      address: {kind: text, search: true, label: {en: Address, fr: Adresse}, description: "Postal address."}
+      timezone: {kind: string, label: {en: Time zone, fr: Fuseau horaire}, description: "IANA time zone of the site."}
+  building:
+    layer: location
+    label: {en: Building, fr: Bâtiment}
+    description: A building of a site.
+    parents: [site]
+    attributes:
+      name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Building name."}
+  room:
+    layer: location
+    label: {en: Room, fr: Salle}
+    description: A room holding racks. Width and depth define the floor plan grid.
+    parents: [site, building]
+    attributes:
+      name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Room name."}
+      width_mm: {kind: int, unit: mm, label: {en: Width, fr: Largeur}, description: "Room width for the floor plan."}
+      depth_mm: {kind: int, unit: mm, label: {en: Depth, fr: Profondeur}, description: "Room depth for the floor plan."}
+  row:
+    layer: location
+    label: {en: Row, fr: Rangée}
+    description: A row of racks.
+    parents: [room]
+    attributes:
+      name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Row name."}
+  aisle:
+    layer: location
+    label: {en: Aisle, fr: Allée}
+    description: A hot or cold aisle between rows.
+    parents: [room]
+    attributes:
+      name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Aisle name."}
+      temperature: {kind: enum, values: [hot, cold], label: {en: Kind, fr: Type}, description: "Whether the aisle is a hot or a cold aisle."}
+  rack:
+    layer: location
+    label: {en: Rack, fr: Baie}
+    description: A rack. Devices are mounted in it at a U position, on its front or rear face.
+    parents: [site, room, row]
+    attributes:
+      name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Rack name as labelled on site."}
+      serial: {kind: string, identity: strong, search: true, label: {en: Serial number, fr: Numéro de série}, description: "Rack serial number."}
+      asset_tag: {kind: string, identity: strong, search: true, label: {en: Asset tag, fr: Étiquette d'inventaire}, description: "Asset tag."}
+      u_height: {kind: int, unit: U, label: {en: Height, fr: Hauteur}, description: "Usable height in rack units."}
+      depth_mm: {kind: int, unit: mm, label: {en: Depth, fr: Profondeur}, description: "Inner mounting depth."}
+      width_mm: {kind: int, unit: mm, label: {en: Width, fr: Largeur}, description: "Outer width."}
+      facing: {kind: enum, values: [north, east, south, west], label: {en: Front faces, fr: Face avant vers}, description: "Direction the front door faces on the floor plan."}
+      floor_x: {kind: int, label: {en: Floor X, fr: Position X}, description: "Floor plan column (tiles from the room origin)."}
+      floor_y: {kind: int, label: {en: Floor Y, fr: Position Y}, description: "Floor plan row (tiles from the room origin)."}
+      power_capacity_w: {kind: int, unit: W, label: {en: Power capacity, fr: Puissance disponible}, description: "Usable power budget of the rack."}
+      lifecycle: {kind: enum, values: [planned, active, decommissioned], label: {en: Lifecycle, fr: Cycle de vie}, description: "Declared lifecycle state."}
+
+  # ----------------------------------------------------------------- physical
+  device_type:
+    layer: physical
+    label: {en: Device model, fr: Modèle d'équipement}
+    description: A device model from the library. Physical dimensions, airflow and power drive the rack views and the thermal checks.
+    display: model
+    attributes:
+      slug: {kind: string, identity: strong, search: true, required: true, label: {en: Slug, fr: Identifiant}, description: "Library identifier, vendor-model in lowercase."}
+      vendor: {kind: string, search: true, label: {en: Vendor, fr: Constructeur}, description: "Manufacturer."}
+      model: {kind: string, identity: weak, search: true, label: {en: Model, fr: Modèle}, description: "Commercial model name."}
+      part_number: {kind: string, search: true, label: {en: Part number, fr: Référence}, description: "Manufacturer part number."}
+      u_height: {kind: float, unit: U, label: {en: Height, fr: Hauteur}, description: "Height in rack units."}
+      full_depth: {kind: bool, label: {en: Full depth, fr: Pleine profondeur}, description: "Whether it occupies both faces of the rack."}
+      depth_mm: {kind: int, unit: mm, label: {en: Depth, fr: Profondeur}, description: "Chassis depth."}
+      weight_kg: {kind: float, unit: kg, label: {en: Weight, fr: Poids}, description: "Chassis weight."}
+      airflow: {kind: enum, values: [front_to_rear, rear_to_front, left_to_right, right_to_left, side_to_rear, passive, mixed], label: {en: Airflow, fr: Flux d'air}, description: "Expected airflow direction."}
+      power_nominal_w: {kind: int, unit: W, label: {en: Nominal power, fr: Puissance nominale}, description: "Typical draw."}
+      power_max_w: {kind: int, unit: W, label: {en: Maximum power, fr: Puissance maximale}, description: "Maximum draw."}
+      psu_count: {kind: int, label: {en: PSU slots, fr: Emplacements d'alimentation}, description: "Number of power supply slots."}
+      front_image: {kind: string, label: {en: Front image, fr: Image avant}, description: "Path of the front illustration in the library."}
+      rear_image: {kind: string, label: {en: Rear image, fr: Image arrière}, description: "Path of the rear illustration in the library."}
+      ports: {kind: json, label: {en: Port layout, fr: Disposition des ports}, description: "Port templates (name, kind, face, x, y) used to draw the faces."}
+      end_of_sale: {kind: time, label: {en: End of sale, fr: Fin de commercialisation}, description: "Manufacturer end-of-sale date."}
+      end_of_support: {kind: time, label: {en: End of support, fr: Fin de support}, description: "Manufacturer end-of-support date."}
+  device:
+    layer: physical
+    label: {en: Device, fr: Équipement}
+    description: A physical device - server, switch, firewall, PDU, UPS, patch panel, sensor or storage.
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Hostname or label."}
+      serial: {kind: string, identity: strong, search: true, label: {en: Serial number, fr: Numéro de série}, description: "Chassis serial number, the primary identity."}
+      hw_uuid: {kind: string, identity: strong, search: true, label: {en: Hardware UUID, fr: UUID matériel}, description: "SMBIOS system UUID."}
+      asset_tag: {kind: string, identity: strong, search: true, label: {en: Asset tag, fr: Étiquette d'inventaire}, description: "Asset tag."}
+      base_mac: {kind: mac, identity: strong, search: true, label: {en: Base MAC, fr: MAC de base}, description: "Chassis base MAC address (LLDP chassis ID on switches)."}
+      role: {kind: enum, values: [server, switch, router, firewall, storage, pdu, ups, patch_panel, sensor, nas, kvm, other], search: true, label: {en: Role, fr: Rôle}, description: "Function of the device."}
+      vendor: {kind: string, search: true, label: {en: Vendor, fr: Constructeur}, description: "Manufacturer."}
+      model: {kind: string, search: true, label: {en: Model, fr: Modèle}, description: "Model as reported by the device."}
+      part_number: {kind: string, search: true, label: {en: Part number, fr: Référence}, description: "Manufacturer part number."}
+      os_name: {kind: string, search: true, label: {en: OS, fr: Système}, description: "Operating system or network OS name."}
+      os_version: {kind: string, search: true, label: {en: OS version, fr: Version du système}, description: "Operating system version."}
+      kernel: {kind: string, label: {en: Kernel, fr: Noyau}, description: "Kernel version (Linux hosts)."}
+      mgmt_ip: {kind: ip, identity: weak, search: true, label: {en: Management IP, fr: IP d'administration}, description: "Address used to manage the device (BMC, switch management)."}
+      primary_ip: {kind: ip, identity: weak, search: true, label: {en: Primary IP, fr: IP principale}, description: "Main production address."}
+      bmc_ip: {kind: ip, search: true, label: {en: BMC IP, fr: IP du BMC}, description: "Address of the out-of-band controller (iLO, iDRAC)."}
+      airflow: {kind: enum, values: [front_to_rear, rear_to_front, left_to_right, right_to_left, side_to_rear, passive, mixed], label: {en: Airflow, fr: Flux d'air}, description: "Airflow as configured or observed."}
+      power_state: {kind: enum, values: ["on", "off", unknown], label: {en: Power state, fr: État d'alimentation}, description: "Power state reported by the BMC."}
+      health: {kind: enum, values: [ok, warning, critical, unknown], label: {en: Health, fr: Santé}, description: "Overall health rollup reported by the device."}
+      power_w: {kind: float, unit: W, label: {en: Power draw, fr: Consommation}, description: "Last power reading."}
+      inlet_temp_c: {kind: float, unit: °C, label: {en: Inlet temperature, fr: Température d'entrée}, description: "Last inlet (front) temperature reading."}
+      outlet_temp_c: {kind: float, unit: °C, label: {en: Outlet temperature, fr: Température de sortie}, description: "Last exhaust (rear) temperature reading."}
+      cpu_count: {kind: int, label: {en: CPUs, fr: Processeurs}, description: "Number of CPU sockets populated."}
+      memory_bytes: {kind: int, unit: B, label: {en: Memory, fr: Mémoire}, description: "Installed memory."}
+      bios_version: {kind: string, search: true, label: {en: BIOS, fr: BIOS}, description: "System BIOS/UEFI version."}
+      bmc_version: {kind: string, search: true, label: {en: BMC firmware, fr: Firmware BMC}, description: "Out-of-band controller firmware version."}
+      uptime_s: {kind: int, unit: s, label: {en: Uptime, fr: Durée de fonctionnement}, description: "Seconds since last boot."}
+      location_led: {kind: enum, values: ["on", "off", blinking, unknown], label: {en: Locator LED, fr: Voyant de localisation}, description: "State of the locator LED."}
+      provisioning_status: {kind: string, search: true, label: {en: Provisioning status, fr: État de provisioning}, description: "Status in the bare-metal provisioning tool (MAAS)."}
+      provisioning_id: {kind: string, identity: strong, search: true, label: {en: Provisioning ID, fr: ID de provisioning}, description: "Machine identifier in the provisioning tool (MAAS system_id)."}
+      warranty_end: {kind: time, label: {en: Warranty end, fr: Fin de garantie}, description: "End of hardware warranty."}
+      lifecycle: {kind: enum, values: [planned, active, maintenance, decommissioned], label: {en: Lifecycle, fr: Cycle de vie}, description: "Declared lifecycle state."}
+      description: {kind: text, search: true, label: {en: Description, fr: Description}, description: "Free text."}
+  module:
+    layer: physical
+    label: {en: Module, fr: Module}
+    description: A field-replaceable module or card (line card, NIC, RAID controller, supervisor).
+    parents: [device, module]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Slot or module name."}
+      serial: {kind: string, identity: strong, search: true, label: {en: Serial number, fr: Numéro de série}, description: "Module serial number."}
+      kind: {kind: enum, values: [linecard, nic, raid_controller, supervisor, gpu, storage_controller, bmc, other], label: {en: Kind, fr: Type}, description: "Module family."}
+      model: {kind: string, search: true, label: {en: Model, fr: Modèle}, description: "Module model."}
+      firmware_version: {kind: string, search: true, label: {en: Firmware, fr: Firmware}, description: "Module firmware version."}
+      health: {kind: enum, values: [ok, warning, critical, unknown], label: {en: Health, fr: Santé}, description: "Module health."}
+      battery_health: {kind: enum, values: [ok, warning, critical, unknown, absent], label: {en: Battery, fr: Batterie}, description: "Cache battery state on RAID controllers."}
+  psu:
+    layer: physical
+    label: {en: Power supply, fr: Alimentation}
+    description: A power supply unit of a device.
+    parents: [device]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "PSU slot name."}
+      serial: {kind: string, identity: strong, search: true, label: {en: Serial number, fr: Numéro de série}, description: "PSU serial number."}
+      model: {kind: string, search: true, label: {en: Model, fr: Modèle}, description: "PSU model or part number."}
+      capacity_w: {kind: int, unit: W, label: {en: Capacity, fr: Capacité}, description: "Rated output."}
+      input_w: {kind: float, unit: W, label: {en: Input power, fr: Puissance d'entrée}, description: "Last input power reading."}
+      health: {kind: enum, values: [ok, warning, critical, unknown, absent], label: {en: Health, fr: Santé}, description: "PSU state."}
+      feed: {kind: string, label: {en: Feed, fr: Voie}, description: "Power path (A or B) it is cabled to."}
+      airflow: {kind: enum, values: [front_to_rear, rear_to_front, unknown], label: {en: Airflow, fr: Flux d'air}, description: "Fan direction of the PSU (port-side intake or exhaust)."}
+      firmware_version: {kind: string, label: {en: Firmware, fr: Firmware}, description: "PSU firmware."}
+  fan:
+    layer: physical
+    label: {en: Fan, fr: Ventilateur}
+    description: A fan of a device or module.
+    parents: [device, module, psu]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Fan name."}
+      speed_rpm: {kind: int, unit: rpm, label: {en: Speed, fr: Vitesse}, description: "Last speed reading."}
+      speed_pct: {kind: float, unit: "%", label: {en: Speed, fr: Vitesse}, description: "Last speed reading in percent of maximum."}
+      health: {kind: enum, values: [ok, warning, critical, unknown, absent], label: {en: Health, fr: Santé}, description: "Fan state."}
+      airflow: {kind: enum, values: [front_to_rear, rear_to_front, unknown], label: {en: Airflow, fr: Flux d'air}, description: "Airflow direction of the fan."}
+  disk:
+    layer: physical
+    label: {en: Disk, fr: Disque}
+    description: A drive (SSD, NVMe, HDD). Wear and error counters feed the end-of-life forecasts.
+    parents: [device, module]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Device name or bay (sda, nvme0n1, Bay 3)."}
+      serial: {kind: string, identity: strong, search: true, label: {en: Serial number, fr: Numéro de série}, description: "Drive serial number."}
+      wwn: {kind: string, identity: strong, search: true, label: {en: WWN, fr: WWN}, description: "World Wide Name."}
+      model: {kind: string, search: true, label: {en: Model, fr: Modèle}, description: "Drive model."}
+      media: {kind: enum, values: [ssd, nvme, hdd, unknown], label: {en: Media, fr: Technologie}, description: "Drive technology."}
+      protocol: {kind: string, label: {en: Protocol, fr: Protocole}, description: "SATA, SAS, NVMe."}
+      capacity_bytes: {kind: int, unit: B, label: {en: Capacity, fr: Capacité}, description: "Raw capacity."}
+      wear_pct: {kind: float, unit: "%", label: {en: Wear, fr: Usure}, description: "Endurance used (NVMe percentage used, SATA wearout inverted)."}
+      written_bytes: {kind: int, unit: B, label: {en: Data written, fr: Volume écrit}, description: "Total host writes."}
+      spare_pct: {kind: float, unit: "%", label: {en: Available spare, fr: Réserve disponible}, description: "Remaining spare blocks."}
+      power_on_hours: {kind: int, unit: h, label: {en: Power-on hours, fr: Heures de fonctionnement}, description: "Hours powered on."}
+      reallocated_sectors: {kind: int, label: {en: Reallocated sectors, fr: Secteurs réalloués}, description: "SMART 5."}
+      pending_sectors: {kind: int, label: {en: Pending sectors, fr: Secteurs en attente}, description: "SMART 197."}
+      media_errors: {kind: int, label: {en: Media errors, fr: Erreurs média}, description: "Uncorrectable media errors."}
+      temperature_c: {kind: float, unit: °C, label: {en: Temperature, fr: Température}, description: "Last temperature reading."}
+      health: {kind: enum, values: [ok, warning, critical, unknown, absent], label: {en: Health, fr: Santé}, description: "Drive health."}
+      firmware_version: {kind: string, search: true, label: {en: Firmware, fr: Firmware}, description: "Drive firmware."}
+      slot: {kind: string, label: {en: Slot, fr: Emplacement}, description: "Physical bay."}
+  memory:
+    layer: physical
+    label: {en: Memory module, fr: Barrette mémoire}
+    description: A DIMM.
+    parents: [device]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Slot, fr: Emplacement}, description: "DIMM slot."}
+      serial: {kind: string, identity: strong, search: true, label: {en: Serial number, fr: Numéro de série}, description: "DIMM serial number."}
+      model: {kind: string, search: true, label: {en: Part number, fr: Référence}, description: "DIMM part number."}
+      size_bytes: {kind: int, unit: B, label: {en: Size, fr: Taille}, description: "Capacity."}
+      speed_mhz: {kind: int, unit: MHz, label: {en: Speed, fr: Fréquence}, description: "Operating speed."}
+      health: {kind: enum, values: [ok, warning, critical, unknown, absent], label: {en: Health, fr: Santé}, description: "DIMM health."}
+      corrected_errors: {kind: int, label: {en: Corrected errors, fr: Erreurs corrigées}, description: "Corrected ECC errors."}
+      uncorrected_errors: {kind: int, label: {en: Uncorrected errors, fr: Erreurs non corrigées}, description: "Uncorrected ECC errors."}
+  cpu:
+    layer: physical
+    label: {en: Processor, fr: Processeur}
+    description: A CPU socket.
+    parents: [device]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Socket, fr: Socket}, description: "Socket name."}
+      model: {kind: string, search: true, label: {en: Model, fr: Modèle}, description: "CPU model."}
+      cores: {kind: int, label: {en: Cores, fr: Cœurs}, description: "Physical cores."}
+      threads: {kind: int, label: {en: Threads, fr: Threads}, description: "Hardware threads."}
+      health: {kind: enum, values: [ok, warning, critical, unknown, absent], label: {en: Health, fr: Santé}, description: "CPU health."}
+  transceiver:
+    layer: physical
+    label: {en: Optic, fr: Optique}
+    description: A pluggable transceiver (SFP, QSFP) and its digital diagnostics.
+    parents: [device, interface]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Port the optic sits in."}
+      serial: {kind: string, identity: strong, search: true, label: {en: Serial number, fr: Numéro de série}, description: "Optic serial number."}
+      vendor: {kind: string, search: true, label: {en: Vendor, fr: Constructeur}, description: "Optic vendor."}
+      model: {kind: string, search: true, label: {en: Model, fr: Modèle}, description: "Optic part number."}
+      media_type: {kind: string, search: true, label: {en: Media type, fr: Type}, description: "10GBASE-SR, 40GBASE-SR4, DAC, ..."}
+      tx_power_dbm: {kind: float, unit: dBm, label: {en: TX power, fr: Puissance émise}, description: "Last transmit power."}
+      rx_power_dbm: {kind: float, unit: dBm, label: {en: RX power, fr: Puissance reçue}, description: "Last receive power."}
+      temperature_c: {kind: float, unit: °C, label: {en: Temperature, fr: Température}, description: "Optic temperature."}
+      voltage_v: {kind: float, unit: V, label: {en: Voltage, fr: Tension}, description: "Supply voltage."}
+  sensor:
+    layer: physical
+    label: {en: Sensor, fr: Capteur}
+    description: A sensor reading of a device or a rack probe.
+    parents: [device, rack, module, psu]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Sensor name as reported."}
+      kind: {kind: enum, values: [temperature, humidity, power, current, voltage, airflow, other], label: {en: Kind, fr: Type}, description: "Quantity measured."}
+      placement: {kind: enum, values: [inlet, outlet, cpu, memory, psu, ambient, system, other], label: {en: Placement, fr: Emplacement}, description: "Where the sensor sits; inlet and outlet drive the airflow checks."}
+      reading: {kind: float, label: {en: Reading, fr: Valeur}, description: "Last reading, in the sensor unit."}
+      unit: {kind: string, label: {en: Unit, fr: Unité}, description: "Unit of the reading."}
+      warning_threshold: {kind: float, label: {en: Warning threshold, fr: Seuil d'alerte}, description: "Upper warning threshold."}
+      critical_threshold: {kind: float, label: {en: Critical threshold, fr: Seuil critique}, description: "Upper critical threshold."}
+      health: {kind: enum, values: [ok, warning, critical, unknown, absent], label: {en: Health, fr: Santé}, description: "Sensor state."}
+  interface:
+    layer: network
+    label: {en: Interface, fr: Interface}
+    description: A network interface or port - physical port, aggregate, VLAN interface, BMC port.
+    parents: [device, module, vm, k8s_node]
+    attributes:
+      name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Interface name (Ethernet1, ether5, eno1, bond0)."}
+      kind: {kind: enum, values: [physical, lag, vlan, loopback, virtual, bmc, tunnel, other], label: {en: Kind, fr: Type}, description: "Interface family."}
+      mac: {kind: mac, search: true, label: {en: MAC, fr: MAC}, description: "MAC address."}
+      description: {kind: text, search: true, label: {en: Description, fr: Description}, description: "Configured description."}
+      speed_mbps: {kind: int, unit: Mb/s, label: {en: Speed, fr: Débit}, description: "Negotiated speed."}
+      duplex: {kind: enum, values: [full, half, unknown], label: {en: Duplex, fr: Duplex}, description: "Negotiated duplex."}
+      mtu: {kind: int, label: {en: MTU, fr: MTU}, description: "MTU."}
+      admin_status: {kind: enum, values: [up, down, unknown], label: {en: Admin status, fr: État administratif}, description: "Configured state."}
+      oper_status: {kind: enum, values: [up, down, unknown, not_present], label: {en: Link status, fr: État du lien}, description: "Operational link state."}
+      mode: {kind: enum, values: [access, trunk, routed, unknown], label: {en: Mode, fr: Mode}, description: "Switchport mode."}
+      native_vlan: {kind: int, label: {en: Native VLAN, fr: VLAN natif}, description: "Untagged VLAN."}
+      lldp_enabled: {kind: bool, label: {en: LLDP enabled, fr: LLDP actif}, description: "Whether LLDP runs on the port."}
+      face: {kind: enum, values: [front, rear], label: {en: Face, fr: Face}, description: "Physical face of the port."}
+  front_port:
+    layer: cabling
+    label: {en: Front port, fr: Port avant}
+    description: A front port of a patch panel.
+    parents: [device]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Port label."}
+      connector: {kind: string, label: {en: Connector, fr: Connecteur}, description: "RJ45, LC, MPO, ..."}
+  rear_port:
+    layer: cabling
+    label: {en: Rear port, fr: Port arrière}
+    description: A rear port of a patch panel.
+    parents: [device]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Port label."}
+      connector: {kind: string, label: {en: Connector, fr: Connecteur}, description: "RJ45, LC, MPO, ..."}
+      positions: {kind: int, label: {en: Positions, fr: Positions}, description: "Number of front ports it carries."}
+  power_port:
+    layer: energy
+    label: {en: Power inlet, fr: Entrée d'alimentation}
+    description: A power inlet of a device (typically one per PSU).
+    parents: [device, psu]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Inlet name."}
+      feed: {kind: string, label: {en: Feed, fr: Voie}, description: "Power path A or B."}
+  power_outlet:
+    layer: energy
+    label: {en: Power outlet, fr: Prise}
+    description: An outlet of a PDU or UPS.
+    parents: [device]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Outlet name or number."}
+      power_w: {kind: float, unit: W, label: {en: Power, fr: Puissance}, description: "Last power reading of the outlet."}
+      state: {kind: enum, values: ["on", "off", unknown], label: {en: State, fr: État}, description: "Outlet state."}
+  circuit:
+    layer: energy
+    label: {en: Circuit, fr: Circuit}
+    description: An electrical circuit feeding PDUs.
+    parents: [site, room]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Circuit name."}
+      feed: {kind: string, label: {en: Feed, fr: Voie}, description: "A or B."}
+      capacity_w: {kind: int, unit: W, label: {en: Capacity, fr: Capacité}, description: "Usable capacity."}
+  cable:
+    layer: cabling
+    label: {en: Cable, fr: Câble}
+    description: A cable between two ports. Documented cables are declared; cables seen through LLDP are deduced.
+    display: label
+    attributes:
+      label: {kind: string, identity: strong, search: true, label: {en: Label, fr: Étiquette}, description: "Label printed on the cable."}
+      key: {kind: string, identity: strong, label: {en: Key, fr: Clé}, description: "Stable key of a deduced cable (its two port IDs)."}
+      media: {kind: enum, values: [copper, fiber, dac, aoc, power, unknown], label: {en: Media, fr: Type}, description: "Cable family."}
+      category: {kind: string, label: {en: Category, fr: Catégorie}, description: "Cat6A, OM4, ..."}
+      color: {kind: string, label: {en: Color, fr: Couleur}, description: "Jacket color."}
+      length_m: {kind: float, unit: m, label: {en: Length, fr: Longueur}, description: "Length."}
+
+  # ------------------------------------------------------------------ network
+  vlan:
+    layer: network
+    label: {en: VLAN, fr: VLAN}
+    description: A VLAN of a layer-2 domain.
+    display: vid
+    attributes:
+      key: {kind: string, identity: strong, label: {en: Key, fr: Clé}, description: "Domain and VLAN ID, e.g. default:204."}
+      vid: {kind: int, search: true, required: true, label: {en: VLAN ID, fr: Numéro de VLAN}, description: "802.1Q VLAN ID."}
+      name: {kind: string, search: true, label: {en: Name, fr: Nom}, description: "VLAN name."}
+      domain: {kind: string, label: {en: L2 domain, fr: Domaine L2}, description: "Layer-2 domain the VLAN ID is unique in."}
+  vrf:
+    layer: network
+    label: {en: VRF, fr: VRF}
+    description: A routing table.
+    attributes:
+      name: {kind: string, identity: strong, search: true, required: true, label: {en: Name, fr: Nom}, description: "VRF name."}
+      rd: {kind: string, label: {en: Route distinguisher, fr: Route distinguisher}, description: "RD."}
+  prefix:
+    layer: network
+    label: {en: Prefix, fr: Préfixe}
+    description: An IP prefix. Occupancy and free addresses are computed from the IP addresses it contains.
+    display: prefix
+    attributes:
+      prefix: {kind: prefix, identity: strong, search: true, required: true, label: {en: Prefix, fr: Préfixe}, description: "CIDR."}
+      description: {kind: text, search: true, label: {en: Description, fr: Description}, description: "Purpose of the prefix."}
+      vlan: {kind: int, label: {en: VLAN, fr: VLAN}, description: "VLAN carrying the prefix."}
+      gateway: {kind: ip, label: {en: Gateway, fr: Passerelle}, description: "Default gateway of the prefix."}
+  ip_address:
+    layer: network
+    label: {en: IP address, fr: Adresse IP}
+    description: An IP address, assigned to an interface, a device, a VM or a service.
+    display: address
+    attributes:
+      address: {kind: ip, identity: strong, search: true, required: true, label: {en: Address, fr: Adresse}, description: "The address."}
+      prefix_length: {kind: int, label: {en: Prefix length, fr: Longueur de préfixe}, description: "Mask length as configured."}
+      dns_name: {kind: string, search: true, label: {en: DNS name, fr: Nom DNS}, description: "Name it resolves from."}
+      role: {kind: enum, values: [primary, secondary, vip, anycast, public, bmc, unknown], label: {en: Role, fr: Rôle}, description: "Address role."}
+  gateway:
+    layer: network
+    label: {en: Gateway, fr: Passerelle}
+    description: A routing gateway, typically on the firewall.
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Gateway name."}
+      address: {kind: ip, search: true, label: {en: Address, fr: Adresse}, description: "Gateway address."}
+      status: {kind: enum, values: [online, offline, degraded, unknown], label: {en: Status, fr: État}, description: "Monitoring state of the gateway."}
+      latency_ms: {kind: float, unit: ms, label: {en: Latency, fr: Latence}, description: "Last measured latency."}
+      loss_pct: {kind: float, unit: "%", label: {en: Loss, fr: Perte}, description: "Last measured packet loss."}
+  internet_access:
+    layer: network
+    label: {en: Internet access, fr: Accès Internet}
+    description: An Internet uplink - provider, contracted bandwidth and public addresses.
+    attributes:
+      name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Uplink name."}
+      provider: {kind: string, search: true, label: {en: Provider, fr: Opérateur}, description: "ISP."}
+      bandwidth_mbps: {kind: int, unit: Mb/s, label: {en: Contracted bandwidth, fr: Débit souscrit}, description: "Contracted bandwidth."}
+      public_ips: {kind: list, search: true, label: {en: Public addresses, fr: Adresses publiques}, description: "Public addresses or ranges."}
+      status: {kind: enum, values: [online, offline, degraded, unknown], label: {en: Status, fr: État}, description: "Current state."}
+  tunnel:
+    layer: network
+    label: {en: Tunnel, fr: Tunnel}
+    description: A VPN tunnel or server (IPsec, OpenVPN, WireGuard).
+    attributes:
+      name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Tunnel name."}
+      kind: {kind: enum, values: [ipsec, openvpn, wireguard, gre, other], label: {en: Kind, fr: Type}, description: "Technology."}
+      peer: {kind: string, search: true, label: {en: Peer, fr: Pair}, description: "Remote peer."}
+      status: {kind: enum, values: [up, down, unknown], label: {en: Status, fr: État}, description: "Tunnel state."}
+      networks: {kind: list, label: {en: Networks, fr: Réseaux}, description: "Tunnelled networks."}
+  firewall_rule:
+    layer: network
+    label: {en: Firewall rule, fr: Règle de pare-feu}
+    description: A firewall or NAT rule, read from the firewall. Never written back.
+    parents: [device]
+    display: description
+    attributes:
+      key: {kind: string, identity: weak, label: {en: Key, fr: Clé}, description: "Stable identifier of the rule on its firewall."}
+      kind: {kind: enum, values: [filter, nat_port_forward, nat_outbound, nat_one_to_one], label: {en: Kind, fr: Type}, description: "Rule family."}
+      interface: {kind: string, search: true, label: {en: Interface, fr: Interface}, description: "Interface the rule applies on."}
+      action: {kind: string, label: {en: Action, fr: Action}, description: "pass, block, reject."}
+      protocol: {kind: string, label: {en: Protocol, fr: Protocole}, description: "Protocol matched."}
+      source: {kind: string, search: true, label: {en: Source, fr: Source}, description: "Source matched."}
+      destination: {kind: string, search: true, label: {en: Destination, fr: Destination}, description: "Destination matched."}
+      port: {kind: string, label: {en: Port, fr: Port}, description: "Destination port matched."}
+      target: {kind: string, label: {en: NAT target, fr: Cible NAT}, description: "NAT target address and port."}
+      order: {kind: int, label: {en: Order, fr: Ordre}, description: "Evaluation order."}
+      enabled: {kind: bool, label: {en: Enabled, fr: Active}, description: "Whether the rule is enabled."}
+      description: {kind: text, search: true, label: {en: Description, fr: Description}, description: "Rule description."}
+
+  # ------------------------------------------------------------------ compute
+  vm:
+    layer: compute
+    label: {en: Virtual machine, fr: Machine virtuelle}
+    description: A virtual machine (KubeVirt, KVM, other hypervisor).
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "VM name."}
+      uuid: {kind: string, identity: strong, search: true, label: {en: UUID, fr: UUID}, description: "VM UUID."}
+      namespace: {kind: string, label: {en: Namespace, fr: Namespace}, description: "Kubernetes namespace for KubeVirt VMs."}
+      vcpus: {kind: int, label: {en: vCPUs, fr: vCPU}, description: "Virtual CPUs."}
+      memory_bytes: {kind: int, unit: B, label: {en: Memory, fr: Mémoire}, description: "Memory."}
+      power_state: {kind: enum, values: [running, stopped, paused, unknown], label: {en: State, fr: État}, description: "Run state."}
+      os_name: {kind: string, search: true, label: {en: OS, fr: Système}, description: "Guest OS."}
+  k8s_cluster:
+    layer: compute
+    label: {en: Kubernetes cluster, fr: Cluster Kubernetes}
+    description: A Kubernetes cluster.
+    attributes:
+      name: {kind: string, identity: strong, search: true, required: true, label: {en: Name, fr: Nom}, description: "Cluster name (kube context)."}
+      version: {kind: string, search: true, label: {en: Version, fr: Version}, description: "Server version."}
+      api_endpoint: {kind: string, label: {en: API endpoint, fr: API}, description: "API server URL."}
+  k8s_node:
+    layer: compute
+    label: {en: Kubernetes node, fr: Nœud Kubernetes}
+    description: A node of a Kubernetes cluster. It runs on a device or a VM.
+    parents: [k8s_cluster]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Node name."}
+      uid: {kind: string, identity: strong, label: {en: UID, fr: UID}, description: "Kubernetes UID."}
+      system_uuid: {kind: string, search: true, label: {en: System UUID, fr: UUID système}, description: "SMBIOS UUID reported by the kubelet; links the node to its device."}
+      kubelet_version: {kind: string, search: true, label: {en: Kubelet, fr: Kubelet}, description: "Kubelet version."}
+      os_image: {kind: string, label: {en: OS image, fr: Image système}, description: "OS image."}
+      kernel: {kind: string, label: {en: Kernel, fr: Noyau}, description: "Kernel version."}
+      roles: {kind: list, label: {en: Roles, fr: Rôles}, description: "Node roles."}
+      ready: {kind: bool, label: {en: Ready, fr: Prêt}, description: "Ready condition."}
+      internal_ip: {kind: ip, search: true, label: {en: Internal IP, fr: IP interne}, description: "InternalIP address."}
+      cpu_capacity: {kind: float, label: {en: CPU, fr: CPU}, description: "Allocatable CPU cores."}
+      memory_capacity_bytes: {kind: int, unit: B, label: {en: Memory, fr: Mémoire}, description: "Allocatable memory."}
+  namespace:
+    layer: compute
+    label: {en: Namespace, fr: Namespace}
+    description: A Kubernetes namespace.
+    parents: [k8s_cluster]
+    attributes:
+      name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Namespace name."}
+      uid: {kind: string, identity: strong, label: {en: UID, fr: UID}, description: "Kubernetes UID."}
+      labels: {kind: json, label: {en: Labels, fr: Labels}, description: "Namespace labels."}
+  workload:
+    layer: compute
+    label: {en: Workload, fr: Charge}
+    description: A Kubernetes controller (Deployment, StatefulSet, DaemonSet, CronJob).
+    parents: [namespace]
+    attributes:
+      name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Workload name."}
+      uid: {kind: string, identity: strong, label: {en: UID, fr: UID}, description: "Kubernetes UID."}
+      kind: {kind: enum, values: [deployment, statefulset, daemonset, cronjob, job, replicaset], label: {en: Kind, fr: Type}, description: "Controller kind."}
+      replicas: {kind: int, label: {en: Replicas, fr: Réplicas}, description: "Desired replicas."}
+      ready_replicas: {kind: int, label: {en: Ready, fr: Prêts}, description: "Ready replicas."}
+      images: {kind: list, search: true, label: {en: Images, fr: Images}, description: "Container images."}
+  pod:
+    layer: compute
+    label: {en: Pod, fr: Pod}
+    description: A Kubernetes pod.
+    parents: [namespace]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Pod name."}
+      uid: {kind: string, identity: strong, label: {en: UID, fr: UID}, description: "Kubernetes UID."}
+      phase: {kind: string, label: {en: Phase, fr: Phase}, description: "Pod phase."}
+      pod_ip: {kind: string, label: {en: Pod IP, fr: IP du pod}, description: "Pod address (not unique across clusters)."}
+      node_name: {kind: string, label: {en: Node, fr: Nœud}, description: "Node the pod runs on."}
+      restarts: {kind: int, label: {en: Restarts, fr: Redémarrages}, description: "Total container restarts."}
+      images: {kind: list, search: true, label: {en: Images, fr: Images}, description: "Container images."}
+  k8s_service:
+    layer: compute
+    label: {en: Kubernetes service, fr: Service Kubernetes}
+    description: A Kubernetes Service.
+    parents: [namespace]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Service name."}
+      uid: {kind: string, identity: strong, label: {en: UID, fr: UID}, description: "Kubernetes UID."}
+      type: {kind: string, label: {en: Type, fr: Type}, description: "ClusterIP, NodePort, LoadBalancer."}
+      cluster_ip: {kind: string, label: {en: Cluster IP, fr: IP de cluster}, description: "Virtual IP."}
+      ports: {kind: json, label: {en: Ports, fr: Ports}, description: "Exposed ports."}
+  ingress:
+    layer: compute
+    label: {en: Ingress, fr: Ingress}
+    description: A Kubernetes ingress or virtual server exposing services by host name.
+    parents: [namespace]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Ingress name."}
+      uid: {kind: string, identity: strong, label: {en: UID, fr: UID}, description: "Kubernetes UID."}
+      hosts: {kind: list, search: true, label: {en: Hosts, fr: Hôtes}, description: "Host names served."}
+
+  # ----------------------------------------------------------------- software
+  software:
+    layer: software
+    label: {en: Software, fr: Logiciel}
+    description: A software release - an OS, a firmware, a package. Devices and components run it.
+    display: key
+    attributes:
+      key: {kind: string, identity: strong, search: true, label: {en: Key, fr: Clé}, description: "kind/name/version."}
+      kind: {kind: enum, values: [os, firmware, package, application, container_image], label: {en: Kind, fr: Type}, description: "Software family."}
+      name: {kind: string, search: true, required: true, label: {en: Name, fr: Nom}, description: "Product or package name."}
+      version: {kind: string, search: true, label: {en: Version, fr: Version}, description: "Version string."}
+      vendor: {kind: string, label: {en: Vendor, fr: Éditeur}, description: "Publisher."}
+  version_policy:
+    layer: software
+    label: {en: Version policy, fr: Politique de version}
+    description: The reference version of a software for devices matching a selector, and the lag tolerated.
+    attributes:
+      name: {kind: string, identity: strong, search: true, required: true, label: {en: Name, fr: Nom}, description: "Policy name."}
+      software: {kind: string, required: true, label: {en: Software, fr: Logiciel}, description: "Software name the policy governs (matched against software.name or a device attribute)."}
+      attribute: {kind: string, label: {en: Attribute, fr: Attribut}, description: "When set, the device attribute holding the version (os_version, bios_version, bmc_version) instead of a runs relation."}
+      selector: {kind: string, label: {en: Selector, fr: Sélecteur}, description: "TQL filter selecting the governed objects, e.g. \"device where vendor = 'Arista'\"."}
+      reference_version: {kind: string, required: true, label: {en: Reference version, fr: Version de référence}, description: "Version every governed object should run."}
+      max_minor_lag: {kind: int, label: {en: Tolerated minor lag, fr: Retard mineur toléré}, description: "Number of minor versions an object may lag behind."}
+      max_patch_lag: {kind: int, label: {en: Tolerated patch lag, fr: Retard correctif toléré}, description: "Number of patch versions an object may lag behind."}
+  service:
+    layer: software
+    label: {en: System service, fr: Service système}
+    description: A system service (systemd unit) on a host.
+    parents: [device, vm]
+    attributes:
+      name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Unit name."}
+      state: {kind: string, label: {en: State, fr: État}, description: "Active state."}
+      enabled: {kind: bool, label: {en: Enabled, fr: Activé}, description: "Enabled at boot."}
+  listener:
+    layer: software
+    label: {en: Listening socket, fr: Port en écoute}
+    description: A socket listening on a host.
+    parents: [device, vm]
+    display: key
+    attributes:
+      key: {kind: string, identity: weak, search: true, label: {en: Key, fr: Clé}, description: "proto/address:port."}
+      protocol: {kind: string, label: {en: Protocol, fr: Protocole}, description: "tcp or udp."}
+      address: {kind: string, label: {en: Address, fr: Adresse}, description: "Bound address."}
+      port: {kind: int, search: true, label: {en: Port, fr: Port}, description: "Port number."}
+      process: {kind: string, search: true, label: {en: Process, fr: Processus}, description: "Owning process."}
+
+  # -------------------------------------------------------------- application
+  application:
+    layer: application
+    label: {en: Application, fr: Application}
+    description: A business application. Declared next to its code, its instances are observed.
+    attributes:
+      name: {kind: string, identity: strong, search: true, required: true, label: {en: Name, fr: Nom}, description: "Application slug."}
+      display_name: {kind: string, search: true, label: {en: Display name, fr: Nom affiché}, description: "Human name."}
+      domain: {kind: string, search: true, label: {en: Domain, fr: Domaine}, description: "Business domain used to group applications."}
+      criticality: {kind: enum, values: [low, medium, high, critical], label: {en: Criticality, fr: Criticité}, description: "Business criticality."}
+      owner: {kind: string, search: true, label: {en: Owner, fr: Responsable}, description: "Owning team or person."}
+      repository: {kind: string, search: true, label: {en: Repository, fr: Dépôt}, description: "Source repository URL."}
+      description: {kind: text, search: true, label: {en: Description, fr: Description}, description: "What the application does."}
+  component:
+    layer: application
+    label: {en: Component, fr: Composant}
+    description: A deployable part of an application (API, worker, database).
+    parents: [application]
+    attributes:
+      name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Component name."}
+      technology: {kind: string, search: true, label: {en: Technology, fr: Technologie}, description: "Language, framework or product."}
+      kind: {kind: enum, values: [service, worker, database, cache, queue, frontend, batch, other], label: {en: Kind, fr: Type}, description: "Component role."}
+      ports: {kind: list, label: {en: Ports, fr: Ports}, description: "Ports the component listens on."}
+  component_instance:
+    layer: application
+    label: {en: Instance, fr: Instance}
+    description: A running instance of a component in an environment.
+    display: key
+    attributes:
+      key: {kind: string, identity: strong, search: true, label: {en: Key, fr: Clé}, description: "application/component/environment/location."}
+      version: {kind: string, search: true, label: {en: Version, fr: Version}, description: "Deployed version."}
+      deployed_at: {kind: time, label: {en: Deployed at, fr: Déployé le}, description: "Last deployment time."}
+      environment: {kind: string, search: true, label: {en: Environment, fr: Environnement}, description: "Environment name."}
+  endpoint:
+    layer: application
+    label: {en: Endpoint, fr: Point d'exposition}
+    description: A URL or port an application is reachable on.
+    display: url
+    attributes:
+      url: {kind: string, identity: strong, search: true, required: true, label: {en: URL, fr: URL}, description: "URL or host:port."}
+      protocol: {kind: string, label: {en: Protocol, fr: Protocole}, description: "http, https, grpc, tcp..."}
+      port: {kind: int, label: {en: Port, fr: Port}, description: "Port."}
+      public: {kind: bool, label: {en: Public, fr: Public}, description: "Reachable from the Internet."}
+  environment:
+    layer: application
+    label: {en: Environment, fr: Environnement}
+    description: A deployment environment (dev, prod).
+    attributes:
+      name: {kind: string, identity: strong, search: true, required: true, label: {en: Name, fr: Nom}, description: "Environment name."}
+
+  # ------------------------------------------------------------- organisation
+  team:
+    layer: organisation
+    label: {en: Team, fr: Équipe}
+    description: A team owning devices or applications.
+    attributes:
+      name: {kind: string, identity: strong, search: true, required: true, label: {en: Name, fr: Nom}, description: "Team name."}
+      email: {kind: string, search: true, label: {en: Email, fr: E-mail}, description: "Team mailbox."}
+      chat: {kind: string, label: {en: Chat channel, fr: Canal de discussion}, description: "Chat channel."}
+  person:
+    layer: organisation
+    label: {en: Person, fr: Personne}
+    description: A person responsible for something.
+    display: email
+    attributes:
+      email: {kind: string, identity: strong, search: true, required: true, label: {en: Email, fr: E-mail}, description: "Email address."}
+      name: {kind: string, search: true, label: {en: Name, fr: Nom}, description: "Full name."}
+      phone: {kind: string, label: {en: Phone, fr: Téléphone}, description: "Phone number."}
+  vendor:
+    layer: organisation
+    label: {en: Vendor, fr: Fournisseur}
+    description: A manufacturer, reseller or service provider.
+    attributes:
+      name: {kind: string, identity: strong, search: true, required: true, label: {en: Name, fr: Nom}, description: "Vendor name."}
+      support_url: {kind: string, label: {en: Support, fr: Support}, description: "Support portal."}
+  contract:
+    layer: organisation
+    label: {en: Contract, fr: Contrat}
+    description: A warranty, support or maintenance contract.
+    display: reference
+    attributes:
+      reference: {kind: string, identity: strong, search: true, required: true, label: {en: Reference, fr: Référence}, description: "Contract reference."}
+      kind: {kind: enum, values: [warranty, support, maintenance, license, connectivity], label: {en: Kind, fr: Type}, description: "Contract family."}
+      level: {kind: string, label: {en: Service level, fr: Niveau de service}, description: "e.g. 4h on-site, NBD."}
+      starts: {kind: time, label: {en: Start, fr: Début}, description: "Start date."}
+      ends: {kind: time, label: {en: End, fr: Fin}, description: "End date."}
+  ticket:
+    layer: organisation
+    label: {en: External ticket, fr: Ticket externe}
+    description: A ticket in an external tracker linked to objects.
+    display: key
+    attributes:
+      key: {kind: string, identity: strong, search: true, required: true, label: {en: Key, fr: Clé}, description: "Ticket key."}
+      url: {kind: string, label: {en: URL, fr: URL}, description: "Link."}
+      title: {kind: string, search: true, label: {en: Title, fr: Titre}, description: "Title."}
+      status: {kind: string, label: {en: Status, fr: État}, description: "Status in the tracker."}
+
+relations:
+  contains:
+    label: {en: contains, fr: contient}
+    inverse: {en: is in, fr: est dans}
+    description: Structural containment - a device contains its interfaces, a namespace its pods. Failure of the container takes the contents down.
+    from: ["*"]
+    to: ["*"]
+    impact: from_to
+  mounted_in:
+    label: {en: is mounted in, fr: est monté dans}
+    inverse: {en: holds, fr: accueille}
+    description: A device mounted in a rack at a U position on one face.
+    from: [device]
+    to: [rack]
+    attributes:
+      position: {kind: float, unit: U, label: {en: Position, fr: Position}, description: "Lowest U occupied (1 is the bottom)."}
+      face: {kind: enum, values: [front, rear], label: {en: Face, fr: Face}, description: "Face the device is mounted on."}
+  instance_of:
+    label: {en: is a, fr: est un}
+    inverse: {en: has instances, fr: a pour instances}
+    description: Links a device to its model, or an instance to its component.
+    from: [device, component_instance]
+    to: [device_type, component]
+  powered_by:
+    label: {en: is powered by, fr: est alimenté par}
+    inverse: {en: powers, fr: alimente}
+    description: Power supply chain. A device stays up while at least one of its feeds is up.
+    from: [device, psu, power_port, circuit]
+    to: [power_outlet, device, circuit]
+    impact: supply
+  connects:
+    label: {en: connects, fr: raccorde}
+    inverse: {en: is connected by, fr: est raccordé par}
+    description: A cable ends on a port.
+    from: [cable]
+    to: [interface, front_port, rear_port, power_port, power_outlet]
+    attributes:
+      end: {kind: enum, values: [a, b], label: {en: End, fr: Extrémité}, description: "Cable end."}
+  cabled_to:
+    label: {en: is cabled to, fr: est câblé à}
+    inverse: {en: is cabled to, fr: est câblé à}
+    description: Physical link between two ports, from a documented cable or deduced from LLDP.
+    from: [interface, front_port, rear_port]
+    to: [interface, front_port, rear_port]
+    impact: link
+  maps_to:
+    label: {en: maps to, fr: correspond à}
+    inverse: {en: is mapped from, fr: est la cible de}
+    description: A patch panel front port carried by a rear port.
+    from: [front_port]
+    to: [rear_port]
+    impact: link
+    attributes:
+      position: {kind: int, label: {en: Position, fr: Position}, description: "Position on the rear port."}
+  neighbor_of:
+    label: {en: sees as neighbor, fr: voit comme voisin}
+    inverse: {en: is seen by, fr: est vu par}
+    description: LLDP/CDP/MNDP adjacency, as observed from the From side.
+    from: [interface]
+    to: [interface]
+    attributes:
+      protocol: {kind: string, label: {en: Protocol, fr: Protocole}, description: "lldp, cdp, mndp."}
+  member_of:
+    label: {en: is member of, fr: est membre de}
+    inverse: {en: has member, fr: a pour membre}
+    description: Aggregate, VLAN or cluster membership.
+    from: [interface, k8s_node, device, vm, person]
+    to: [interface, vlan, k8s_cluster, team]
+    attributes:
+      tagged: {kind: bool, label: {en: Tagged, fr: Étiqueté}, description: "For VLAN membership, whether frames are tagged."}
+  assigned_to:
+    label: {en: is assigned to, fr: est attribuée à}
+    inverse: {en: has address, fr: porte l'adresse}
+    description: An IP address configured on an interface, device, VM or service.
+    from: [ip_address, prefix]
+    to: [interface, device, vm, k8s_service, k8s_node, vlan, vrf, gateway, internet_access]
+  hosts:
+    label: {en: hosts, fr: héberge}
+    inverse: {en: runs on, fr: tourne sur}
+    description: A host runs a guest - a device hosts a VM or a Kubernetes node, a node hosts pods.
+    from: [device, vm, k8s_node]
+    to: [vm, k8s_node, pod]
+    impact: from_to
+  runs:
+    label: {en: runs, fr: exécute}
+    inverse: {en: runs on, fr: est exécuté par}
+    description: Software installed or running on a device, component or VM.
+    from: [device, vm, k8s_node, module, disk, psu, interface, transceiver, component_instance]
+    to: [software]
+  served_by:
+    label: {en: is served by, fr: est servi par}
+    inverse: {en: serves, fr: sert}
+    description: A workload, service or component and the replicas or instances that serve it. It stays up while at least one is up.
+    from: [workload, k8s_service, component, endpoint]
+    to: [pod, component_instance, workload]
+    impact: supply
+  runs_on:
+    label: {en: runs on, fr: tourne sur}
+    inverse: {en: runs, fr: fait tourner}
+    description: An application instance placed on a host, VM, node or pod.
+    from: [component_instance]
+    to: [device, vm, k8s_node, pod, workload]
+    impact: to_from
+  depends_on:
+    label: {en: depends on, fr: dépend de}
+    inverse: {en: is needed by, fr: est nécessaire à}
+    description: Hard dependency. If the target fails, the source fails.
+    from: ["*"]
+    to: ["*"]
+    impact: to_from
+  calls:
+    label: {en: calls, fr: appelle}
+    inverse: {en: is called by, fr: est appelé par}
+    description: A flow between components, with protocol and port. Declared flows come from application declarations; observed flows from connections.
+    from: [application, component, component_instance, device, vm]
+    to: [application, component, component_instance, endpoint, device, vm, ip_address]
+    impact: degrade
+    attributes:
+      protocol: {kind: string, label: {en: Protocol, fr: Protocole}, description: "Protocol."}
+      port: {kind: int, label: {en: Port, fr: Port}, description: "Destination port."}
+  talks_to:
+    label: {en: talks to, fr: échange avec}
+    inverse: {en: is reached by, fr: est joint par}
+    description: An established connection observed on a host.
+    from: [device, vm, pod]
+    to: [ip_address]
+    attributes:
+      port: {kind: int, label: {en: Port, fr: Port}, description: "Remote port."}
+      protocol: {kind: string, label: {en: Protocol, fr: Protocole}, description: "tcp or udp."}
+      process: {kind: string, label: {en: Process, fr: Processus}, description: "Local process."}
+  exposed_by:
+    label: {en: is exposed by, fr: est exposé par}
+    inverse: {en: exposes, fr: expose}
+    description: A component reachable through an endpoint, service or ingress.
+    from: [component, component_instance, k8s_service, workload]
+    to: [endpoint, k8s_service, ingress, ip_address]
+  owned_by:
+    label: {en: is owned by, fr: est sous la responsabilité de}
+    inverse: {en: owns, fr: est responsable de}
+    description: Ownership by a team or a person.
+    from: ["*"]
+    to: [team, person]
+  covered_by:
+    label: {en: is covered by, fr: est couvert par}
+    inverse: {en: covers, fr: couvre}
+    description: Warranty or support coverage.
+    from: [device, module, disk, psu, software, internet_access]
+    to: [contract]
+  supplied_by:
+    label: {en: is supplied by, fr: est fourni par}
+    inverse: {en: supplies, fr: fournit}
+    description: Vendor of a device, contract or uplink.
+    from: [device, contract, internet_access, software, device_type]
+    to: [vendor]
+  backed_up_by:
+    label: {en: is backed up by, fr: est sauvegardé par}
+    inverse: {en: backs up, fr: sauvegarde}
+    description: Backup relationship.
+    from: ["*"]
+    to: ["*"]
+  routes_via:
+    label: {en: routes via, fr: sort par}
+    inverse: {en: routes for, fr: route pour}
+    description: Routing path - a prefix or device reaching the Internet through a gateway or uplink. Up while one path is up.
+    from: [prefix, device, gateway, vrf]
+    to: [gateway, internet_access, device]
+    impact: supply
+  tracked_in:
+    label: {en: is tracked in, fr: est suivi dans}
+    inverse: {en: tracks, fr: suit}
+    description: Link to an external ticket.
+    from: ["*"]
+    to: [ticket]

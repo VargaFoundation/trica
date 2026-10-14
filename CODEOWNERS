@@ -1,0 +1,8 @@
+# Default owners: the integrator stream.
+*                         @VargaFoundation/integrators
+
+# The collector contract is public: any change is a breaking change for
+# third-party collectors.
+/pkg/sdk/                 @VargaFoundation/integrators
+/internal/schema/         @VargaFoundation/integrators
+/docs/adr/                @VargaFoundation/integrators

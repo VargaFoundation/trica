@@ -1,0 +1,42 @@
+# golangci-lint v2. The version is pinned in the Makefile and in ci.yml.
+version: "2"
+run:
+  timeout: 5m
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - errorlint
+    - gocritic
+    - gosec
+    - misspell
+    - noctx
+    - nolintlint
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - unconvert
+    - usestdlibvars
+  settings:
+    gosec:
+      excludes:
+        # G115 (integer overflow on conversion) fires on every int/int64 cast of
+        # bounded values (counts, durations); it is noise here.
+        - G115
+    revive:
+      rules:
+        - name: exported
+          arguments: ["disableStutteringCheck"]
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+  exclusions:
+    presets: [comments, std-error-handling]
+    rules:
+      - path: _test\.go
+        linters: [gosec, noctx, bodyclose]
+formatters:
+  enable: [gofmt, goimports]
+  settings:
+    goimports:
+      local-prefixes: [github.com/VargaFoundation/trica]

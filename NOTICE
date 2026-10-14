@@ -1,0 +1,21 @@
+trica
+Copyright 2026 Varga Foundation
+
+This product includes software developed at the Varga Foundation
+(https://github.com/VargaFoundation/trica), licensed under the
+Apache License, Version 2.0. See LICENSE.
+
+Neither the name "trica" nor the Varga Foundation name may be used to endorse
+or describe a derived product in a way that suggests it is this project. The
+Apache licence grants no trademark rights (section 6). See docs/TRADEMARK.md.
+
+------------------------------------------------------------------------------
+Third-party components
+------------------------------------------------------------------------------
+
+trica runs alongside, but does not embed:
+
+  PostgreSQL          PostgreSQL   database (container image or external)
+
+Go dependencies are declared in go.mod and go.sum, JavaScript dependencies in
+web/pnpm-lock.yaml, and an SBOM ships with every release image.
