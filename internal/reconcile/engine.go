@@ -81,6 +81,25 @@ func (e *Engine) checkObservedAge(b *sdk.Batch) error {
 	return nil
 }
 
+// strictSource reports whether source is an API caller (user, token). Their
+// batches are rejected on a value the schema refuses; a collector's batch only
+// gets a warning, so one odd value never loses a whole inventory run.
+func strictSource(source string) bool {
+	kind, _, _ := strings.Cut(source, ":")
+	return kind == "user" || kind == "token"
+}
+
+// problem handles a schema problem with one value or relation: a hard error
+// (ErrRejected, the transaction rolls back) for strict sources, a warning
+// otherwise.
+func (r *run) problem(format string, args ...any) error {
+	if strictSource(r.b.Source) {
+		return fmt.Errorf("%w: %s", ErrRejected, fmt.Sprintf(format, args...))
+	}
+	r.warn(format, args...)
+	return nil
+}
+
 const maxRecordedChanges = 2000
 
 func (e *Engine) now() time.Time {
@@ -577,7 +596,9 @@ func (r *run) writeClaims(ctx context.Context) error {
 			}
 			nv, err := schema.Normalize(a, vals[k])
 			if err != nil {
-				r.warn("%s %s: %v", o.Type, o.Ref, err)
+				if perr := r.problem("%s %s: %v", o.Type, o.Ref, err); perr != nil {
+					return perr
+				}
 				continue
 			}
 			raw, _ := json.Marshal(nv)
@@ -912,7 +933,9 @@ func (r *run) writeRelationClaims(ctx context.Context) error {
 	for _, rel := range r.b.Relations {
 		rt, err := r.reg.Relation(rel.Type)
 		if err != nil {
-			r.warn("%v", err)
+			if perr := r.problem("%v", err); perr != nil {
+				return perr
+			}
 			continue
 		}
 		from, err := r.resolveEndpoint(ctx, rel.From)
@@ -952,7 +975,9 @@ func (r *run) writeRelationClaims(ctx context.Context) error {
 			}
 			v, err := schema.Normalize(a, rel.Attributes[k])
 			if err != nil {
-				r.warn("relation %s: %v", rel.Type, err)
+				if perr := r.problem("relation %s: %v", rel.Type, err); perr != nil {
+					return perr
+				}
 				continue
 			}
 			attrs[k] = v
