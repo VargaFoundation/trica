@@ -1,0 +1,16 @@
+{
+  "multicastTable": {"tableEntries": []},
+  "unicastTable": {
+    "tableEntries": [
+      {"macAddress": "02:aa:00:00:03:01", "vlanId": 100, "interface": "Ethernet1", "entryType": "learnedDynamicMac", "moves": 1, "lastMove": 1759100000.0},
+      {"macAddress": "02:aa:00:00:04:01", "vlanId": 100, "interface": "Port-Channel10", "entryType": "learnedDynamicMac", "moves": 1, "lastMove": 1759100000.0},
+      {"macAddress": "02:aa:00:00:04:02", "vlanId": 100, "interface": "Port-Channel10", "entryType": "learnedDynamicMac", "moves": 1, "lastMove": 1759100000.0},
+      {"macAddress": "02:bb:00:00:00:01", "vlanId": 100, "interface": "Ethernet49", "entryType": "learnedDynamicMac", "moves": 1, "lastMove": 1759100000.0},
+      {"macAddress": "02:bb:00:00:00:02", "vlanId": 100, "interface": "Ethernet49", "entryType": "learnedDynamicMac", "moves": 1, "lastMove": 1759100000.0},
+      {"macAddress": "02:bb:00:00:00:03", "vlanId": 200, "interface": "Ethernet49", "entryType": "learnedDynamicMac", "moves": 1, "lastMove": 1759100000.0},
+      {"macAddress": "02:bb:00:00:00:04", "vlanId": 200, "interface": "Ethernet49", "entryType": "learnedDynamicMac", "moves": 1, "lastMove": 1759100000.0},
+      {"macAddress": "02:bb:00:00:00:05", "vlanId": 200, "interface": "Ethernet49", "entryType": "learnedDynamicMac", "moves": 1, "lastMove": 1759100000.0},
+      {"macAddress": "02:1c:73:00:10:01", "vlanId": 100, "interface": "Cpu", "entryType": "configuredStaticMac", "moves": 0, "lastMove": 0.0}
+    ]
+  }
+}

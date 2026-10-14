@@ -1,0 +1,8 @@
+{
+  "powerSupplies": {
+    "1": {"state": "ok", "modelName": "PWR-460AC-F", "capacity": 460.0, "outputPower": 128.5, "inputCurrent": 0.6, "outputCurrent": 10.7, "managed": true, "uptime": 1230000.0},
+    "2": {"state": "ok", "modelName": "PWR-460AC-F", "capacity": 460.0, "outputPower": 121.0, "inputCurrent": 0.6, "outputCurrent": 10.1, "managed": true, "uptime": 1230000.0}
+  },
+  "voltageSensors": {},
+  "currentSensors": {}
+}

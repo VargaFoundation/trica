@@ -1,0 +1,9 @@
+{
+  "interfaces": {
+    "Et1": {"vendorSn": "FAKEXCVR0001", "mediaType": "10GBASE-SR", "temperature": 31.5, "voltage": 3.29, "txBias": 6.2, "txPower": -2.4, "rxPower": -3.1, "updateTime": 1758100000.0},
+    "Et2": {"vendorSn": "FAKEXCVR0002", "mediaType": "10GBASE-CR", "temperature": 30.0, "voltage": 3.3, "txBias": 0.0, "txPower": "N/A", "rxPower": "N/A", "updateTime": 1758100000.0},
+    "Et49": {"vendorSn": "FAKEXCVR0049", "mediaType": "40GBASE-SR4", "temperature": 33.0, "voltage": 3.28, "txBias": 7.1, "txPower": -1.2, "rxPower": -2.5, "updateTime": 1758100000.0},
+    "Et50": {"vendorSn": "FAKEXCVR0050", "mediaType": "40GBASE-SR4", "temperature": 33.5, "voltage": 3.28, "txBias": 7.0, "txPower": -1.3, "rxPower": -2.7, "updateTime": 1758100000.0},
+    "Et51": {"vendorSn": "FAKEXCVR0051", "mediaType": "40GBASE-SR4", "temperature": 34.0, "voltage": 3.27, "txBias": 7.2, "txPower": -1.1, "rxPower": -2.2, "updateTime": 1758100000.0}
+  }
+}

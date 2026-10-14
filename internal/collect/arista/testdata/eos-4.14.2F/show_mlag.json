@@ -1,0 +1,16 @@
+{
+  "domainId": "MLAG-A",
+  "localInterface": "Vlan4094",
+  "peerAddress": "203.0.113.2",
+  "peerLink": "Port-Channel1",
+  "state": "active",
+  "negStatus": "connected",
+  "peerLinkStatus": "up",
+  "localIntfStatus": "up",
+  "systemId": "02:1c:73:00:00:99",
+  "reloadDelay": 300,
+  "reloadDelayNonMlag": 300,
+  "configSanity": "consistent",
+  "portsErrdisabled": false,
+  "mlagPorts": {"Disabled": 0, "Configured": 0, "Inactive": 0, "Active-partial": 0, "Active-full": 0}
+}

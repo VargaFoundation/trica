@@ -1,0 +1,34 @@
+{
+  "interfaces": {
+    "Management1": {
+      "name": "Management1", "lineProtocolStatus": "up", "interfaceStatus": "connected", "enabled": true,
+      "mtu": 1500, "vrf": "default",
+      "interfaceAddress": {
+        "primaryIp": {"address": "192.0.2.12", "maskLen": 24},
+        "secondaryIps": {}, "secondaryIpsOrderedList": [],
+        "virtualIp": {"address": "0.0.0.0", "maskLen": 0},
+        "broadcastAddress": "255.255.255.255", "dhcp": false
+      }
+    },
+    "Vlan100": {
+      "name": "Vlan100", "lineProtocolStatus": "up", "interfaceStatus": "connected", "enabled": true,
+      "mtu": 1500, "vrf": "default",
+      "interfaceAddress": {
+        "primaryIp": {"address": "198.51.100.3", "maskLen": 24},
+        "secondaryIps": {}, "secondaryIpsOrderedList": [],
+        "virtualIp": {"address": "198.51.100.1", "maskLen": 24},
+        "broadcastAddress": "255.255.255.255", "dhcp": false
+      }
+    },
+    "Loopback0": {
+      "name": "Loopback0", "lineProtocolStatus": "up", "interfaceStatus": "connected", "enabled": true,
+      "mtu": 65535, "vrf": "default",
+      "interfaceAddress": {
+        "primaryIp": {"address": "203.0.113.102", "maskLen": 32},
+        "secondaryIps": {}, "secondaryIpsOrderedList": [],
+        "virtualIp": {"address": "0.0.0.0", "maskLen": 0},
+        "broadcastAddress": "255.255.255.255", "dhcp": false
+      }
+    }
+  }
+}

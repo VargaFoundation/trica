@@ -1,0 +1,14 @@
+{
+  "portChannels": {
+    "Port-Channel1": {
+      "activePorts": {
+        "Ethernet49": {"timeBecameActive": 1758000100.0, "protocol": "lacp"},
+        "Ethernet50": {"timeBecameActive": 1758000101.0, "protocol": "lacp"},
+        "PeerEthernet49": {"timeBecameActive": 1758000100.0, "protocol": "lacp"},
+        "PeerEthernet50": {"timeBecameActive": 1758000101.0, "protocol": "lacp"}
+      },
+      "inactivePorts": {},
+      "recircFeature": []
+    }
+  }
+}

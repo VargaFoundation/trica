@@ -1,0 +1,104 @@
+{
+  "lldpNeighbors": {
+    "Ethernet1": {
+      "lldpNeighborInfo": [
+        {
+          "chassisIdType": "macAddress",
+          "chassisId": "02aa.0000.0101",
+          "systemName": "srv-01.example.net",
+          "systemDescription": "Linux srv-01 6.1.0 #1 SMP x86_64",
+          "systemCapabilities": {"bridge": false, "router": false, "station": true},
+          "managementAddresses": [{"addressType": "ipv4", "address": "198.51.100.51"}],
+          "neighborInterfaceInfo": {
+            "interfaceIdType": "macAddress",
+            "interfaceId": "\"02aa.0000.0101\"",
+            "interfaceDescription": "eno1"
+          },
+          "ttl": 120
+        }
+      ],
+      "tablesLastChangeTime": 1758100000.0
+    },
+    "Ethernet2": {
+      "lldpNeighborInfo": [
+        {
+          "chassisIdType": "local",
+          "chassisId": "\"srv-02\"",
+          "systemName": "srv-02",
+          "systemDescription": "Linux srv-02 6.1.0 #1 SMP x86_64",
+          "systemCapabilities": {"bridge": false, "router": false, "station": true},
+          "managementAddresses": [],
+          "neighborInterfaceInfo": {
+            "interfaceIdType": "interfaceName",
+            "interfaceId": "\"eth0\"",
+            "interfaceDescription": ""
+          },
+          "ttl": 120
+        }
+      ],
+      "tablesLastChangeTime": 1758100000.0
+    },
+    "Ethernet49": {
+      "lldpNeighborInfo": [
+        {
+          "chassisIdType": "macAddress",
+          "chassisId": "02:1c:73:00:00:02",
+          "systemName": "sw-a2.example.net",
+          "systemDescription": "Arista Networks EOS version 4.14.2F running on an Arista Networks DCS-7050SX-64-F",
+          "systemCapabilities": {"bridge": true, "router": true, "station": false},
+          "managementAddresses": [{"addressType": "ipv4", "address": "192.0.2.13"}],
+          "neighborInterfaceInfo": {
+            "interfaceIdType": "interfaceName",
+            "interfaceId": "\"Ethernet49\"",
+            "interfaceDescription": "mlag peer sw-a1 Ethernet49"
+          },
+          "ttl": 120
+        }
+      ],
+      "tablesLastChangeTime": 1758100000.0
+    },
+    "Ethernet50": {
+      "lldpNeighborInfo": [
+        {
+          "chassisIdType": "macAddress",
+          "chassisId": "02:1c:73:00:00:02",
+          "systemName": "sw-a2.example.net",
+          "systemDescription": "Arista Networks EOS version 4.14.2F running on an Arista Networks DCS-7050SX-64-F",
+          "systemCapabilities": {"bridge": true, "router": true, "station": false},
+          "managementAddresses": [{"addressType": "ipv4", "address": "192.0.2.13"}],
+          "neighborInterfaceInfo": {
+            "interfaceIdType": "interfaceName",
+            "interfaceId": "\"Ethernet50\"",
+            "interfaceDescription": "mlag peer sw-a1 Ethernet50"
+          },
+          "ttl": 120
+        }
+      ],
+      "tablesLastChangeTime": 1758100000.0
+    },
+    "Ethernet51": {
+      "lldpNeighborInfo": [
+        {
+          "chassisIdType": "macAddress",
+          "chassisId": "02:1c:73:00:10:01",
+          "systemName": "sw-b1.example.net",
+          "systemDescription": "Arista Networks EOS version 4.20.7M running on an Arista Networks DCS-7280SE-64",
+          "systemCapabilities": {"bridge": true, "router": true, "station": false},
+          "managementAddresses": [{"addressType": "ipv4", "address": "192.0.2.12"}],
+          "neighborInterfaceInfo": {
+            "interfaceIdType": "interfaceName",
+            "interfaceId": "\"Ethernet49\"",
+            "interfaceDescription": "uplink sw-a1 Ethernet51"
+          },
+          "ttl": 120
+        }
+      ],
+      "tablesLastChangeTime": 1758100000.0
+    }
+  },
+  "tablesLastChangeTime": 1758100000.0,
+  "tablesAgeOuts": 0,
+  "tablesDeletes": 0,
+  "tablesDrops": 0,
+  "tablesInserts": 5
+}

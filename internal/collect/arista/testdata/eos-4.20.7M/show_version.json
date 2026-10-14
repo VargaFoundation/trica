@@ -1,0 +1,18 @@
+{
+  "mfgName": "Arista",
+  "modelName": "DCS-7280SE-64-F",
+  "hardwareRevision": "11.02",
+  "serialNumber": "FAKE7280B0001",
+  "systemMacAddress": "02:1c:73:00:10:01",
+  "hwMacAddress": "00:00:00:00:00:00",
+  "configMacAddress": "00:00:00:00:00:00",
+  "version": "4.20.7M",
+  "architecture": "i686",
+  "internalVersion": "4.20.7M-9999999.4207M",
+  "internalBuildId": "00000000-0000-0000-0000-000000000000",
+  "bootupTimestamp": 1757000000.0,
+  "uptime": 2234567.0,
+  "memTotal": 8010656,
+  "memFree": 4417868,
+  "isIntlVersion": false
+}

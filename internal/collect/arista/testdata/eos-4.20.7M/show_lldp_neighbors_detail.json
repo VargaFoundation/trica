@@ -1,0 +1,69 @@
+{
+  "lldpNeighbors": {
+    "Ethernet1": {
+      "lldpNeighborInfo": [
+        {
+          "chassisIdType": "macAddress",
+          "chassisId": "02:aa:00:00:03:01",
+          "systemName": "srv-03.example.net",
+          "systemDescription": "Linux srv-03 6.1.0 #1 SMP x86_64",
+          "systemCapabilities": {"bridge": false, "router": false, "station": true},
+          "managementAddresses": [{"addressType": "ipv4", "address": "198.51.100.53"}],
+          "neighborInterfaceInfo": {
+            "interfaceIdType": "interfaceName",
+            "interfaceId": "\"eno1\"",
+            "interfaceId_v2": "eno1",
+            "interfaceDescription": "uplink A"
+          },
+          "ttl": 120
+        }
+      ],
+      "tablesLastChangeTime": 1759100000.0
+    },
+    "Ethernet3": {
+      "lldpNeighborInfo": [
+        {
+          "chassisIdType": "macAddress",
+          "chassisId": "02:aa:00:00:04:01",
+          "systemName": "srv-04",
+          "systemDescription": "Linux srv-04 6.1.0 #1 SMP x86_64",
+          "systemCapabilities": {"bridge": false, "router": false, "station": true},
+          "managementAddresses": [],
+          "neighborInterfaceInfo": {
+            "interfaceIdType": "macAddress",
+            "interfaceId": "\"02aa.0000.0401\"",
+            "interfaceId_v2": "02:aa:00:00:04:01",
+            "interfaceDescription": "eth0"
+          },
+          "ttl": 120
+        }
+      ],
+      "tablesLastChangeTime": 1759100000.0
+    },
+    "Ethernet49": {
+      "lldpNeighborInfo": [
+        {
+          "chassisIdType": "macAddress",
+          "chassisId": "02:1c:73:00:00:01",
+          "systemName": "sw-a1.example.net",
+          "systemDescription": "Arista Networks EOS version 4.14.2F running on an Arista Networks DCS-7050SX-64-F",
+          "systemCapabilities": {"bridge": true, "router": true, "station": false},
+          "managementAddresses": [{"addressType": "ipv4", "address": "192.0.2.11"}],
+          "neighborInterfaceInfo": {
+            "interfaceIdType": "interfaceName",
+            "interfaceId": "\"Ethernet51\"",
+            "interfaceId_v2": "Ethernet51",
+            "interfaceDescription": "uplink sw-b1 Ethernet49"
+          },
+          "ttl": 120
+        }
+      ],
+      "tablesLastChangeTime": 1759100000.0
+    }
+  },
+  "tablesLastChangeTime": 1759100000.0,
+  "tablesAgeOuts": 0,
+  "tablesDeletes": 0,
+  "tablesDrops": 0,
+  "tablesInserts": 3
+}

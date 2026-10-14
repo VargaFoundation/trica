@@ -1,0 +1,13 @@
+{
+  "modelName": "DCS-7050SX-64-F",
+  "internalVersion": "4.14.2F-2038232.4142F",
+  "systemMacAddress": "02:1c:73:00:00:01",
+  "serialNumber": "FAKE7050A0001",
+  "memTotal": 3794508,
+  "bootupTimestamp": 1758000000.0,
+  "memFree": 1517724,
+  "version": "4.14.2F",
+  "architecture": "i386",
+  "internalBuildId": "00000000-0000-0000-0000-000000000000",
+  "hardwareRevision": "01.02"
+}

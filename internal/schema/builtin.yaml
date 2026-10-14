@@ -137,6 +137,9 @@ types:
       provisioning_tags: {kind: list, search: true, label: {en: Provisioning tags, fr: Étiquettes (provisioning)}, description: "Tags set on the machine in the provisioning tool (MAAS tag_names)."}
       provisioning_kernel: {kind: string, label: {en: Provisioning kernel, fr: Noyau (provisioning)}, description: "Kernel flavour requested for deployment (MAAS hwe_kernel, e.g. ga-22.04). Not the running kernel version: that is kernel."}
       provisioning_power_type: {kind: string, search: true, label: {en: Power driver, fr: Pilote d'alimentation}, description: "Power driver the provisioning tool uses (MAAS power_type: ipmi, redfish, lxd, virsh, manual)."}
+      mlag_domain: {kind: string, search: true, label: {en: MLAG domain, fr: Domaine MLAG}, description: "MLAG domain ID the switch belongs to, as configured (Arista). Two peers share it."}
+      mlag_state: {kind: string, label: {en: MLAG state, fr: État MLAG}, description: "MLAG state as reported by the switch: active, inactive, disabled."}
+      mlag_peer: {kind: string, search: true, label: {en: MLAG peer, fr: Pair MLAG}, description: "Address of the MLAG peer switch, as configured on the peer link."}
   module:
     layer: physical
     label: {en: Module, fr: Module}
