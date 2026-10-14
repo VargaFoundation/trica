@@ -19,3 +19,12 @@ trica runs alongside, but does not embed:
 
 Go dependencies are declared in go.mod and go.sum, JavaScript dependencies in
 web/pnpm-lock.yaml, and an SBOM ships with every release image.
+
+trica embeds, unchanged, device model files from:
+
+  netbox-community/devicetype-library   CC0-1.0 (public domain dedication)
+    https://github.com/netbox-community/devicetype-library
+    licence checked 2026-10-14, master at 565a9ba8e0a68a4fa102ce4b35f30c6695a2d574
+    files: internal/devicetypes/library/<Vendor>/ (every directory but "trica")
+
+The models in internal/devicetypes/library/trica/ are written by this project.
