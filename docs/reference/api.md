@@ -6,8 +6,11 @@ and the schema registry, so a custom type or attribute is in the document (and i
 soon as it is in the registry, with no restart. A test compares the document with the routes the
 server actually serves, and validates real traffic (requests and responses) against the document.
 
-The package is a library: it is not mounted in a binary yet (the `trica` server comes with the
-auth PR). `api.New(Config)` returns a `*Server`; `Handler()` serves paths under `api.Prefix`.
+`trica server` mounts it at `/api/v1/` (`internal/wiring`, [ADR 0025](../adr/0025-server-wiring.md)):
+the `Authorizer` is `internal/auth` (API tokens and OIDC JWTs, RBAC policy), the `Auditor` is the
+hash-chained audit log, and a rate limit applies. `api.New(Config)` returns a `*Server`;
+`Handler()` serves paths under `api.Prefix`. A token has no source of its own in `internal/auth`:
+the server speaks for it as `api:token-<id>`.
 
 ## Endpoints
 
@@ -130,7 +133,9 @@ size of the whole result for the caller, not of the page. Lists that are post-fi
   `/whohad`, `/changes`, discrepancies filtered per object), but cannot list.
 - A free-text search could match a custom searchable attribute whose name is sensitive (the
   query is refused only when it names the attribute).
-- No rate limit; no CORS; no TLS (the binary will terminate it).
+- The server rate-limits per principal (`auth.rate_limit`, a 429 over it) but has no CORS and no
+  TLS (a reverse proxy or an ingress terminates it). An authentication backend that fails (the
+  database) answers 401, not 503: the `Authorizer` interface has one error for both.
 - A batch result may carry warnings with status 200: the engine downgrades a value that does not
   fit its kind, or an unknown relation type, to a warning instead of refusing the batch.
 - Approval is not four-eyes: the submitter of a proposal may approve it if they hold `approve`.

@@ -1,0 +1,73 @@
+suite: transport
+templates:
+  - templates/deployment.yaml
+  - templates/configmap.yaml
+  - templates/service.yaml
+  - templates/networkpolicy.yaml
+set:
+  database.existingSecret: trica-db
+tests:
+  - it: opens no second port by default
+    template: templates/deployment.yaml
+    asserts:
+      - lengthEqual: {path: "spec.template.spec.containers[0].ports", count: 1}
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: transport-ca
+            persistentVolumeClaim: {claimName: trica-ca}
+  - it: leaves the service and the network policy on the HTTP port by default
+    template: templates/service.yaml
+    asserts:
+      - lengthEqual: {path: "spec.ports", count: 1}
+  - it: does not configure the transport by default
+    template: templates/configmap.yaml
+    asserts:
+      - notMatchRegex: {path: 'data["trica.yaml"]', pattern: "transport"}
+  - it: refuses an enabled transport without hosts
+    template: templates/deployment.yaml
+    set: {transport.enabled: true, transport.existingClaim: trica-ca}
+    asserts:
+      - failedTemplate:
+          errorMessage: "transport.hosts is required when transport.enabled: the names agents dial"
+  - it: refuses an enabled transport without a claim for the CA
+    template: templates/deployment.yaml
+    set: {transport.enabled: true, "transport.hosts": [trica.example.test]}
+    asserts:
+      - failedTemplate:
+          errorMessage: "transport.existingClaim is required when transport.enabled: the CA must outlive the pod"
+  - it: serves the transport on its own port, with the CA on the claim
+    template: templates/deployment.yaml
+    set: {transport.enabled: true, transport.existingClaim: trica-ca, "transport.hosts": [trica.example.test]}
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content: {name: transport, containerPort: 8443, protocol: TCP}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: transport-ca
+            persistentVolumeClaim: {claimName: trica-ca}
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: transport-ca, mountPath: /var/lib/trica/ca}
+  - it: writes the transport section of the configuration
+    template: templates/configmap.yaml
+    set: {transport.enabled: true, transport.existingClaim: trica-ca, "transport.hosts": [trica.example.test]}
+    asserts:
+      - matchRegex: {path: 'data["trica.yaml"]', pattern: 'addr: :8443'}
+      - matchRegex: {path: 'data["trica.yaml"]', pattern: 'ca_dir: /var/lib/trica/ca'}
+      - matchRegex: {path: 'data["trica.yaml"]', pattern: 'trica.example.test'}
+  - it: exposes the transport port on the service
+    template: templates/service.yaml
+    set: {transport.enabled: true, transport.existingClaim: trica-ca, "transport.hosts": [trica.example.test]}
+    asserts:
+      - contains:
+          path: spec.ports
+          content: {name: transport, port: 8443, targetPort: transport, protocol: TCP}
+  - it: admits the transport port in the network policy
+    template: templates/networkpolicy.yaml
+    set: {transport.enabled: true, transport.existingClaim: trica-ca, "transport.hosts": [trica.example.test]}
+    asserts:
+      - lengthEqual: {path: "spec.ingress", count: 2}
+      - equal: {path: "spec.ingress[1].ports[0].port", value: transport}

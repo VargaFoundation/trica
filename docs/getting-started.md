@@ -48,6 +48,15 @@ optional CronJob for standalone installs ([chart README](../charts/trica/README.
 
 ## What you get today
 
-The server, its health and metrics endpoints, the migrations and the absence sweep. The REST
-API, the MCP server, the collectors and the UI are mounted as they land; see
-[`plan/STATUS.md`](plan/STATUS.md).
+One server process with the migrations, the absence sweep, `/healthz`, `/readyz`, `/metrics`, and:
+
+- the REST API at `/api/v1/` and the MCP server at `/mcp`, both behind a bearer credential (an
+  API token, or an OIDC JWT when `auth.oidc` is set), rate-limited and audited;
+- the web UI at `/` (a placeholder page in a build without the `webui` tag);
+- the cabling deducer, which runs every five minutes, and the device type library, matched once
+  at start;
+- the mutual-TLS endpoint for agents, on its own port, when `transport.addr` is set.
+
+There is no anonymous access, and no command yet to create the first API token or an agent
+enrolment token: sign in through OIDC to use the API today ([configuration](reference/configuration.md)).
+The collectors and the agent are not started by the server; see [`plan/STATUS.md`](plan/STATUS.md).

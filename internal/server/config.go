@@ -36,6 +36,117 @@ type Config struct {
 	MigrateOnStart *bool `yaml:"migrate_on_start"`
 	// LogLevel is debug, info, warn or error.
 	LogLevel string `yaml:"log_level"`
+
+	// Auth configures authentication and authorisation of the API and the MCP
+	// server (ADR 0013, 0025). API tokens are always accepted; OIDC only when
+	// an issuer is configured.
+	Auth AuthConfig `yaml:"auth"`
+	// MCP configures the Model Context Protocol endpoint, mounted at /mcp.
+	MCP MCPConfig `yaml:"mcp"`
+	// Transport configures the mutual-TLS ingestion endpoint of agents and
+	// collectors. Disabled unless transport.addr is set.
+	Transport TransportConfig `yaml:"transport"`
+	// Deduce configures the cabling deducer loop.
+	Deduce DeduceConfig `yaml:"deduce"`
+	// Web configures the embedded UI, mounted at /.
+	Web WebConfig `yaml:"web"`
+}
+
+// AuthConfig is the "auth" section. It holds references (a file), never
+// secrets: the OIDC verifier needs only public keys, found through discovery.
+type AuthConfig struct {
+	// OIDC enables bearer ID/access tokens of one identity provider. Nil: only
+	// API tokens authenticate.
+	OIDC *OIDCConfig `yaml:"oidc"`
+	// PolicyFile is a YAML RBAC policy layered on the default roles
+	// (internal/auth ParsePolicy): extra roles and group_roles.
+	PolicyFile string `yaml:"policy_file"`
+	// GroupRoles maps an OIDC group to roles, in addition to the policy file's
+	// own group_roles (a group in both takes the union). The roles must exist.
+	GroupRoles map[string][]string `yaml:"group_roles"`
+	// RateLimit bounds requests per principal (per peer address before
+	// authentication) on the API and the MCP endpoint.
+	RateLimit RateLimitConfig `yaml:"rate_limit"`
+}
+
+// OIDCConfig is the server side of single sign-on.
+type OIDCConfig struct {
+	// Issuer is the exact `iss`, an https URL. Discovery runs at start; the
+	// server does not start when it fails.
+	Issuer string `yaml:"issuer"`
+	// Audience lists the accepted `aud` values. Required.
+	Audience []string `yaml:"audience"`
+	// GroupsClaim holds the user's groups; "groups" when empty.
+	GroupsClaim string `yaml:"groups_claim"`
+}
+
+// RateLimitConfig is a token bucket per principal.
+type RateLimitConfig struct {
+	// Rate is requests per second, sustained. Zero means 20.
+	Rate float64 `yaml:"rate"`
+	// Burst is how many requests may arrive at once. Zero means 60.
+	Burst int `yaml:"burst"`
+}
+
+// MCPConfig is the "mcp" section.
+type MCPConfig struct {
+	// Disabled leaves /mcp unmounted.
+	Disabled bool `yaml:"disabled"`
+	// GraphRefresh is how often the dependency graph is marked stale, so that
+	// a replica sees commits made by another one. Commits on this replica
+	// invalidate it at once. Zero means one minute.
+	GraphRefresh time.Duration `yaml:"graph_refresh"`
+	// DisableLocalhostProtection turns off the MCP SDK's Host-header check for
+	// a server listening on a loopback address behind a same-host proxy.
+	DisableLocalhostProtection bool `yaml:"disable_localhost_protection"`
+}
+
+// TransportConfig is the "transport" section (ADR 0008, 0025).
+type TransportConfig struct {
+	// Addr is the listen address of the mTLS endpoint, its own port apart
+	// from http.addr. Empty disables the transport.
+	Addr string `yaml:"addr"`
+	// CADir holds ca.pem and ca-key.pem: a directory on a persistent mounted
+	// volume. The CA is created there on the first start, and never replaced.
+	CADir string `yaml:"ca_dir"`
+	// Hosts are the names and IPs the server certificate is valid for: what
+	// agents dial. Required when the transport is enabled.
+	Hosts []string `yaml:"hosts"`
+	// CertTTL is the validity of client certificates; seven days when zero.
+	CertTTL time.Duration `yaml:"cert_ttl"`
+	// ServerCertTTL is the validity of the server certificate, issued at
+	// start and renewed (the listener is re-opened) after two thirds of it;
+	// 90 days when zero.
+	ServerCertTTL time.Duration `yaml:"server_cert_ttl"`
+}
+
+// DeduceConfig is the "deduce" section.
+type DeduceConfig struct {
+	// Disabled stops the cabling deducer.
+	Disabled bool `yaml:"disabled"`
+	// Interval between passes; five minutes when zero. A moved cable must show
+	// within 15 minutes, collection interval included.
+	Interval time.Duration `yaml:"interval"`
+}
+
+// WebConfig is the "web" section.
+type WebConfig struct {
+	// Disabled leaves / unmounted.
+	Disabled bool `yaml:"disabled"`
+	// OIDC enables "Sign in with SSO" in the browser (public client, PKCE).
+	OIDC *WebOIDCConfig `yaml:"oidc"`
+}
+
+// WebOIDCConfig is what the browser learns from /ui-config.json.
+type WebOIDCConfig struct {
+	// Issuer defaults to auth.oidc.issuer.
+	Issuer string `yaml:"issuer"`
+	// ClientID is the public client registered for the UI. No secret.
+	ClientID string `yaml:"client_id"`
+	// Scopes requested besides openid.
+	Scopes []string `yaml:"scopes"`
+	// Bearer is access_token (default) or id_token: the token sent to the API.
+	Bearer string `yaml:"bearer"`
 }
 
 // DatabaseConfig locates PostgreSQL.
@@ -74,6 +185,15 @@ func LoadConfig(path string) (*Config, error) {
 	if v := os.Getenv("TRICA_LOG_LEVEL"); v != "" {
 		c.LogLevel = v
 	}
+	if v := os.Getenv("TRICA_TRANSPORT_ADDR"); v != "" {
+		c.Transport.Addr = v
+	}
+	if v := os.Getenv("TRICA_OIDC_ISSUER"); v != "" {
+		if c.Auth.OIDC == nil {
+			c.Auth.OIDC = &OIDCConfig{}
+		}
+		c.Auth.OIDC.Issuer = v
+	}
 	c.defaults()
 	return c, c.validate()
 }
@@ -95,6 +215,24 @@ func (c *Config) defaults() {
 	if c.LogLevel == "" {
 		c.LogLevel = "info"
 	}
+	if c.Auth.RateLimit.Rate <= 0 {
+		c.Auth.RateLimit.Rate = 20
+	}
+	if c.Auth.RateLimit.Burst <= 0 {
+		c.Auth.RateLimit.Burst = 60
+	}
+	if c.MCP.GraphRefresh <= 0 {
+		c.MCP.GraphRefresh = time.Minute
+	}
+	if c.Transport.ServerCertTTL <= 0 {
+		c.Transport.ServerCertTTL = 90 * 24 * time.Hour
+	}
+	if c.Deduce.Interval <= 0 {
+		c.Deduce.Interval = 5 * time.Minute
+	}
+	if c.Web.OIDC != nil && c.Web.OIDC.Issuer == "" && c.Auth.OIDC != nil {
+		c.Web.OIDC.Issuer = c.Auth.OIDC.Issuer
+	}
 }
 
 func (c *Config) validate() error {
@@ -102,6 +240,15 @@ func (c *Config) validate() error {
 	case "debug", "info", "warn", "error":
 	default:
 		return fmt.Errorf("config: log_level %q: want debug, info, warn or error", c.LogLevel)
+	}
+	if o := c.Auth.OIDC; o != nil && (o.Issuer == "" || len(o.Audience) == 0) {
+		return errors.New("config: auth.oidc needs an issuer and at least one audience")
+	}
+	if t := c.Transport; t.Addr != "" && (t.CADir == "" || len(t.Hosts) == 0) {
+		return errors.New("config: transport.addr needs transport.ca_dir and transport.hosts")
+	}
+	if w := c.Web.OIDC; w != nil && (w.Issuer == "" || w.ClientID == "") {
+		return errors.New("config: web.oidc needs a client_id and an issuer (or auth.oidc.issuer)")
 	}
 	return nil
 }

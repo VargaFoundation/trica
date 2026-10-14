@@ -8,3 +8,11 @@ policy:
   absent_after: 30m
   # Batches from these sources wait for a human approval.
   propose: ["mcp:*"]
+# Optional components (docs/reference/configuration.md). The REST API, the MCP
+# server and the web UI are mounted on the HTTP port. The mutual-TLS transport
+# for agents is off until it has a port and a volume for its CA:
+#   transport:
+#     addr: ":8443"
+#     ca_dir: /var/lib/trica/ca   # a volume: losing the CA un-enrols every agent
+#     hosts: [trica.example.test]
+# and the compose file must then publish 8443 and mount that volume.

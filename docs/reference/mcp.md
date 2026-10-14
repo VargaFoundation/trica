@@ -5,9 +5,11 @@
 write is `propose_change`, which queues a proposal that a person approves (ADR 0009). The
 structural choices are in ADR 0017.
 
-The package is a library, like `internal/api`: it is not mounted in a binary yet (the `trica`
-server comes with the auth PR, which also brings the real `Authorizer`). `mcp.New(Config)`
-returns a `*Server`.
+The `trica server` mounts it at `/mcp` (streamable HTTP), behind the same bearer authentication,
+rate limit and audit log as the REST API, with the graph adapter below
+(`internal/wiring`, [ADR 0025](../adr/0025-server-wiring.md)); `mcp.disabled` leaves it out
+([configuration](configuration.md)). `mcp.New(Config)` returns a `*Server`, which is what an
+embedding program uses.
 
 ```go
 srv, err := mcp.New(mcp.Config{
@@ -148,9 +150,13 @@ A `trica mcp` subcommand is not written yet (out of scope of this PR): embed
 
 `impact_analysis` and `network_path` need a graph. The server depends on the `mcp.GraphQuerier`
 interface, not on `internal/graph`, so that it is tested with a fake and does not wait for the
-graph. Without a `Graph` in the `Config`, the two tools are not offered. Adapting a
-`*graph.Cache` takes a few lines (the result types mirror those of `internal/graph` field for
-field, so a JSON round trip converts them):
+graph. Without a `Graph` in the `Config`, the two tools are not offered. The server wires
+`wiring.GraphAdapter` (`internal/wiring/graph.go`) over a `*graph.Cache` that is marked stale on
+every commit of the engine (`Engine.OnCommit`: a batch, an approval, the absence sweep, the
+deducer) and every `mcp.graph_refresh`, so that a commit made by another replica shows up
+within that delay; the reload itself happens on the next graph tool call. The adapter, in
+short (the result types mirror those of `internal/graph` field for field, so a JSON round trip
+converts them):
 
 ```go
 type graphAdapter struct{ c *graph.Cache }
@@ -202,7 +208,8 @@ read is refused, not shown in part.
 
 - MCP resources (model documentation, saved queries) and prompts (weekly health review,
   maintenance preparation, incident analysis) of the specification.
-- A rate limit.
+- A per-tool rate limit: the limit is per principal for the whole endpoint
+  (`auth.rate_limit`), shared with the REST API.
 - Alerts and metrics in `object_summary`, link load and flows, thermal and metrics/log
   correlation tools (later lots). End-of-life forecasts other than a threshold crossing are not
   there either.

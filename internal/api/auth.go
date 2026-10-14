@@ -43,6 +43,11 @@ type Principal struct {
 	// Source is the source a token is bound to ("arista:sw-a1", "mcp:claude").
 	// Ignored for users. A token without a source cannot submit batches.
 	Source string
+	// Credential is opaque to the API: whatever the Authorizer needs to
+	// answer Allow for this principal (internal/wiring keeps the verified
+	// internal/auth principal, with its roles, scopes and restrictions).
+	// Only the Authorizer that built the Principal reads it.
+	Credential any `json:"-"`
 }
 
 // BatchSource is the only source the principal may speak as.

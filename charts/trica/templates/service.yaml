@@ -11,5 +11,11 @@ spec:
       port: {{ .Values.service.port }}
       targetPort: http
       protocol: TCP
+    {{- if .Values.transport.enabled }}
+    - name: transport
+      port: {{ .Values.transport.port }}
+      targetPort: transport
+      protocol: TCP
+    {{- end }}
   selector:
     {{- include "trica.selectorLabels" . | nindent 4 }}

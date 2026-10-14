@@ -112,7 +112,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	case "restore":
 		return runRestore(ctx, cfg, log, *file, *replace, stdout)
 	}
-	return server.New(cfg, log, version, components()...).Run(ctx)
+	return server.New(cfg, log, version, components(cfg)...).Run(ctx)
 }
 
 func newLogger(w io.Writer, level string) *slog.Logger {

@@ -42,6 +42,13 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- $cfg := deepCopy .Values.config -}}
 {{- $_ := set $cfg "http" (dict "addr" (printf ":%v" .Values.service.port)) -}}
 {{- $_ := set $cfg "database" (dict "url_file" "/var/run/secrets/trica/database-url") -}}
+{{- if .Values.transport.enabled -}}
+{{- $t := deepCopy (default (dict) $cfg.transport) -}}
+{{- $_ := set $t "addr" (printf ":%v" .Values.transport.port) -}}
+{{- $_ := set $t "ca_dir" "/var/lib/trica/ca" -}}
+{{- $_ := set $t "hosts" .Values.transport.hosts -}}
+{{- $_ := set $cfg "transport" $t -}}
+{{- end -}}
 {{- if .Values.schemaOverlays -}}
 {{- $paths := list -}}
 {{- range $name, $_ := .Values.schemaOverlays -}}

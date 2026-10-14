@@ -1,6 +1,14 @@
 {{- if not .Values.database.existingSecret }}
 {{- fail "database.existingSecret is required: the name of a Secret holding the PostgreSQL URL" }}
 {{- end }}
+{{- if .Values.transport.enabled }}
+{{- if not .Values.transport.hosts }}
+{{- fail "transport.hosts is required when transport.enabled: the names agents dial" }}
+{{- end }}
+{{- if not .Values.transport.existingClaim }}
+{{- fail "transport.existingClaim is required when transport.enabled: the CA must outlive the pod" }}
+{{- end }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -43,6 +51,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+            {{- if .Values.transport.enabled }}
+            - name: transport
+              containerPort: {{ .Values.transport.port }}
+              protocol: TCP
+            {{- end }}
           livenessProbe:
             httpGet: {path: /healthz, port: http}
             periodSeconds: 10
@@ -76,6 +89,13 @@ spec:
               readOnly: true
             - name: tmp
               mountPath: /tmp
+            {{- if .Values.transport.enabled }}
+            - name: transport-ca
+              mountPath: /var/lib/trica/ca
+              {{- with .Values.transport.subPath }}
+              subPath: {{ . }}
+              {{- end }}
+            {{- end }}
       volumes:
         - name: config
           configMap:
@@ -88,6 +108,11 @@ spec:
                 path: database-url
         - name: tmp
           emptyDir: {}
+        {{- if .Values.transport.enabled }}
+        - name: transport-ca
+          persistentVolumeClaim:
+            claimName: {{ .Values.transport.existingClaim }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

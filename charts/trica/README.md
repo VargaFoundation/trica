@@ -20,7 +20,11 @@ No chart or image is published yet; see [getting started](../../docs/getting-sta
 | `image.repository` / `tag` / `digest` | `ghcr.io/vargafoundation/trica` / appVersion / `""` | A digest takes precedence over the tag. |
 | `replicaCount` | `1` | Migrations and the sweep are safe with several replicas (ADR 0014). |
 | `service.type` / `port` | `ClusterIP` / `8080` | |
-| `networkPolicy.enabled` | `true` | Ingress on the HTTP port only. |
+| `transport.enabled` | `false` | Mutual-TLS endpoint for agents, on its own port and Service port (ADR 0025). Needs `transport.hosts` and `transport.existingClaim`; the chart refuses to render without them. |
+| `transport.port` / `hosts` | `8443` / `[]` | Listen port; names and IPs agents dial (the server certificate's). |
+| `transport.existingClaim` / `subPath` | `""` / `""` | PersistentVolumeClaim holding the CA (`ca.pem`, `ca-key.pem`). Losing it un-enrols every agent; ReadWriteMany with several replicas. |
+| `transport.ingressFrom` | `[]` | Peers allowed on the transport port; empty means any pod of the namespace. |
+| `networkPolicy.enabled` | `true` | Ingress on the HTTP port, and on the transport port when enabled. |
 | `networkPolicy.ingressFrom` | `[]` | Allowed peers; empty means any pod of the namespace. |
 | `networkPolicy.egressTo` | `[]` | Egress rules besides DNS; empty leaves egress open. List the database when set. |
 | `serviceMonitor.enabled` / `interval` / `labels` | `false` / `30s` / `{}` | Prometheus Operator scrape of `/metrics`. |
