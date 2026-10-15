@@ -52,6 +52,47 @@ func TestHistoryRangesCannotOverlap(t *testing.T) {
 
 // Replicas starting together all migrate on start; they must take turns
 // instead of racing on goose's version table.
+// Stores of different databases do not share the advisory lock, so their
+// migrations really overlap: under -race this catches any process-wide state
+// in the migration library (goose's package-level file system, #24).
+func TestMigrationsOfSeparateDatabasesRunInParallel(t *testing.T) {
+	ctx := context.Background()
+	const n = 4
+	stores := make([]*store.Store, n)
+	for i := range stores {
+		s, err := store.Open(ctx, testdb.NewURL(t))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer s.Close()
+		stores[i] = s
+	}
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	errs := make(chan error, n)
+	for _, s := range stores {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			errs <- s.Migrate(ctx)
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("parallel migrate: %v", err)
+		}
+	}
+	for _, s := range stores {
+		if v, err := s.SchemaVersion(ctx); err != nil || v != store.KnownVersion() {
+			t.Fatalf("version %d, %v; want %d", v, err, store.KnownVersion())
+		}
+	}
+}
+
 func TestConcurrentMigrationsTakeTurns(t *testing.T) {
 	url := testdb.NewURL(t)
 	ctx := context.Background()
