@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
+	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -39,6 +41,10 @@ type Config struct {
 	Version string
 	// Logger receives the run summaries; default slog.Default().
 	Logger *slog.Logger
+	// Domain is the routing domain (VRF, site, network) the host's addresses
+	// and the remote addresses it talks to are unique in. It becomes part of
+	// their identity (ADR 0036); empty is the global domain.
+	Domain string
 }
 
 // Agent observes one host. It implements sdk.Collector.
@@ -50,13 +56,22 @@ type Agent struct {
 	now     func() time.Time
 	version string
 	log     *slog.Logger
+	domain  string
 }
 
 var _ sdk.Collector = (*Agent)(nil)
 
+// builtin is the registry the domain is stamped against: the agent only emits
+// built-in types.
+var builtin = sync.OnceValue(schema.Builtin)
+
 // New builds an Agent. Close it when done.
 func New(cfg Config) (*Agent, error) {
-	a := &Agent{fs: cfg.FS, run: cfg.Runner, addrs: cfg.Addrs, now: cfg.Now, version: cfg.Version, log: cfg.Logger, closer: func() error { return nil }}
+	domain, err := schema.NormalizeScope(cfg.Domain)
+	if err != nil {
+		return nil, fmt.Errorf("agent domain: %w", err)
+	}
+	a := &Agent{fs: cfg.FS, run: cfg.Runner, addrs: cfg.Addrs, now: cfg.Now, version: cfg.Version, log: cfg.Logger, domain: domain, closer: func() error { return nil }}
 	onHost := cfg.FS == nil && (cfg.Root == "" || cfg.Root == "/")
 	if a.fs == nil {
 		root := cfg.Root
@@ -115,6 +130,9 @@ func (a *Agent) Collect(ctx context.Context, emit sdk.Emitter) error {
 	inv := observe(ctx, a.fs, a.run, a.addrs)
 	b, err := inv.Batch(start, a.version, a.now().Sub(start))
 	if err != nil {
+		return err
+	}
+	if err := builtin().ScopeBatch(b, a.domain); err != nil {
 		return err
 	}
 	if err := b.Validate(); err != nil {

@@ -48,6 +48,7 @@ const (
 	envServer         = "TRICA_AGENT_SERVER"
 	envCAFile         = "TRICA_AGENT_CA_FILE"
 	envEnrolTokenFile = "TRICA_AGENT_ENROL_TOKEN_FILE" //nolint:gosec // G101: the name of a variable holding a file path, not a credential
+	envDomain         = "TRICA_AGENT_DOMAIN"
 )
 
 // errUnhealthy ends a run that stayed on probation past its health timeout.
@@ -82,8 +83,11 @@ certificate and an on-disk spool in --state-dir, and spools batches while the
 server is unreachable. --output then only adds a local copy when given.
 With --metrics-file the agent writes the state of its spool, in the Prometheus
 text format, for the node exporter's textfile collector: it opens no port.
+With --domain the host's addresses, and the remote addresses it talks to, are
+identified within that routing domain (VRF, site, network): the same private
+address behind two NATs is then two objects, not one.
 Environment: TRICA_AGENT_SERVER, TRICA_AGENT_CA_FILE, TRICA_AGENT_ENROL_TOKEN_FILE,
-TRICA_AGENT_METRICS_FILE.
+TRICA_AGENT_METRICS_FILE, TRICA_AGENT_DOMAIN.
 
 Usage:
   trica-agent [flags]
@@ -103,6 +107,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	caFile := fl.String("ca-file", os.Getenv(envCAFile), "PEM file of the CA certificate that signs the server certificate [$"+envCAFile+"]")
 	tokenFile := fl.String("enrol-token-file", os.Getenv(envEnrolTokenFile), "file holding the enrolment token (one-time, or a class token shared by a fleet), read only while the agent has no certificate [$"+envEnrolTokenFile+"]")
 	metricsFile := fl.String("metrics-file", os.Getenv(envMetricsFile), "file the transport metrics are written to, every minute, in the Prometheus text format for the node exporter's textfile collector (name it *.prom; needs --server) [$"+envMetricsFile+"]")
+	domain := fl.String("domain", os.Getenv(envDomain), "routing domain (VRF, site, network) the addresses of the host are unique in; part of their identity, empty is the global one [$"+envDomain+"]")
 	healthTimeout := fl.Duration("health-timeout", 2*time.Minute, "how long a newly staged version has to complete a collection before it is rolled back")
 	fl.Usage = func() {
 		fmt.Fprint(stderr, usage)
@@ -144,7 +149,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 			}
 		}
 	}
-	a, err := agent.New(agent.Config{Root: *root, Version: version, Logger: logger})
+	a, err := agent.New(agent.Config{Root: *root, Version: version, Logger: logger, Domain: *domain})
 	if err != nil {
 		logger.Error("cannot start", "collector", agent.CollectorName, "error", err)
 		return 1

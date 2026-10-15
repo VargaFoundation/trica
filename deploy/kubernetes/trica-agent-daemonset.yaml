@@ -60,6 +60,9 @@ metadata:
 data:
   # https://host:port of the server's transport listener (transport.addr).
   server: https://trica.example.invalid:8443
+  # Optional: the routing domain the nodes' addresses are unique in (ADR 0036), when
+  # this cluster's private ranges overlap another site's. Absent: the global domain.
+  # domain: site-a
   # The public CA certificate of the server (ca.pem in transport.ca_dir).
   ca.pem: |
     -----BEGIN CERTIFICATE-----
@@ -106,6 +109,9 @@ spec:
             - name: TRICA_AGENT_SERVER
               valueFrom:
                 configMapKeyRef: { name: trica-agent, key: server }
+            - name: TRICA_AGENT_DOMAIN
+              valueFrom:
+                configMapKeyRef: { name: trica-agent, key: domain, optional: true }
           securityContext:
             privileged: false
             allowPrivilegeEscalation: false

@@ -94,6 +94,38 @@ func TestIntervalBelowTheMinimumIsRefused(t *testing.T) {
 	}
 }
 
+func TestDomainFlagScopesTheAddresses(t *testing.T) {
+	t.Setenv(envDomain, "site-a")
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{{nil, "site-a"}, {[]string{"--domain", "Site-B"}, "site-b"}} {
+		code, out, errs := runArgs(t, append([]string{"--root", fixture, "--once"}, tc.args...)...)
+		if code != 0 {
+			t.Fatalf("%v: exit %d: %s", tc.args, code, errs)
+		}
+		var b sdk.Batch
+		if err := json.Unmarshal([]byte(out), &b); err != nil {
+			t.Fatal(err)
+		}
+		n := 0
+		for _, o := range b.Objects {
+			if o.Type == "ip_address" {
+				n++
+				if o.Identity["domain"] != tc.want {
+					t.Errorf("%v: %s in domain %q, want %q", tc.args, o.Ref, o.Identity["domain"], tc.want)
+				}
+			}
+		}
+		if n == 0 {
+			t.Fatalf("%v: no address in the batch", tc.args)
+		}
+	}
+	if code, _, _ := runArgs(t, "--root", fixture, "--once", "--domain", "site a"); code != 1 {
+		t.Errorf("an invalid domain: exit %d, want 1", code)
+	}
+}
+
 func TestBadInvocations(t *testing.T) {
 	for _, args := range [][]string{{"--nope"}, {"--interval", "soon"}, {"extra"}, {"--once", "extra"}} {
 		if code, _, _ := runArgs(t, args...); code != 2 {

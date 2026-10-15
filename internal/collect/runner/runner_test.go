@@ -407,3 +407,41 @@ func value(t *testing.T, reg *prometheus.Registry, name, target string) float64 
 	}
 	return 0
 }
+
+func TestTheTargetDomainScopesItsAddresses(t *testing.T) {
+	addr := func(_ context.Context, tg collect.Target, emit sdk.Emitter) error {
+		b := sdk.NewBatch(tg.Source(), sdk.ScopeFull)
+		b.Object("ip", "ip_address").Identify("address", "10.0.0.1")
+		b.Object("d", "device").Identify("name", tg.Name)
+		return emit.Emit(context.Background(), collect.Succeeded(b, tg, tg.Kind, "test", time.Now(), nil))
+	}
+	scoped, global := target("site-a", time.Hour), target("global", time.Hour)
+	scoped.Domain = "Site-A"
+	s := &sink{}
+	r, err := runner.New(runner.Config{
+		Targets: []collect.Target{scoped, global}, Emitter: s, Log: quiet,
+		Build: builder(map[string]func(context.Context, collect.Target, sdk.Emitter) error{"site-a": addr, "global": addr}),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.RunOnce(context.Background())
+	for source, want := range map[string]string{"stub:site-a": "site-a", "stub:global": ""} {
+		bs := s.from(source)
+		if len(bs) != 1 {
+			t.Fatalf("%s: %d batches", source, len(bs))
+		}
+		ip, _ := bs[0].Lookup("ip")
+		d, _ := bs[0].Lookup("d")
+		if ip.Identity["domain"] != want || d.Identity["domain"] != "" {
+			t.Errorf("%s: address domain %q (want %q), device domain %q (want none)", source, ip.Identity["domain"], want, d.Identity["domain"])
+		}
+	}
+
+	bad := target("bad", time.Hour)
+	bad.Domain = "site a"
+	ok := func(c collect.Target) (sdk.Collector, error) { return &stub{kind: c.Kind, run: healthy, t: c}, nil }
+	if _, err := runner.New(runner.Config{Emitter: &sink{}, Targets: []collect.Target{bad}, Build: ok}); err == nil || !strings.Contains(err.Error(), "domain") {
+		t.Errorf("invalid domain: %v", err)
+	}
+}

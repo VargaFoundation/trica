@@ -306,3 +306,41 @@ func TestProbesOnlyReadTheirWhitelistedFiles(t *testing.T) {
 		}
 	}
 }
+
+func TestDomainScopesTheAddresses(t *testing.T) {
+	addrs := func(b *sdk.Batch, domain string) (own, remote int) {
+		for _, o := range b.Objects {
+			if o.Type != "ip_address" {
+				if o.Identity["domain"] != "" {
+					t.Errorf("%s %s was given a domain", o.Type, o.Ref)
+				}
+				continue
+			}
+			if o.Identity["domain"] != domain {
+				t.Errorf("%s: domain %q, want %q", o.Ref, o.Identity["domain"], domain)
+			}
+			if strings.HasPrefix(o.Ref, "rip:") {
+				remote++
+			} else {
+				own++
+			}
+		}
+		return own, remote
+	}
+	a, _ := newTestAgent(t, "debian12")
+	a.domain = "site-a"
+	own, remote := addrs(collectOne(t, a), "site-a")
+	if own == 0 || remote == 0 {
+		t.Fatalf("%d own and %d remote addresses: the fixture must have both", own, remote)
+	}
+	a.domain = ""
+	addrs(collectOne(t, a), "")
+
+	if _, err := New(Config{FS: a.fs, Domain: "site a"}); err == nil {
+		t.Error("invalid domain accepted")
+	}
+	b, err := New(Config{FS: a.fs, Domain: " Site-A "})
+	if err != nil || b.domain != "site-a" {
+		t.Fatalf("domain %q, %v", b.domain, err)
+	}
+}

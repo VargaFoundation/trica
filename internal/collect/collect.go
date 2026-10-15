@@ -95,6 +95,11 @@ type Target struct {
 	TLS      TLS           `yaml:"tls" json:"tls,omitempty"`
 	Timeout  time.Duration `yaml:"timeout" json:"timeout,omitempty"`
 	Interval time.Duration `yaml:"interval" json:"interval,omitempty"`
+	// Domain is the routing domain (VRF, site, network) the addresses the
+	// target reports are unique in. It becomes part of their identity
+	// (ADR 0036), so that overlapping private ranges stay apart. Empty is the
+	// global domain.
+	Domain string `yaml:"domain" json:"domain,omitempty"`
 	// Options holds collector-specific settings, decoded by the collector.
 	Options yaml.Node `yaml:"options" json:"-"`
 }

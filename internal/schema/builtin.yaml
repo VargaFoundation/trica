@@ -366,7 +366,9 @@ types:
     label: {en: Prefix, fr: Préfixe}
     description: An IP prefix. Occupancy and free addresses are computed from the IP addresses it contains.
     display: prefix
+    identity_scope: domain
     attributes:
+      domain: {kind: string, search: true, label: {en: Routing domain, fr: Domaine de routage}, description: "Routing domain (VRF, site, network) the prefix is unique in; empty is the global one. Part of the identity."}
       prefix: {kind: prefix, identity: strong, search: true, required: true, label: {en: Prefix, fr: Préfixe}, description: "CIDR."}
       description: {kind: text, search: true, label: {en: Description, fr: Description}, description: "Purpose of the prefix."}
       vlan: {kind: int, label: {en: VLAN, fr: VLAN}, description: "VLAN carrying the prefix."}
@@ -376,7 +378,10 @@ types:
     label: {en: IP address, fr: Adresse IP}
     description: An IP address, assigned to an interface, a device, a VM or a service.
     display: address
+    # The same private address in two routing domains is two objects (ADR 0036).
+    identity_scope: domain
     attributes:
+      domain: {kind: string, search: true, label: {en: Routing domain, fr: Domaine de routage}, description: "Routing domain (VRF, site, network) the address is unique in; empty is the global one. Part of the identity."}
       address: {kind: ip, identity: strong, search: true, required: true, label: {en: Address, fr: Adresse}, description: "The address."}
       prefix_length: {kind: int, label: {en: Prefix length, fr: Longueur de préfixe}, description: "Mask length as configured."}
       dns_name: {kind: string, search: true, label: {en: DNS name, fr: Nom DNS}, description: "Name it resolves from."}

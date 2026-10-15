@@ -22,3 +22,5 @@ same server with different identifiers. Merging wrongly is worse than not mergin
 
 - A conflicting serial number never merges two objects; it creates a second one, and the
   duplicate name is visible.
+- An address or a prefix is only unique within a routing domain: [ADR 0036](0036-identity-scope.md)
+  scopes their identity by an optional `domain`, the global one when absent.

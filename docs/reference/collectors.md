@@ -23,6 +23,7 @@ a pasted secret stops the start instead of collecting nothing.
 | `tls` | `ca_file`, `insecure` (explicit, per target), `min_version`. |
 | `timeout` | Bound of one run, `30s` by default. |
 | `interval` | Time between runs, `5m` by default. |
+| `domain` | Routing domain (VRF, site, network) the addresses and prefixes the target reports are unique in, stamped on all of them: the same private address under two domains is two objects ([ADR 0036](../adr/0036-identity-scope.md)). Empty (default): the global domain. Letters, digits, `.`, `_`, `:`, `-`, at most 64; anything else stops the start. Set it before the first run: changing it creates new objects. |
 | `options` | Collector-specific settings; unknown keys are an error. |
 
 One example per kind (documentation addresses, names and MACs; nothing here is a real device):

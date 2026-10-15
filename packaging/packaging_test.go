@@ -165,6 +165,16 @@ type container struct {
 		MountPath string `yaml:"mountPath"`
 		ReadOnly  bool   `yaml:"readOnly"`
 	} `yaml:"volumeMounts"`
+	Env []struct {
+		Name      string `yaml:"name"`
+		ValueFrom struct {
+			ConfigMapKeyRef *struct {
+				Name     string `yaml:"name"`
+				Key      string `yaml:"key"`
+				Optional *bool  `yaml:"optional"`
+			} `yaml:"configMapKeyRef"`
+		} `yaml:"valueFrom"`
+	} `yaml:"env"`
 }
 
 func daemonSet(t *testing.T) (hostPID, hostNetwork bool, c container, hostPaths map[string]string) {
@@ -270,6 +280,23 @@ func TestDaemonSetIsAsNarrowAsTheProbesAllow(t *testing.T) {
 // The fleet enrols with one class token from a Secret (ADR 0035). The volume is
 // optional, so that deleting the Secret after the rollout does not stop the pods
 // from starting, and the token file the agent reads is in it.
+// The routing domain of a cluster's nodes (ADR 0036) is an optional key of the
+// ConfigMap: a cluster without one stays in the global domain and still starts.
+func TestDaemonSetTakesAnOptionalDomain(t *testing.T) {
+	_, _, c, _ := daemonSet(t)
+	for _, e := range c.Env {
+		if e.Name != "TRICA_AGENT_DOMAIN" {
+			continue
+		}
+		ref := e.ValueFrom.ConfigMapKeyRef
+		if ref == nil || ref.Name != "trica-agent" || ref.Key != "domain" || ref.Optional == nil || !*ref.Optional {
+			t.Fatalf("TRICA_AGENT_DOMAIN = %+v, want the optional key domain of the trica-agent ConfigMap", ref)
+		}
+		return
+	}
+	t.Fatal("the DaemonSet does not pass TRICA_AGENT_DOMAIN")
+}
+
 func TestDaemonSetEnrolsFromAnOptionalSecret(t *testing.T) {
 	dec := yaml.NewDecoder(bytes.NewReader([]byte(read(t, "../deploy/kubernetes/trica-agent-daemonset.yaml"))))
 	for {
@@ -338,7 +365,7 @@ func TestUnitSendsToTheServerFromItsEnvironmentFile(t *testing.T) {
 	}
 	// A token is a reference to a file, never a value of the configuration.
 	env := read(t, "agent.env")
-	for _, want := range []string{"TRICA_AGENT_SERVER", "TRICA_AGENT_CA_FILE", "TRICA_AGENT_ENROL_TOKEN_FILE"} {
+	for _, want := range []string{"TRICA_AGENT_SERVER", "TRICA_AGENT_CA_FILE", "TRICA_AGENT_ENROL_TOKEN_FILE", "TRICA_AGENT_DOMAIN"} {
 		if !strings.Contains(env, want) {
 			t.Errorf("agent.env does not document %s", want)
 		}
