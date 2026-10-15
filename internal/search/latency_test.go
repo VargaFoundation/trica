@@ -3,7 +3,9 @@ package search_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -17,17 +19,64 @@ import (
 // Acceptance criterion of lot 1: a search answers in under 200 ms on a site
 // of 50 racks and 2,000 servers. The site goes through the engine like any
 // collector's batches; the threshold is checked on the median of several
-// runs of each query, so that one slow run on a loaded CI machine does not
-// decide.
+// runs of each query, after one warm-up run that is not counted, so that one
+// slow run on a loaded CI machine does not decide.
 const (
 	latencyRacks   = 50
 	latencyPerRack = 40
 	latencyBudget  = 200 * time.Millisecond
 )
 
+// EnvLatencyScale multiplies the budget on a loaded developer machine
+// (TRICA_LATENCY_SCALE=2 gives 400 ms). CI must hold the criterion itself, so
+// the scale is refused when CI is set (GitHub Actions sets CI=true).
+const EnvLatencyScale = "TRICA_LATENCY_SCALE"
+
+// budgetFrom returns the budget for a scale read from the environment.
+func budgetFrom(getenv func(string) string) (time.Duration, error) {
+	raw := getenv(EnvLatencyScale)
+	if raw == "" {
+		return latencyBudget, nil
+	}
+	if getenv("CI") != "" {
+		return 0, fmt.Errorf("%s=%s is set on CI: the %s criterion is not scaled there", EnvLatencyScale, raw, latencyBudget)
+	}
+	scale, err := strconv.ParseFloat(raw, 64)
+	if err != nil || scale < 1 {
+		return 0, fmt.Errorf("%s=%q: want a number of at least 1", EnvLatencyScale, raw)
+	}
+	return time.Duration(float64(latencyBudget) * scale), nil
+}
+
+func TestLatencyBudgetScale(t *testing.T) {
+	cases := []struct {
+		name string
+		env  map[string]string
+		want time.Duration
+		err  bool
+	}{
+		{"default", nil, 200 * time.Millisecond, false},
+		{"default on CI", map[string]string{"CI": "true"}, 200 * time.Millisecond, false},
+		{"scaled locally", map[string]string{EnvLatencyScale: "2"}, 400 * time.Millisecond, false},
+		{"refused on CI", map[string]string{EnvLatencyScale: "2", "CI": "true"}, 0, true},
+		{"below 1 would tighten silently", map[string]string{EnvLatencyScale: "0.5"}, 0, true},
+		{"not a number", map[string]string{EnvLatencyScale: "fast"}, 0, true},
+	}
+	for _, tc := range cases {
+		got, err := budgetFrom(func(k string) string { return tc.env[k] })
+		if (err != nil) != tc.err || got != tc.want {
+			t.Errorf("%s: budget %s, err %v", tc.name, got, err)
+		}
+	}
+}
+
 func TestSearchLatency(t *testing.T) {
 	if testing.Short() {
 		t.Skip("loads 2,000 servers")
+	}
+	budget, err := budgetFrom(os.Getenv)
+	if err != nil {
+		t.Fatal(err)
 	}
 	s := testdb.New(t)
 	reg := schema.Builtin()
@@ -80,13 +129,16 @@ func TestSearchLatency(t *testing.T) {
 	} {
 		var runs []time.Duration
 		var res *search.Result
-		for range 5 {
+		// The first run warms the plan and page caches and is not counted.
+		for i := range 6 {
 			r, err := sr.Search(ctx, q, search.Page{})
 			if err != nil {
 				t.Fatalf("%q: %v", q, err)
 			}
 			res = r
-			runs = append(runs, r.Took)
+			if i > 0 {
+				runs = append(runs, r.Took)
+			}
 		}
 		sort.Slice(runs, func(i, j int) bool { return runs[i] < runs[j] })
 		median := runs[len(runs)/2]
@@ -94,8 +146,8 @@ func TestSearchLatency(t *testing.T) {
 		if res.Total == 0 {
 			t.Errorf("%q finds nothing: the timing proves nothing", q)
 		}
-		if median > latencyBudget {
-			t.Errorf("%q: median %s over the %s budget", q, median, latencyBudget)
+		if median > budget {
+			t.Errorf("%q: median %s over the %s budget", q, median, budget)
 		}
 	}
 }

@@ -30,6 +30,10 @@ database per test from the URL's connection, so the role needs at least `CREATED
 extensions must be creatable in each new database (superuser, or installed in `template1`). Do
 not point the tests at a server that holds anything you care about.
 
+`TestSearchLatency` checks the lot 1 criterion (a search under 200 ms on 2,000 servers). On a
+loaded machine, `export TRICA_LATENCY_SCALE=2` doubles its budget; the test refuses the variable
+when `CI` is set, so CI always holds the 200 ms itself.
+
 ## Repository layout
 
 | Path | What |
