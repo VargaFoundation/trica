@@ -21,6 +21,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -145,6 +146,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	ctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 	var emit sdk.Emitter
+	var delivery deliveryStats // nil without a server: there is nothing to deliver to
 	if *server == "" {
 		emit = emitter(*output, stdout)
 	} else {
@@ -169,12 +171,13 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 			}()
 		}
 		emit = client
+		delivery = func() (uint64, int) { st := client.Stats(); return st.Sent, st.Spooled }
 		if outputSet { // a local copy, for whoever wants to look at what was sent
 			emit = both(client, emitter(*output, stdout))
 		}
 	}
 	if store != nil {
-		emit = probation(cancel, store, version, *healthTimeout, emit, logger)
+		emit = probation(cancel, store, version, *healthTimeout, emit, delivery, logger)
 	}
 	if *once {
 		if err := a.Collect(ctx, emit); err != nil {
@@ -243,29 +246,73 @@ func boot(store *update.Store, healthTimeout time.Duration, args []string, logge
 	return 0, false
 }
 
-// probation wraps emit for a version that is on probation: its first emitted
-// batch confirms it, and if none comes within healthTimeout the run is
-// cancelled with errUnhealthy, so that the next start rolls back. A version
-// that is not on probation is returned unchanged.
-func probation(cancel context.CancelCauseFunc, store *update.Store, version string, healthTimeout time.Duration, emit sdk.Emitter, logger *slog.Logger) sdk.Emitter {
+// deliveryStats reports the batches the server accepted so far and the number
+// waiting in the spool.
+type deliveryStats func() (sent uint64, spooled int)
+
+// probation wraps emit for a version that is on probation, and returns emit
+// unchanged for a version that is not.
+//
+// The version is confirmed by its first healthy collection: an emitted batch
+// and, when the server was reachable before the update, an accepted delivery.
+// An empty spool at start is that evidence (the previous version delivered all
+// it collected), and then a batch that is only spooled does not count: a
+// version that can no longer reach the server must not pass (#65). With a
+// spool already waiting, the server was down before the update, and an emitted
+// batch is enough, as without a server.
+//
+// A delivery can come after the emit, when the transport flushes its spool:
+// at healthTimeout the version is confirmed if it is healthy by then, and
+// otherwise the run is cancelled with errUnhealthy, so that the next start
+// rolls back.
+func probation(cancel context.CancelCauseFunc, store *update.Store, version string, healthTimeout time.Duration, emit sdk.Emitter, delivery deliveryStats, logger *slog.Logger) sdk.Emitter {
 	st, err := store.Load()
 	if err != nil || st.Pending == nil || st.Pending.Version != version {
 		return emit
 	}
-	t := time.AfterFunc(healthTimeout, func() { cancel(errUnhealthy) })
-	var once sync.Once
-	return sdk.EmitterFunc(func(c context.Context, b *sdk.Batch) error {
-		if err := emit.Emit(c, b); err != nil {
-			return err
+	mustDeliver, sent0 := false, uint64(0)
+	if delivery != nil {
+		var spooled int
+		sent0, spooled = delivery()
+		mustDeliver = spooled == 0
+	}
+	var emitted atomic.Bool
+	healthy := func() bool {
+		if !emitted.Load() {
+			return false
 		}
-		once.Do(func() {
-			t.Stop()
+		if !mustDeliver {
+			return true
+		}
+		sent, _ := delivery()
+		return sent > sent0
+	}
+	var decided sync.Once
+	confirm := func() {
+		decided.Do(func() {
 			if ok, err := store.Confirm(version); err != nil {
 				logger.Error("cannot confirm the new version", "collector", agent.CollectorName, "error", err)
 			} else if ok {
 				logger.Info("new version confirmed", "collector", agent.CollectorName, "version", version)
 			}
 		})
+	}
+	t := time.AfterFunc(healthTimeout, func() {
+		if healthy() {
+			confirm()
+			return
+		}
+		decided.Do(func() { cancel(errUnhealthy) })
+	})
+	return sdk.EmitterFunc(func(c context.Context, b *sdk.Batch) error {
+		if err := emit.Emit(c, b); err != nil {
+			return err
+		}
+		emitted.Store(true)
+		if healthy() {
+			t.Stop()
+			confirm()
+		}
 		return nil
 	})
 }
