@@ -30,6 +30,7 @@ func TestObservedAtAgeBound(t *testing.T) {
 		{"user within 15 minutes", "user:v", 10 * time.Minute, false},
 		{"user older than 15 minutes", "user:v", 30 * time.Minute, true},
 		{"token older than 15 minutes", "token:ci", 2 * time.Hour, true},
+		{"unbound token older than 15 minutes", "api:token-7", 2 * time.Hour, true},
 		{"collector replaying a spool", "arista:sw1", 3 * 24 * time.Hour, false},
 		{"collector older than a week", "arista:sw1", 8 * 24 * time.Hour, true},
 		{"per-kind override rejects", "redfish:bmc1", 2 * time.Hour, true},
