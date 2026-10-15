@@ -1,6 +1,8 @@
 # What is only true on a real cluster: the chart installs, the pod starts
 # non-root and read-only against a real PostgreSQL, and the NetworkPolicy is
 # enforced (Calico, not kindnet). Nightly, and on PRs touching the packaging.
+# The UI in Firefox and WebKit as well as Chromium: on demand only (the
+# browsers job), since every engine adds minutes to the organisation's budget.
 name: e2e
 
 on:
@@ -48,3 +50,31 @@ jobs:
           kubectl get pods -A -o wide
           kubectl -n trica-e2e describe pods
           kubectl -n trica-e2e logs deploy/trica --tail=200 || true
+
+  browsers:
+    # The pull request job runs Chromium only; this one runs the same specs in
+    # Firefox and WebKit too. On demand only: Actions > e2e > Run workflow.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.23.3
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-go@v6
+        with: { go-version-file: go.mod }
+      - run: make web-install
+      - run: make web-build
+      - run: npm --prefix web run e2e:install-browsers
+      - run: make web-e2e-browsers
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report-browsers
+          path: |
+            web/playwright-report
+            web/test-results
+          if-no-files-found: ignore

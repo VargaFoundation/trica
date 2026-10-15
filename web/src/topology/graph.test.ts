@@ -190,6 +190,27 @@ describe("export size", () => {
   it("copes with an empty box", () => {
     expect(exportRatio(0, 0)).toBe(2);
   });
+
+  it("is asked of cytoscape as a size, which it does not multiply by the screen's pixel ratio", async () => {
+    const d = draw(null, graph(), text, () => undefined);
+    await d.ready;
+    const png = vi
+      .spyOn(d.cy, "png")
+      .mockResolvedValue(new Blob() as never);
+    const bb = d.cy.elements().boundingBox();
+    const r = await d.raster("png");
+    const opts = png.mock.calls[0]?.[0] as Record<string, unknown>;
+    // A `scale` would be multiplied by devicePixelRatio: four times the pixels on a Retina screen.
+    expect(opts.scale).toBeUndefined();
+    expect(opts).toMatchObject({
+      full: true,
+      maxWidth: Math.ceil(bb.w * r.ratio),
+      maxHeight: Math.ceil(bb.h * r.ratio),
+    });
+    expect(r.width).toBe(opts.maxWidth);
+    expect(r.height).toBe(opts.maxHeight);
+    d.destroy();
+  });
 });
 
 describe("the page's content security policy", () => {

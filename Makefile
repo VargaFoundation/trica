@@ -98,6 +98,10 @@ web-embed-test:  ## Go tests of the handler against the real build (needs web-bu
 web-e2e:  ## Playwright (Chromium) against cmd/trica-e2e-server; needs web-build and `npm --prefix web run e2e:install` once
 	cd $(WEB_DIR) && npx playwright test
 
+.PHONY: web-e2e-browsers
+web-e2e-browsers:  ## The same specs in Chromium, Firefox and WebKit; needs web-build and `npm --prefix web run e2e:install-browsers` once
+	cd $(WEB_DIR) && TRICA_E2E_BROWSERS=all npx playwright test
+
 .PHONY: web-api-update
 web-api-update:  ## Re-export web/openapi.json from the Go API, then regenerate the types
 	TRICA_UPDATE_OPENAPI=1 $(GO) test ./internal/api -run TestWebOpenAPISnapshotIsCurrent

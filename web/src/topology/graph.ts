@@ -360,10 +360,15 @@ export function draw(
       await ready;
       const bb = cy.elements().boundingBox();
       const ratio = exportRatio(bb.w + 2 * 20, bb.h + 2 * 20);
+      // The size is given as maxWidth/maxHeight, not as `scale`: cytoscape
+      // multiplies a scale by the screen's pixel ratio, so on a high-density
+      // screen (2 on a Retina display) the image would have four times the
+      // pixels allowed, and Safari refuses a canvas that large.
       const opts = {
         full: true,
         bg: PAPER,
-        scale: ratio,
+        maxWidth: Math.ceil(bb.w * ratio),
+        maxHeight: Math.ceil(bb.h * ratio),
         output: "blob-promise" as const,
       };
       const blob =
