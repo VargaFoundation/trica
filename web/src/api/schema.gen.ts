@@ -2064,12 +2064,12 @@ export interface components {
             facing?: "north" | "east" | "south" | "west";
             /**
              * Floor X
-             * @description Floor plan column (tiles from the room origin).
+             * @description Floor plan column: tiles east of the room's north-west corner (tile size: the room's tile_mm).
              */
             floor_x?: number;
             /**
              * Floor Y
-             * @description Floor plan row (tiles from the room origin).
+             * @description Floor plan row: tiles south of the room's north-west corner (tile size: the room's tile_mm).
              */
             floor_y?: number;
             /**
@@ -2138,6 +2138,11 @@ export interface components {
              * @description Room name.
              */
             name?: string;
+            /**
+             * Floor tile
+             * @description Side of one floor plan tile, the unit of rack floor_x and floor_y; 600 when not set.
+             */
+            tile_mm?: number;
             /**
              * Width
              * @description Room width for the floor plan.

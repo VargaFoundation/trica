@@ -14,7 +14,7 @@ developer and an operator need; when it and the code disagree, the code wins.
 | `/discrepancies?status=&kind=&offset=` | Declared against observed; open by default |
 | `/proposals?status=&offset=` | Proposals waiting for a decision (pending by default); `/proposals/<id>` shows the preview of what it would change |
 | `/health` | Last run of each source, failing sources first |
-| `/rooms`, `/rooms/<id>` | Every room; the floor plan of one room (SVG, racks on a grid of 600 mm tiles, the bar on a rack is its front) with a table of its racks. Racks stand in the room directly or through a row |
+| `/rooms`, `/rooms/<id>` | Every room; the floor plan of one room (SVG, racks on a grid of the room's tiles, 600 mm unless the room sets `tile_mm`; north is up, the bar on a rack is its front) with a table of its racks. Racks stand in the room directly or through a row |
 | `/topology?site=&rack=&vlan=&classes=` | The layer-2 links: a layered graph (Cytoscape + ELK) of the devices that have a link, a legend, filters, and the same links as a table. See "Topology" below |
 | `/racks/<id>` | Front and rear elevations of one rack (SVG, U 1 at the bottom) with free units, a table of what is mounted, and the devices mounted without a position. Opened from the floor plan, from a rack's object page, or from the room page |
 
@@ -30,16 +30,17 @@ nothing matches) or `type:device vendor:arista os_version<4.20`.
 From the schema as it is (`internal/schema/builtin.yaml`): the `mounted_in` relation carries
 `position` (U of the lowest unit, 1 = bottom) and `face` (`front`, `rear`); the device's model
 (`device_type`, through `instance_of`) carries `u_height` and `full_depth`; the rack carries
-`u_height`, `floor_x`, `floor_y` (tiles) and `facing`; the room carries `width_mm`, `depth_mm`.
+`u_height`, `floor_x`, `floor_y` (tiles east and south of the room's north-west corner) and
+`facing`; the room carries `width_mm`, `depth_mm` and `tile_mm` (the side of a tile, 600 when not
+set; ADR 0030).
 
 - A **full-depth** device is drawn on its face and as a dashed shadow on the other; it blocks both.
 - What the data does not say is shown, never hidden: no rack height means 42 U assumed (with a
   note), no device height means 1 U, no face means front, no position lists the device apart.
 - A device that overlaps another on the same face, or sticks out of the rack, has a red outline, a
   `!` and a note in the table; two racks on one tile, or racks outside the room's size, are flagged.
-- Known limits: one request per mounted device to learn its model (finding #42); the 600 mm tile is
-  an assumption the schema does not define (finding #43); at most 1000 relations per rack and 1000
-  racks per room are read (the page says when it is cut).
+- Known limits: one request per mounted device to learn its model (finding #42); at most 1000
+  relations per rack and 1000 racks per room are read (the page says when it is cut).
 
 ### Topology: what the graph relies on
 
@@ -204,4 +205,4 @@ menu click, of which layout under 6 s).
 ## Not in this version
 
 Selectable text in the PDF exports (they are pictures), patch-panel front/rear ports in the topology, saved queries, history ("which device had this
-address on 3 March"), a rack-contents endpoint (finding #42), a defined floor tile (finding #43).
+address on 3 March"), a rack-contents endpoint (finding #42).

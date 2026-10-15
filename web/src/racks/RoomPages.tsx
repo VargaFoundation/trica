@@ -9,7 +9,7 @@ import { ObjectLink } from "../components/ObjectLink";
 import { useI18n } from "../i18n";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { usePageTitle } from "../usePageTitle";
-import { layoutFloor, TILE_MM, type FloorPlan, type PlacedRack } from "./floor";
+import { layoutFloor, tileOf, type FloorPlan, type PlacedRack } from "./floor";
 import { useRoomContents, type RoomContents } from "./useRack";
 
 /** /rooms — every room, each linking to its floor plan. */
@@ -84,7 +84,15 @@ function Room({ room }: { room: ObjectView }) {
         {(c) => {
           const w = room.attributes?.width_mm;
           const d = room.attributes?.depth_mm;
-          return <Plan roomName={room.display} widthMm={typeof w === "number" ? w : undefined} depthMm={typeof d === "number" ? d : undefined} contents={c} />;
+          return (
+            <Plan
+              roomName={room.display}
+              widthMm={typeof w === "number" ? w : undefined}
+              depthMm={typeof d === "number" ? d : undefined}
+              tileMm={tileOf(room.attributes?.tile_mm)}
+              contents={c}
+            />
+          );
         }}
       </Async>
     </>
@@ -94,9 +102,21 @@ function Room({ room }: { room: ObjectView }) {
 const TILE_PX = 64;
 const PAD = 8;
 
-function Plan({ roomName, widthMm, depthMm, contents }: { roomName: string; widthMm?: number; depthMm?: number; contents: RoomContents }) {
+function Plan({
+  roomName,
+  widthMm,
+  depthMm,
+  tileMm,
+  contents,
+}: {
+  roomName: string;
+  widthMm?: number;
+  depthMm?: number;
+  tileMm: number;
+  contents: RoomContents;
+}) {
   const { t, number } = useI18n();
-  const plan = useMemo(() => layoutFloor(widthMm, depthMm, contents.racks), [widthMm, depthMm, contents.racks]);
+  const plan = useMemo(() => layoutFloor(widthMm, depthMm, contents.racks, tileMm), [widthMm, depthMm, contents.racks, tileMm]);
   const uHeights = new Map(contents.racks.map((r) => [r.id, r.uHeight]));
   return (
     <>
@@ -118,7 +138,7 @@ function Plan({ roomName, widthMm, depthMm, contents }: { roomName: string; widt
       {contents.racks.length === 0 ? <p>{t("room.empty")}</p> : null}
       {plan.placed.length > 0 ? (
         <figure className="floor-plan">
-          <figcaption>{t("room.tile", { mm: number(TILE_MM) })}</figcaption>
+          <figcaption>{t("room.tile", { mm: number(tileMm) })}</figcaption>
           <FloorSvg roomName={roomName} plan={plan} />
         </figure>
       ) : null}

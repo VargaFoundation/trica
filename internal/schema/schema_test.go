@@ -209,3 +209,17 @@ func TestSensitiveAttributeAllowedWhenNotIndexed(t *testing.T) {
 		t.Error("serial_number sensitive")
 	}
 }
+
+// A floor position is only meaningful with the size of a tile (#43, ADR 0030).
+func TestRoomSaysTheSizeOfItsFloorTile(t *testing.T) {
+	r := Builtin()
+	a := r.Types["room"].Attributes["tile_mm"]
+	if a == nil || a.Kind != Int || a.Unit != "mm" {
+		t.Fatalf("room.tile_mm = %+v, want an int in mm", a)
+	}
+	for _, n := range []string{"floor_x", "floor_y"} {
+		if d := r.Types["rack"].Attributes[n].Description; !strings.Contains(d, "north-west corner") || !strings.Contains(d, "tile_mm") {
+			t.Errorf("rack.%s does not say where it counts from and in what: %q", n, d)
+		}
+	}
+}

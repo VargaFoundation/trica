@@ -1,4 +1,4 @@
-import { layoutFloor, TILE_MM } from "./floor";
+import { DEFAULT_TILE_MM, layoutFloor, tileOf } from "./floor";
 import { formatRange, freeUnits, intervalsOverlap, layoutRack, type Mounted } from "./layout";
 
 const dev = (id: string, position: number | undefined, heightU: number | undefined, extra: Partial<Mounted> = {}): Mounted => ({
@@ -107,9 +107,21 @@ describe("helpers", () => {
 
 describe("layoutFloor", () => {
   it("sizes the grid from the room in 600 mm tiles, rounding up", () => {
-    expect(TILE_MM).toBe(600);
+    expect(DEFAULT_TILE_MM).toBe(600);
     const p = layoutFloor(6000, 3100, []);
     expect(p).toMatchObject({ cols: 10, rows: 6, sizeFromRacks: false });
+  });
+
+  it("sizes the grid in the room's own tile, and places racks in it", () => {
+    const p = layoutFloor(6000, 3100, [{ id: "a", name: "a", x: 15, y: 10 }], 300);
+    expect(p).toMatchObject({ cols: 20, rows: 11, outside: [] });
+    // The same rack is outside a room counted in 600 mm tiles.
+    expect(layoutFloor(6000, 3100, [{ id: "a", name: "a", x: 15, y: 10 }]).outside).toEqual(["a"]);
+  });
+
+  it("falls back to the default tile when tile_mm is missing or unusable", () => {
+    expect(tileOf(300)).toBe(300);
+    for (const v of [undefined, null, 0, -600, 300.5, "300"]) expect(tileOf(v)).toBe(DEFAULT_TILE_MM);
   });
 
   it("fits the grid to the racks when the room has no size", () => {
