@@ -43,6 +43,10 @@ type core struct {
 	auditor *Auditor
 	limiter *auth.RateLimiter
 	cache   *graph.Cache
+	// refusals records what the API and the MCP server cannot: the 401, 403
+	// and 429 answered before or around their handlers (#56). It is shared,
+	// so that one caller's 429s are sampled once across both.
+	refusals func(http.Handler) http.Handler
 }
 
 // New returns the wiring for cfg.
@@ -80,6 +84,7 @@ func (w *Wiring) Components() []server.Component {
 		cs = append(cs, server.Component{Name: "collect", Run: w.runCollect})
 	}
 	cs = append(cs, server.Component{Name: "devicetypes", Run: w.runDeviceTypes})
+	cs = append(cs, server.Component{Name: "audit-anchor", Run: w.runAuditAnchor})
 	return cs
 }
 
@@ -108,11 +113,15 @@ func (w *Wiring) build(d server.Deps) (*core, error) {
 		}
 	}
 	rl := w.cfg.Auth.RateLimit
+	al := &audit.Log{Store: d.Store}
 	return &core{
 		authz:   &Authorizer{Auth: a, Policy: pol},
-		auditor: &Auditor{Log: &audit.Log{Store: d.Store}},
+		auditor: &Auditor{Log: al},
 		limiter: auth.NewRateLimiter(rl.Rate, rl.Burst),
 		cache:   graph.NewCache(d.Store, d.Schema),
+		refusals: audit.NewMiddleware(al, audit.Options{
+			RefusalsOnly: true, RateLimitedEvery: w.cfg.Audit.RateLimitedEvery, Logger: d.Log,
+		}),
 	}, nil
 }
 
@@ -161,7 +170,7 @@ func (w *Wiring) mountAPI(mux *http.ServeMux, d server.Deps) error {
 	if err != nil {
 		return err
 	}
-	mux.Handle(api.Prefix+"/", limit(c.limiter, c.authz, srv.Handler()))
+	mux.Handle(api.Prefix+"/", c.refusals(limit(c.limiter, c.authz, srv.Handler())))
 	return nil
 }
 
@@ -186,7 +195,7 @@ func (w *Wiring) mountMCP(mux *http.ServeMux, d server.Deps) error {
 	if err != nil {
 		return err
 	}
-	h := limit(c.limiter, c.authz, srv.Handler())
+	h := c.refusals(limit(c.limiter, c.authz, srv.Handler()))
 	mux.Handle(mcp.Prefix, h)
 	mux.Handle(mcp.Prefix+"/", h)
 	return nil

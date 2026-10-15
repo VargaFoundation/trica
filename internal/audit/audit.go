@@ -118,7 +118,8 @@ func normalise(details map[string]any) (map[string]any, error) {
 
 // Append records an entry at the end of the chain and returns it with its id and hashes.
 // Appends are serialised by a transaction-scoped advisory lock taken before the head is
-// read, so concurrent appenders queue and the chain never forks.
+// read, so concurrent appenders queue and the chain never forks. Appending with the context
+// of a request NewMiddleware watches tells it the request has its entry.
 func (l *Log) Append(ctx context.Context, e Entry) (*Entry, error) {
 	if e.Actor == "" || e.Action == "" {
 		return nil, errors.New("audit: an entry needs an actor and an action")
@@ -159,7 +160,39 @@ func (l *Log) Append(ctx context.Context, e Entry) (*Entry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("audit: append: %w", err)
 	}
+	markRecorded(ctx)
 	return &e, nil
+}
+
+// Head returns the id and hash of the last entry of the chain, or 0 and nil when it is
+// empty. It is what an anchor records outside the table (ADR 0034): the chain alone cannot
+// show that its last entries were removed.
+func (l *Log) Head(ctx context.Context) (int64, []byte, error) {
+	var id int64
+	var hash []byte
+	err := l.Store.Pool.QueryRow(ctx, `SELECT id, hash FROM audit_log ORDER BY id DESC LIMIT 1`).Scan(&id, &hash)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil, nil
+	}
+	if err != nil {
+		return 0, nil, fmt.Errorf("audit: head: %w", err)
+	}
+	return id, hash, nil
+}
+
+// HashOf returns the hash of entry id, and false when there is no such entry: what an anchor
+// compares with the head it recorded earlier, since entries appended after a truncation hide
+// it from the head alone.
+func (l *Log) HashOf(ctx context.Context, id int64) ([]byte, bool, error) {
+	var hash []byte
+	err := l.Store.Pool.QueryRow(ctx, `SELECT hash FROM audit_log WHERE id = $1`, id).Scan(&hash)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("audit: entry %d: %w", id, err)
+	}
+	return hash, true, nil
 }
 
 // Break describes the first entry where the chain does not hold.

@@ -107,14 +107,22 @@ func bearer(r *http.Request) (string, bool) {
 // that the bucket is the principal's, and leaves the verified principal in the
 // context for Authorizer.Principal. A request that does not authenticate is
 // limited by peer address (auth.RateLimiter's rule) and passed on: the handler
-// answers 401 itself, so the response format stays the API's or MCP's own.
+// answers 401 itself, so the response format stays the API's or MCP's own. Why
+// it did not authenticate goes to the audit Slot, for the refusal's entry.
 func limit(l *auth.RateLimiter, a *Authorizer, next http.Handler) http.Handler {
 	limited := l.Middleware(next)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if raw, ok := bearer(r); ok {
-			if p, err := a.Auth.Authenticate(r.Context(), raw); err == nil {
-				r = r.WithContext(auth.WithPrincipal(r.Context(), p))
-			}
+		raw, ok := bearer(r)
+		if !ok {
+			auth.RecordReason(r.Context(), "no credential presented")
+			limited.ServeHTTP(w, r)
+			return
+		}
+		p, err := a.Auth.Authenticate(r.Context(), raw)
+		if err != nil {
+			auth.RecordReason(r.Context(), err.Error())
+		} else {
+			r = r.WithContext(auth.WithPrincipal(r.Context(), p))
 		}
 		limited.ServeHTTP(w, r)
 	})

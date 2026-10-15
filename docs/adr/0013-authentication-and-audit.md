@@ -100,8 +100,9 @@ down gets a 503, never a pass.
   triggers, and `api_tokens.types`, `sites`, `owner_roles` plus a CHECK on scope values.
 - The hash chain is not keyed: someone who can write the table **and** reimplement the hash can
   rewrite the tail consistently. Detecting that, or the truncation of the last entries, needs
-  the head recorded somewhere the table's writers cannot reach (`Result.Head`); doing so
-  (an external anchor, a signed head) is a later story, as is rotating or sealing the chain.
+  the head recorded somewhere the table's writers cannot reach (`Result.Head`): the server logs
+  it and publishes it as a metric ([ADR 0034](0034-refusals-audit-and-head-anchor.md)); a
+  signed head, and rotating or sealing the chain, are later stories.
 - The audit entry of a request is written after the response is decided, so a crash between
   the two loses it, and an audit write failure is logged, not surfaced to the client.
 - Token roles are a snapshot: demoting a user does not demote tokens they already created

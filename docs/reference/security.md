@@ -1,9 +1,25 @@
 # Security reference: authentication, authorisation, audit
 
 Decisions and their reasons: [ADR 0013](../adr/0013-authentication-and-audit.md). Code:
-`internal/auth`, `internal/audit`. Status: these are libraries; no server mounts them yet.
+`internal/auth`, `internal/audit`, assembled by `internal/wiring` (ADR 0025, ADR 0034).
 
 ## Mounting order
+
+The server mounts, on `/api/v1/` and on `/mcp`:
+
+```go
+audit.NewMiddleware(auditLog, audit.Options{RefusalsOnly: true})( // outermost: 401, 403, 429
+    limit(limiter, authorizer,                                      // authenticates, then 429 per principal
+        handler))                                                   // 401/403 itself; records its own calls
+```
+
+The API and the MCP server authenticate, authorise and record their calls themselves, through
+`api.Authorizer` and `api.Auditor`, with the domain action (`proposal.approve`,
+`mcp.tool.search`). The middleware records what they cannot see: the refusals answered in
+front of them, and a 401 or a read's 403 they do not record. A request whose handler recorded
+an entry gets none from the middleware.
+
+A server built from the libraries alone mounts them this way:
 
 ```go
 chain := audit.Middleware(auditLog, logger)(      // outermost: sees every refusal
@@ -141,7 +157,11 @@ in whole seconds. `X-Forwarded-For` is not trusted.
 ## Audit log
 
 Every mutating request (not GET, HEAD, OPTIONS) and every denied request (401, 403, 429) is
-recorded once the response is decided.
+recorded once the response is decided; with `RefusalsOnly` (what the server mounts), the
+denied ones only, the handlers recording their calls. A request whose handler appended an
+entry with the request's context gets no second one. A 429 is recorded once per caller and
+`audit.rate_limited_every` (one minute); the next entry of that caller counts the others in
+`details.suppressed`, and a count no entry will carry is logged when the caller is forgotten.
 
 | Field | Content |
 |---|---|
@@ -173,5 +193,14 @@ reason) if any, and the head (id and hash):
 Record the head `Verify` returns somewhere the database's writers cannot reach, and compare it
 on the next run: that is the only way to notice that the last entries were truncated, or that
 the whole tail was rewritten consistently.
+
+The server does it every `audit.anchor_interval` (five minutes, every replica): it logs
+`audit chain head` with `head_id` and `head_hash`, and publishes `trica_audit_head_id`. An
+entry anchored at the previous read that is gone or has another hash (entries appended after a
+truncation do not hide it) is logged as an error and counted in
+`trica_audit_head_regressions_total`. Alert on that counter, or on the
+gauge decreasing; keep the logs where the database's administrators cannot edit them. The
+anchor does not protect against whoever controls the server's process
+([ADR 0034](../adr/0034-refusals-audit-and-head-anchor.md)).
 
 The database also refuses UPDATE, DELETE and TRUNCATE on `audit_log`.

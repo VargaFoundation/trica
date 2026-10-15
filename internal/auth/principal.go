@@ -63,8 +63,12 @@ const (
 	slotKey
 )
 
-// WithPrincipal returns ctx carrying p.
+// WithPrincipal returns ctx carrying p. It also gives p to the audit Slot of ctx, when there
+// is one, so that a refusal further in is recorded under p rather than as anonymous.
 func WithPrincipal(ctx context.Context, p *Principal) context.Context {
+	if s := slotFrom(ctx); s != nil {
+		s.Principal = p
+	}
 	return context.WithValue(ctx, principalKey, p)
 }
 
@@ -95,7 +99,9 @@ func slotFrom(ctx context.Context) *Slot {
 	return s
 }
 
-func recordReason(ctx context.Context, reason string) {
+// RecordReason says, in the audit Slot of ctx when there is one, why authentication or
+// authorisation failed. The reason is for the audit log only, never for the client.
+func RecordReason(ctx context.Context, reason string) {
 	if s := slotFrom(ctx); s != nil {
 		s.Reason = reason
 	}

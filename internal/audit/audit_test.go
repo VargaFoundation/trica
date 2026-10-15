@@ -391,3 +391,28 @@ func TestAppendRedactsBeforeStoring(t *testing.T) {
 		t.Errorf("redacted entry does not verify: %+v", r.First)
 	}
 }
+
+// Head is the last entry, the one Verify ends on; removing it moves the head
+// back, which is what an anchor kept elsewhere shows.
+func TestHead(t *testing.T) {
+	l := newLog(t)
+	ctx := context.Background()
+	if id, hash, err := l.Head(ctx); err != nil || id != 0 || hash != nil {
+		t.Fatalf("empty log: %d %x %v", id, hash, err)
+	}
+	es := appendN(t, l, 3)
+	id, hash, err := l.Head(ctx)
+	if err != nil || id != es[2].ID || !bytes.Equal(hash, es[2].Hash) {
+		t.Fatalf("head = %d %x %v, want %d %x", id, hash, err, es[2].ID, es[2].Hash)
+	}
+	if res := verify(t, l); res.HeadID != id || !bytes.Equal(res.Head, hash) {
+		t.Errorf("verify ends on %d, head is %d", res.HeadID, id)
+	}
+	tamper(t, l.Store, `DELETE FROM audit_log WHERE id = $1`, es[2].ID)
+	if id, _, _ := l.Head(ctx); id != es[1].ID {
+		t.Errorf("head after truncation = %d, want %d", id, es[1].ID)
+	}
+	if res := verify(t, l); !res.Intact() {
+		t.Error("the chain alone shows a truncation; the anchor would be useless")
+	}
+}

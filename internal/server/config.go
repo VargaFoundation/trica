@@ -52,6 +52,20 @@ type Config struct {
 	Web WebConfig `yaml:"web"`
 	// Collect runs collectors inside the server (ADR 0026).
 	Collect CollectConfig `yaml:"collect"`
+	// Audit configures what the audit log records of refusals, and the
+	// anchoring of its head (ADR 0013, 0034).
+	Audit AuditConfig `yaml:"audit"`
+}
+
+// AuditConfig is the "audit" section.
+type AuditConfig struct {
+	// AnchorInterval is how often the head of the audit chain is logged and
+	// published as a metric, out of the database's reach. Five minutes when
+	// zero.
+	AnchorInterval time.Duration `yaml:"anchor_interval"`
+	// RateLimitedEvery is how often a 429 is recorded per caller; the others
+	// are counted in the next entry. One minute when zero.
+	RateLimitedEvery time.Duration `yaml:"rate_limited_every"`
 }
 
 // CollectConfig is the "collect" section: collectors run by the server itself,
@@ -241,6 +255,12 @@ func (c *Config) defaults() {
 	}
 	if c.Deduce.Interval <= 0 {
 		c.Deduce.Interval = 5 * time.Minute
+	}
+	if c.Audit.AnchorInterval <= 0 {
+		c.Audit.AnchorInterval = 5 * time.Minute
+	}
+	if c.Audit.RateLimitedEvery <= 0 {
+		c.Audit.RateLimitedEvery = time.Minute
 	}
 	if c.Web.OIDC != nil && c.Web.OIDC.Issuer == "" && c.Auth.OIDC != nil {
 		c.Web.OIDC.Issuer = c.Auth.OIDC.Issuer
