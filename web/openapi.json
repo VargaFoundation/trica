@@ -2347,6 +2347,16 @@
               "fr": "Nom DNS"
             }
           },
+          "domain": {
+            "description": "Routing domain (VRF, site, network) the address is unique in; empty is the global one. Part of the identity.",
+            "title": "Routing domain",
+            "type": "string",
+            "x-trica-kind": "string",
+            "x-trica-label": {
+              "en": "Routing domain",
+              "fr": "Domaine de routage"
+            }
+          },
           "prefix_length": {
             "description": "Mask length as configured.",
             "title": "Prefix length",
@@ -3100,6 +3110,16 @@
             "x-trica-label": {
               "en": "Description",
               "fr": "Description"
+            }
+          },
+          "domain": {
+            "description": "Routing domain (VRF, site, network) the prefix is unique in; empty is the global one. Part of the identity.",
+            "title": "Routing domain",
+            "type": "string",
+            "x-trica-kind": "string",
+            "x-trica-label": {
+              "en": "Routing domain",
+              "fr": "Domaine de routage"
             }
           },
           "gateway": {

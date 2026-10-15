@@ -55,3 +55,13 @@ func TestLoadTargets(t *testing.T) {
 		t.Fatal("missing file accepted")
 	}
 }
+
+func TestParseTargetsReadsTheDomain(t *testing.T) {
+	ts, err := runner.ParseTargets([]byte("targets:\n  - {kind: arista, name: sw-a1, address: 192.0.2.10, domain: site-a}\n"), "t.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ts) != 1 || ts[0].Domain != "site-a" {
+		t.Fatalf("targets %+v", ts)
+	}
+}

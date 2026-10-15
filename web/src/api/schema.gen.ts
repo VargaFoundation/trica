@@ -1619,6 +1619,11 @@ export interface components {
              */
             dns_name?: string;
             /**
+             * Routing domain
+             * @description Routing domain (VRF, site, network) the address is unique in; empty is the global one. Part of the identity.
+             */
+            domain?: string;
+            /**
              * Prefix length
              * @description Mask length as configured.
              */
@@ -1994,6 +1999,11 @@ export interface components {
              * @description Purpose of the prefix.
              */
             description?: string;
+            /**
+             * Routing domain
+             * @description Routing domain (VRF, site, network) the prefix is unique in; empty is the global one. Part of the identity.
+             */
+            domain?: string;
             /**
              * Gateway
              * @description Default gateway of the prefix.

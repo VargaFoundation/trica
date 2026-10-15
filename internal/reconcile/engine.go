@@ -351,14 +351,19 @@ type ident struct {
 	Strong     bool
 }
 
-// identities normalises an object's identifiers against its type.
+// identities normalises an object's identifiers against its type. The identity
+// scope of the type (ADR 0036) is not an identifier: it prefixes the others.
 func identities(t *schema.Type, id map[string]string) ([]ident, error) {
+	scope, err := identityScope(t, id)
+	if err != nil {
+		return nil, err
+	}
 	var out []ident
 	for _, k := range sdk.SortedKeys(id) {
-		if k == sdk.IDKey {
+		if k == sdk.IDKey || (k == t.IdentityScope && t.IdentityScope != "") {
 			continue
 		}
-		v, err := t.NormalizeIdentity(k, id[k])
+		v, err := t.ScopedIdentity(k, id[k], scope)
 		if err != nil {
 			return nil, err
 		}
@@ -369,6 +374,15 @@ func identities(t *schema.Type, id map[string]string) ([]ident, error) {
 		out = append(out, ident{Key: k, Value: v, Strong: a.Identity == schema.Strong})
 	}
 	return out, nil
+}
+
+// identityScope returns the normalised identity scope given in id, "" (the
+// global scope) when t has none or id names none.
+func identityScope(t *schema.Type, id map[string]string) (string, error) {
+	if t.IdentityScope == "" {
+		return "", nil
+	}
+	return schema.NormalizeScope(id[t.IdentityScope])
 }
 
 // find looks up an existing object. parentID scopes weak identifiers ("" =
@@ -639,14 +653,27 @@ func (r *run) writeClaims(ctx context.Context) error {
 		if desired[id] == nil {
 			desired[id] = map[string]want{}
 		}
+		// identities already accepted the scope when the object was resolved.
+		scope, _ := identityScope(t, o.Identity)
 		vals := map[string]any{}
 		for k, v := range o.Attributes {
+			if k == t.IdentityScope && t.IdentityScope != "" {
+				// A scope set as a plain value would show the object in a domain
+				// its identity is not in.
+				if perr := r.problem("%s %s: %s is part of the identity, give it with the identifiers", o.Type, o.Ref, k); perr != nil {
+					return perr
+				}
+				continue
+			}
 			vals[k] = v
 		}
 		for k, v := range o.Identity {
 			if k != sdk.IDKey {
 				vals[k] = v
 			}
+		}
+		if scope != "" {
+			vals[t.IdentityScope] = scope
 		}
 		for _, k := range sdk.SortedKeys(vals) {
 			a := t.Attributes[k]
@@ -664,7 +691,7 @@ func (r *run) writeClaims(ctx context.Context) error {
 			raw, _ := json.Marshal(nv)
 			w := want{value: raw, conf: conf}
 			if a.Identity != "" {
-				s, err := t.NormalizeIdentity(k, fmt.Sprint(vals[k]))
+				s, err := t.ScopedIdentity(k, fmt.Sprint(vals[k]), scope)
 				if err == nil {
 					w.ident, w.strong = &s, a.Identity == schema.Strong
 				}

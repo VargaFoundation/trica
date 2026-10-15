@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
 // Kind is the value kind of an attribute.
@@ -76,14 +78,19 @@ type Attribute struct {
 
 // Type describes an object type.
 type Type struct {
-	Name        string                `yaml:"-" json:"name"`
-	Layer       string                `yaml:"layer" json:"layer"`
-	Label       Label                 `yaml:"label" json:"label"`
-	Description string                `yaml:"description" json:"description"`
-	Display     string                `yaml:"display" json:"display"`
-	Parents     []string              `yaml:"parents,omitempty" json:"parents,omitempty"`
-	Attributes  map[string]*Attribute `yaml:"attributes" json:"attributes"`
-	Custom      bool                  `yaml:"-" json:"custom"`
+	Name        string   `yaml:"-" json:"name"`
+	Layer       string   `yaml:"layer" json:"layer"`
+	Label       Label    `yaml:"label" json:"label"`
+	Description string   `yaml:"description" json:"description"`
+	Display     string   `yaml:"display" json:"display"`
+	Parents     []string `yaml:"parents,omitempty" json:"parents,omitempty"`
+	// IdentityScope names the attribute whose value scopes the identifiers of
+	// the type (ADR 0036): the same address in two routing domains is two
+	// ip_address objects. It is given with the identity (Identify), never as a
+	// plain attribute; an object without it is in the global scope.
+	IdentityScope string                `yaml:"identity_scope,omitempty" json:"identity_scope,omitempty"`
+	Attributes    map[string]*Attribute `yaml:"attributes" json:"attributes"`
+	Custom        bool                  `yaml:"-" json:"custom"`
 }
 
 // RelationType describes a relation type.
@@ -206,6 +213,9 @@ func (r *Registry) Validate() error {
 				return fmt.Errorf("type %s: %w", name, err)
 			}
 		}
+		if err := validScope(t); err != nil {
+			return fmt.Errorf("type %s: %w", name, err)
+		}
 	}
 	for name, rt := range r.Relations {
 		if !nameRe.MatchString(name) {
@@ -253,6 +263,26 @@ func validAttr(name string, a *Attribute) error {
 	// never returns (issue #25).
 	if Sensitive(name) && (a.Search || a.Identity != "") {
 		return fmt.Errorf("attribute %s: a sensitive attribute cannot be searchable or identifying", name)
+	}
+	return nil
+}
+
+// validScope checks the identity scope of t: a string attribute that does not
+// identify anything by itself (a weak "domain" would merge every address of a
+// domain), on a type that has identifiers to scope.
+func validScope(t *Type) error {
+	if t.IdentityScope == "" {
+		return nil
+	}
+	a, ok := t.Attributes[t.IdentityScope]
+	if !ok {
+		return fmt.Errorf("identity_scope %q is not an attribute", t.IdentityScope)
+	}
+	if a.Kind != String || a.Identity != "" {
+		return fmt.Errorf("identity_scope %s must be a string attribute that is not itself an identifier", t.IdentityScope)
+	}
+	if strong, weak := t.IdentityKeys(); len(strong)+len(weak) == 0 {
+		return fmt.Errorf("identity_scope %s scopes no identifier", t.IdentityScope)
 	}
 	return nil
 }
@@ -561,6 +591,76 @@ func NormalizeMAC(s string) (string, error) {
 // attribute that carries it, falling back to trimmed lowercase text. Identity
 // matching is case-insensitive: "SW-A1" and "sw-a1" are the same switch.
 func (t *Type) NormalizeIdentity(key, value string) (string, error) {
+	return t.normalizeIdentity(key, value)
+}
+
+var scopeRE = regexp.MustCompile(`^[a-z0-9][a-z0-9._:-]{0,63}$`)
+
+// NormalizeScope returns the canonical form of an identity scope value
+// (trimmed, lower case) or an error if it is not one: 1 to 64 characters among
+// letters, digits, ".", "_", ":" and "-". An empty value is the global scope.
+func NormalizeScope(value string) (string, error) {
+	v := strings.ToLower(strings.TrimSpace(value))
+	if v == "" || scopeRE.MatchString(v) {
+		return v, nil
+	}
+	return "", fmt.Errorf("invalid identity scope %q (1 to 64 letters, digits, '.', '_', ':' or '-')", value)
+}
+
+// ScopedIdentity returns the identity value of key as the engine stores and
+// matches it: the normalised value, prefixed by "<scope>|" when scope (already
+// normalised) is not the global one. Values of the global scope are what they
+// were before the type was scoped, so existing objects keep their identity.
+func (t *Type) ScopedIdentity(key, value, scope string) (string, error) {
+	v, err := t.normalizeIdentity(key, value)
+	if err != nil || scope == "" || t.IdentityScope == "" {
+		return v, err
+	}
+	return scope + "|" + v, nil
+}
+
+// ScopeBatch puts scope in the identity of every object and every relation
+// endpoint of b whose type has an identity scope and that names none: a
+// collector or an agent that knows the routing domain it observes gives it to
+// all of its addresses at once. An empty or invalid scope changes nothing and
+// is reported.
+func (r *Registry) ScopeBatch(b *sdk.Batch, scope string) error {
+	s, err := NormalizeScope(scope)
+	if err != nil || s == "" {
+		return err
+	}
+	stamp := func(typ string, id map[string]string) map[string]string {
+		t := r.Types[typ]
+		if t == nil || t.IdentityScope == "" || id[t.IdentityScope] != "" || id[sdk.IDKey] != "" {
+			return id
+		}
+		if id == nil {
+			id = map[string]string{}
+		}
+		id[t.IdentityScope] = s
+		return id
+	}
+	for _, o := range b.Objects {
+		o.Identity = stamp(o.Type, o.Identity)
+	}
+	var endpoint func(e *sdk.Endpoint)
+	endpoint = func(e *sdk.Endpoint) {
+		if e == nil || e.Ref != "" {
+			return
+		}
+		e.Identity = stamp(e.Type, e.Identity)
+		endpoint(e.Parent)
+	}
+	for _, rels := range [][]*sdk.Relation{b.Relations, b.Unrelations} {
+		for _, rel := range rels {
+			endpoint(&rel.From)
+			endpoint(&rel.To)
+		}
+	}
+	return nil
+}
+
+func (t *Type) normalizeIdentity(key, value string) (string, error) {
 	if a, ok := t.Attributes[key]; ok {
 		switch a.Kind {
 		case MAC, IP, Prefix:

@@ -22,6 +22,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/VargaFoundation/trica/internal/collect"
+	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -86,6 +87,9 @@ func New(cfg Config) (*Runner, error) {
 			return nil, fmt.Errorf("runner: target %s is declared twice", t.Source())
 		}
 		seen[t.Source()] = true
+		if _, err := schema.NormalizeScope(t.Domain); err != nil {
+			return nil, fmt.Errorf("runner: target %s: domain: %w", t.Source(), err)
+		}
 		c, err := build(t)
 		if err != nil {
 			return nil, err
@@ -184,16 +188,26 @@ func (r *Runner) tick(ctx context.Context, j *job, wg *sync.WaitGroup) {
 }
 
 // recorder sits between a collector and the emitter: it notes the health
-// record the collector reported and whether the emitter refused a batch.
+// record the collector reported and whether the emitter refused a batch, and
+// gives the target's domain to the addresses of every batch.
 type recorder struct {
 	next    sdk.Emitter
+	domain  string
 	health  *sdk.Health
 	emitErr error
 }
 
+// builtin is the registry the domain is stamped against. Custom scoped types
+// are not stamped here (ADR 0036): the runner does not read the server's.
+var builtin = sync.OnceValue(schema.Builtin)
+
 func (e *recorder) Emit(ctx context.Context, b *sdk.Batch) error {
 	if b != nil && b.Health != nil {
 		e.health = b.Health
+	}
+	if b != nil && e.domain != "" {
+		// Validated by New: it cannot fail here.
+		_ = builtin().ScopeBatch(b, e.domain)
 	}
 	err := e.next.Emit(ctx, b)
 	if err != nil && e.emitErr == nil {
@@ -209,7 +223,7 @@ func (r *Runner) runOne(ctx context.Context, j *job) {
 	t := j.target
 	log := r.log.With("source", t.Source(), "collector", t.Kind, "target", t.Name)
 	started := time.Now()
-	rec := &recorder{next: r.cfg.Emitter}
+	rec := &recorder{next: r.cfg.Emitter, domain: t.Domain}
 
 	err := r.collect(ctx, j, rec)
 
