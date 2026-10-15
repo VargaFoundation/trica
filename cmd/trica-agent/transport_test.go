@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -12,6 +13,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 
 	"github.com/VargaFoundation/trica/internal/agent/update"
 	"github.com/VargaFoundation/trica/internal/pki"
@@ -368,6 +372,104 @@ func TestRunningAgentFlushesItsSpoolWhenTheServerComesBack(t *testing.T) {
 	}
 }
 
+// The metrics file says what the spool holds and since when, so that an
+// operator is alerted before it fills (#65); it follows the spool as it drains.
+func TestMetricsFileShowsTheSpoolAndItsAge(t *testing.T) {
+	old := flushEvery
+	flushEvery = 100 * time.Millisecond
+	t.Cleanup(func() { flushEvery = old })
+
+	e := newSrvEnv(t)
+	stop := e.start()
+	dir := t.TempDir()
+	if code, _, errs := e.agent(dir, "--enrol-token-file", e.token("agent:host-01")); code != 0 {
+		t.Fatalf("exit %d: %s", code, errs)
+	}
+	stop()
+
+	prom := filepath.Join(t.TempDir(), "trica-agent.prom")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan int, 1)
+	go func() {
+		var out, errb strings.Builder
+		done <- run(ctx, []string{"--root", fixture, "--interval", "1h", "--server", e.url(), "--ca-file", e.caFile,
+			"--state-dir", dir, "--metrics-file", prom}, &out, &errb)
+	}()
+	waitFor(t, "the metrics to show a spooled batch growing old", func() bool {
+		m := readMetrics(t, prom)
+		return m["trica_agent_spooled_batches"] == 1 && m["trica_agent_spool_bytes"] > 0 &&
+			m["trica_agent_spool_oldest_age_seconds"] > 0 && m["trica_agent_last_delivery_timestamp_seconds"] == 0
+	})
+	e.start()
+	waitFor(t, "the metrics to show the spool delivered", func() bool {
+		m := readMetrics(t, prom)
+		return m["trica_agent_spooled_batches"] == 0 && m["trica_agent_spool_oldest_age_seconds"] == 0 &&
+			m["trica_agent_sent_batches_total"] == 1 && m["trica_agent_last_delivery_timestamp_seconds"] > 0
+	})
+	cancel()
+	select {
+	case code := <-done:
+		if code != 0 {
+			t.Fatalf("exit %d", code)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("the agent did not stop when cancelled")
+	}
+	if st, err := os.Stat(prom); err != nil || st.Mode().Perm() != 0o644 {
+		t.Fatalf("metrics file: %v, %v; the node exporter must be able to read it", st, err)
+	}
+	ents, _ := os.ReadDir(filepath.Dir(prom))
+	if len(ents) != 1 {
+		t.Fatalf("temporary files left next to the metrics file: %v", ents)
+	}
+}
+
+// A run with --once writes the metrics after its collection.
+func TestMetricsFileOfASingleRun(t *testing.T) {
+	e := newSrvEnv(t)
+	e.start()
+	dir := t.TempDir()
+	prom := filepath.Join(t.TempDir(), "trica-agent.prom")
+	if code, _, errs := e.agent(dir, "--enrol-token-file", e.token("agent:host-01"), "--metrics-file", prom); code != 0 {
+		t.Fatalf("exit %d: %s", code, errs)
+	}
+	if m := readMetrics(t, prom); m["trica_agent_sent_batches_total"] != 1 || m["trica_agent_spooled_batches"] != 0 {
+		t.Fatalf("metrics = %v", m)
+	}
+}
+
+// readMetrics parses the metrics file as the node exporter would, and returns
+// the value of each unlabelled sample; a missing file is an empty map.
+func readMetrics(t *testing.T, path string) map[string]float64 {
+	t.Helper()
+	f, err := os.Open(path) // #nosec G304 -- a test file
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	p := expfmt.NewTextParser(model.UTF8Validation)
+	fams, err := p.TextToMetricFamilies(f)
+	if err != nil {
+		t.Fatalf("the metrics file does not parse: %v", err)
+	}
+	out := map[string]float64{}
+	for name, fam := range fams {
+		for _, m := range fam.GetMetric() {
+			switch {
+			case m.GetGauge() != nil:
+				out[name] = m.GetGauge().GetValue()
+			case m.GetCounter() != nil:
+				out[name] = m.GetCounter().GetValue()
+			}
+		}
+	}
+	return out
+}
+
 func waitFor(t *testing.T, what string, ok func() bool) {
 	t.Helper()
 	for deadline := time.Now().Add(20 * time.Second); time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
@@ -548,11 +650,12 @@ func TestBadTransportFlags(t *testing.T) {
 	dir := t.TempDir()
 	ca := filepath.Join(dir, "ca.pem")
 	for name, args := range map[string][]string{
-		"no CA":        {"--server", "https://127.0.0.1:1", "--state-dir", dir},
-		"no state dir": {"--server", "https://127.0.0.1:1", "--ca-file", ca},
-		"plain http":   {"--server", "http://127.0.0.1:1", "--ca-file", ca, "--state-dir", dir},
-		"no host":      {"--server", "https://", "--ca-file", ca, "--state-dir", dir},
-		"not a url":    {"--server", "127.0.0.1:1", "--ca-file", ca, "--state-dir", dir},
+		"no CA":                    {"--server", "https://127.0.0.1:1", "--state-dir", dir},
+		"no state dir":             {"--server", "https://127.0.0.1:1", "--ca-file", ca},
+		"plain http":               {"--server", "http://127.0.0.1:1", "--ca-file", ca, "--state-dir", dir},
+		"no host":                  {"--server", "https://", "--ca-file", ca, "--state-dir", dir},
+		"not a url":                {"--server", "127.0.0.1:1", "--ca-file", ca, "--state-dir", dir},
+		"metrics without a server": {"--metrics-file", filepath.Join(dir, "trica-agent.prom")},
 	} {
 		if code, _, errs := runArgs(t, append([]string{"--root", fixture, "--once"}, args...)...); code != 2 {
 			t.Errorf("%s: exit %d, want 2: %s", name, code, errs)

@@ -36,5 +36,5 @@ before the update, by an accepted delivery within `--health-timeout`.
   rolled out while the server is up, since the server is what offers it.
 - The default health timeout is longer than the flush interval (one minute), so one flush
   happens inside the window.
-- Not done: spool size and age as metrics (#65 proposes them). The agent has no metrics
-  endpoint; the spool is visible as files in `--state-dir/spool`.
+- ~~Not done: spool size and age as metrics (#65 proposes them).~~ Done by ADR 0033: the
+  agent writes them to a file for the node exporter (`--metrics-file`).

@@ -267,7 +267,8 @@ func TestRenewalFailure(t *testing.T) {
 	if err := c.Emit(ctx, batch("agent:host-01")); err != nil {
 		t.Fatalf("a failed renewal must not stop a valid certificate from sending: %v", err)
 	}
-	if st := c.Stats(); st.Renewals != 0 || st.Sent != 1 {
+	sentAt := clk.Now()
+	if st := c.Stats(); st.Renewals != 0 || st.Sent != 1 || !st.LastSent.Equal(sentAt) || !st.OldestSpooled.IsZero() {
 		t.Fatalf("stats = %+v", st)
 	}
 	p.mu.Lock()
@@ -282,7 +283,9 @@ func TestRenewalFailure(t *testing.T) {
 	if err := c.Emit(ctx, batch("agent:host-01")); err != nil {
 		t.Fatal(err)
 	}
-	if st := c.Stats(); st.Spooled != 1 || st.Sent != 1 {
+	// The spool says since when the server has been out of reach, and the
+	// last delivery stays the one before (#65).
+	if st := c.Stats(); st.Spooled != 1 || st.Sent != 1 || !st.OldestSpooled.Equal(clk.Now()) || !st.LastSent.Equal(sentAt) {
 		t.Fatalf("stats = %+v", st)
 	}
 	// ... while a refusal (403) is an error for the caller.
