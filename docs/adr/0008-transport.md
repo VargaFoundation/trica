@@ -1,7 +1,7 @@
 # ADR-0008: Agent and collector transport, HTTP/2 over mutual TLS with a disk spool
 
 - **Status**: accepted (2026-10); supersedes the gRPC and bbolt option of the initial plan
-- **Concerns**: `internal/transport`, `cmd/trica-agent`, remote collectors
+- **Concerns**: `internal/transport` (server), `internal/transport/uplink` (client), `internal/transport/wire`, `cmd/trica-agent`, remote collectors
 
 ## Context
 

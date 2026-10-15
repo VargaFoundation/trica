@@ -21,6 +21,7 @@ import (
 	"github.com/VargaFoundation/trica/internal/store"
 	"github.com/VargaFoundation/trica/internal/testdb"
 	"github.com/VargaFoundation/trica/internal/transport"
+	"github.com/VargaFoundation/trica/internal/transport/uplink"
 	"github.com/VargaFoundation/trica/internal/wiring"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
@@ -319,8 +320,8 @@ func TestEnrolCreateIsRedeemedOnce(t *testing.T) {
 	go func() { done <- srv.Serve(ctx, ln) }()
 	defer func() { cancel(); <-done }()
 
-	newClient := func(dir string) *transport.Client {
-		c, err := transport.NewClient(transport.ClientConfig{
+	newClient := func(dir string) *uplink.Client {
+		c, err := uplink.NewClient(uplink.ClientConfig{
 			ServerURL: "https://" + ln.Addr().String(), CAFile: filepath.Join(e.caDir, pki.CACertFile),
 			Dir: dir, EnrolToken: token,
 		})
@@ -341,7 +342,7 @@ func TestEnrolCreateIsRedeemedOnce(t *testing.T) {
 	}
 	// A second machine with the same token: refused, nothing delivered.
 	err = newClient(t.TempDir()).Emit(ctx, b)
-	var se *transport.StatusError
+	var se *uplink.StatusError
 	if !errors.As(err, &se) || se.Code != http.StatusUnauthorized {
 		t.Fatalf("a used token: %v, want a 401", err)
 	}

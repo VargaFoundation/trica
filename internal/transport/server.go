@@ -1,7 +1,9 @@
-// Package transport carries batches from agents and remote collectors to the
-// server (docs/adr/0008-transport.md): HTTP/2 over mutual TLS, an internal CA
-// with one-time enrolment tokens, a revocation list in PostgreSQL, and on the
-// client side a bounded disk spool that survives server outages.
+// Package transport is the server side of the transport that carries batches
+// from agents and remote collectors (docs/adr/0008-transport.md): HTTP/2 over
+// mutual TLS, an internal CA with one-time enrolment tokens and a revocation
+// list in PostgreSQL. The client, with its disk spool, is
+// internal/transport/uplink; the contract between the two is
+// internal/transport/wire.
 //
 // The server side hands every accepted batch to a [Sink]; in production that
 // is a function calling reconcile.Engine.Submit, so this package never writes
@@ -23,14 +25,8 @@ import (
 	"time"
 
 	"github.com/VargaFoundation/trica/internal/pki"
+	"github.com/VargaFoundation/trica/internal/transport/wire"
 	"github.com/VargaFoundation/trica/pkg/sdk"
-)
-
-// Endpoints.
-const (
-	PathEnrol   = "/v1/enrol"
-	PathRenew   = "/v1/renew"
-	PathBatches = "/v1/batches"
 )
 
 // Defaults for [ServerConfig].
@@ -142,9 +138,9 @@ func (s *Server) TLSConfig() *tls.Config {
 // the identity of a client is the certificate verified by the TLS layer.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST "+PathEnrol, s.handleEnrol)
-	mux.HandleFunc("POST "+PathRenew, s.handleRenew)
-	mux.HandleFunc("POST "+PathBatches, s.handleBatches)
+	mux.HandleFunc("POST "+wire.PathEnrol, s.handleEnrol)
+	mux.HandleFunc("POST "+wire.PathRenew, s.handleRenew)
+	mux.HandleFunc("POST "+wire.PathBatches, s.handleBatches)
 	return mux
 }
 
@@ -182,21 +178,6 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	return nil
 }
 
-// Wire types.
-type (
-	enrolRequest struct {
-		Token string `json:"token"`
-		CSR   string `json:"csr"`
-	}
-	renewRequest struct {
-		CSR string `json:"csr"`
-	}
-	certResponse struct {
-		Certificate string `json:"certificate"`
-		CA          string `json:"ca"`
-	}
-)
-
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -208,7 +189,7 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 }
 
 func (s *Server) handleEnrol(w http.ResponseWriter, r *http.Request) {
-	var req enrolRequest
+	var req wire.EnrolRequest
 	if !decodeSmall(w, r, &req) {
 		return
 	}
@@ -240,7 +221,7 @@ func (s *Server) handleEnrol(w http.ResponseWriter, r *http.Request) {
 	}
 	binding, _ := pki.BindingFromCert(cert)
 	s.log.Info("client enrolled", "source", binding, "serial", pki.SerialString(cert))
-	writeJSON(w, http.StatusOK, certResponse{Certificate: string(pki.CertPEM(cert)), CA: string(s.cfg.CA.CertPEM())})
+	writeJSON(w, http.StatusOK, wire.CertResponse{Certificate: string(pki.CertPEM(cert)), CA: string(s.cfg.CA.CertPEM())})
 }
 
 func (s *Server) handleRenew(w http.ResponseWriter, r *http.Request) {
@@ -248,7 +229,7 @@ func (s *Server) handleRenew(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var req renewRequest
+	var req wire.RenewRequest
 	if !decodeSmall(w, r, &req) {
 		return
 	}
@@ -270,7 +251,7 @@ func (s *Server) handleRenew(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.log.Info("certificate renewed", "source", id.Binding, "serial", pki.SerialString(cert))
-	writeJSON(w, http.StatusOK, certResponse{Certificate: string(pki.CertPEM(cert)), CA: string(s.cfg.CA.CertPEM())})
+	writeJSON(w, http.StatusOK, wire.CertResponse{Certificate: string(pki.CertPEM(cert)), CA: string(s.cfg.CA.CertPEM())})
 }
 
 func (s *Server) handleBatches(w http.ResponseWriter, r *http.Request) {

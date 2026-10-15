@@ -1,4 +1,4 @@
-package transport
+package uplink
 
 import (
 	"errors"

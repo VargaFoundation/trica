@@ -26,7 +26,7 @@ import (
 
 	"github.com/VargaFoundation/trica/internal/agent"
 	"github.com/VargaFoundation/trica/internal/agent/update"
-	"github.com/VargaFoundation/trica/internal/transport"
+	"github.com/VargaFoundation/trica/internal/transport/uplink"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -148,7 +148,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if *server == "" {
 		emit = emitter(*output, stdout)
 	} else {
-		client, err := transport.NewClient(transport.ClientConfig{
+		client, err := uplink.NewClient(uplink.ClientConfig{
 			ServerURL: *server, CAFile: *caFile, Dir: *stateDir, EnrolTokenFile: *tokenFile, Logger: logger,
 		})
 		if err != nil {

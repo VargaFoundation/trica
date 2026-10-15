@@ -24,7 +24,7 @@ trica-agent [--root /] [--interval 5m] [--once] [--output -] [--state-dir DIR] [
 | `--interval` | Time between runs, default 5 m, minimum 30 s (`--once` ignores it). |
 | `--once` | Run once and exit. |
 | `--state-dir` | Directory of the agent's own state (`/var/lib/trica-agent` in the packages): staged versions and update state, and, with `--server`, the client certificate and the spool. Empty (default): the agent never runs anything but itself, and `--server` is refused. |
-| `--server` | `https://host:port` of the server's transport listener (`transport.addr`). Batches go there through `transport.Client`. `http://` is refused. Env `TRICA_AGENT_SERVER`. |
+| `--server` | `https://host:port` of the server's transport listener (`transport.addr`). Batches go there through `uplink.Client`. `http://` is refused. Env `TRICA_AGENT_SERVER`. |
 | `--ca-file` | PEM file of the CA certificate that signs the server's certificate, required with `--server`. The agent trusts nothing else: there is no trust on first use. Env `TRICA_AGENT_CA_FILE`. |
 | `--enrol-token-file` | File holding the one-time enrolment token. Read only while the agent has no certificate. A path, never a value (no flag or variable takes the token itself). Env `TRICA_AGENT_ENROL_TOKEN_FILE`. |
 | `--health-timeout` | How long a newly staged version has to emit one batch before it is rolled back, default 2 m. |

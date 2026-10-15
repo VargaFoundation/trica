@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -13,10 +12,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -24,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/VargaFoundation/trica/internal/pki"
+	"github.com/VargaFoundation/trica/internal/transport/uplink"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -224,13 +222,13 @@ func (e *env) url() string { return "https://" + e.addr }
 
 // clientCfg builds a client configuration with a fresh enrolment token for
 // binding.
-func (e *env) clientCfg(binding string) ClientConfig {
+func (e *env) clientCfg(binding string) uplink.ClientConfig {
 	e.t.Helper()
 	token, err := e.reg.NewEnrolmentToken(context.Background(), binding, time.Hour)
 	if err != nil {
 		e.t.Fatal(err)
 	}
-	return ClientConfig{
+	return uplink.ClientConfig{
 		ServerURL:  e.url(),
 		CAFile:     e.caFile,
 		Dir:        e.t.TempDir(),
@@ -240,13 +238,20 @@ func (e *env) clientCfg(binding string) ClientConfig {
 	}
 }
 
-func (e *env) client(binding string, mut ...func(*ClientConfig)) *Client {
+func (e *env) client(binding string, mut ...func(*uplink.ClientConfig)) *uplink.Client {
 	e.t.Helper()
 	cfg := e.clientCfg(binding)
 	for _, m := range mut {
 		m(&cfg)
 	}
-	c, err := NewClient(cfg)
+	return e.clientFrom(cfg)
+}
+
+// clientFrom builds a client from a configuration the test keeps, to restart
+// it later on the same directories.
+func (e *env) clientFrom(cfg uplink.ClientConfig) *uplink.Client {
+	e.t.Helper()
+	c, err := uplink.NewClient(cfg)
 	if err != nil {
 		e.t.Fatal(err)
 	}
@@ -264,6 +269,18 @@ func (e *env) rawClient(cert *tls.Certificate) *http.Client {
 	tr := &http.Transport{TLSClientConfig: cfg, ForceAttemptHTTP2: true}
 	e.t.Cleanup(tr.CloseIdleConnections)
 	return &http.Client{Transport: tr, Timeout: 5 * time.Second}
+}
+
+// identityOf loads the identity a client keeps in dir (key and certificate in
+// one file), for hand-made requests in that client's name.
+func identityOf(t *testing.T, dir string) *tls.Certificate {
+	t.Helper()
+	path := filepath.Join(dir, uplink.IdentityFile)
+	c, err := tls.LoadX509KeyPair(path, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &c
 }
 
 // identity issues a client certificate straight from the CA, with its key.
@@ -291,21 +308,6 @@ func issueIdentity(t *testing.T, ca *pki.CA, binding string, ttl time.Duration, 
 		t.Fatal(err)
 	}
 	return tls.Certificate{Certificate: [][]byte{cert.Raw}, PrivateKey: key, Leaf: cert}
-}
-
-// provision writes an identity file as a client that enrolled earlier would
-// have, so that tests of the client alone need no enrolment.
-func provision(t *testing.T, ca *pki.CA, dir, binding string, ttl time.Duration, now time.Time) {
-	t.Helper()
-	id := issueIdentity(t, ca, binding, ttl, now)
-	keyPEM, err := pki.MarshalKeyPEM(id.PrivateKey.(*ecdsa.PrivateKey))
-	if err != nil {
-		t.Fatal(err)
-	}
-	data := slices.Concat(keyPEM, pki.CertPEM(id.Leaf))
-	if err := os.WriteFile(filepath.Join(dir, identityFile), data, 0o600); err != nil {
-		t.Fatal(err)
-	}
 }
 
 // batch is a minimal valid batch of the given source. Sources of equal length
@@ -360,32 +362,6 @@ func post(t *testing.T, hc *http.Client, url string, body []byte, hdr map[string
 
 var gzipHdr = map[string]string{"Content-Encoding": "gzip", "Content-Type": "application/json"}
 
-// fakeServer is a TLS server whose behaviour the test controls, for failure
-// injection that the real server never produces (5xx, 429, ...). It
-// requests but does not require client certificates.
-func fakeServer(t *testing.T, ca *pki.CA, h http.HandlerFunc) (url string, caFile string) {
-	t.Helper()
-	sc, err := ca.IssueServer([]string{"127.0.0.1"}, 90*24*time.Hour, time.Now())
-	if err != nil {
-		t.Fatal(err)
-	}
-	srv := httptest.NewUnstartedServer(h)
-	srv.EnableHTTP2 = true
-	srv.TLS = &tls.Config{
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{sc},
-		ClientAuth:   tls.VerifyClientCertIfGiven,
-		ClientCAs:    ca.Pool(),
-	}
-	srv.StartTLS()
-	t.Cleanup(srv.Close)
-	caFile = filepath.Join(t.TempDir(), "ca.pem")
-	if err := os.WriteFile(caFile, ca.CertPEM(), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return srv.URL, caFile
-}
-
 func mustParseCert(t *testing.T, pemData string) *x509.Certificate {
 	t.Helper()
 	c, err := pki.ParseCertPEM([]byte(pemData))
@@ -393,19 +369,6 @@ func mustParseCert(t *testing.T, pemData string) *x509.Certificate {
 		t.Fatal(err)
 	}
 	return c
-}
-
-func spoolFiles(t *testing.T, dir string) []string {
-	t.Helper()
-	ents, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var out []string
-	for _, e := range ents {
-		out = append(out, e.Name())
-	}
-	return out
 }
 
 func srcs(prefix string, from, to int) []string {
