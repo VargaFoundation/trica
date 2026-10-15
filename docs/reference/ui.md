@@ -59,8 +59,8 @@ The schema has no `connected_to` or `link` relation; the page reads what it has 
   dotted, blue. Deduced: dashed, amber, and its label says the level ("deduced, high"). The legend
   and the table say the same in words. An unknown confidence counts as deduced.
 - **Deduced cables.** A deducer writes `cabled_to` with a `level` (`high`, `medium`, `low`) and an
-  `evidence` (`lldp`, `lldp_one_sided`, `mac_table`) attribute. They are shown when present; without
-  them the link is "deduced" with no level (the deducer is on its own branch, ADR 0024).
+  `evidence` (`lldp`, `lldp_one_sided`, `mac_table`) attribute (`internal/deduce`, ADR 0010). They
+  are shown when present; without them the link is "deduced" with no level.
 - **Nodes are devices.** A port on a chassis module belongs to the module's device. A link between
   two ports of one device is not drawn (counted in a note, kept in the table). A port whose device
   is not listed is a dashed grey node named by the start of its id. Several links between the same
@@ -147,6 +147,16 @@ Three tests fail when the Go API, the snapshot, the generated types and the clie
 (`TestWebOpenAPISnapshotIsCurrent`, `src/api/schema.test.ts`). Test fixtures
 (`src/test/fixtures.ts`) are anonymised (192.0.2.0/24, 198.51.100.0/24, `sw-a1`) and typed by the
 generated schemas; they are written by hand, not recorded from a server.
+
+One set is recorded: `src/topology/testdata/deduced-api.json` holds what the real API returns
+(`GET /relations` and `GET /objects`) over cables the real deducer wrote, ids renamed.
+`TestDeducedCablesReachTheTopologyAsWritten` fails when it drifts, and
+`src/topology/deduced.test.ts` runs the topology model on it. After a change to the deducer or to
+those endpoints:
+
+```
+TRICA_UPDATE_TOPOLOGY=1 go test ./internal/api -run DeducedCablesReachTheTopology
+```
 
 ## Build, test, run
 
