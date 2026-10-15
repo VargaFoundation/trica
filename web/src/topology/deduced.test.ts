@@ -95,8 +95,21 @@ describe("the topology over the deducer's own cables", () => {
       "srv-02|sw-a2 medium",
       "sw-a1|sw-a2 high",
     ]);
-    // Every end resolved to a device the page knows, with its site. The site
-    // comes from the link ends: GET /objects does not return site_id (#100).
+    // Every end resolved to a device the page knows, with its site.
     expect(g.nodes.every((n) => !n.unresolved && n.siteId)).toBe(true);
+  });
+
+  // The topology also takes a device's site from its links' ends, which the
+  // real API always fills, so this agrees with or without the device's own
+  // site; what it pins is that the real list carries it (#100).
+  it("reads each device's site from GET /objects, as the real API now gives it", async () => {
+    const devices = snapshot.devices as unknown as ObjectView[];
+    // The real API's list says where each device is.
+    expect(devices.every((d) => typeof d.site_id === "string")).toBe(true);
+    const { topology } = await load();
+    for (const d of devices) {
+      const node = topology.nodes.get(d.id);
+      if (node) expect([d.display, node.siteId]).toEqual([d.display, d.site_id]);
+    }
   });
 });

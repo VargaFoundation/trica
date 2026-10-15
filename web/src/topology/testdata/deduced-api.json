@@ -15,6 +15,7 @@
       "id": "device:sw-a1",
       "last_seen": "2026-03-01T00:00:00Z",
       "observed": true,
+      "site_id": "site:paris-1",
       "status": "active",
       "type": "device"
     },
@@ -32,6 +33,7 @@
       "id": "device:srv-01",
       "last_seen": "2026-03-01T00:00:00Z",
       "observed": true,
+      "site_id": "site:lyon-1",
       "status": "active",
       "type": "device"
     },
@@ -47,6 +49,7 @@
       "id": "device:srv-02",
       "last_seen": "2026-03-01T00:00:00Z",
       "observed": true,
+      "site_id": "site:paris-1",
       "status": "active",
       "type": "device"
     },
@@ -62,6 +65,7 @@
       "id": "device:sw-a2",
       "last_seen": "2026-03-01T00:00:00Z",
       "observed": true,
+      "site_id": "site:paris-1",
       "status": "active",
       "type": "device"
     }
@@ -237,6 +241,7 @@
       "display": "lyon-1",
       "id": "site:lyon-1",
       "observed": false,
+      "site_id": "site:lyon-1",
       "status": "active",
       "type": "site"
     },
@@ -249,6 +254,7 @@
       "display": "paris-1",
       "id": "site:paris-1",
       "observed": false,
+      "site_id": "site:paris-1",
       "status": "active",
       "type": "site"
     }

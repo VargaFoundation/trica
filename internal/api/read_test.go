@@ -386,3 +386,47 @@ func TestCollectionHealthScrubsCredentialsInErrors(t *testing.T) {
 		t.Fatalf("error text lost: %s", r.Body)
 	}
 }
+
+// A listed object says which site it is in, as the object itself does: the
+// room list and the topology read it from the list (#100).
+func TestObjectsListCarriesTheSite(t *testing.T) {
+	e := newEnv(t, reconcile.Policy{})
+	want := map[string]string{
+		e.ids["paris"]:  e.ids["paris"], // a site is in itself
+		e.ids["rack-l"]: e.ids["lyon"],  // through its parent
+		e.ids["sw"]:     e.ids["paris"], // through mounted_in
+		e.ids["srv"]:    e.ids["lyon"],
+		e.ids["e1"]:     e.ids["paris"], // through its device
+	}
+	for _, path := range []string{"/api/v1/objects?limit=1000", "/api/v1/search?q=" + url.QueryEscape("sw-a1")} {
+		var sp struct {
+			Items []struct {
+				ID     string `json:"id"`
+				SiteID string `json:"site_id"`
+			} `json:"items"`
+		}
+		r := e.get(path, tokReader)
+		wantStatus(t, r, 200)
+		r.json(t, &sp)
+		if len(sp.Items) == 0 {
+			t.Fatalf("%s: no items", path)
+		}
+		for _, it := range sp.Items {
+			site, ok := want[it.ID]
+			if !ok {
+				continue
+			}
+			if it.SiteID != site {
+				t.Errorf("%s: %s has site %q, want %q", path, it.ID, it.SiteID, site)
+			}
+			// The list and the object agree.
+			var one struct {
+				SiteID string `json:"site_id"`
+			}
+			e.get("/api/v1/objects/"+it.ID, tokReader).json(t, &one)
+			if one.SiteID != it.SiteID {
+				t.Errorf("%s: list says %q, object says %q", it.ID, it.SiteID, one.SiteID)
+			}
+		}
+	}
+}
