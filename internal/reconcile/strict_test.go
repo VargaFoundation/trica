@@ -38,6 +38,8 @@ func TestStrictValidationForAPICallers(t *testing.T) {
 		{"token, invalid enum", badEnum, "token:ci", true},
 		{"user, unknown relation type", badRelation, "user:v", true},
 		{"token, unknown relation type", badRelation, "token:ci", true},
+		{"unbound token, invalid enum", badEnum, "api:token-7", true},
+		{"unbound token, unknown relation type", badRelation, "api:token-7", true},
 		{"collector, invalid enum", badEnum, "arista:sw1", false},
 		{"collector, unknown relation type", badRelation, "arista:sw1", false},
 	}

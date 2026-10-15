@@ -11,7 +11,9 @@ the `Authorizer` is `internal/auth` (API tokens and OIDC JWTs, RBAC policy), the
 hash-chained audit log, and a rate limit applies. `api.New(Config)` returns a `*Server`;
 `Handler()` serves paths under `api.Prefix`. A token speaks as the source it is bound to
 (`trica token create --source arista:sw-a1`), or as `api:token-<id>` when it has none
-([ADR 0028](../adr/0028-token-bound-source.md)).
+([ADR 0028](../adr/0028-token-bound-source.md)). People and unbound tokens are strict callers: a
+value the schema refuses rejects the whole batch with 422; a bound token is treated as the
+collector it stands for, and gets a warning instead ([ADR 0005](../adr/0005-single-writer.md)).
 
 ## Endpoints
 

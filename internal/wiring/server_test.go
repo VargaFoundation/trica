@@ -272,6 +272,20 @@ transport:
 		}
 	})
 
+	t.Run("an unbound token is an API caller: a value the schema refuses rejects its batch", func(t *testing.T) {
+		b := sdk.NewBatch("", sdk.ScopePartial)
+		b.ObservedAt = time.Now().UTC()
+		b.Object("sw", "device").Identify("name", "sw-strict").Set("role", "switch")
+		b.Object("e1", "interface").Identify("name", "Ethernet1").In("sw").Set("oper_status", "sideways")
+		raw, _ := json.Marshal(b)
+		if code, body := r.do("POST", "/api/v1/batches", r.token, string(raw)); code != http.StatusUnprocessableEntity {
+			t.Fatalf("submit: %d %s, want 422", code, body)
+		}
+		if _, body := r.do("GET", "/api/v1/objects?type=device", r.readToken, ""); strings.Contains(body, "sw-strict") {
+			t.Fatalf("a rejected batch left an object behind: %s", body)
+		}
+	})
+
 	t.Run("MCP: 401 without a bearer, tools with one, and the graph sees the commit", func(t *testing.T) {
 		if code, _ := r.do("POST", mcp.Prefix, "", `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`); code != http.StatusUnauthorized {
 			t.Fatalf("mcp without credential: %d", code)

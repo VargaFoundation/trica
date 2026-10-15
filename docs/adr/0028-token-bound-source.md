@@ -31,5 +31,8 @@ collector pushing through the REST API with a token could therefore not be ranke
   as they would for one collector restarted with a new token: that is the point.
 - A token bound to the source of a running collector can overwrite that collector's claims. Only
   an `admin` creates tokens, and the binding is in the audit log entry of every submission.
-- The reconciliation engine treats `token:` sources as strict (schema errors reject the batch)
-  and `api:` sources as collectors; how the derived name should be classified is #75.
+- An unbound token is an API caller for the engine: the `api` kind, like `user` and `token`, is
+  strict on schema errors and limited to 15 minutes of `observed_at` age (ADR 0005, #75). The
+  derived name is not renamed, so existing claims keep their source.
+- A token bound to a source is classified by that source's kind: bound to `arista:sw-a1`, it
+  gets a collector's leniency (a warning, 7 days of age), because it stands for that collector.

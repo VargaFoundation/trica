@@ -38,7 +38,7 @@ value lets a caller backdate what it says (absence detection, history order). Th
   (the API answers 422, not 400: the batch is well formed, the engine refuses it). Nothing is
   applied.
 - The maximum age is `Policy.MaxObservedAge`, **per source kind** (the part of the source before
-  the first `:`; `*` is the fallback). Defaults: `user` and `token` 15 minutes (API callers have
+  the first `:`; `*` is the fallback). Defaults: `user`, `token` and `api` 15 minutes (API callers have
   no spool, they observe "now"); every other kind 7 days, to cover a collector or agent replaying
   its disk spool after an outage (ADR 0008).
 - The check runs when a batch is submitted (`Apply`, `Propose`), not when a stored proposal is
@@ -50,7 +50,8 @@ A value the schema refuses (invalid enum, wrong kind) or a relation type it does
 be dropped with a warning whatever the source, so an API client checking only the status code
 believed its data was recorded. Now, by source kind:
 
-- **`user` and `token`** (people and API clients): such a batch is **rejected** with
+- **`user`, `token` and `api`** (people and API clients; `api:token-<id>` is how a token that
+  is not bound to a source speaks, ADR 0028): such a batch is **rejected** with
   `ErrRejected` (the API answers 422), nothing is applied, including for a proposal at proposal
   time. The caller can fix its input and resend.
 - **Every other kind** (collectors, agent, `deduce`, `declare`, `mcp`): unchanged, a warning in

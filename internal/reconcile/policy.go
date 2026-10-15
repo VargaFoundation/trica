@@ -59,8 +59,7 @@ func (p Policy) maxObservedAge(source string) time.Duration {
 	if d, ok := p.MaxObservedAge[kind]; ok && d > 0 {
 		return d
 	}
-	switch kind {
-	case "user", "token":
+	if apiCaller(source) {
 		return DefaultAPIMaxObservedAge
 	}
 	if d, ok := p.MaxObservedAge["*"]; ok && d > 0 {

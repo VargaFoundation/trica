@@ -113,12 +113,21 @@ func validateSelector(o *sdk.Object) error {
 	return nil
 }
 
-// strictSource reports whether source is an API caller (user, token). Their
-// batches are rejected on a value the schema refuses; a collector's batch only
-// gets a warning, so one odd value never loses a whole inventory run.
+// apiCallerKinds are the source kinds of the API's callers: a person
+// ("user"), a token ("token"), and a token that is not bound to a source and
+// speaks as "api:token-<id>" (ADR 0028).
+var apiCallerKinds = map[string]bool{"user": true, "token": true, "api": true}
+
+// apiCaller reports whether source is one of the API's callers.
+func apiCaller(source string) bool {
+	return apiCallerKinds[sourceKind(source)]
+}
+
+// strictSource reports whether source is an API caller. Their batches are
+// rejected on a value the schema refuses; a collector's batch only gets a
+// warning, so one odd value never loses a whole inventory run.
 func strictSource(source string) bool {
-	kind, _, _ := strings.Cut(source, ":")
-	return kind == "user" || kind == "token"
+	return apiCaller(source)
 }
 
 // problem handles a schema problem with one value or relation: a hard error
