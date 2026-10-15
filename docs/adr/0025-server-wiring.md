@@ -78,7 +78,8 @@ discovered later is matched at the next restart (known limit, a periodic run is 
 sections. Unknown keys are still rejected. No secret is a configuration value: the database URL
 is a file reference, the UI is a public client, and the OIDC verifier needs none. An OIDC issuer
 that cannot be reached at start stops the server (no silent fallback to tokens only), as does a
-group mapped to a role the policy does not define.
+group mapped to a role the policy does not define. *Amended by ADR 0031: an issuer that does not
+answer no longer stops the start; JWTs get a 503 until it is discovered.*
 
 **The web UI is mounted at `/`** with the browser OIDC settings from `web.oidc` (the issuer
 defaults to `auth.oidc.issuer`). A build without the `webui` tag serves the embedded placeholder

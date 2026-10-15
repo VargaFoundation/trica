@@ -17,9 +17,12 @@ import (
 	"github.com/go-jose/go-jose/v4/jwt"
 )
 
-// Verifier errors; the client only ever sees a 401, the reason goes to the audit log.
+// Verifier errors. ErrTokenInvalid is a bad credential: the client only ever sees a 401, the
+// reason goes to the audit log. ErrIssuerUnreachable is not about the credential: discovery
+// could not reach the issuer, and the client gets a 503 (the credential may be valid).
 var (
-	ErrTokenInvalid = errors.New("auth: invalid credential")
+	ErrTokenInvalid      = errors.New("auth: invalid credential")
+	ErrIssuerUnreachable = errors.New("auth: oidc issuer unreachable")
 )
 
 const (
@@ -65,15 +68,32 @@ type Verifier struct {
 	client  *http.Client
 	jwksURL string
 
-	refreshMu   sync.Mutex // serialises JWKS refreshes
-	mu          sync.Mutex // guards keys, lastRefresh, fetches
-	keys        map[string]jose.JSONWebKey
-	lastRefresh time.Time
-	fetches     int
+	discoverMu    sync.Mutex // serialises discoveries
+	refreshMu     sync.Mutex // serialises JWKS refreshes
+	mu            sync.Mutex // guards jwksURL, keys, lastRefresh, lastDiscovery, fetches
+	keys          map[string]jose.JSONWebKey
+	lastRefresh   time.Time
+	lastDiscovery time.Time
+	fetches       int
 }
 
 // NewVerifier performs discovery and returns a verifier. The JWKS is fetched on first use.
 func NewVerifier(ctx context.Context, cfg OIDCConfig) (*Verifier, error) {
+	v, err := NewLazyVerifier(cfg)
+	if err != nil {
+		return nil, err
+	}
+	if err := v.Discover(ctx); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// NewLazyVerifier checks the configuration and returns a verifier that has not discovered
+// its issuer yet: Verify discovers it on first use, and retries at most every
+// MinRefreshInterval while the issuer does not answer. A server can then start, and serve
+// API tokens, while its identity provider is down.
+func NewLazyVerifier(cfg OIDCConfig) (*Verifier, error) {
 	if err := requireHTTPS(cfg.Issuer); err != nil {
 		return nil, fmt.Errorf("auth: oidc issuer: %w", err)
 	}
@@ -105,21 +125,63 @@ func NewVerifier(ctx context.Context, cfg OIDCConfig) (*Verifier, error) {
 			return nil, fmt.Errorf("auth: oidc: algorithm %q is not allowed (RS256, ES256 only)", n)
 		}
 	}
+	return v, nil
+}
+
+// Discover fetches the discovery document and records the JWKS URL. An issuer that does not
+// answer, or answers with an error status, gives ErrIssuerUnreachable; a document that does
+// not match the configuration gives another error, which no retry will fix.
+func (v *Verifier) Discover(ctx context.Context) error {
 	var doc struct {
 		Issuer  string `json:"issuer"`
 		JWKSURI string `json:"jwks_uri"`
 	}
-	if err := v.getJSON(ctx, strings.TrimSuffix(cfg.Issuer, "/")+"/.well-known/openid-configuration", &doc); err != nil {
-		return nil, fmt.Errorf("auth: oidc discovery: %w", err)
+	if err := v.getJSON(ctx, strings.TrimSuffix(v.cfg.Issuer, "/")+"/.well-known/openid-configuration", &doc); err != nil {
+		return fmt.Errorf("%w: discovery: %w", ErrIssuerUnreachable, err)
 	}
-	if doc.Issuer != cfg.Issuer {
-		return nil, fmt.Errorf("auth: oidc discovery: issuer %q does not match the configured %q", doc.Issuer, cfg.Issuer)
+	if doc.Issuer != v.cfg.Issuer {
+		return fmt.Errorf("auth: oidc discovery: issuer %q does not match the configured %q", doc.Issuer, v.cfg.Issuer)
 	}
 	if err := requireHTTPS(doc.JWKSURI); err != nil {
-		return nil, fmt.Errorf("auth: oidc discovery: jwks_uri: %w", err)
+		return fmt.Errorf("auth: oidc discovery: jwks_uri: %w", err)
 	}
+	v.mu.Lock()
 	v.jwksURL = doc.JWKSURI
-	return v, nil
+	v.mu.Unlock()
+	return nil
+}
+
+// Discovered reports whether the issuer has been discovered.
+func (v *Verifier) Discovered() bool { return v.jwks() != "" }
+
+func (v *Verifier) jwks() string {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	return v.jwksURL
+}
+
+// discovered makes sure the issuer is discovered before a key is looked up. Attempts are
+// bounded by MinRefreshInterval, like JWKS refreshes, so that a stream of requests while the
+// issuer is down does not become a stream of requests to it.
+func (v *Verifier) discovered(ctx context.Context) error {
+	if v.Discovered() {
+		return nil
+	}
+	v.discoverMu.Lock()
+	defer v.discoverMu.Unlock()
+	if v.Discovered() { // discovered while we waited
+		return nil
+	}
+	v.mu.Lock()
+	tooSoon := !v.lastDiscovery.IsZero() && v.now().Sub(v.lastDiscovery) < v.cfg.MinRefreshInterval
+	if !tooSoon {
+		v.lastDiscovery = v.now()
+	}
+	v.mu.Unlock()
+	if tooSoon {
+		return fmt.Errorf("%w: not discovered yet, retried at most every %s", ErrIssuerUnreachable, v.cfg.MinRefreshInterval)
+	}
+	return v.Discover(ctx)
 }
 
 func requireHTTPS(raw string) error {
@@ -192,7 +254,7 @@ func (v *Verifier) key(ctx context.Context, kid string) (*jose.JSONWebKey, error
 		return nil, fmt.Errorf("%w: unknown key id", ErrTokenInvalid)
 	}
 	var set jose.JSONWebKeySet
-	if err := v.getJSON(ctx, v.jwksURL, &set); err != nil {
+	if err := v.getJSON(ctx, v.jwks(), &set); err != nil {
 		return nil, fmt.Errorf("auth: oidc jwks: %w", err)
 	}
 	keys := make(map[string]jose.JSONWebKey, len(set.Keys))
@@ -224,6 +286,9 @@ func (v *Verifier) Verify(ctx context.Context, raw string) (*Principal, error) {
 	kid := tok.Headers[0].KeyID
 	if kid == "" {
 		return nil, fmt.Errorf("%w: missing key id", ErrTokenInvalid)
+	}
+	if err := v.discovered(ctx); err != nil {
+		return nil, err
 	}
 	key, err := v.key(ctx, kid)
 	if err != nil {
