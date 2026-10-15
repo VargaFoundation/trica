@@ -35,9 +35,10 @@ against what the server generates (`TRICA_UPDATE_OPENAPI=1` rewrites it); a Vite
 the generated file is not what the tool makes of the snapshot; a contract test fails when the
 client calls a path, method or query parameter the document does not declare. We did not
 generate the fetch layer too: it would add a runtime dependency or a large generated file for
-about fifteen calls. Known gap: the document's `Object` `oneOf` has a discriminator without
-`mapping`, so the generated union is unusable and the UI types objects with the base schema
-(finding #27, origin: UI).
+about fifteen calls. The document's `Object` `oneOf` maps each `type` value to its variant
+(`discriminator.mapping`, #27), so the generated union narrows on `type`; the UI still types
+objects with the base schema, because a custom type added at run time is not in a union
+generated at build time.
 
 **Own i18n, two languages.** `en` is the reference catalogue (`as const`, so a key is a type);
 `fr` is `Record<MessageKey, string>`, so a missing translation does not compile. Plurals use

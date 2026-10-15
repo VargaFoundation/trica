@@ -2734,7 +2734,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.aisle";
+            type: "aisle";
         };
         "Object.application": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.application"];
@@ -2745,7 +2745,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.application";
+            type: "application";
         };
         "Object.building": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.building"];
@@ -2756,7 +2756,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.building";
+            type: "building";
         };
         "Object.cable": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.cable"];
@@ -2767,7 +2767,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.cable";
+            type: "cable";
         };
         "Object.circuit": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.circuit"];
@@ -2778,7 +2778,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.circuit";
+            type: "circuit";
         };
         "Object.component": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.component"];
@@ -2789,7 +2789,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.component";
+            type: "component";
         };
         "Object.component_instance": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.component_instance"];
@@ -2800,7 +2800,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.component_instance";
+            type: "component_instance";
         };
         "Object.contract": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.contract"];
@@ -2811,7 +2811,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.contract";
+            type: "contract";
         };
         "Object.cpu": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.cpu"];
@@ -2822,7 +2822,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.cpu";
+            type: "cpu";
         };
         "Object.device": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.device"];
@@ -2833,7 +2833,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.device";
+            type: "device";
         };
         "Object.device_type": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.device_type"];
@@ -2844,7 +2844,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.device_type";
+            type: "device_type";
         };
         "Object.disk": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.disk"];
@@ -2855,7 +2855,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.disk";
+            type: "disk";
         };
         "Object.endpoint": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.endpoint"];
@@ -2866,7 +2866,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.endpoint";
+            type: "endpoint";
         };
         "Object.environment": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.environment"];
@@ -2877,7 +2877,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.environment";
+            type: "environment";
         };
         "Object.fan": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.fan"];
@@ -2888,7 +2888,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.fan";
+            type: "fan";
         };
         "Object.firewall_rule": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.firewall_rule"];
@@ -2899,7 +2899,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.firewall_rule";
+            type: "firewall_rule";
         };
         "Object.front_port": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.front_port"];
@@ -2910,7 +2910,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.front_port";
+            type: "front_port";
         };
         "Object.gateway": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.gateway"];
@@ -2921,7 +2921,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.gateway";
+            type: "gateway";
         };
         "Object.ingress": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.ingress"];
@@ -2932,7 +2932,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.ingress";
+            type: "ingress";
         };
         "Object.interface": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.interface"];
@@ -2943,7 +2943,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.interface";
+            type: "interface";
         };
         "Object.internet_access": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.internet_access"];
@@ -2954,7 +2954,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.internet_access";
+            type: "internet_access";
         };
         "Object.ip_address": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.ip_address"];
@@ -2965,7 +2965,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.ip_address";
+            type: "ip_address";
         };
         "Object.k8s_cluster": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.k8s_cluster"];
@@ -2976,7 +2976,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.k8s_cluster";
+            type: "k8s_cluster";
         };
         "Object.k8s_node": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.k8s_node"];
@@ -2987,7 +2987,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.k8s_node";
+            type: "k8s_node";
         };
         "Object.k8s_service": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.k8s_service"];
@@ -2998,7 +2998,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.k8s_service";
+            type: "k8s_service";
         };
         "Object.listener": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.listener"];
@@ -3009,7 +3009,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.listener";
+            type: "listener";
         };
         "Object.memory": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.memory"];
@@ -3020,7 +3020,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.memory";
+            type: "memory";
         };
         "Object.module": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.module"];
@@ -3031,7 +3031,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.module";
+            type: "module";
         };
         "Object.namespace": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.namespace"];
@@ -3042,7 +3042,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.namespace";
+            type: "namespace";
         };
         "Object.person": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.person"];
@@ -3053,7 +3053,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.person";
+            type: "person";
         };
         "Object.pod": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.pod"];
@@ -3064,7 +3064,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.pod";
+            type: "pod";
         };
         "Object.power_outlet": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.power_outlet"];
@@ -3075,7 +3075,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.power_outlet";
+            type: "power_outlet";
         };
         "Object.power_port": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.power_port"];
@@ -3086,7 +3086,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.power_port";
+            type: "power_port";
         };
         "Object.prefix": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.prefix"];
@@ -3097,7 +3097,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.prefix";
+            type: "prefix";
         };
         "Object.psu": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.psu"];
@@ -3108,7 +3108,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.psu";
+            type: "psu";
         };
         "Object.rack": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.rack"];
@@ -3119,7 +3119,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.rack";
+            type: "rack";
         };
         "Object.rear_port": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.rear_port"];
@@ -3130,7 +3130,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.rear_port";
+            type: "rear_port";
         };
         "Object.room": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.room"];
@@ -3141,7 +3141,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.room";
+            type: "room";
         };
         "Object.row": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.row"];
@@ -3152,7 +3152,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.row";
+            type: "row";
         };
         "Object.sensor": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.sensor"];
@@ -3163,7 +3163,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.sensor";
+            type: "sensor";
         };
         "Object.service": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.service"];
@@ -3174,7 +3174,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.service";
+            type: "service";
         };
         "Object.site": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.site"];
@@ -3185,7 +3185,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.site";
+            type: "site";
         };
         "Object.software": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.software"];
@@ -3196,7 +3196,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.software";
+            type: "software";
         };
         "Object.team": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.team"];
@@ -3207,7 +3207,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.team";
+            type: "team";
         };
         "Object.ticket": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.ticket"];
@@ -3218,7 +3218,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.ticket";
+            type: "ticket";
         };
         "Object.transceiver": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.transceiver"];
@@ -3229,7 +3229,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.transceiver";
+            type: "transceiver";
         };
         "Object.tunnel": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.tunnel"];
@@ -3240,7 +3240,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.tunnel";
+            type: "tunnel";
         };
         "Object.vendor": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.vendor"];
@@ -3251,7 +3251,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.vendor";
+            type: "vendor";
         };
         "Object.version_policy": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.version_policy"];
@@ -3262,7 +3262,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.version_policy";
+            type: "version_policy";
         };
         "Object.vlan": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.vlan"];
@@ -3273,7 +3273,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.vlan";
+            type: "vlan";
         };
         "Object.vm": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.vm"];
@@ -3284,7 +3284,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.vm";
+            type: "vm";
         };
         "Object.vrf": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.vrf"];
@@ -3295,7 +3295,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.vrf";
+            type: "vrf";
         };
         "Object.workload": components["schemas"]["ObjectBase"] & {
             attributes?: components["schemas"]["Attributes.workload"];
@@ -3306,7 +3306,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            type: "Object.workload";
+            type: "workload";
         };
         ObjectBase: {
             /** Format: date-time */

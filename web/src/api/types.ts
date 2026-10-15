@@ -11,9 +11,9 @@ type S = components["schemas"];
  *
  * The document describes an object as a union discriminated by `type`, one
  * member per registry type. A custom type added at run time appears in the
- * document but not in the generated union, and the generator renames the
- * discriminant ("Object.device" instead of "device"), so the UI types objects
- * with the common part, which carries every field the server sends.
+ * document but not in the generated union, which is fixed at build time, so
+ * the UI types objects with the common part, which carries every field the
+ * server sends.
  */
 export type ObjectView = S["ObjectBase"];
 export type SearchPage = Omit<S["SearchPage"], "items"> & { items: ObjectView[] };
