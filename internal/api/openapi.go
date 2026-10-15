@@ -175,6 +175,7 @@ func objectComponents(g *schemaGen, reg *schema.Registry, types []string) (map[s
 	}
 	out["ObjectBase"] = base
 	var union []any
+	mapping := map[string]any{}
 	for _, name := range types {
 		t := reg.Types[name]
 		props := map[string]any{}
@@ -199,12 +200,16 @@ func objectComponents(g *schemaGen, reg *schema.Registry, types []string) (map[s
 				}},
 			},
 		}
-		union = append(union, map[string]any{"$ref": "#/components/schemas/Object." + name})
+		ref := "#/components/schemas/Object." + name
+		union = append(union, map[string]any{"$ref": ref})
+		mapping[name] = ref
 	}
 	out["Object"] = map[string]any{
-		"description":   "An object of any type of the registry; `type` selects the schema of `attributes`.",
-		"oneOf":         union,
-		"discriminator": map[string]any{"propertyName": "type"},
+		"description": "An object of any type of the registry; `type` selects the schema of `attributes`.",
+		"oneOf":       union,
+		// Without a mapping the discriminator value would be the schema name,
+		// "Object.device", while the server sends "device" (#27).
+		"discriminator": map[string]any{"propertyName": "type", "mapping": mapping},
 	}
 	return out, nil
 }

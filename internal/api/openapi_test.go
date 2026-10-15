@@ -229,6 +229,46 @@ func TestRealTrafficConformsToTheDocument(t *testing.T) {
 	check("400 body", "POST", "/api/v1/batches", tokProposer, `{`, true)
 }
 
+// The discriminator maps the value the server sends in `type` ("device") to
+// its variant: without a mapping a client takes the schema name
+// ("Object.device") as the value, and cannot select the variant (#27).
+func TestDiscriminatorMapsTheTypeTheServerSends(t *testing.T) {
+	e := newEnv(t, reconcile.Policy{})
+	_, doc := openAPIDoc(t, e)
+	schemas := doc["components"].(map[string]any)["schemas"].(map[string]any)
+	obj := schemas["Object"].(map[string]any)
+	mapping, _ := obj["discriminator"].(map[string]any)["mapping"].(map[string]any)
+	union := obj["oneOf"].([]any)
+	if len(mapping) != len(union) {
+		t.Fatalf("%d mapped values for %d variants", len(mapping), len(union))
+	}
+	for _, u := range union {
+		ref := u.(map[string]any)["$ref"].(string)
+		variant := schemas[strings.TrimPrefix(ref, "#/components/schemas/")].(map[string]any)
+		value := variant["allOf"].([]any)[1].(map[string]any)["properties"].(map[string]any)["type"].(map[string]any)["const"].(string)
+		if mapping[value] != ref {
+			t.Errorf("type %q maps to %v, want %s", value, mapping[value], ref)
+		}
+	}
+	// Every object the server returns selects a variant by its type.
+	var page struct {
+		Items []struct {
+			Type string `json:"type"`
+		} `json:"items"`
+	}
+	r := e.get("/api/v1/objects?limit=100", tokReader)
+	wantStatus(t, r, 200)
+	r.json(t, &page)
+	if len(page.Items) == 0 {
+		t.Fatal("fixture: no object")
+	}
+	for _, o := range page.Items {
+		if _, ok := mapping[o.Type]; !ok {
+			t.Errorf("an object of type %q selects no variant", o.Type)
+		}
+	}
+}
+
 // A type added to the registry shows up in /schema and in /openapi.json on the
 // next request, and leaves with the registry: nothing is cached or generated at build time.
 func TestCustomTypeAppearsWithoutRestart(t *testing.T) {
@@ -293,6 +333,9 @@ types:
 	}
 	if !found {
 		t.Fatal("Object does not list the new type")
+	}
+	if m := sc["Object"].(map[string]any)["discriminator"].(map[string]any)["mapping"].(map[string]any); m["ups_battery"] != "#/components/schemas/Object.ups_battery" {
+		t.Fatalf("the discriminator does not map the new type: %v", m["ups_battery"])
 	}
 	typeParam := func(doc map[string]any) []any {
 		for _, p := range pathsOf(doc)["GET /objects"]["parameters"].([]any) {
