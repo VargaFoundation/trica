@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"net"
 	"net/http"
 	"net/url"
 	"slices"
@@ -585,5 +586,55 @@ func TestRegistryDefaults(t *testing.T) {
 	}
 	if d := expires.Sub(created); d != DefaultTokenTTL {
 		t.Fatalf("default token lifetime = %v", d)
+	}
+}
+
+// blockingSink holds every batch until release is closed.
+type blockingSink struct {
+	in      chan struct{}
+	release chan struct{}
+}
+
+func (b *blockingSink) Ingest(context.Context, *sdk.Batch, Identity) error {
+	b.in <- struct{}{}
+	<-b.release
+	return nil
+}
+
+func TestServeReturnsOnlyOnceRequestsAreDrained(t *testing.T) {
+	sink := &blockingSink{in: make(chan struct{}, 1), release: make(chan struct{})}
+	e := newEnv(t, func(c *ServerConfig) { c.Sink = sink })
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.addr = ln.Addr().String()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	served := make(chan error, 1)
+	go func() { served <- e.srv.Serve(ctx, ln) }()
+
+	c := e.client("agent:host-01")
+	emitted := make(chan error, 1)
+	go func() { emitted <- c.Emit(context.Background(), batch("agent:host-01")) }()
+	<-sink.in // the batch is in the sink
+	cancel()
+	select {
+	case err := <-served:
+		close(sink.release)
+		t.Fatalf("Serve returned (%v) while a batch was still being ingested", err)
+	case <-time.After(300 * time.Millisecond):
+	}
+	close(sink.release)
+	select {
+	case err := <-served:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Serve did not return once the batch was ingested")
+	}
+	if err := <-emitted; err != nil {
+		t.Fatalf("the batch in flight at shutdown must be answered: %v", err)
 	}
 }

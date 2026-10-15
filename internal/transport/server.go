@@ -159,8 +159,9 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 		IdleTimeout:       5 * time.Minute,
 	}
 	done := make(chan struct{})
-	defer close(done)
+	stopped := make(chan struct{})
 	go func() {
+		defer close(stopped)
 		select {
 		case <-ctx.Done():
 			sctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
@@ -169,7 +170,13 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 		case <-done:
 		}
 	}()
-	if err := srv.ServeTLS(ln, "", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	err := srv.ServeTLS(ln, "", "")
+	close(done)
+	// ServeTLS returns as soon as Shutdown starts; requests in flight are
+	// still being served. Returning before Shutdown has drained them would
+	// let a caller believe the server is down while it still accepts batches.
+	<-stopped
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 	return nil
