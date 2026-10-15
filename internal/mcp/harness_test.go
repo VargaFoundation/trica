@@ -46,8 +46,6 @@ func (c *clock) advance(d time.Duration) {
 	c.t = c.t.Add(d)
 }
 
-var migrating sync.Mutex
-
 // t0 is the start of the invented history.
 var t0 = time.Date(2026, 3, 1, 8, 0, 0, 0, time.UTC)
 
@@ -102,9 +100,7 @@ func newEnv(t *testing.T, policy reconcile.Policy, withGraph bool) *env {
 func newEnvWith(t *testing.T, policy reconcile.Policy, withGraph bool, reg *schema.Registry) *env {
 	t.Helper()
 	t.Parallel()
-	migrating.Lock() // goose keeps its file system in a package variable: one migration at a time
 	st := testdb.New(t)
-	migrating.Unlock()
 	e := &env{t: t, st: st, aud: &api.MemoryAuditor{}, clk: &clock{t: t0}, ids: map[string]string{}, graph: &fakeGraph{}}
 	e.eng = &reconcile.Engine{Store: st, Schema: func() *schema.Registry { return reg }, Policy: policy, Now: e.clk.now}
 	e.fixtures()

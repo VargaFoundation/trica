@@ -71,8 +71,6 @@ type env struct {
 	ids map[string]string
 }
 
-var migrating sync.Mutex
-
 var t0 = time.Date(2026, 3, 1, 8, 0, 0, 0, time.UTC)
 
 // newEnv builds the engine, the server and a small anonymised inventory,
@@ -81,9 +79,7 @@ func newEnv(t *testing.T, policy reconcile.Policy) *env {
 	t.Helper()
 	// Database creation is slow on a busy machine: let tests overlap.
 	t.Parallel()
-	migrating.Lock() // goose keeps its file system in a package variable: one migration at a time
 	st := testdb.New(t)
-	migrating.Unlock()
 	e := &env{t: t, st: st, aud: &api.MemoryAuditor{}, clk: &clock{t: t0}, reg: &regHolder{reg: schema.Builtin()}, ids: map[string]string{}}
 	e.eng = &reconcile.Engine{Store: st, Schema: e.reg.get, Policy: policy, Now: e.clk.now}
 	e.fixtures()
