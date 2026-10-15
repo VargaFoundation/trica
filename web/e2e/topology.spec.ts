@@ -254,6 +254,34 @@ test("the topology exports a PNG and a PDF under the page's policy", async ({
   expect(await csp()).toEqual([]);
 });
 
+test("the PNG has the same size on a high-density screen", async ({
+  browser,
+  browserName,
+}) => {
+  // Playwright's Firefox kept devicePixelRatio at 1 for a context asked for 2
+  // (seen with Firefox 1543), so the comparison would prove nothing there.
+  test.skip(browserName === "firefox", "the device scale factor does not apply");
+  // Cytoscape multiplies an export's scale by the screen's pixel ratio; the
+  // page asks for a size instead, so a Retina display does not get four times
+  // the pixels (which Safari refuses for the 200-device picture).
+  const sizes: { width: number; height: number }[] = [];
+  for (const deviceScaleFactor of [1, 2]) {
+    const context = await browser.newContext({
+      deviceScaleFactor,
+      ignoreHTTPSErrors: true,
+    });
+    const page = await context.newPage();
+    await signInWithToken(page, `/topology?vlan=${VLAN_10}`);
+    await expect(ready(page, 3)).toBeVisible();
+    expect(await page.evaluate(() => window.devicePixelRatio)).toBe(
+      deviceScaleFactor,
+    );
+    sizes.push(dims((await downloadOf(page, "Export PNG")).bytes));
+    await context.close();
+  }
+  expect(sizes[1]).toEqual(sizes[0]);
+});
+
 test("the rack elevation exports a PNG and a PDF under the page's policy", async ({
   page,
   context,

@@ -84,7 +84,8 @@ the page's own script).
 - The rack sheet is drawn on a canvas, on white, with a fixed palette whatever the theme: both
   faces side by side, the title, and "Exported from trica on <date>". The topology is Cytoscape's
   own image of the whole graph, on white, up to 16 million pixels (the ratio drops for a very large
-  graph).
+  graph). The size does not depend on the screen: a Retina display gets the same file as any other
+  (ADR 0038).
 - The PDF is one page at the figure's size (1 CSS px = 0.75 pt, at most 200 inches a side).
   - **Topology: drawn as lines, boxes and text** (ADR 0037). The names and labels can be selected
     and searched, and the drawing stays sharp when zoomed. The font is Helvetica, which every PDF
@@ -111,7 +112,7 @@ the page's own script).
   page and on the interactive states, and the contrast ratio of every colour pair of both themes
   computed from the tokens in `src/styles/tokens.css`. In a real browser (Playwright, below) axe
   also checks rendered contrast on every page, in English and French. **Not checked**: real screen
-  readers, phone layout, browsers other than Chromium.
+  readers, phone layout. Firefox and WebKit run the same browser tests on demand only (ADR 0038).
 
 ## Signing in and permissions
 
@@ -170,6 +171,7 @@ TRICA_UPDATE_TOPOLOGY=1 go test ./internal/api -run DeducedCablesReachTheTopolog
 | `make web` | install, lint, typecheck, generated-types check, tests, build, Go tests on the build |
 | `make web-lint`, `web-typecheck`, `web-test`, `web-build`, `web-audit` | One step each |
 | `make web-e2e` | Playwright (Chromium) on every page against `cmd/trica-e2e-server`; needs `make web-build` and, once, `npm --prefix web run e2e:install` (the `e2e` CI job does both) |
+| `make web-e2e-browsers` | The same specs in Chromium, Firefox and WebKit; needs `make web-build` and, once, `npm --prefix web run e2e:install-browsers` (the `browsers` job of the `e2e` workflow, on demand) |
 | `npm --prefix web run dev` | Vite dev server; `/api` is proxied to `TRICA_API` (default `http://127.0.0.1:8080`) |
 
 Node 20.19 or newer (CI and the image use 22.23.3). `make web-build` writes `internal/web/dist`.
@@ -206,7 +208,7 @@ distroless.
 
 ## Browser tests (`web/e2e`)
 
-`make web-e2e` runs Playwright (Chromium only) against `cmd/trica-e2e-server`: the real `internal/web`
+`make web-e2e` runs Playwright (Chromium; `make web-e2e-browsers` adds Firefox and WebKit, ADR 0038) against `cmd/trica-e2e-server`: the real `internal/web`
 handler with the built UI, a read-only mock of `/api/v1` over an invented inventory, and a fake
 OpenID provider on one self-signed TLS origin (`https://127.0.0.1:18443`, `TRICA_E2E_PORT` changes
 it). The specs cover every page in English (and a rack page in French) with `@axe-core/playwright`

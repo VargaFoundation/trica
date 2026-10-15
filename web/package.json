@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps chromium",
+    "e2e:install-browsers": "playwright install --with-deps chromium firefox webkit",
     "gen:api": "openapi-typescript openapi.json -o src/api/schema.gen.ts",
     "gen:api:check": "openapi-typescript openapi.json -o src/api/schema.gen.ts --check"
   },
