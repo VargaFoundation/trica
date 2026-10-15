@@ -10,8 +10,9 @@ Design: [ADR 0008](../adr/0008-transport.md). Status of what is and is not prove
 `trica server` serves it when `transport.addr` is set, on a listener of its own, apart from the
 HTTP port ([configuration](configuration.md), [ADR 0025](../adr/0025-server-wiring.md)). The CA
 is loaded from or created in `transport.ca_dir` (a persistent volume), the server certificate is
-issued for `transport.hosts` at start and renewed by reopening the listener after two thirds of
-`transport.server_cert_ttl`, and batches go to `reconcile.Engine.Submit` as source-bound by the
+issued for `transport.hosts` at start and renewed after two thirds of
+`transport.server_cert_ttl` in place (the next handshakes get the new one; the listener and the
+open connections stay), and batches go to `reconcile.Engine.Submit` as source-bound by the
 certificate. The agent binary sends through the client with `--server` ([agent reference](agent.md#sending-to-a-server), [ADR 0027](../adr/0027-agent-sends-to-the-server.md)), and so does `trica collector` ([collectors](collectors.md), one enrolment per target, ADR 0026).
 
 ## Trust model
