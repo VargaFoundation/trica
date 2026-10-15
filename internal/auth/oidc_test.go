@@ -32,7 +32,10 @@ type testIssuer struct {
 	mu       sync.Mutex
 	keys     map[string]any // kid -> private key, the ones published in the JWKS
 	jwksHits atomic.Int32
-	jwksFail atomic.Bool
+	// discoveryHits and discoveryFail observe and break the discovery endpoint.
+	discoveryHits atomic.Int32
+	discoveryFail atomic.Bool
+	jwksFail      atomic.Bool
 	// jwksDelay slows the JWKS endpoint down (nanoseconds), to hold a refresh in flight.
 	jwksDelay atomic.Int64
 	// algs overrides the "alg" the JWKS declares for a kid.
@@ -44,6 +47,11 @@ func newTestIssuer(t *testing.T) *testIssuer {
 	is := &testIssuer{t: t, keys: map[string]any{}}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, _ *http.Request) {
+		is.discoveryHits.Add(1)
+		if is.discoveryFail.Load() {
+			http.Error(w, "down", http.StatusBadGateway)
+			return
+		}
 		_ = json.NewEncoder(w).Encode(map[string]string{"issuer": is.srv.URL, "jwks_uri": is.srv.URL + "/jwks"})
 	})
 	mux.HandleFunc("/jwks", func(w http.ResponseWriter, _ *http.Request) {
@@ -516,5 +524,63 @@ func TestNewVerifierDiscoveryMismatches(t *testing.T) {
 		if err == nil {
 			t.Errorf("%s: accepted", name)
 		}
+	}
+}
+
+// A verifier built while the issuer is down discovers it on first use: until then a JWT is an
+// outage (not a bad credential), attempts are bounded like JWKS refreshes, and a token that is
+// not even a JWT never reaches the issuer (#57).
+func TestLazyVerifierDiscoversOnFirstUse(t *testing.T) {
+	is := newTestIssuer(t)
+	rk := is.addRSA("rsa-1")
+	is.discoveryFail.Store(true)
+	clk := newClock()
+	v, err := NewLazyVerifier(OIDCConfig{Issuer: is.url(), Audience: []string{testAudience}, HTTPClient: is.srv.Client(), Now: clk.now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if err := v.Discover(ctx); !errors.Is(err, ErrIssuerUnreachable) {
+		t.Fatalf("Discover while down: %v, want ErrIssuerUnreachable", err)
+	}
+	if v.Discovered() {
+		t.Fatal("discovered while the issuer is down")
+	}
+	if _, err := v.Verify(ctx, "not-a-jwt"); !errors.Is(err, ErrTokenInvalid) || is.discoveryHits.Load() != 1 {
+		t.Fatalf("garbage: %v, %d discoveries (want a 401 and no new discovery)", err, is.discoveryHits.Load())
+	}
+	raw := func() string { return is.sign(jose.RS256, "rsa-1", rk, is.claims(clk, nil)) }
+	for i := range 3 {
+		_, err := v.Verify(ctx, raw())
+		if !errors.Is(err, ErrIssuerUnreachable) || IsCredentialError(err) {
+			t.Fatalf("JWT %d while down: %v, want an outage", i, err)
+		}
+	}
+	if n := is.discoveryHits.Load(); n != 2 {
+		t.Fatalf("%d discoveries for 3 JWTs within the cool-down, want 2 (start, then one retry)", n)
+	}
+	is.discoveryFail.Store(false)
+	clk.advance(time.Minute)
+	p, err := v.Verify(ctx, raw())
+	if err != nil || p.Subject != "user:alice" {
+		t.Fatalf("after the issuer is back: %v %+v", err, p)
+	}
+	if !v.Discovered() {
+		t.Fatal("not marked discovered")
+	}
+}
+
+// NewVerifier still fails when discovery fails, and tells an outage from a contradiction.
+func TestNewVerifierTellsOutageFromMismatch(t *testing.T) {
+	is := newTestIssuer(t)
+	is.discoveryFail.Store(true)
+	_, err := NewVerifier(context.Background(), OIDCConfig{Issuer: is.url(), Audience: []string{"a"}, HTTPClient: is.srv.Client()})
+	if !errors.Is(err, ErrIssuerUnreachable) {
+		t.Fatalf("issuer down: %v, want ErrIssuerUnreachable", err)
+	}
+	is.discoveryFail.Store(false)
+	_, err = NewVerifier(context.Background(), OIDCConfig{Issuer: is.url() + "/", Audience: []string{"a"}, HTTPClient: is.srv.Client()})
+	if err == nil || errors.Is(err, ErrIssuerUnreachable) {
+		t.Fatalf("issuer mismatch: %v, want a configuration error", err)
 	}
 }

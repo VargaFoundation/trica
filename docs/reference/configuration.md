@@ -25,7 +25,7 @@ secret does not exist (the UI is a public PKCE client).
 
 | Key | Environment | Default | Meaning |
 |---|---|---|---|
-| `auth.oidc.issuer` | `TRICA_OIDC_ISSUER` | none (OIDC off) | Issuer of the identity provider; `https` required, discovery runs at start and a failure stops the start. |
+| `auth.oidc.issuer` | `TRICA_OIDC_ISSUER` | none (OIDC off) | Issuer of the identity provider; `https` required, discovery runs at start; an issuer that does not answer is retried on use (JWTs get a 503 meanwhile, API tokens work), a discovery document that contradicts the configuration stops the start ([ADR 0031](../adr/0031-oidc-issuer-down-at-start.md)). |
 | `auth.oidc.audience` | | none, required with `auth.oidc` | Accepted audiences. |
 | `auth.oidc.groups_claim` | | `groups` | Claim listing the user's groups. |
 | `auth.policy_file` | | built-in `viewer` / `operator` / `admin` | RBAC policy file (roles and group mappings, unknown keys rejected). |

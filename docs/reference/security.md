@@ -95,7 +95,9 @@ trica token revoke --id 7                                   # marks revoked_at, 
 Required in the token: `kid` header, `sub`, `exp`; `iss` equal to the issuer; `aud` containing
 one accepted value. `nbf` and `iat` are checked when present. The JWKS is fetched on first use
 and when a token carries an unknown `kid` (key rotation), at most once per
-`MinRefreshInterval`; a refresh replaces the cached set.
+`MinRefreshInterval`; a refresh replaces the cached set. Discovery runs at start; if the issuer
+does not answer, it is retried when a JWT arrives, at most once per `MinRefreshInterval`, and the
+JWT gets a 503 until it succeeds ([ADR 0031](../adr/0031-oidc-issuer-down-at-start.md)).
 
 ## Roles and actions
 

@@ -100,9 +100,7 @@ func (w *Wiring) build(d server.Deps) (*core, error) {
 		Logger: d.Log,
 	}
 	if o := w.cfg.Auth.OIDC; o != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		a.OIDC, err = auth.NewVerifier(ctx, auth.OIDCConfig{
+		a.OIDC, err = startOIDC(d.Log, auth.OIDCConfig{
 			Issuer: o.Issuer, Audience: o.Audience, GroupsClaim: o.GroupsClaim, GroupRoles: pol.GroupRoles,
 		})
 		if err != nil {
@@ -236,4 +234,25 @@ func logFailure(log *slog.Logger, what string, err error) {
 	if err != nil && !errors.Is(err, context.Canceled) {
 		log.Error(what, "error", err.Error())
 	}
+}
+
+// startOIDC builds the OIDC verifier and tries to discover its issuer. An issuer that does
+// not answer does not stop the server (#57): API tokens keep working and a JWT is answered
+// 503 until a later discovery succeeds. A discovery document that contradicts the
+// configuration (another issuer, a jwks_uri over http) still stops it: no retry fixes that.
+func startOIDC(log *slog.Logger, cfg auth.OIDCConfig) (*auth.Verifier, error) {
+	v, err := auth.NewLazyVerifier(cfg)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := v.Discover(ctx); err != nil {
+		if !errors.Is(err, auth.ErrIssuerUnreachable) {
+			return nil, err
+		}
+		log.Warn("OIDC issuer unreachable at start: JWTs get a 503 until it is discovered, API tokens work",
+			"issuer", cfg.Issuer, "error", err.Error())
+	}
+	return v, nil
 }

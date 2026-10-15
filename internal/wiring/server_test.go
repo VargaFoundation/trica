@@ -2,6 +2,7 @@ package wiring_test
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -143,6 +144,7 @@ mcp: {disable_localhost_protection: true}
 		}
 		select {
 		case err := <-done:
+			done <- err // r.stop, run by the cleanup, waits for it
 			t.Fatalf("server exited before ready: %v", err)
 		default:
 		}
@@ -482,5 +484,25 @@ func TestServerRefusesToStartOnAnUnknownGroupRole(t *testing.T) {
 	err = srv.Run(ctx)
 	if err == nil || !strings.Contains(err.Error(), "unknown role") {
 		t.Fatalf("Run = %v, want an unknown role error", err)
+	}
+}
+
+// An identity provider that is down at start must not keep the inventory down
+// (#57): the server starts, API tokens work, and a JWT gets a 503, not a 401,
+// so that a client keeps a credential that may be valid.
+func TestServerStartsWhileTheOIDCIssuerIsDown(t *testing.T) {
+	r := newRig(t, `
+auth:
+  oidc:
+    issuer: "https://127.0.0.1:1"
+    audience: [trica]
+`)
+	if code, body := r.do("GET", "/api/v1/me", r.token, ""); code != http.StatusOK {
+		t.Fatalf("API token while the issuer is down: %d %s", code, body)
+	}
+	enc := base64.RawURLEncoding.EncodeToString
+	jwt := enc([]byte(`{"alg":"RS256","kid":"k1","typ":"JWT"}`)) + "." + enc([]byte(`{"sub":"v"}`)) + "." + enc([]byte("signature"))
+	if code, body := r.do("GET", "/api/v1/me", jwt, ""); code != http.StatusServiceUnavailable {
+		t.Fatalf("JWT while the issuer is down: %d %s, want 503", code, body)
 	}
 }
