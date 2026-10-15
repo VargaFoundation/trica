@@ -9,8 +9,9 @@ server actually serves, and validates real traffic (requests and responses) agai
 `trica server` mounts it at `/api/v1/` (`internal/wiring`, [ADR 0025](../adr/0025-server-wiring.md)):
 the `Authorizer` is `internal/auth` (API tokens and OIDC JWTs, RBAC policy), the `Auditor` is the
 hash-chained audit log, and a rate limit applies. `api.New(Config)` returns a `*Server`;
-`Handler()` serves paths under `api.Prefix`. A token has no source of its own in `internal/auth`:
-the server speaks for it as `api:token-<id>`.
+`Handler()` serves paths under `api.Prefix`. A token speaks as the source it is bound to
+(`trica token create --source arista:sw-a1`), or as `api:token-<id>` when it has none
+([ADR 0028](../adr/0028-token-bound-source.md)).
 
 ## Endpoints
 

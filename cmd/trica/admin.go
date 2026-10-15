@@ -36,6 +36,7 @@ const adminUsage = `usage:
 // flags are nil for the others.
 type tokenFlags struct {
 	name, owner, roles, scopes, types, sites *string
+	source                                   *string
 	expires                                  *time.Duration
 	id                                       *int64
 }
@@ -59,6 +60,7 @@ func runToken(ctx context.Context, args []string, stdout, stderr io.Writer, gete
 		f.scopes = fs.String("scopes", "", "read, write or admin, comma separated (required)")
 		f.types = fs.String("types", "", "restrict the token to these object types")
 		f.sites = fs.String("sites", "", "restrict the token to these sites")
+		f.source = fs.String("source", "", "source its batches are attributed to, e.g. arista:sw-a1 (default: api:token-<id>)")
 		f.expires = fs.Duration("expires", 0, "validity, e.g. 720h (default: no expiry)")
 	case "revoke":
 		f.id = fs.Int64("id", 0, "id of the token to revoke (required)")
@@ -81,6 +83,11 @@ func runToken(ctx context.Context, args []string, stdout, stderr io.Writer, gete
 		}
 		if *f.name == "" || *f.owner == "" || *f.roles == "" || *f.scopes == "" {
 			return errors.New("token create: --name, --owner, --roles and --scopes are required")
+		}
+		if *f.source != "" {
+			if err := auth.ValidTokenSource(*f.source); err != nil {
+				return fmt.Errorf("token create: %w", err)
+			}
 		}
 	case "revoke":
 		if *f.id <= 0 {
@@ -106,7 +113,7 @@ func runToken(ctx context.Context, args []string, stdout, stderr io.Writer, gete
 	case "create":
 		return tokenCreate(ctx, ts, pol, tokenArgs{
 			name: *f.name, owner: *f.owner, roles: splitList(*f.roles), scopes: splitList(*f.scopes),
-			types: splitList(*f.types), sites: splitList(*f.sites), expires: *f.expires,
+			types: splitList(*f.types), sites: splitList(*f.sites), source: *f.source, expires: *f.expires,
 		}, stdout, stderr)
 	case "revoke":
 		// Revoke marks revoked_at; the row stays (it is the audit trail).
@@ -123,7 +130,7 @@ func runToken(ctx context.Context, args []string, stdout, stderr io.Writer, gete
 }
 
 type tokenArgs struct {
-	name, owner                 string
+	name, owner, source         string
 	roles, scopes, types, sites []string
 	expires                     time.Duration
 }
@@ -135,7 +142,7 @@ func tokenCreate(ctx context.Context, ts *auth.TokenStore, pol *auth.Policy, a t
 			return fmt.Errorf("token create: role %q is not in the RBAC policy (known: %s)", r, strings.Join(known, ", "))
 		}
 	}
-	p := auth.CreateParams{Name: a.name, Scopes: a.scopes, Types: a.types, Sites: a.sites}
+	p := auth.CreateParams{Name: a.name, Scopes: a.scopes, Types: a.types, Sites: a.sites, Source: a.source}
 	if a.expires > 0 {
 		t := time.Now().UTC().Add(a.expires)
 		p.ExpiresAt = &t
@@ -148,6 +155,9 @@ func tokenCreate(ctx context.Context, ts *auth.TokenStore, pol *auth.Policy, a t
 	// Metadata on stderr, the secret alone on stdout: the output can be piped.
 	fmt.Fprintf(stderr, "token %d %q created for %s: scopes %s, roles %s", tok.ID, tok.Name, tok.CreatedBy,
 		strings.Join(tok.Scopes, ","), strings.Join(tok.Roles, ","))
+	if tok.Source != "" {
+		fmt.Fprintf(stderr, ", source %s", tok.Source)
+	}
 	if tok.ExpiresAt != nil {
 		fmt.Fprintf(stderr, ", expires %s", tok.ExpiresAt.Format(time.RFC3339))
 	}
@@ -162,10 +172,14 @@ func tokenList(ctx context.Context, ts *auth.TokenStore, stdout io.Writer) error
 		return err
 	}
 	w := tabwriter.NewWriter(stdout, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(w, "ID\tNAME\tOWNER\tROLES\tSCOPES\tTYPES\tSITES\tCREATED\tEXPIRES\tLAST USED\tREVOKED")
+	fmt.Fprintln(w, "ID\tNAME\tOWNER\tROLES\tSCOPES\tTYPES\tSITES\tSOURCE\tCREATED\tEXPIRES\tLAST USED\tREVOKED")
 	for _, t := range toks {
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", t.ID, t.Name, t.CreatedBy,
-			joinOrDash(t.Roles), joinOrDash(t.Scopes), joinOrDash(t.Types), joinOrDash(t.Sites),
+		src := t.Source
+		if src == "" {
+			src = "-"
+		}
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", t.ID, t.Name, t.CreatedBy,
+			joinOrDash(t.Roles), joinOrDash(t.Scopes), joinOrDash(t.Types), joinOrDash(t.Sites), src,
 			t.CreatedAt.Format(time.RFC3339), timeOrDash(t.ExpiresAt), timeOrDash(t.LastUsed), timeOrDash(t.RevokedAt))
 	}
 	return w.Flush()

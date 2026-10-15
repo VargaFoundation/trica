@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/VargaFoundation/trica/internal/pki"
 	"github.com/VargaFoundation/trica/internal/store"
 )
 
@@ -34,6 +35,11 @@ var (
 	ErrInvalidToken     = errors.New("auth: invalid token parameters")
 )
 
+// reservedSourceKinds cannot be bound to a token: "user" is how people's batches are
+// attributed, and "agent" sources are bound by a certificate on the transport (ADR 0027). A
+// token speaking as either would pass for a person or for a host.
+var reservedSourceKinds = []string{"user", "agent"}
+
 // secretBytes is the size of the random secret: 256 bits.
 const secretBytes = 32
 
@@ -48,6 +54,7 @@ type Token struct {
 	Types     []string
 	Sites     []string
 	Roles     []string // the owner's roles when the token was created
+	Source    string   // the source its batches are attributed to; empty = derived from the id
 	CreatedBy string
 	CreatedAt time.Time
 	ExpiresAt *time.Time
@@ -57,11 +64,27 @@ type Token struct {
 
 // CreateParams describes a token to create.
 type CreateParams struct {
-	Name      string
-	Scopes    []string
-	Types     []string // optional restriction, empty = all types
-	Sites     []string // optional restriction, empty = all sites
+	Name   string
+	Scopes []string
+	Types  []string // optional restriction, empty = all types
+	Sites  []string // optional restriction, empty = all sites
+	// Source binds the token to a source ("arista:sw-a1"): its batches are attributed to it
+	// and ranked by it (ADR 0004). Optional; see ValidTokenSource.
+	Source    string
 	ExpiresAt *time.Time
+}
+
+// ValidTokenSource checks a source a token may be bound to: the format of a transport binding
+// (kind:name, two segments at least) and not a reserved kind.
+func ValidTokenSource(source string) error {
+	if err := pki.ValidBinding(source); err != nil {
+		return fmt.Errorf("%w: source: %w", ErrInvalidToken, err)
+	}
+	kind, _, _ := strings.Cut(source, ":")
+	if slices.Contains(reservedSourceKinds, kind) {
+		return fmt.Errorf("%w: source kind %q is reserved", ErrInvalidToken, kind)
+	}
+	return nil
 }
 
 // TokenStore creates, authenticates and revokes API tokens in PostgreSQL.
@@ -108,6 +131,11 @@ func (s *TokenStore) Create(ctx context.Context, owner *Principal, p CreateParam
 			}
 		}
 	}
+	if p.Source != "" {
+		if err := ValidTokenSource(p.Source); err != nil {
+			return "", nil, err
+		}
+	}
 	now := s.now()
 	if p.ExpiresAt != nil && !p.ExpiresAt.After(now) {
 		return "", nil, fmt.Errorf("%w: expiry is in the past", ErrInvalidToken)
@@ -119,12 +147,12 @@ func (s *TokenStore) Create(ctx context.Context, owner *Principal, p CreateParam
 	secret := base64.RawURLEncoding.EncodeToString(raw)
 	t := &Token{
 		Name: p.Name, Scopes: nonNil(p.Scopes), Types: nonNil(p.Types), Sites: nonNil(p.Sites),
-		Roles: nonNil(owner.Roles), CreatedBy: owner.Subject, CreatedAt: now, ExpiresAt: p.ExpiresAt,
+		Roles: nonNil(owner.Roles), Source: p.Source, CreatedBy: owner.Subject, CreatedAt: now, ExpiresAt: p.ExpiresAt,
 	}
 	err := s.Store.Pool.QueryRow(ctx, `
-		INSERT INTO api_tokens (name, hash, scopes, types, sites, owner_roles, created_by, created_at, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-		t.Name, hashSecret(secret), t.Scopes, t.Types, t.Sites, t.Roles, t.CreatedBy, t.CreatedAt, t.ExpiresAt).Scan(&t.ID)
+		INSERT INTO api_tokens (name, hash, scopes, types, sites, owner_roles, source, created_by, created_at, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, ''), $8, $9, $10) RETURNING id`,
+		t.Name, hashSecret(secret), t.Scopes, t.Types, t.Sites, t.Roles, t.Source, t.CreatedBy, t.CreatedAt, t.ExpiresAt).Scan(&t.ID)
 	if err != nil {
 		return "", nil, fmt.Errorf("auth: store token: %w", err)
 	}
@@ -197,6 +225,7 @@ func (s *TokenStore) Authenticate(ctx context.Context, raw string) (*Principal, 
 		Scopes:  t.Scopes,
 		Types:   t.Types,
 		Sites:   t.Sites,
+		Source:  t.Source,
 		Owner:   t.CreatedBy,
 	}, nil
 }
@@ -233,8 +262,8 @@ func (s *TokenStore) List(ctx context.Context) ([]Token, error) {
 	return out, rows.Err()
 }
 
-const selectRows = `SELECT id, name, hash, scopes, types, sites, owner_roles, created_by, created_at, expires_at, last_used, revoked_at FROM api_tokens`
+const selectRows = `SELECT id, name, hash, scopes, types, sites, owner_roles, coalesce(source, ''), created_by, created_at, expires_at, last_used, revoked_at FROM api_tokens`
 
 func tokenDest(t *Token, hash *[]byte) []any {
-	return []any{&t.ID, &t.Name, hash, &t.Scopes, &t.Types, &t.Sites, &t.Roles, &t.CreatedBy, &t.CreatedAt, &t.ExpiresAt, &t.LastUsed, &t.RevokedAt}
+	return []any{&t.ID, &t.Name, hash, &t.Scopes, &t.Types, &t.Sites, &t.Roles, &t.Source, &t.CreatedBy, &t.CreatedAt, &t.ExpiresAt, &t.LastUsed, &t.RevokedAt}
 }

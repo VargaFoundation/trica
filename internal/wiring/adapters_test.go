@@ -70,6 +70,10 @@ func TestToAPIAttribution(t *testing.T) {
 	if k.BatchSource() != "api:token-7" {
 		t.Errorf("token source %q", k.BatchSource())
 	}
+	b, _ := toAPI(&auth.Principal{Kind: auth.KindToken, Subject: "token:8", Source: "arista:sw-a1"})
+	if b.BatchSource() != "arista:sw-a1" || b.Subject != "8" {
+		t.Errorf("bound token: source %q, subject %q", b.BatchSource(), b.Subject)
+	}
 	if _, err := toAPI(&auth.Principal{Kind: "service"}); err == nil {
 		t.Error("an unknown kind was accepted")
 	}

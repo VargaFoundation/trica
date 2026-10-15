@@ -74,15 +74,20 @@ func (a *Authorizer) Allow(p api.Principal, action, objType, site string) bool {
 
 // toAPI converts a verified internal/auth principal. The kind prefix of the
 // auth subject ("user:", "token:") is dropped: api.Principal.BatchSource puts
-// "user:" back for people, and a token speaks as "api:token-<id>". The audit
-// adapter rebuilds the actor from kind and subject.
+// "user:" back for people, and a token speaks as the source it is bound to, or
+// as "api:token-<id>" when it has none (ADR 0028). The audit adapter rebuilds
+// the actor from kind and subject.
 func toAPI(p *auth.Principal) (api.Principal, error) {
 	switch p.Kind {
 	case auth.KindUser:
 		return api.Principal{Subject: strings.TrimPrefix(p.Subject, "user:"), Kind: api.KindUser, Credential: p}, nil
 	case auth.KindToken:
 		id := strings.TrimPrefix(p.Subject, "token:")
-		return api.Principal{Subject: id, Kind: api.KindToken, Source: "api:token-" + id, Credential: p}, nil
+		src := p.Source
+		if src == "" {
+			src = "api:token-" + id
+		}
+		return api.Principal{Subject: id, Kind: api.KindToken, Source: src, Credential: p}, nil
 	}
 	return api.Principal{}, errors.New("wiring: unknown principal kind")
 }
