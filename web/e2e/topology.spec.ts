@@ -38,6 +38,10 @@ async function watchCsp(page: Page): Promise<() => Promise<string[]>> {
   ];
 }
 
+// The 200-device picture is budgeted by the benchmark below (8 s), not by the
+// functional tests: they wait as long as the benchmark does, not Playwright's 5 s.
+const LAYOUT_200 = { timeout: 30_000 };
+
 const ready = (page: Page, nodes?: number) =>
   page.locator(
     `.topology-canvas[data-state="ready"]${nodes === undefined ? "" : `[data-nodes="${nodes}"]`}`,
@@ -167,7 +171,7 @@ test("the filters narrow the picture and the address keeps them", async ({
   page,
 }) => {
   await signInWithToken(page, "/topology");
-  await expect(ready(page, 200)).toBeVisible();
+  await expect(ready(page, 200)).toBeVisible(LAYOUT_200);
   const summary = page.locator("p.summary");
   await page.getByLabel("Rack").selectOption({ label: "rl1" });
   await expect(ready(page, 3)).toBeVisible();
@@ -193,7 +197,7 @@ test("the filters narrow the picture and the address keeps them", async ({
   await expect(summary).toHaveText("1 link · 2 devices");
   // A value that matches nothing is ignored, not obeyed.
   await page.goto(`/topology?site=nowhere&classes=nonsense`);
-  await expect(ready(page, 200)).toBeVisible();
+  await expect(ready(page, 200)).toBeVisible(LAYOUT_200);
 });
 
 test("the table of links is the keyboard way in: every device and port opens its page", async ({
@@ -282,7 +286,7 @@ test("a 200-device topology is laid out and drawn in a few seconds", async ({
   const started = Date.now();
   await page.getByRole("link", { name: "Topology" }).click();
   const canvas = ready(page, 200);
-  await expect(canvas).toBeVisible({ timeout: 30_000 });
+  await expect(canvas).toBeVisible(LAYOUT_200);
   const total = Date.now() - started;
   const layout = Number(await canvas.getAttribute("data-layout-ms"));
   const edges = Number(await canvas.getAttribute("data-edges"));
