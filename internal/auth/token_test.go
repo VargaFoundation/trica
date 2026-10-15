@@ -271,3 +271,49 @@ func TestTokenScopesConstraint(t *testing.T) {
 		t.Fatal("the database accepted an unknown scope")
 	}
 }
+
+func TestTokenBoundSource(t *testing.T) {
+	ts, _ := newTokenStore(t)
+	ctx := context.Background()
+	raw, tok, err := ts.Create(ctx, user("operator"), CreateParams{Name: "arista", Scopes: []string{ScopeWrite}, Source: "arista:sw-a1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tok.Source != "arista:sw-a1" {
+		t.Errorf("created token source %q", tok.Source)
+	}
+	p, err := ts.Authenticate(ctx, raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Source != "arista:sw-a1" {
+		t.Errorf("principal source %q", p.Source)
+	}
+	unbound, _, err := ts.Create(ctx, user("operator"), CreateParams{Name: "plain", Scopes: []string{ScopeWrite}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p, err := ts.Authenticate(ctx, unbound); err != nil || p.Source != "" {
+		t.Errorf("unbound token: source %q, err %v", p.Source, err)
+	}
+	toks, err := ts.List(ctx)
+	if err != nil || len(toks) != 2 || toks[1].Source != "arista:sw-a1" || toks[0].Source != "" {
+		t.Fatalf("list = %+v, %v", toks, err)
+	}
+
+	for _, src := range []string{
+		"arista",        // one segment: a whole kind
+		"user:alice",    // people
+		"agent:host-01", // certificate-bound on the transport
+		"arista:sw a1",  // not a binding
+		"arista:sw-a1:", // empty segment
+	} {
+		if _, _, err := ts.Create(ctx, user("operator"), CreateParams{Name: "x", Scopes: []string{ScopeWrite}, Source: src}); !errors.Is(err, ErrInvalidToken) {
+			t.Errorf("source %q: err = %v, want ErrInvalidToken", src, err)
+		}
+	}
+	// The database refuses a malformed source even from a writer that skips the check.
+	if _, err := ts.Store.Pool.Exec(ctx, `UPDATE api_tokens SET source = 'arista' WHERE id = $1`, tok.ID); err == nil {
+		t.Error("the database accepted a one segment source")
+	}
+}

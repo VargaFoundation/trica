@@ -75,7 +75,7 @@ next tick, and does not stop the server.
 | `trica migrate up` | Apply pending migrations. |
 | `trica migrate down` | Roll back the latest migration only. |
 | `trica migrate status` | Print the schema version. |
-| `trica token create --name N --owner SUBJECT --roles R1,R2 --scopes read\|write\|admin [--types …] [--sites …] [--expires 720h]` | Create an API token; the token is the only thing on stdout, shown once, the metadata goes to stderr. Roles must exist in the configured policy ([security](security.md#minting-the-first-token)). |
+| `trica token create --name N --owner SUBJECT --roles R1,R2 --scopes read\|write\|admin [--types …] [--sites …] [--source kind:name] [--expires 720h]` | Create an API token; the token is the only thing on stdout, shown once, the metadata goes to stderr. Roles must exist in the configured policy ([security](security.md#minting-the-first-token)). |
 | `trica token list` | List the tokens (id, name, owner, roles, scopes, restrictions, dates). Never a secret or a hash; revoked tokens stay listed. |
 | `trica token revoke --id N` | Revoke a token at once; the row is kept. |
 | `trica enrol create --binding KIND:NAME [--ttl 24h]` | Create a one-time enrolment token for an agent or collector ([transport](transport.md)); prints it once on stdout, and where the CA certificate is on stderr. |

@@ -44,6 +44,8 @@ type Principal struct {
 	// Types and Sites restrict a token to object types and sites; empty means no restriction.
 	Types []string
 	Sites []string
+	// Source is the source a token is bound to (tokens only, optional, ADR 0028).
+	Source string
 	// Owner is the user that created the token (tokens only).
 	Owner string
 }

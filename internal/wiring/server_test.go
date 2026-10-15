@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -42,6 +43,7 @@ type rig struct {
 	token     string // a write token
 	readToken string // a read-only token
 	siteToken string // a write token limited to a site
+	srcToken  string // a write token bound to the source arista:sw-a1
 	stop      func() error
 }
 
@@ -73,8 +75,12 @@ func newRig(t *testing.T, extraYAML string) *rig {
 	}
 	owner := &auth.Principal{Kind: auth.KindUser, Subject: "user:test", Roles: []string{"admin"}}
 	ts := &auth.TokenStore{Store: st, Policy: auth.DefaultPolicy()}
-	mk := func(name string, scopes, sites []string) string {
-		raw, _, err := ts.Create(ctx, owner, auth.CreateParams{Name: name, Scopes: scopes, Sites: sites})
+	mk := func(name string, scopes, sites []string, source ...string) string {
+		p := auth.CreateParams{Name: name, Scopes: scopes, Sites: sites}
+		if len(source) > 0 {
+			p.Source = source[0]
+		}
+		raw, _, err := ts.Create(ctx, owner, p)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -83,6 +89,7 @@ func newRig(t *testing.T, extraYAML string) *rig {
 	r.token = mk("rw", []string{"write"}, nil)
 	r.readToken = mk("ro", []string{"read"}, nil)
 	r.siteToken = mk("site", []string{"write"}, []string{"paris-1"})
+	r.srcToken = mk("arista", []string{"write"}, nil, "arista:sw-a1")
 	st.Close()
 	r.start(extraYAML)
 	return r
@@ -241,6 +248,27 @@ transport:
 		_, body := r.do("GET", "/api/v1/objects?type=device", r.readToken, "")
 		if !strings.Contains(body, "sw-a1") || !strings.Contains(body, "srv-01") {
 			t.Fatalf("objects: %s", body)
+		}
+	})
+
+	t.Run("a token bound to a source speaks as that source, an unbound one as api:token-<id>", func(t *testing.T) {
+		if code, body := r.do("POST", "/api/v1/batches", r.srcToken, topology()); code != http.StatusOK {
+			t.Fatalf("submit: %d %s", code, body)
+		}
+		st, err := store.Open(ctx, r.url)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer st.Close()
+		var sources []string
+		if err := st.Pool.QueryRow(ctx, `SELECT array_agg(DISTINCT source ORDER BY source) FROM claims`).Scan(&sources); err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Contains(sources, "arista:sw-a1") {
+			t.Fatalf("no claim from the bound source: %v", sources)
+		}
+		if !slices.ContainsFunc(sources, func(s string) bool { return strings.HasPrefix(s, "api:token-") }) {
+			t.Fatalf("the unbound token no longer speaks as api:token-<id>: %v", sources)
 		}
 	})
 

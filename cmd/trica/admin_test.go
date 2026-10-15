@@ -154,6 +154,28 @@ func TestTokenCreateAuthenticatesThroughTheWiring(t *testing.T) {
 	}
 }
 
+func TestTokenCreateBoundSource(t *testing.T) {
+	e := newAdminEnv(t)
+	out, errOut, err := e.run("token", "create", "--name", "arista", "--owner", "vincent", "--roles", "admin", "--scopes", "write", "--source", "arista:sw-a1")
+	if err != nil {
+		t.Fatalf("create: %v\n%s", err, errOut)
+	}
+	if !strings.Contains(errOut, "source arista:sw-a1") {
+		t.Errorf("stderr does not name the source: %q", errOut)
+	}
+	p, err := e.authorizer().Principal(e.request(strings.TrimSpace(out)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.BatchSource() != "arista:sw-a1" {
+		t.Fatalf("batch source %q, want arista:sw-a1", p.BatchSource())
+	}
+	list, _, err := e.run("token", "list")
+	if err != nil || !strings.Contains(list, "SOURCE") || !strings.Contains(list, "arista:sw-a1") {
+		t.Fatalf("list: %v\n%s", err, list)
+	}
+}
+
 func TestTokenCreateRefusals(t *testing.T) {
 	e := newAdminEnv(t)
 	base := []string{"token", "create", "--name", "x", "--owner", "vincent"}
@@ -169,6 +191,8 @@ func TestTokenCreateRefusals(t *testing.T) {
 		{"no scope", append(base, "--roles", "admin"), "required"},
 		{"no owner", []string{"token", "create", "--name", "x", "--roles", "admin", "--scopes", "read"}, "required"},
 		{"a negative expiry", append(base, "--roles", "admin", "--scopes", "read", "--expires=-1h"), "positive"},
+		{"a reserved source kind", append(base, "--roles", "admin", "--scopes", "write", "--source", "agent:host-01"), "reserved"},
+		{"a one segment source", append(base, "--roles", "admin", "--scopes", "write", "--source", "arista"), "invalid binding"},
 	} {
 		out, _, err := e.run(c.args...)
 		if err == nil || !strings.Contains(err.Error(), c.want) {

@@ -46,6 +46,7 @@ find a leaked one.
 | revocation | takes effect on the next request |
 | `last_used` | refreshed at most once a minute |
 | owner roles | the creator's roles when the token was created |
+| source | optional: the source its batches are attributed to (`kind:name`, not `user:` or `agent:`); default `api:token-<id>` ([ADR 0028](../adr/0028-token-bound-source.md)) |
 
 A scope is a ceiling, never an extension. A token is allowed an action only if its scopes allow
 it **and** its owner roles grant it. Creating a token whose scope needs an action the creator's
