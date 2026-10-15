@@ -154,8 +154,9 @@ interface, not on `internal/graph`, so that it is tested with a fake and does no
 graph. Without a `Graph` in the `Config`, the two tools are not offered. The server wires
 `wiring.GraphAdapter` (`internal/wiring/graph.go`) over a `*graph.Cache` that is marked stale on
 every commit of the engine (`Engine.OnCommit`: a batch, an approval, the absence sweep, the
-deducer) and every `mcp.graph_refresh`, so that a commit made by another replica shows up
-within that delay; the reload itself happens on the next graph tool call. The adapter, in
+deducer), on every notification on the PostgreSQL channel `trica_changes`, where every replica
+announces its commits (ADR 0032), and every `mcp.graph_refresh` in case a notification was
+missed; the reload itself happens on the next graph tool call. The adapter, in
 short (the result types mirror those of `internal/graph` field for field, so a JSON round trip
 converts them):
 

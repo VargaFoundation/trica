@@ -192,14 +192,22 @@ func (w *Wiring) mountMCP(mux *http.ServeMux, d server.Deps) error {
 	return nil
 }
 
-// runGraphRefresh marks the graph stale every mcp.graph_refresh: a commit made
-// by another replica does not reach this one's OnCommit. The reload itself is
-// lazy (next graph tool call), so an idle server pays nothing.
+// runGraphRefresh marks the graph stale when another replica commits: a commit
+// made elsewhere does not reach this one's OnCommit, but its notification on
+// reconcile.ChangesChannel does. Every mcp.graph_refresh it also marks it
+// stale, in case a notification was missed. The reload itself is lazy (next
+// graph tool call), so an idle server pays nothing.
 func (w *Wiring) runGraphRefresh(ctx context.Context, d server.Deps) error {
 	c, err := w.shared(d)
 	if err != nil {
 		return err
 	}
+	listened := make(chan struct{})
+	go func() {
+		defer close(listened)
+		_ = d.Store.Listen(ctx, reconcile.ChangesChannel, c.cache.Invalidate, d.Log)
+	}()
+	defer func() { <-listened }()
 	t := time.NewTicker(w.cfg.MCP.GraphRefresh)
 	defer t.Stop()
 	for {

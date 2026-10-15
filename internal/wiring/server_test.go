@@ -105,14 +105,21 @@ func (r *rig) start(extraYAML string) {
 		_ = r.stop()
 	}
 	ctx := context.Background()
+	// A top-level key of extraYAML replaces the default one (YAML refuses a
+	// key given twice).
+	var defaults []string
+	for _, d := range []string{"sweep_interval: 1h", "deduce: {interval: 50ms}", "mcp: {disable_localhost_protection: true}"} {
+		key, _, _ := strings.Cut(d, ":")
+		if !strings.HasPrefix(extraYAML, key+":") && !strings.Contains(extraYAML, "\n"+key+":") {
+			defaults = append(defaults, d)
+		}
+	}
 	cfgYAML := fmt.Sprintf(`
 database: {url_file: %s}
 http: {addr: "127.0.0.1:0"}
-sweep_interval: 1h
-deduce: {interval: 50ms}
-mcp: {disable_localhost_protection: true}
 %s
-`, writeFile(t, "url", r.url), strings.ReplaceAll(extraYAML, "{CA}", r.caDir))
+%s
+`, writeFile(t, "url", r.url), strings.Join(defaults, "\n"), strings.ReplaceAll(extraYAML, "{CA}", r.caDir))
 	cfg, err := server.LoadConfig(writeFile(t, "trica.yaml", cfgYAML))
 	if err != nil {
 		t.Fatal(err)
