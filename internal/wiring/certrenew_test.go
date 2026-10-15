@@ -23,7 +23,7 @@ transport:
   hosts: [localhost, 127.0.0.1]
   server_cert_ttl: 6s
 `)
-	addr := r.w.TransportAddr()
+	addr := r.transportAddr()
 	pem, err := os.ReadFile(filepath.Join(r.caDir, "ca.pem"))
 	if err != nil {
 		t.Fatal(err)
