@@ -1,6 +1,6 @@
 # ADR-0024: L2 topology view, a bulk relations endpoint, client-side PNG/PDF export
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10); the topology PDF is vector since ADR 0037
 - **Concerns**: `web/`, `internal/api` (one endpoint), `cmd/trica-e2e-server`. Builds on ADR 0018 and 0019.
 
 ## Context

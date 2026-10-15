@@ -334,6 +334,28 @@ describe("ExportButtons", () => {
     expect(await screen.findByText("PDF file saved.")).toBeDefined();
   });
 
+  it("draws the PDF from the figure's shapes when it has them: text, not a picture", async () => {
+    const renderFn = vi.fn(() => Promise.resolve(raster()));
+    const vector = vi.fn(() =>
+      Promise.resolve({ width: 200, height: 100, shapes: [{ kind: "text" as const, at: { x: 100, y: 50 }, text: "sw-a1", size: 12, color: "#1f2328" }] }),
+    );
+    render(
+      <Providers locale="en">
+        <ExportButtons basename="trica-topology" title="Topology" render={renderFn} vector={vector} />
+      </Providers>,
+    );
+    await userEvent.setup().click(screen.getByRole("button", { name: "Export PDF" }));
+    await waitFor(() => expect(saved).toHaveLength(1));
+    expect(renderFn).not.toHaveBeenCalled();
+    expect(vector).toHaveBeenCalledOnce();
+    expect(saved[0]?.name).toBe("trica-topology.pdf");
+    const text = latin1(await blobBytes(blobs[0] as Blob));
+    expect(text).toContain("/MediaBox [0 0 150 75]");
+    expect(text).toContain("(sw-a1) Tj");
+    expect(text).not.toContain("/DCTDecode");
+    expect(await screen.findByText("PDF file saved.")).toBeDefined();
+  });
+
   it("says what failed, and can be tried again", async () => {
     const renderFn = vi.fn().mockRejectedValueOnce(new Error("canvas is full")).mockResolvedValue(raster());
     show(renderFn);
