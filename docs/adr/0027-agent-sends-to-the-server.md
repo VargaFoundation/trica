@@ -28,7 +28,8 @@ nothing (issue #59).
 - **Probation.** A collection counts as healthy when `Emit` returned nil: the batch was accepted
   or spooled. A server outage must not roll back a good version. A refused batch (4xx) is not
   healthy. Accepted cost: a version whose transport only spools is confirmed; the spool size is
-  the signal to watch.
+  the signal to watch. *Amended by ADR 0029*: when the server was reachable before the update
+  (empty spool at start), a spooled batch is no longer enough, an accepted delivery is required.
 - **DaemonSet.** The identity must outlive the pod, so the state directory is a `hostPath`
   (`/var/lib/trica-agent`, the one writable host path; `packaging_test.go` pins it). Enrolment
   tokens are one per node, as a file on the node, placed at provisioning: a token grants one

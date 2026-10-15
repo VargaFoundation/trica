@@ -336,7 +336,8 @@ agent : in wave? newer? not known-bad? nothing on probation?
         artifact (size-capped)       -> SHA-256 is the one SHA256SUMS lists?
         stage versions/<v>/trica-agent, then state.json {current, previous, pending}
 restart : Boot() -> exec the staged binary (starts counted, deadline set)
-health  : first batch emitted -> Confirm(): probation over, previous version kept
+health  : first batch emitted (and delivered, if the server was reachable before)
+          -> Confirm(): probation over, previous version kept
 failure : crash (3 starts) or no batch within --health-timeout -> Boot() restores
           the previous version and records the failed one as bad
 ```
@@ -368,13 +369,21 @@ failure : crash (3 starts) or no batch within --health-timeout -> Boot() restore
   restarts it, which is when the rollback happens. Three starts without a healthy
   batch roll back too.
 
-**Health with a server.** A collection is healthy when the batch was **accepted by the
-server or spooled** (`Emit` returned nil). A server outage must not roll back a good
-version, since the new version did its job: it collected and handed over. A batch the
-server refuses (4xx), or a failing `--output`, is not healthy, and the version is not
-confirmed. What this does not catch: a new version whose transport is broken in a way
-that only spools (a bad certificate, a changed protocol) is confirmed, and the spool
-grows silently. Alert on the spool, not on the probation.
+**Health with a server** (ADR 0027, amended by ADR 0029). A batch the server refuses (4xx),
+or a failing `--output`, is never healthy. Otherwise it depends on the spool the new version
+finds at start:
+
+| Spool at start | Meaning | Healthy when |
+|---|---|---|
+| empty | the previous version delivered everything: the server was reachable | a batch is emitted **and** the server accepted at least one batch since the start, directly or from the spool flush |
+| not empty | the server was already down before the update | a batch is emitted (accepted or spooled) |
+
+The decision is taken at the first emitted batch if it is already healthy, and otherwise again
+at `--health-timeout`, so that a flush of the spool in between counts. A version that spools
+while the previous one delivered is stopped at the timeout and rolled back. The cost: a server
+outage that starts during the probation window and outlasts `--health-timeout` rolls back a
+good version and marks it bad on this host. The spool is not exported as a metric (the agent
+has no metrics endpoint): watch `--state-dir/spool`.
 
 Not verified: the staged binary has been executed in tests through a simulated
 service manager, not through systemd; whether a real cosign produces a signature

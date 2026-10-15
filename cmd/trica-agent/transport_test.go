@@ -399,34 +399,117 @@ func TestTokenForAnotherBindingIsRefused(t *testing.T) {
 	}
 }
 
-// Probation: the new version is healthy when its batch was accepted or
-// spooled (it collected and handed over), not when the server refused it.
+// Probation: the new version is healthy when its batch was accepted, or only
+// spooled when the server was already down before the update (a spool was
+// waiting); never when the server refused it (#65).
 func TestProbationCountsAcceptedAndSpooledBatchesAsHealthy(t *testing.T) {
 	for _, tc := range []struct {
-		name      string
-		serverUp  bool
-		binding   string
-		confirmed bool
+		name        string
+		downBefore  bool // the server was down before the update: the old version left a spool
+		serverUp    bool
+		binding     string
+		confirmed   bool
+		wantSpooled int
 	}{
-		{"accepted", true, "agent:host-01", true},
-		{"spooled", false, "agent:host-01", true},
-		{"refused", true, "agent:host-02", false},
+		{"accepted", false, true, "agent:host-01", true, 0},
+		{"spooled while the server was reachable before", false, false, "agent:host-01", false, 1},
+		{"spooled while the server was already down", true, false, "agent:host-01", true, 2},
+		{"refused", false, true, "agent:host-02", false, 0},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := newSrvEnv(t)
 			stop := e.start()
-			if !tc.serverUp {
+			dir, s := stage(t, "2.0.0")
+			tok := e.token(tc.binding)
+			if tc.downBefore {
+				stop()
+				setVersion(t, "1.0.0") // the old version runs and leaves its batch in the spool
+				e.agent(dir, "--enrol-token-file", tok)
+			} else if !tc.serverUp {
 				stop()
 			}
-			dir, s := stage(t, "2.0.0")
 			setVersion(t, "2.0.0")
 			t.Setenv(update.BootedEnv, "1")
-			e.agent(dir, "--enrol-token-file", e.token(tc.binding))
+			e.agent(dir, "--enrol-token-file", tok)
 			st, _ := s.Load()
 			if confirmed := st.Pending == nil; confirmed != tc.confirmed {
 				t.Fatalf("confirmed=%v, want %v (state %+v)", confirmed, tc.confirmed, st)
 			}
+			if n := spooled(dir); n != tc.wantSpooled {
+				t.Fatalf("%d batches in the spool, want %d", n, tc.wantSpooled)
+			}
 		})
+	}
+}
+
+// A new version that keeps the server unreachable, when the old one reached it,
+// is stopped at the health timeout, so that the next start rolls back.
+func TestProbationStopsAVersionThatNoLongerDelivers(t *testing.T) {
+	e := newSrvEnv(t)
+	stop := e.start()
+	stop()
+	dir, s := stage(t, "2.0.0")
+	setVersion(t, "2.0.0")
+	t.Setenv(update.BootedEnv, "1")
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	var out, errb strings.Builder
+	code := run(ctx, []string{"--root", fixture, "--interval", "1h", "--health-timeout", "300ms",
+		"--server", e.url(), "--ca-file", e.caFile, "--state-dir", dir, "--enrol-token-file", e.token("agent:host-01")}, &out, &errb)
+	if ctx.Err() != nil {
+		t.Fatal("still running long after the health timeout: the spooled batch passed probation")
+	}
+	if code != 1 || !strings.Contains(errb.String(), "health timeout") {
+		t.Fatalf("exit %d: %s", code, errb.String())
+	}
+	if st, _ := s.Load(); st.Pending == nil {
+		t.Fatal("confirmed a version whose batches were only spooled")
+	}
+}
+
+// The delivery can come after the emit: a running agent whose spool is
+// flushed before the health timeout is confirmed, and keeps running.
+func TestProbationIsConfirmedByADeliveryFromTheSpool(t *testing.T) {
+	old := flushEvery
+	flushEvery = 100 * time.Millisecond
+	t.Cleanup(func() { flushEvery = old })
+
+	e := newSrvEnv(t)
+	stop := e.start()
+	stop()
+	dir, s := stage(t, "2.0.0")
+	setVersion(t, "2.0.0")
+	t.Setenv(update.BootedEnv, "1")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan int, 1)
+	var errb strings.Builder
+	go func() {
+		var out strings.Builder
+		done <- run(ctx, []string{"--root", fixture, "--interval", "1h", "--health-timeout", "3s",
+			"--server", e.url(), "--ca-file", e.caFile, "--state-dir", dir, "--enrol-token-file", e.token("agent:host-01")}, &out, &errb)
+	}()
+	waitFor(t, "the batch to be spooled", func() bool { return spooled(dir) == 1 })
+	if st, _ := s.Load(); st.Pending == nil {
+		t.Fatal("confirmed by a spooled batch")
+	}
+	e.start()
+	waitFor(t, "the spool to be delivered", func() bool { return len(e.rec.sources()) == 1 })
+	waitFor(t, "the version to be confirmed", func() bool { st, _ := s.Load(); return st.Pending == nil })
+	select {
+	case code := <-done:
+		t.Fatalf("a confirmed version stopped: exit %d", code)
+	case <-time.After(200 * time.Millisecond):
+	}
+	cancel()
+	select {
+	case code := <-done:
+		if code != 0 {
+			t.Fatalf("exit %d", code)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("the agent did not stop when cancelled")
 	}
 }
 
