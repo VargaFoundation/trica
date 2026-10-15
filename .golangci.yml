@@ -1,7 +1,9 @@
 # golangci-lint v2. The version is pinned in the Makefile and in ci.yml.
 version: "2"
 run:
-  timeout: 5m
+  # Bounds a stuck run, not a performance target: loading the packages alone
+  # took more than 5 minutes on a hosted runner (#87).
+  timeout: 10m
 linters:
   default: standard
   enable:
