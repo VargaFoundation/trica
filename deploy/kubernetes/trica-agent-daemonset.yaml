@@ -10,13 +10,19 @@
 #   identity and spool  /var/lib/trica-agent on the node (hostPath, the one writable
 #                       host path): the client certificate must outlive the pod, or
 #                       every restart would need a new one-time token.
-#   enrolment token     ONE PER NODE, because a token grants one binding and the
-#                       binding of a node is agent:<its hostname> (pki.ValidBinding
-#                       refuses a wildcard). Put it in the file
-#                       /var/lib/trica-agent/enrol-token of the node (mode 0600) before
-#                       the pod starts, when you provision the node; it is read only
-#                       while the node has no certificate and is useless once used.
-#                       A Secret cannot do this: a Secret is the same for every node.
+#   enrolment token     ONE CLASS TOKEN FOR THE WHOLE FLEET (ADR 0035), in the Secret
+#                       trica-agent-enrol (key `token`), mounted at /etc/trica-agent-enrol:
+#                         trica enrol create --prefix agent --ttl 24h > token
+#                         kubectl -n trica-system create secret generic trica-agent-enrol \
+#                           --from-file=token=token && rm token
+#                       Each pod asks for agent:<its node's hostname>; the server refuses
+#                       a name that already holds a valid certificate (409), so the token
+#                       is not consumed and every node enrols with the same one. Give it
+#                       the TTL of the rollout, then revoke it (`trica enrol revoke
+#                       --id`, the id is printed when it is created) and delete the
+#                       Secret: the volume is optional, and a node that already has its
+#                       certificate never reads the token again. A node whose state
+#                       directory is lost gets 409 until its old certificate is revoked.
 #
 # What the agent reads, and so what the pod needs from the host:
 #   hostPID: true      /proc/<pid>/fd and comm of the node's processes name the owner
@@ -95,7 +101,7 @@ spec:
             - --interval=5m
             - --state-dir=/var/lib/trica-agent
             - --ca-file=/etc/trica-agent/ca.pem
-            - --enrol-token-file=/var/lib/trica-agent/enrol-token
+            - --enrol-token-file=/etc/trica-agent-enrol/token
           env:
             - name: TRICA_AGENT_SERVER
               valueFrom:
@@ -122,6 +128,7 @@ spec:
           volumeMounts:
             - { name: state, mountPath: /var/lib/trica-agent }
             - { name: config, mountPath: /etc/trica-agent, readOnly: true }
+            - { name: enrol, mountPath: /etc/trica-agent-enrol, readOnly: true }
             - { name: os-release, mountPath: /etc/os-release, readOnly: true }
             - { name: machine-id, mountPath: /etc/machine-id, readOnly: true }
             - { name: dpkg, mountPath: /var/lib/dpkg, readOnly: true }
@@ -130,6 +137,10 @@ spec:
           hostPath: { path: /var/lib/trica-agent, type: DirectoryOrCreate }
         - name: config
           configMap: { name: trica-agent, items: [{ key: ca.pem, path: ca.pem }] }
+        - name: enrol
+          # optional: the pods keep starting once the Secret is deleted after the
+          # rollout; an enrolled node never reads it again.
+          secret: { secretName: trica-agent-enrol, optional: true, defaultMode: 0400 }
         - name: os-release
           hostPath: { path: /etc/os-release, type: File }
         - name: machine-id

@@ -223,7 +223,7 @@ func (s *Server) handleEnrol(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	reg := s.cfg.Registry
-	cert, err := reg.enrol(r.Context(), req.Token, func(binding string) (*x509.Certificate, error) {
+	cert, err := reg.enrol(r.Context(), req.Token, req.Binding, func(binding string) (*x509.Certificate, error) {
 		return s.cfg.CA.IssueClient(csr, binding, s.cfg.CertTTL, reg.now())
 	})
 	switch {
@@ -231,13 +231,23 @@ func (s *Server) handleEnrol(w http.ResponseWriter, r *http.Request) {
 		s.log.Warn("enrolment refused", "target", r.RemoteAddr)
 		writeError(w, http.StatusUnauthorized, "invalid enrolment token")
 		return
+	case errors.Is(err, ErrBindingRefused):
+		// The caller holds a valid token: telling it the binding is wrong
+		// says nothing it could not try.
+		s.log.Warn("enrolment refused: binding not granted", "target", r.RemoteAddr, "claimed_source", req.Binding, "token", TokenID(req.Token))
+		writeError(w, http.StatusForbidden, fmt.Sprintf("binding %q is not granted by this token", req.Binding))
+		return
+	case errors.Is(err, ErrBindingInUse):
+		s.log.Warn("enrolment refused: binding already enrolled", "target", r.RemoteAddr, "claimed_source", req.Binding, "token", TokenID(req.Token))
+		writeError(w, http.StatusConflict, fmt.Sprintf("binding %q is already enrolled; revoke its certificates to enrol it again", req.Binding))
+		return
 	case err != nil:
 		s.log.Error("enrolment failed", "target", r.RemoteAddr, "error", err)
 		writeError(w, http.StatusInternalServerError, "enrolment failed")
 		return
 	}
 	binding, _ := pki.BindingFromCert(cert)
-	s.log.Info("client enrolled", "source", binding, "serial", pki.SerialString(cert))
+	s.log.Info("client enrolled", "source", binding, "serial", pki.SerialString(cert), "token", TokenID(req.Token))
 	writeJSON(w, http.StatusOK, wire.CertResponse{Certificate: string(pki.CertPEM(cert)), CA: string(s.cfg.CA.CertPEM())})
 }
 

@@ -260,10 +260,65 @@ func TestDaemonSetIsAsNarrowAsTheProbesAllow(t *testing.T) {
 			t.Error("--output would write the inventory to the node's disk for nothing: the batches go to the server")
 		}
 	}
-	for _, want := range []string{"--ca-file=/etc/trica-agent/ca.pem", "--enrol-token-file=" + stateDir + "/enrol-token", "--state-dir=" + stateDir} {
+	for _, want := range []string{"--ca-file=/etc/trica-agent/ca.pem", "--enrol-token-file=/etc/trica-agent-enrol/token", "--state-dir=" + stateDir} {
 		if !slices.Contains(c.Args, want) {
 			t.Errorf("the DaemonSet does not pass %s", want)
 		}
+	}
+}
+
+// The fleet enrols with one class token from a Secret (ADR 0035). The volume is
+// optional, so that deleting the Secret after the rollout does not stop the pods
+// from starting, and the token file the agent reads is in it.
+func TestDaemonSetEnrolsFromAnOptionalSecret(t *testing.T) {
+	dec := yaml.NewDecoder(bytes.NewReader([]byte(read(t, "../deploy/kubernetes/trica-agent-daemonset.yaml"))))
+	for {
+		var doc struct {
+			Kind string `yaml:"kind"`
+			Spec struct {
+				Template struct {
+					Spec struct {
+						Volumes []struct {
+							Name   string `yaml:"name"`
+							Secret *struct {
+								SecretName string `yaml:"secretName"`
+								Optional   *bool  `yaml:"optional"`
+							} `yaml:"secret"`
+						} `yaml:"volumes"`
+					} `yaml:"spec"`
+				} `yaml:"template"`
+			} `yaml:"spec"`
+		}
+		if err := dec.Decode(&doc); errors.Is(err, io.EOF) {
+			t.Fatal("no DaemonSet in the manifest")
+		} else if err != nil {
+			t.Fatal(err)
+		}
+		if doc.Kind != "DaemonSet" {
+			continue
+		}
+		var secrets []string
+		for _, v := range doc.Spec.Template.Spec.Volumes {
+			if v.Secret == nil {
+				continue
+			}
+			secrets = append(secrets, v.Secret.SecretName)
+			if v.Secret.Optional == nil || !*v.Secret.Optional {
+				t.Errorf("secret volume %s is not optional: the pods would not start once the token is deleted", v.Name)
+			}
+		}
+		if !slices.Equal(secrets, []string{"trica-agent-enrol"}) {
+			t.Errorf("secret volumes %v, want the enrolment token's only", secrets)
+		}
+		_, _, c, _ := daemonSet(t)
+		mounted := false
+		for _, m := range c.VolumeMounts {
+			mounted = mounted || (m.MountPath == "/etc/trica-agent-enrol" && m.ReadOnly)
+		}
+		if !mounted {
+			t.Error("the enrolment Secret is not mounted read-only at /etc/trica-agent-enrol")
+		}
+		return
 	}
 }
 

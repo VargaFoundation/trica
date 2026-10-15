@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -291,7 +292,8 @@ func TestTokenListAndRevoke(t *testing.T) {
 
 func TestAdminCommandUsage(t *testing.T) {
 	e := newAdminEnv(t)
-	for _, args := range [][]string{{"token"}, {"token", "frobnicate"}, {"token", "list", "extra"}, {"enrol"}, {"enrol", "list"}, {"token", "create", "--no-such-flag"}} {
+	for _, args := range [][]string{{"token"}, {"token", "frobnicate"}, {"token", "list", "extra"}, {"enrol"}, {"enrol", "list"}, {"token", "create", "--no-such-flag"},
+		{"enrol", "revoke"}, {"enrol", "revoke", "--id", "zz"}, {"enrol", "revoke", "--id", "0123456789abcdef"}, {"enrol", "revoke", "--id", "ab", "extra"}} {
 		if _, _, err := e.run(args...); err == nil {
 			t.Errorf("%v accepted", args)
 		}
@@ -315,7 +317,34 @@ func TestEnrolCreateIsRedeemedOnce(t *testing.T) {
 		t.Fatalf("stderr does not say where the CA certificate is (%s): %q", want, errOut)
 	}
 
-	// The real transport server on the same database, as the wiring builds it.
+	addr, delivered := e.transport(ctx)
+	newClient := func(dir string) *uplink.Client { return e.client(addr, dir, token, "") }
+	b := sdk.NewBatch("agent:host-01", sdk.ScopePartial)
+	b.Object("h", "device").Identify("name", "host-01")
+
+	if err := newClient(t.TempDir()).Emit(ctx, b); err != nil {
+		t.Fatalf("a token minted by the command is refused: %v", err)
+	}
+	if got := delivered(); len(got) != 1 || got[0] != "agent:host-01<-agent:host-01" {
+		t.Fatalf("batch not delivered under the binding: %v", got)
+	}
+	// A second machine with the same token: refused, nothing delivered.
+	err = newClient(t.TempDir()).Emit(ctx, b)
+	var se *uplink.StatusError
+	if !errors.As(err, &se) || se.Code != http.StatusUnauthorized {
+		t.Fatalf("a used token: %v, want a 401", err)
+	}
+	if got := delivered(); len(got) != 1 {
+		t.Fatalf("a used token delivered a batch: %v", got)
+	}
+}
+
+// transport starts the real transport server on the environment's database
+// and CA, as the wiring builds it, until ctx ends. delivered lists the batches
+// it accepted as "binding<-source".
+func (e *adminEnv) transport(ctx context.Context) (addr string, delivered func() []string) {
+	t := e.t
+	t.Helper()
 	ca, err := pki.LoadOrCreateCA(e.caDir, "trica transport CA", time.Now())
 	if err != nil {
 		t.Fatal(err)
@@ -324,10 +353,13 @@ func TestEnrolCreateIsRedeemedOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var mu sync.Mutex
 	var got []string
 	srv, err := transport.NewServer(transport.ServerConfig{
 		CA: ca, Registry: transport.NewRegistry(e.st.Pool), ServerCert: cert,
 		Sink: transport.SinkFunc(func(_ context.Context, b *sdk.Batch, id transport.Identity) error {
+			mu.Lock()
+			defer mu.Unlock()
 			got = append(got, id.Binding+"<-"+b.Source)
 			return nil
 		}),
@@ -339,38 +371,123 @@ func TestEnrolCreateIsRedeemedOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan error, 1)
 	go func() { done <- srv.Serve(ctx, ln) }()
-	defer func() { cancel(); <-done }()
+	t.Cleanup(func() { cancel(); <-done })
+	return ln.Addr().String(), func() []string {
+		mu.Lock()
+		defer mu.Unlock()
+		return append([]string(nil), got...)
+	}
+}
 
-	newClient := func(dir string) *uplink.Client {
-		c, err := uplink.NewClient(uplink.ClientConfig{
-			ServerURL: "https://" + ln.Addr().String(), CAFile: filepath.Join(e.caDir, pki.CACertFile),
-			Dir: dir, EnrolToken: token,
-		})
-		if err != nil {
-			t.Fatal(err)
+// client is a transport client with its own identity directory, enrolling
+// with token and asking for binding.
+func (e *adminEnv) client(addr, dir, token, binding string) *uplink.Client {
+	e.t.Helper()
+	c, err := uplink.NewClient(uplink.ClientConfig{
+		ServerURL: "https://" + addr, CAFile: filepath.Join(e.caDir, pki.CACertFile),
+		Dir: dir, EnrolToken: token, Binding: binding,
+	})
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	e.t.Cleanup(c.Close)
+	return c
+}
+
+// A class token enrols a fleet: each node under its own name, once per name,
+// never outside the prefix, and not after it is revoked (#63).
+func TestEnrolClassTokenEnrolsAFleetOncePerName(t *testing.T) {
+	e := newAdminEnv(t)
+	ctx := context.Background()
+	out, errOut, err := e.run("enrol", "create", "--prefix", "agent", "--ttl", "24h")
+	if err != nil {
+		t.Fatalf("enrol create --prefix: %v\n%s", err, errOut)
+	}
+	token := strings.TrimSuffix(out, "\n")
+	id := transport.TokenID(token)
+	if strings.Contains(errOut, token) || !strings.Contains(errOut, id) {
+		t.Fatalf("stderr must name the token by its id, never print it: %q", errOut)
+	}
+	addr, delivered := e.transport(ctx)
+	send := func(binding, source string) error {
+		b := sdk.NewBatch(source, sdk.ScopePartial)
+		b.Object("h", "device").Identify("name", source)
+		return e.client(addr, t.TempDir(), token, binding).Emit(ctx, b)
+	}
+	status := func(err error) int {
+		var se *uplink.StatusError
+		if errors.As(err, &se) {
+			return se.Code
 		}
-		t.Cleanup(c.Close)
-		return c
+		return 0
 	}
-	b := sdk.NewBatch("agent:host-01", sdk.ScopePartial)
-	b.Object("h", "device").Identify("name", "host-01")
+	for _, n := range []string{"node-1", "node-2"} {
+		if err := send("agent:"+n, "agent:"+n); err != nil {
+			t.Fatalf("%s: %v", n, err)
+		}
+	}
+	for _, c := range []struct {
+		name, binding string
+		want          int
+	}{
+		{"a name already enrolled (a squatter, or a node that lost its state)", "agent:node-1", http.StatusConflict},
+		{"no name", "", http.StatusForbidden},
+		{"the prefix itself", "agent", http.StatusForbidden},
+		{"a source of an enrolled node", "agent:node-1:docker", http.StatusForbidden},
+		{"another kind", "collector:node-3", http.StatusForbidden},
+	} {
+		if err := send(c.binding, "agent:node-1"); status(err) != c.want {
+			t.Errorf("%s: %v, want %d", c.name, err, c.want)
+		}
+	}
+	if got := delivered(); len(got) != 2 || got[0] != "agent:node-1<-agent:node-1" || got[1] != "agent:node-2<-agent:node-2" {
+		t.Fatalf("delivered %v", got)
+	}
 
-	if err := newClient(t.TempDir()).Emit(ctx, b); err != nil {
-		t.Fatalf("a token minted by the command is refused: %v", err)
+	// Revoking node-1's certificates frees its name for a reinstalled node.
+	if n, err := transport.NewRegistry(e.st.Pool).RevokeBinding(ctx, "agent:node-1", "reinstalled"); err != nil || n != 1 {
+		t.Fatalf("revoke binding: %d, %v", n, err)
 	}
-	if len(got) != 1 || got[0] != "agent:host-01<-agent:host-01" {
-		t.Fatalf("batch not delivered under the binding: %v", got)
+	if err := send("agent:node-1", "agent:node-1"); err != nil {
+		t.Fatalf("a revoked name cannot be enrolled again: %v", err)
 	}
-	// A second machine with the same token: refused, nothing delivered.
-	err = newClient(t.TempDir()).Emit(ctx, b)
+
+	if _, errOut, err := e.run("enrol", "revoke", "--id", id); err != nil {
+		t.Fatalf("enrol revoke: %v\n%s", err, errOut)
+	}
+	if err := send("agent:node-3", "agent:node-3"); status(err) != http.StatusUnauthorized {
+		t.Fatalf("a revoked class token: %v, want a 401", err)
+	}
+	if _, _, err := e.run("enrol", "revoke", "--id", id); err == nil {
+		t.Error("revoking a revoked token is not reported")
+	}
+}
+
+// A one-time token refuses a client that asks for another binding, and is not
+// consumed by the refusal.
+func TestEnrolOneTimeTokenRefusesAnotherBinding(t *testing.T) {
+	e := newAdminEnv(t)
+	ctx := context.Background()
+	out, _, err := e.run("enrol", "create", "--binding", "agent:host-01")
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := strings.TrimSuffix(out, "\n")
+	addr, _ := e.transport(ctx)
+	b := sdk.NewBatch("agent:host-02", sdk.ScopePartial)
+	b.Object("h", "device").Identify("name", "host-02")
+	err = e.client(addr, t.TempDir(), token, "agent:host-02").Emit(ctx, b)
 	var se *uplink.StatusError
-	if !errors.As(err, &se) || se.Code != http.StatusUnauthorized {
-		t.Fatalf("a used token: %v, want a 401", err)
+	if !errors.As(err, &se) || se.Code != http.StatusForbidden {
+		t.Fatalf("another binding: %v, want a 403", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("a used token delivered a batch: %v", got)
+	b = sdk.NewBatch("agent:host-01", sdk.ScopePartial)
+	b.Object("h", "device").Identify("name", "host-01")
+	if err := e.client(addr, t.TempDir(), token, "agent:host-01").Emit(ctx, b); err != nil {
+		t.Fatalf("the refusal consumed the token: %v", err)
 	}
 }
 
@@ -385,6 +502,10 @@ func TestEnrolCreateRefusals(t *testing.T) {
 		{"a space", []string{"enrol", "create", "--binding", "agent:host 01"}},
 		{"a slash", []string{"enrol", "create", "--binding", "agent:../x"}},
 		{"a zero ttl", []string{"enrol", "create", "--binding", "agent:host-01", "--ttl", "0s"}},
+		{"a binding and a prefix", []string{"enrol", "create", "--binding", "agent:host-01", "--prefix", "agent"}},
+		{"a prefix ending in a separator", []string{"enrol", "create", "--prefix", "agent:"}},
+		{"a wildcard prefix", []string{"enrol", "create", "--prefix", "agent:*"}},
+		{"a class token with a zero ttl", []string{"enrol", "create", "--prefix", "agent", "--ttl", "0s"}},
 	} {
 		out, _, err := e.run(c.args...)
 		if err == nil || out != "" {

@@ -30,7 +30,9 @@ const adminUsage = `usage:
                      [--types T1,T2] [--sites S1,S2] [--expires 720h] [--config FILE]
   trica token list   [--config FILE]
   trica token revoke --id N [--config FILE]
-  trica enrol create --binding KIND:NAME [--ttl 24h] [--config FILE]`
+  trica enrol create --binding KIND:NAME [--ttl 24h] [--config FILE]
+  trica enrol create --prefix KIND [--ttl 24h] [--config FILE]   (class token, ADR 0035)
+  trica enrol revoke --id HEX [--config FILE]`
 
 // tokenFlags holds the flags of "trica token"; the pointers of an action's
 // flags are nil for the others.
@@ -185,31 +187,37 @@ func tokenList(ctx context.Context, ts *auth.TokenStore, stdout io.Writer) error
 	return w.Flush()
 }
 
-// runEnrol is "trica enrol create".
+// runEnrol is "trica enrol create|revoke".
 func runEnrol(ctx context.Context, args []string, stdout, stderr io.Writer, getenv func(string) string) error {
-	if len(args) == 0 || args[0] != "create" {
+	if len(args) == 0 || (args[0] != "create" && args[0] != "revoke") {
 		fmt.Fprintln(stderr, adminUsage)
-		return errors.New("enrol: want create")
+		return errors.New("enrol: want create or revoke")
 	}
-	fs := flag.NewFlagSet("enrol create", flag.ContinueOnError)
+	action, args := args[0], args[1:]
+	fs := flag.NewFlagSet("enrol "+action, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	cfgPath := fs.String("config", getenv("TRICA_CONFIG"), "configuration file (YAML)")
-	binding := fs.String("binding", "", "source the machine may report as, e.g. agent:host-01 (required)")
-	ttl := fs.Duration("ttl", transport.DefaultTokenTTL, "validity of the token")
-	if err := fs.Parse(args[1:]); err != nil {
+	var binding, prefix, id *string
+	var ttl *time.Duration
+	if action == "create" {
+		binding = fs.String("binding", "", "source the machine may report as, e.g. agent:host-01; the token works once")
+		prefix = fs.String("prefix", "", "class token: each client names itself one segment below, e.g. agent for agent:<hostname>, once per name; the token works until it expires or is revoked")
+		ttl = fs.Duration("ttl", transport.DefaultTokenTTL, "validity of the token")
+	} else {
+		id = fs.String("id", "", "id of the token, printed when it was created (required)")
+	}
+	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {
-		return fmt.Errorf("enrol create: unexpected argument %q", fs.Arg(0))
+		return fmt.Errorf("enrol %s: unexpected argument %q", action, fs.Arg(0))
 	}
-	if *binding == "" {
-		return errors.New("enrol create: --binding is required")
-	}
-	if err := pki.ValidBinding(*binding); err != nil {
-		return err
-	}
-	if *ttl <= 0 {
-		return errors.New("enrol create: --ttl must be positive")
+	if action == "create" {
+		if err := checkEnrolCreate(*binding, *prefix, *ttl); err != nil {
+			return err
+		}
+	} else if *id == "" {
+		return errors.New("enrol revoke: --id is required")
 	}
 	cfg, err := server.LoadConfig(*cfgPath)
 	if err != nil {
@@ -220,11 +228,33 @@ func runEnrol(ctx context.Context, args []string, stdout, stderr io.Writer, gete
 		return err
 	}
 	defer st.Close()
-	token, err := transport.NewRegistry(st.Pool).NewEnrolmentToken(ctx, *binding, *ttl)
+	reg := transport.NewRegistry(st.Pool)
+	if action == "revoke" {
+		found, err := reg.RevokeEnrolmentToken(ctx, *id)
+		if err != nil {
+			return fmt.Errorf("enrol revoke: %w", err)
+		}
+		if !found {
+			return fmt.Errorf("enrol revoke: no usable token with id %s (unknown, used, expired or already revoked)", *id)
+		}
+		fmt.Fprintf(stderr, "enrolment token %s revoked; the certificates it minted are not: revoke those by binding\n", *id)
+		return nil
+	}
+	var token string
+	if *prefix != "" {
+		token, err = reg.NewClassEnrolmentToken(ctx, *prefix, *ttl)
+	} else {
+		token, err = reg.NewEnrolmentToken(ctx, *binding, *ttl)
+	}
 	if err != nil {
 		return fmt.Errorf("enrol create: %w", err)
 	}
-	fmt.Fprintf(stderr, "enrolment token for %s, valid %s, usable once\n", *binding, *ttl)
+	if *prefix != "" {
+		fmt.Fprintf(stderr, "class enrolment token %s for %s:<name>, valid %s, once per name not enrolled yet; revoke it with trica enrol revoke --id %s\n",
+			transport.TokenID(token), *prefix, *ttl, transport.TokenID(token))
+	} else {
+		fmt.Fprintf(stderr, "enrolment token %s for %s, valid %s, usable once\n", transport.TokenID(token), *binding, *ttl)
+	}
 	if t := cfg.Transport; t.Addr != "" {
 		fmt.Fprintf(stderr, "the client dials %s (server certificate hosts: %s)\n", t.Addr, strings.Join(t.Hosts, ", "))
 		fmt.Fprintf(stderr, "the client needs the CA certificate: %s on the server (public, hand it over with the token)\n",
@@ -233,6 +263,29 @@ func runEnrol(ctx context.Context, args []string, stdout, stderr io.Writer, gete
 		fmt.Fprintln(stderr, "warning: transport.addr is not set in this configuration: no server accepts an enrolment yet")
 	}
 	fmt.Fprintln(stdout, token)
+	return nil
+}
+
+// checkEnrolCreate checks the flags of "enrol create" before the database is
+// opened: exactly one of a binding and a prefix, each valid, a positive ttl.
+func checkEnrolCreate(binding, prefix string, ttl time.Duration) error {
+	switch {
+	case binding == "" && prefix == "":
+		return errors.New("enrol create: --binding or --prefix is required")
+	case binding != "" && prefix != "":
+		return errors.New("enrol create: --binding and --prefix exclude each other")
+	case prefix != "":
+		if err := pki.ValidPrefix(prefix); err != nil {
+			return err
+		}
+	default:
+		if err := pki.ValidBinding(binding); err != nil {
+			return err
+		}
+	}
+	if ttl <= 0 {
+		return errors.New("enrol create: --ttl must be positive")
+	}
 	return nil
 }
 

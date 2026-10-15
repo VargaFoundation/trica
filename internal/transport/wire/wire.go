@@ -13,10 +13,14 @@ const (
 	PathBatches = "/v1/batches"
 )
 
-// EnrolRequest trades a one-time token and a CSR for a client certificate.
+// EnrolRequest trades an enrolment token and a CSR for a client certificate.
+// Binding is the binding the client asks for: required with a class token
+// (the token grants a prefix, the client names itself below it, ADR 0035);
+// with a one-time token, empty or the token's own binding.
 type EnrolRequest struct {
-	Token string `json:"token"`
-	CSR   string `json:"csr"`
+	Token   string `json:"token"`
+	CSR     string `json:"csr"`
+	Binding string `json:"binding,omitempty"`
 }
 
 // RenewRequest asks for a new certificate of the same binding; the caller

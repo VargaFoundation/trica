@@ -26,7 +26,7 @@ trica-agent [--root /] [--interval 5m] [--once] [--output -] [--state-dir DIR] [
 | `--state-dir` | Directory of the agent's own state (`/var/lib/trica-agent` in the packages): staged versions and update state, and, with `--server`, the client certificate and the spool. Empty (default): the agent never runs anything but itself, and `--server` is refused. |
 | `--server` | `https://host:port` of the server's transport listener (`transport.addr`). Batches go there through `uplink.Client`. `http://` is refused. Env `TRICA_AGENT_SERVER`. |
 | `--ca-file` | PEM file of the CA certificate that signs the server's certificate, required with `--server`. The agent trusts nothing else: there is no trust on first use. Env `TRICA_AGENT_CA_FILE`. |
-| `--enrol-token-file` | File holding the one-time enrolment token. Read only while the agent has no certificate. A path, never a value (no flag or variable takes the token itself). Env `TRICA_AGENT_ENROL_TOKEN_FILE`. |
+| `--enrol-token-file` | File holding the enrolment token: one-time for this host, or a class token for a fleet ([ADR 0035](../adr/0035-class-enrolment-tokens.md)). The agent asks for `agent:<hostname>`. Read only while the agent has no certificate. A path, never a value (no flag or variable takes the token itself). Env `TRICA_AGENT_ENROL_TOKEN_FILE`. |
 | `--health-timeout` | How long a newly staged version has to emit one batch before it is rolled back, default 2 m. |
 | `--output` | `-` (default): one JSON batch per line on stdout. A path: the latest batch, rewritten atomically (temporary file next to it, mode 0600, rename). With `--server`, nothing goes to stdout; a given `--output` is then a local copy written in addition to the send. |
 
@@ -347,27 +347,34 @@ profile is the cluster operator's call.
 `/var/lib/trica-agent` on the node (`hostPath`, the one writable host path, checked by
 `packaging_test.go`): without it every pod restart would need a new token.
 
-The enrolment token is the awkward part. A token grants **one binding**, a node's binding
-is `agent:<its hostname>`, and `pki.ValidBinding` refuses a wildcard (`agent:*`) or a
-prefix that is not the source. So a token shared by the DaemonSet (one Secret) cannot
-work, and a Secret per node cannot be mounted by a DaemonSet. The least-bad option that
-weakens nothing: **one token per node, as a file on the node**
-(`/var/lib/trica-agent/enrol-token`, mode 0600), placed when the node is provisioned
-(cloud-init, Ansible, a node-setup job with the token minted for that node). It is read
-once and useless afterwards. It scales with the number of nodes, it is manual, and today
-there is not even a command to mint the tokens (see "Known gaps"); a clean answer needs a
-server change, listed there.
+The enrolment token is **one class token for the whole fleet** ([ADR 0035](../adr/0035-class-enrolment-tokens.md)),
+in the Secret `trica-agent-enrol` (key `token`), mounted read-only at `/etc/trica-agent-enrol`
+by an **optional** volume:
+
+```bash
+trica enrol create --prefix agent --ttl 24h > token   # the token id on stderr
+kubectl -n trica-system create secret generic trica-agent-enrol --from-file=token=token && rm token
+# once every node is enrolled:
+trica enrol revoke --id <id> && kubectl -n trica-system delete secret trica-agent-enrol
+```
+
+Each agent asks for `agent:<its hostname>` (`EnrolRequest.Binding`, the source its batches
+carry). The server mints it if it is one segment under the token's prefix and no unexpired,
+unrevoked certificate holds it yet; otherwise 403 (outside the prefix) or 409 (already
+enrolled). The token is not consumed, so every node enrols with it, each name once. A node
+that has its certificate never reads the token again, so deleting the Secret after the
+rollout stops nothing. A node whose state directory is lost (no `hostPath`, a reinstalled
+node) gets 409 until its old certificate is revoked (`reg.RevokeBinding`) or expires.
 
 Not verified: that a pod with `hostNetwork` reads the node's hostname in
 `/proc/sys/kernel/hostname` on every runtime (the batch source depends on it).
 
 ## Known gaps of the transport
 
-- **Per-node tokens for a fleet** (a DaemonSet of hundreds of nodes) do not scale. A server
-  change would fix it without a wildcard, e.g. an enrolment that derives the binding from
-  something the server can verify about the node (a Kubernetes TokenReview of the pod's
-  service account plus the node name), or a class token that mints bindings only under a
-  prefix and only once per hostname. Either touches `internal/pki` and `internal/transport`.
+- **A leaked class token claims free names**: until it expires or is revoked, its holder can
+  enrol any name under the prefix that no node holds yet, and the real node then gets 409.
+  Mitigation: the TTL of a rollout, then `trica enrol revoke`. There is no command listing
+  the live tokens; only their ids (printed at creation) revoke them (ADR 0035).
 - The agent's `--output` with `--server` is written even when the batch could not be sent;
   a failing local copy fails the run.
 

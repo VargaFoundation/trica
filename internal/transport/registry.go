@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -21,6 +22,22 @@ import (
 // used or expired. The three cases are deliberately not told apart: the
 // caller learns nothing about which tokens exist.
 var ErrInvalidToken = errors.New("transport: invalid enrolment token")
+
+// ErrBindingRefused is returned when the binding a client asks for is not one
+// its token can grant: another binding than a one-time token's, or not one
+// segment below a class token's prefix. The token is not consumed.
+var ErrBindingRefused = errors.New("transport: binding not granted by this token")
+
+// ErrBindingInUse is returned when a class token is asked for a binding that
+// an unexpired, unrevoked certificate already holds: the class token mints a
+// name once, so its holder cannot take over a node that is enrolled. Revoking
+// that node's certificates frees the name.
+var ErrBindingInUse = errors.New("transport: binding already enrolled")
+
+// classLockSpace is the first key of the transaction advisory lock that
+// serialises the class enrolments of one binding. The two-key form does not
+// overlap the one-key locks of the deducer, the engine and the audit log.
+const classLockSpace = 7426300
 
 // DefaultTokenTTL is the validity of an enrolment token created without an
 // explicit lifetime.
@@ -50,6 +67,15 @@ func hashToken(token string) []byte {
 	return h[:]
 }
 
+// tokenIDLen is the number of bytes of the token hash an operator names a
+// token by: enough to be unique, useless to enrol.
+const tokenIDLen = 8
+
+// TokenID is how an operator names token (to revoke it): the start of its
+// sha256, in hex. It is printed when the token is created and logged on each
+// enrolment, and gives nothing to enrol with.
+func TokenID(token string) string { return hex.EncodeToString(hashToken(token)[:tokenIDLen]) }
+
 // NewEnrolmentToken creates a one-time token granting binding (for example
 // "agent:host-01", see [pki.Allows]) and valid for ttl (DefaultTokenTTL when
 // ttl <= 0). It returns the token in clear: this is the only moment it exists
@@ -60,6 +86,23 @@ func (r *Registry) NewEnrolmentToken(ctx context.Context, binding string, ttl ti
 	if err := pki.ValidBinding(binding); err != nil {
 		return "", err
 	}
+	return r.newToken(ctx, binding, false, ttl)
+}
+
+// NewClassEnrolmentToken creates a token that is not consumed (ADR 0035):
+// until it expires or is revoked, each use mints the binding one segment below
+// prefix that the client asks for ("agent" mints "agent:<hostname>"), once per
+// binding, as long as no unexpired, unrevoked certificate holds it. It is what
+// a DaemonSet shares. Whoever holds it can enrol any name not enrolled yet
+// under prefix: give it the lifetime of a rollout, and revoke it after.
+func (r *Registry) NewClassEnrolmentToken(ctx context.Context, prefix string, ttl time.Duration) (string, error) {
+	if err := pki.ValidPrefix(prefix); err != nil {
+		return "", err
+	}
+	return r.newToken(ctx, prefix, true, ttl)
+}
+
+func (r *Registry) newToken(ctx context.Context, binding string, class bool, ttl time.Duration) (string, error) {
 	if ttl <= 0 {
 		ttl = DefaultTokenTTL
 	}
@@ -70,31 +113,76 @@ func (r *Registry) NewEnrolmentToken(ctx context.Context, binding string, ttl ti
 	token := base64.RawURLEncoding.EncodeToString(raw)
 	now := r.now()
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO enrol_tokens (token_hash, binding, created_at, expires_at) VALUES ($1, $2, $3, $4)`,
-		hashToken(token), binding, now, now.Add(ttl))
+		`INSERT INTO enrol_tokens (token_hash, binding, class, created_at, expires_at) VALUES ($1, $2, $3, $4, $5)`,
+		hashToken(token), binding, class, now, now.Add(ttl))
 	if err != nil {
 		return "", fmt.Errorf("transport: store token: %w", err)
 	}
 	return token, nil
 }
 
-// enrol consumes token and, in the same transaction, signs with issue: a
-// token is marked used only if the certificate was produced, and two
-// concurrent uses of one token cannot both succeed (the UPDATE is the lock).
-func (r *Registry) enrol(ctx context.Context, token string, issue func(binding string) (*x509.Certificate, error)) (*x509.Certificate, error) {
+// RevokeEnrolmentToken makes the token named id (see [TokenID]) unusable from
+// now on; certificates it already minted are not touched (revoke those by
+// binding). It reports whether a token still usable was found.
+func (r *Registry) RevokeEnrolmentToken(ctx context.Context, id string) (bool, error) {
+	prefix, err := hex.DecodeString(id)
+	if err != nil || len(prefix) != tokenIDLen {
+		return false, fmt.Errorf("transport: invalid token id %q (want %d hex digits)", id, 2*tokenIDLen)
+	}
+	now := r.now()
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE enrol_tokens SET expires_at = $2
+		  WHERE substring(token_hash FROM 1 FOR $3) = $1 AND used_at IS NULL AND expires_at > $2`,
+		prefix, now, tokenIDLen)
+	if err != nil {
+		return false, fmt.Errorf("transport: revoke token: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
+// enrol uses token to sign with issue, in one transaction.
+//
+// A one-time token is consumed: it is marked used only if the certificate was
+// produced, and two concurrent uses cannot both succeed (the UPDATE is the
+// lock). It grants its binding; a client that asks for another (requested
+// not empty) is refused before anything is consumed.
+//
+// A class token is not consumed. The client must ask for a binding one segment
+// below its prefix, which is refused while an unexpired, unrevoked
+// certificate holds it; an advisory lock on the binding makes two concurrent
+// enrolments of one name take turns, so only the first gets it.
+func (r *Registry) enrol(ctx context.Context, token, requested string, issue func(binding string) (*x509.Certificate, error)) (*x509.Certificate, error) {
 	var cert *x509.Certificate
 	now := r.now()
 	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
-		var binding string
+		var granted string
+		var class bool
 		err := tx.QueryRow(ctx,
-			`UPDATE enrol_tokens SET used_at = $2
+			`SELECT binding, class FROM enrol_tokens
 			  WHERE token_hash = $1 AND used_at IS NULL AND expires_at > $2
-			  RETURNING binding`, hashToken(token), now).Scan(&binding)
+			  FOR UPDATE`, hashToken(token), now).Scan(&granted, &class)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrInvalidToken
 		}
 		if err != nil {
-			return fmt.Errorf("transport: consume token: %w", err)
+			return fmt.Errorf("transport: read token: %w", err)
+		}
+		binding := granted
+		if class {
+			if pki.UnderPrefix(granted, requested) != nil {
+				return ErrBindingRefused
+			}
+			binding = requested
+			if err := lockBinding(ctx, tx, binding, now); err != nil {
+				return err
+			}
+		} else {
+			if requested != "" && requested != granted {
+				return ErrBindingRefused
+			}
+			if _, err := tx.Exec(ctx, `UPDATE enrol_tokens SET used_at = $2 WHERE token_hash = $1`, hashToken(token), now); err != nil {
+				return fmt.Errorf("transport: consume token: %w", err)
+			}
 		}
 		cert, err = issue(binding)
 		if err != nil {
@@ -106,6 +194,27 @@ func (r *Registry) enrol(ctx context.Context, token string, issue func(binding s
 		return nil, err
 	}
 	return cert, nil
+}
+
+// lockBinding takes the class enrolment lock of binding until the end of tx,
+// then refuses the binding if a certificate still valid at now holds it.
+func lockBinding(ctx context.Context, tx pgx.Tx, binding string, now time.Time) error {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1, hashtext($2))`, classLockSpace, binding); err != nil {
+		return fmt.Errorf("transport: lock binding: %w", err)
+	}
+	var held bool
+	err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM issued_certs c
+		                 WHERE c.binding = $1 AND c.not_after > $2
+		                   AND NOT EXISTS (SELECT 1 FROM revoked_certs r WHERE r.serial = c.serial))`,
+		binding, now).Scan(&held)
+	if err != nil {
+		return fmt.Errorf("transport: check binding: %w", err)
+	}
+	if held {
+		return ErrBindingInUse
+	}
+	return nil
 }
 
 // renew signs with issue and records the certificate.

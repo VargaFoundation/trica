@@ -101,7 +101,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	stateDir := fl.String("state-dir", "", "directory of staged versions and update state; empty disables running staged versions")
 	server := fl.String("server", os.Getenv(envServer), "https://host:port of the trica transport listener; batches are sent there over mTLS (needs --ca-file and --state-dir) [$"+envServer+"]")
 	caFile := fl.String("ca-file", os.Getenv(envCAFile), "PEM file of the CA certificate that signs the server certificate [$"+envCAFile+"]")
-	tokenFile := fl.String("enrol-token-file", os.Getenv(envEnrolTokenFile), "file holding the one-time enrolment token, read only while the agent has no certificate [$"+envEnrolTokenFile+"]")
+	tokenFile := fl.String("enrol-token-file", os.Getenv(envEnrolTokenFile), "file holding the enrolment token (one-time, or a class token shared by a fleet), read only while the agent has no certificate [$"+envEnrolTokenFile+"]")
 	metricsFile := fl.String("metrics-file", os.Getenv(envMetricsFile), "file the transport metrics are written to, every minute, in the Prometheus text format for the node exporter's textfile collector (name it *.prom; needs --server) [$"+envMetricsFile+"]")
 	healthTimeout := fl.Duration("health-timeout", 2*time.Minute, "how long a newly staged version has to complete a collection before it is rolled back")
 	fl.Usage = func() {
@@ -158,8 +158,13 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if *server == "" {
 		emit = emitter(*output, stdout)
 	} else {
+		source, err := a.Source()
+		if err != nil {
+			logger.Error("cannot start the transport", "collector", agent.CollectorName, "error", err)
+			return 1
+		}
 		client, err := uplink.NewClient(uplink.ClientConfig{
-			ServerURL: *server, CAFile: *caFile, Dir: *stateDir, EnrolTokenFile: *tokenFile, Logger: logger,
+			ServerURL: *server, CAFile: *caFile, Dir: *stateDir, EnrolTokenFile: *tokenFile, Binding: source, Logger: logger,
 		})
 		if err != nil {
 			logger.Error("cannot start the transport", "collector", agent.CollectorName, "error", err)

@@ -24,6 +24,52 @@ func TestMigrationsAreReversible(t *testing.T) {
 	}
 }
 
+// Rolling back the class enrolment tokens (ADR 0035) must not leave a class
+// token behind: without its column it would read as a one-time token for its
+// prefix, and a prefix of two segments ("agent:site-1") is a valid binding.
+func TestClassTokensDoNotOutliveTheirMigration(t *testing.T) {
+	s := testdb.New(t)
+	ctx := context.Background()
+	insert := `INSERT INTO enrol_tokens (token_hash, binding, created_at, expires_at, class)
+		VALUES (decode(repeat($1, 64), 'hex'), $2, now(), now() + interval '1 hour', $3)`
+	if _, err := s.Pool.Exec(ctx, insert, "a", "agent:site-1", true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Pool.Exec(ctx, insert, "b", "agent:host-01", false); err != nil {
+		t.Fatal(err)
+	}
+	for { // back to before 00006, whatever came after it
+		v, err := s.SchemaVersion(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if v < 6 {
+			break
+		}
+		if err := s.MigrateDownOne(ctx); err != nil {
+			t.Fatalf("down from %d: %v", v, err)
+		}
+	}
+	var bindings []string
+	rows, err := s.Pool.Query(ctx, `SELECT binding FROM enrol_tokens ORDER BY binding`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var b string
+		if err := rows.Scan(&b); err != nil {
+			t.Fatal(err)
+		}
+		bindings = append(bindings, b)
+	}
+	if rows.Err() != nil || len(bindings) != 1 || bindings[0] != "agent:host-01" {
+		t.Fatalf("tokens left after down: %v (%v), want the one-time token only", bindings, rows.Err())
+	}
+	if err := s.Migrate(ctx); err != nil {
+		t.Fatalf("up again: %v", err)
+	}
+}
+
 // Two values of one attribute can never be valid at the same instant: the
 // exclusion constraint is what makes "the state at a date" single-valued.
 func TestHistoryRangesCannotOverlap(t *testing.T) {
