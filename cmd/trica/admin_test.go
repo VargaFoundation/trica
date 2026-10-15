@@ -255,14 +255,13 @@ func TestTokenListAndRevoke(t *testing.T) {
 	if len(hashes) != 2 {
 		t.Fatalf("hashes = %v", hashes)
 	}
-	parts1, parts2 := strings.Split(secret1, "_"), strings.Split(secret2, "_")
-	for _, s := range append(hashes, secret1, secret2, parts1[2], parts2[2]) {
+	for _, s := range append(hashes, secret1, secret2, secretPart(secret1), secretPart(secret2)) {
 		if strings.Contains(out+errOut, s) {
 			t.Fatalf("list leaks %q:\n%s", s, out)
 		}
 	}
 
-	id := parts1[1]
+	id := strings.SplitN(secret1, "_", 3)[1]
 	if _, _, err := e.run("token", "revoke", "--id", id); err != nil {
 		t.Fatal(err)
 	}
@@ -410,5 +409,23 @@ func TestEnrolWithoutTransportWarns(t *testing.T) {
 	}
 	if !strings.Contains(errOut.String(), "transport.addr is not set") || out.Len() == 0 {
 		t.Fatalf("stdout %q stderr %q", out.String(), errOut.String())
+	}
+}
+
+// secretPart returns the secret of a "trica_<id>_<secret>" token. The secret is
+// base64url, whose alphabet holds "_": only the first two separators count.
+func secretPart(token string) string {
+	return strings.SplitN(token, "_", 3)[2]
+}
+
+func TestSecretPartKeepsUnderscoresOfTheSecret(t *testing.T) {
+	for tok, want := range map[string]string{
+		"trica_1_abc":   "abc",
+		"trica_1__abc":  "_abc", // a secret starting with "_" made the leak check match ""
+		"trica_12_a_b_": "a_b_",
+	} {
+		if got := secretPart(tok); got != want {
+			t.Errorf("secretPart(%q) = %q, want %q", tok, got, want)
+		}
 	}
 }
