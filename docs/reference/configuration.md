@@ -37,7 +37,7 @@ secret does not exist (the UI is a public PKCE client).
 | Key | Environment | Default | Meaning |
 |---|---|---|---|
 | `mcp.disabled` | | `false` | Leave `/mcp` unmounted. |
-| `mcp.graph_refresh` | | `1m` | The dependency graph is rebuilt on the next graph tool call after a commit made by this server, and at most this late after a commit made by another replica. |
+| `mcp.graph_refresh` | | `1m` | The dependency graph is rebuilt on the next graph tool call after a commit, made by this server or announced by another replica on the `trica_changes` channel (ADR 0032); and at most this late after a commit whose notification was lost (a listener reconnecting, a pooler in transaction mode). |
 | `mcp.disable_localhost_protection` | | `false` | Accept loopback `Host` headers behind a same-host proxy. |
 | `deduce.disabled` | | `false` | Stop the cabling deducer. |
 | `deduce.interval` | | `5m` | Time between deduction passes; one replica deduces at a time. Also the time between device type library passes. |

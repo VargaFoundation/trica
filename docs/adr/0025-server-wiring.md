@@ -51,7 +51,9 @@ outcome is mapped (`ok` to `success`, `error` to `failure`), the time is the log
 **Graph.** One `graph.Cache` is shared. The engine's `OnCommit` marks it stale (a batch, an
 approval, the sweep, the deducer's batch); a ticker (`mcp.graph_refresh`, one minute) also marks
 it stale, because a commit made by another replica does not reach this one's `OnCommit`. The
-reload is lazy, on the next graph tool call: an idle server does nothing.
+reload is lazy, on the next graph tool call: an idle server does nothing. *Amended by ADR 0032:
+every commit is announced on a PostgreSQL channel that every replica listens to; the ticker
+remains as a safety net.*
 
 **The transport has its own listener, `transport.addr`.** The HTTP listener usually sits behind a
 TLS-terminating ingress, which would remove the client certificate the transport authenticates
@@ -94,5 +96,6 @@ page and logs a warning at start.
   next to the server and against the policy `wiring.Policy` builds (STATUS row 36).
 - Audit entries are written by the API and MCP handlers for mutating or denied calls; a 401 or a
   429 never reaches them, and the chain is still not anchored outside the database (ADR 0013).
-- The graph of a replica is at most `mcp.graph_refresh` behind a commit made by another one.
+- The graph of a replica is at most `mcp.graph_refresh` behind a commit made by another one
+  (ADR 0032: now as soon as the notification arrives; the timer is the bound when it does not).
 - Renewing the transport certificate closes the listener for a moment; clients retry.

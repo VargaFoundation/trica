@@ -54,8 +54,10 @@ func (e *Engine) SweepAbsent(ctx context.Context) ([]string, error) {
 			}
 		}
 		stats, _ := json.Marshal(map[string]int{"absent": len(ids)})
-		_, err = tx.Exec(ctx, `UPDATE changesets SET stats = $2 WHERE id = $1`, cs, stats)
-		return err
+		if _, err := tx.Exec(ctx, `UPDATE changesets SET stats = $2 WHERE id = $1`, cs, stats); err != nil {
+			return err
+		}
+		return notify(ctx, tx, cs)
 	})
 	if err != nil {
 		return nil, err

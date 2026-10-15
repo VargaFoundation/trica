@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -278,7 +279,22 @@ func (e *Engine) apply(ctx context.Context, tx pgx.Tx, b *sdk.Batch, author, rea
 	if _, err := tx.Exec(ctx, `UPDATE changesets SET stats = $2 WHERE id = $1`, r.cs, stats); err != nil {
 		return nil, err
 	}
+	if err := notify(ctx, tx, r.cs); err != nil {
+		return nil, err
+	}
 	return r.res, nil
+}
+
+// ChangesChannel is the PostgreSQL notification channel on which every
+// committed changeset is announced, its id as payload. Other replicas listen
+// on it to drop what they cached (#57); OnCommit only reaches this process.
+const ChangesChannel = "trica_changes"
+
+// notify announces changeset cs. Sent inside the transaction, the
+// notification is delivered at commit and never for a rollback (Preview).
+func notify(ctx context.Context, tx pgx.Tx, cs int64) error {
+	_, err := tx.Exec(ctx, `SELECT pg_notify($1, $2)`, ChangesChannel, strconv.FormatInt(cs, 10))
+	return err
 }
 
 func (r *run) warn(format string, args ...any) {

@@ -103,9 +103,10 @@ type RateLimitConfig struct {
 type MCPConfig struct {
 	// Disabled leaves /mcp unmounted.
 	Disabled bool `yaml:"disabled"`
-	// GraphRefresh is how often the dependency graph is marked stale, so that
-	// a replica sees commits made by another one. Commits on this replica
-	// invalidate it at once. Zero means one minute.
+	// GraphRefresh is how often the dependency graph is marked stale anyway.
+	// Commits invalidate it at once, on this replica through OnCommit and on
+	// the others through a PostgreSQL notification; the timer covers a
+	// notification lost while a listener reconnects. Zero means one minute.
 	GraphRefresh time.Duration `yaml:"graph_refresh"`
 	// DisableLocalhostProtection turns off the MCP SDK's Host-header check for
 	// a server listening on a loopback address behind a same-host proxy.
