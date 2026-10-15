@@ -75,13 +75,13 @@ func Middleware(a *Authenticator) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			raw, ok := bearer(r)
 			if !ok {
-				recordReason(r.Context(), "no credential presented")
+				RecordReason(r.Context(), "no credential presented")
 				unauthorized(w)
 				return
 			}
 			p, err := a.Authenticate(r.Context(), raw)
 			if err != nil {
-				recordReason(r.Context(), err.Error())
+				RecordReason(r.Context(), err.Error())
 				if IsCredentialError(err) {
 					unauthorized(w)
 					return
@@ -91,9 +91,6 @@ func Middleware(a *Authenticator) func(http.Handler) http.Handler {
 				return
 			}
 			ctx := context.WithValue(WithPrincipal(r.Context(), p), policyKey, a.Policy)
-			if s := slotFrom(ctx); s != nil {
-				s.Principal = p
-			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -132,10 +129,10 @@ func Require(action Action, scope ...ScopeFunc) func(http.Handler) http.Handler 
 			case err == nil:
 				next.ServeHTTP(w, r)
 			case errors.Is(err, ErrUnauthenticated):
-				recordReason(r.Context(), "no authenticated principal")
+				RecordReason(r.Context(), "no authenticated principal")
 				unauthorized(w)
 			default:
-				recordReason(r.Context(), fmt.Sprintf("forbidden: %s on type %q site %q", action, objectType, site))
+				RecordReason(r.Context(), fmt.Sprintf("forbidden: %s on type %q site %q", action, objectType, site))
 				writeError(w, http.StatusForbidden, "forbidden")
 			}
 		})

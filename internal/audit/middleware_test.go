@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/VargaFoundation/trica/internal/auth"
 )
@@ -22,6 +24,13 @@ type rig struct {
 // newRig mounts audit (outermost), authentication, a rate limiter and a Require-guarded mux,
 // in the order the API will use.
 func newRig(t *testing.T, limiter *auth.RateLimiter) *rig {
+	t.Helper()
+	return newRigWith(t, limiter, Options{})
+}
+
+// newRigWith is newRig with middleware options. The rig has a route whose
+// handler records its own entry, as the API's do.
+func newRigWith(t *testing.T, limiter *auth.RateLimiter, o Options) *rig {
 	t.Helper()
 	l := newLog(t)
 	pol := auth.DefaultPolicy()
@@ -39,6 +48,12 @@ func newRig(t *testing.T, limiter *auth.RateLimiter) *rig {
 	mux.Handle("POST /v1/boom", auth.Require(auth.ActionRead)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic("boom")
 	})))
+	mux.Handle("POST /v1/self", auth.Require(auth.ActionPropose)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := l.Append(r.Context(), Entry{Actor: "user:alice", Action: "proposal.create", Target: "proposal/7"}); err != nil {
+			t.Error(err)
+		}
+		w.WriteHeader(http.StatusCreated)
+	})))
 	mux.Handle("POST /v1/bad", auth.Require(auth.ActionRead)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "nope", http.StatusUnprocessableEntity)
 	})))
@@ -47,7 +62,10 @@ func newRig(t *testing.T, limiter *auth.RateLimiter) *rig {
 		inner = limiter.Middleware(inner)
 	}
 	inner = auth.Middleware(a)(inner)
-	return &rig{t: t, log: l, tokens: ts, h: Middleware(l, slog.New(slog.NewTextHandler(io.Discard, nil)))(inner)}
+	if o.Logger == nil {
+		o.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
+	return &rig{t: t, log: l, tokens: ts, h: NewMiddleware(l, o)(inner)}
 }
 
 func (r *rig) token(roles string, scopes ...string) string {
@@ -269,5 +287,103 @@ func TestStatusWriter(t *testing.T) {
 	w.WriteHeader(http.StatusTeapot) // ignored by net/http, and by the recorded status
 	if w.status != http.StatusAccepted || w.Unwrap() != rec {
 		t.Errorf("status %d", w.status)
+	}
+}
+
+// A handler that records its own entry gets no second one from the middleware.
+func TestMiddlewareDoesNotDuplicateTheHandlersEntry(t *testing.T) {
+	r := newRig(t, nil)
+	tok := r.token("operator", auth.ScopeWrite)
+	if rec := r.do(http.MethodPost, "/v1/self", tok); rec.Code != http.StatusCreated {
+		t.Fatalf("status %d", rec.Code)
+	}
+	es := r.entries()
+	if len(es) != 1 || es[0].Action != "proposal.create" {
+		t.Fatalf("entries = %+v, want the handler's only", es)
+	}
+}
+
+// With RefusalsOnly, what the handlers record themselves (mutating calls,
+// successful or failed) is left to them; 401, 403 and 429 are recorded.
+func TestRefusalsOnlyRecordsRefusals(t *testing.T) {
+	r := newRigWith(t, nil, Options{RefusalsOnly: true})
+	tok := r.token("operator", auth.ScopeWrite)
+	viewer := r.token("viewer", auth.ScopeRead)
+	for _, c := range []struct {
+		method, path, tok string
+		want              int
+	}{
+		{http.MethodPost, "/v1/proposals", tok, http.StatusCreated},
+		{http.MethodPost, "/v1/bad", tok, http.StatusUnprocessableEntity},
+		{http.MethodGet, "/v1/objects", tok, http.StatusOK},
+		{http.MethodGet, "/v1/objects", "", http.StatusUnauthorized},
+		{http.MethodPost, "/v1/proposals", viewer, http.StatusForbidden},
+	} {
+		if rec := r.do(c.method, c.path, c.tok); rec.Code != c.want {
+			t.Fatalf("%s %s: status %d, want %d", c.method, c.path, rec.Code, c.want)
+		}
+	}
+	es := r.entries()
+	if len(es) != 2 {
+		t.Fatalf("%d entries, want the 401 and the 403: %+v", len(es), es)
+	}
+	if es[0].Details["status"] != 401.0 || es[0].Actor != "anonymous" || es[1].Details["status"] != 403.0 || es[1].Actor != "token:2" {
+		t.Errorf("entries = %+v", es)
+	}
+}
+
+// A flood of 429s is one entry per caller and period; the next entry says how
+// many were not recorded.
+func TestRateLimitedRequestsAreSampled(t *testing.T) {
+	var mu sync.Mutex
+	now := time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC)
+	clock := func() time.Time { mu.Lock(); defer mu.Unlock(); return now }
+	lim := auth.NewRateLimiter(0.000001, 1)
+	lim.Now = clock
+	r := newRigWith(t, lim, Options{RateLimitedEvery: time.Minute, Now: clock})
+	tok := r.token("viewer", auth.ScopeRead)
+	limited := func(n int, bearer string) {
+		t.Helper()
+		for range n {
+			if rec := r.do(http.MethodGet, "/v1/objects", bearer); rec.Code != http.StatusTooManyRequests {
+				t.Fatalf("status %d", rec.Code)
+			}
+		}
+	}
+	if rec := r.do(http.MethodGet, "/v1/objects", tok); rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+	limited(4, tok)
+	if es := r.entries(); len(es) != 1 || es[0].Details["status"] != 429.0 || es[0].Details["suppressed"] != nil {
+		t.Fatalf("after the first period: %+v", es)
+	}
+	mu.Lock()
+	now = now.Add(61 * time.Second)
+	mu.Unlock()
+	limited(2, tok)
+	es := r.entries()
+	if len(es) != 2 || es[1].Actor != "token:1" || es[1].Details["suppressed"] != 3.0 {
+		t.Fatalf("after the second period: %+v", es)
+	}
+}
+
+// The sampler forgets the callers whose period is over, and logs what it
+// counted for them, since no entry will carry it.
+func TestSamplerSweepLogsWhatItDrops(t *testing.T) {
+	var buf strings.Builder
+	now := time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC)
+	s := &sampler{every: time.Minute, now: func() time.Time { return now }, logger: slog.New(slog.NewTextHandler(&buf, nil)), seen: map[string]*sample{}}
+	for _, key := range []string{"token:1", "token:1", "token:1", "ip:192.0.2.9"} {
+		s.admit(key)
+	}
+	now = now.Add(2 * time.Minute)
+	if ok, n := s.admit("token:2"); !ok || n != 0 {
+		t.Fatalf("admit = %v, %d", ok, n)
+	}
+	if len(s.seen) != 1 {
+		t.Errorf("%d keys kept, want the new one only", len(s.seen))
+	}
+	if !strings.Contains(buf.String(), "caller=token:1 count=2") || strings.Contains(buf.String(), "192.0.2.9") {
+		t.Errorf("log = %q", buf.String())
 	}
 }

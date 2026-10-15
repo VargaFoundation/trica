@@ -31,6 +31,8 @@ secret does not exist (the UI is a public PKCE client).
 | `auth.policy_file` | | built-in `viewer` / `operator` / `admin` | RBAC policy file (roles and group mappings, unknown keys rejected). |
 | `auth.group_roles` | | `{}` | Group to roles, merged over the policy. A role that does not exist stops the start. |
 | `auth.rate_limit.rate` / `burst` | | `20` / `60` | Requests per second and burst, per principal (per peer address before authentication), shared by the API and the MCP server; over it, a 429. |
+| `audit.rate_limited_every` | | `1m` | A 429 is recorded in the audit log once per caller and period; the next entry counts the others in `details.suppressed` ([ADR 0034](../adr/0034-refusals-audit-and-head-anchor.md)). |
+| `audit.anchor_interval` | | `5m` | How often each replica logs the head of the audit chain (`audit chain head`, `head_id`, `head_hash`) and publishes `trica_audit_head_id`. An entry anchored at the previous read that is gone or changed is logged as an error and counted in `trica_audit_head_regressions_total`. |
 
 ### Components
 
@@ -61,7 +63,7 @@ next tick, and does not stop the server.
 |---|---|
 | `GET /healthz` | Liveness: the process serves HTTP. Does not touch the database. |
 | `GET /readyz` | Readiness: started and the database answers within 2 s. |
-| `GET /metrics` | Prometheus metrics: `trica_build_info`, `trica_absence_sweeps_total`, `trica_absence_sweep_errors_total`, `trica_objects_marked_absent_total`, `trica_deduce_runs_total`, `trica_deduce_errors_total`, `trica_deduce_skipped_total`, `trica_deduce_cables`, `trica_deduce_findings`, `trica_deduce_last_success_timestamp_seconds`, `trica_deduce_duration_seconds`, Go and process collectors. |
+| `GET /metrics` | Prometheus metrics: `trica_build_info`, `trica_absence_sweeps_total`, `trica_absence_sweep_errors_total`, `trica_objects_marked_absent_total`, `trica_deduce_runs_total`, `trica_deduce_errors_total`, `trica_deduce_skipped_total`, `trica_deduce_cables`, `trica_deduce_findings`, `trica_deduce_last_success_timestamp_seconds`, `trica_deduce_duration_seconds`, `trica_audit_head_id`, `trica_audit_head_regressions_total`, `trica_audit_anchor_errors_total`, `trica_audit_anchor_last_success_timestamp_seconds`, Go and process collectors. |
 | `/api/v1/` | The REST API ([reference](api.md)). Bearer token or OIDC JWT. |
 | `/mcp` | The MCP server, streamable HTTP ([reference](mcp.md)). Bearer token or OIDC JWT. |
 | `/` | The web UI, served from the binary when built with the `webui` tag; otherwise a placeholder page says so. `/ui-config.json` tells the browser how to sign in. |

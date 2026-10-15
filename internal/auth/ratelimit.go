@@ -113,7 +113,7 @@ func (l *RateLimiter) Middleware(next http.Handler) http.Handler {
 		}
 		secs := max(int(math.Ceil(wait.Seconds())), 1)
 		w.Header().Set("Retry-After", strconv.Itoa(secs))
-		recordReason(r.Context(), "rate limit exceeded")
+		RecordReason(r.Context(), "rate limit exceeded")
 		writeError(w, http.StatusTooManyRequests, "rate limit exceeded")
 	})
 }
