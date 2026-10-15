@@ -198,7 +198,8 @@ OpenID provider on one self-signed TLS origin (`https://127.0.0.1:18443`, `TRICA
 it). The specs cover every page in English (and a rack page in French) with `@axe-core/playwright`
 (WCAG 2.0 to 2.2 A and AA, contrast included), the full SSO flow with the provider verifying PKCE,
 forged and refused callbacks, the pasted-token fallback, the CSP and `/ui-config.json`, rack
-drawing, and the render time of a 48 U rack with 96 devices (budget: under one second). The
+drawing, and the render time of a 48 U rack with 96 devices (budget: the median of five renders
+after a warm-up render, each from a reloaded room page, under one second). The
 topology specs check every kind of link, the filters, the table as keyboard path, PNG and PDF
 downloads of the rack and of the graph (signature, size, pixels inked, no content-security-policy
 violation), axe in English and French, and the time to draw 200 devices (budget: under 8 s from the
