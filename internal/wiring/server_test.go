@@ -162,6 +162,23 @@ http: {addr: "127.0.0.1:0"}
 	}
 }
 
+// transportAddr waits for the transport to listen and returns its address.
+// The server is ready (/readyz) once its HTTP side is up; the transport is a
+// background component that binds its own listener a moment later (#99).
+func (r *rig) transportAddr() string {
+	r.t.Helper()
+	deadline := time.Now().Add(patience)
+	for {
+		if a := r.w.TransportAddr(); a != "" {
+			return a
+		}
+		if time.Now().After(deadline) {
+			r.t.Fatal("the transport never listened")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 func (r *rig) do(method, path, token, body string) (int, string) {
 	r.t.Helper()
 	req, err := http.NewRequestWithContext(context.Background(), method, r.base+path, strings.NewReader(body))
@@ -397,10 +414,7 @@ transport:
 	})
 
 	t.Run("the transport enrols an agent and its batch reaches the inventory", func(t *testing.T) {
-		addr := r.w.TransportAddr()
-		if addr == "" {
-			t.Fatal("transport not listening")
-		}
+		addr := r.transportAddr()
 		st, err := store.Open(ctx, r.url)
 		if err != nil {
 			t.Fatal(err)
