@@ -26,6 +26,7 @@ export type Claim = S["Claim"];
 export type RelationView = S["RelationView"];
 export type RelationLink = S["RelationLink"];
 export type RelationEnd = S["RelationEnd"];
+export type RackItem = S["RackItem"];
 export type Change = S["Change"];
 export type Proposal = S["Proposal"];
 export type PlannedChange = S["PlannedChange"];

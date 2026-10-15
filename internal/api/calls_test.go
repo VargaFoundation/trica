@@ -67,6 +67,7 @@ func (e *env) calls(t testing.TB, proposalID, discrepancyID int64) map[string]ca
 		"getObjectHistory":    {"GET", "/api/v1/objects/" + sw + "/history?key=os_version", ""},
 		"getObjectRelations":  {"GET", "/api/v1/objects/" + sw + "/relations", ""},
 		"getObjectTimeline":   {"GET", "/api/v1/objects/" + sw + "/timeline", ""},
+		"getRackContents":     {"GET", "/api/v1/racks/" + e.ids["rack-p"] + "/contents", ""},
 		"search":              {"GET", "/api/v1/search?q=sw-a1", ""},
 		"whoHad":              {"GET", "/api/v1/whohad?key=mgmt_ip&value=192.0.2.10", ""},
 		"listChanges":         {"GET", "/api/v1/changes?from=2026-01-01T00:00:00Z", ""},

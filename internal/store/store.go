@@ -440,6 +440,20 @@ func (s *Store) CurrentRelationsOfTypes(ctx context.Context, types []string, lim
 	return scanRelations(rows)
 }
 
+// CurrentRelationsFrom returns the current relations of one type that start
+// at one of these objects, oldest id first: the models of the devices of a
+// rack in one query instead of one per device.
+func (s *Store) CurrentRelationsFrom(ctx context.Context, typ string, fromIDs []string) ([]Relation, error) {
+	if len(fromIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := s.Pool.Query(ctx, `SELECT `+relationCols+` FROM relations WHERE type = $1 AND from_id = ANY($2::uuid[]) AND upper_inf(valid) ORDER BY id`, typ, fromIDs)
+	if err != nil {
+		return nil, err
+	}
+	return scanRelations(rows)
+}
+
 // RelationHistory returns every relation that ever touched an object, newest first.
 func (s *Store) RelationHistory(ctx context.Context, id string, limit int) ([]Relation, error) {
 	if limit <= 0 {

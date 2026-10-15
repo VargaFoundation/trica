@@ -304,6 +304,8 @@ func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.search(w, r.URL.Query().Get("q"))
 	case strings.HasPrefix(path, "/objects/"):
 		a.one(w, strings.TrimPrefix(path, "/objects/"))
+	case strings.HasPrefix(path, "/racks/") && strings.HasSuffix(path, "/contents"):
+		a.rackContents(w, strings.TrimSuffix(strings.TrimPrefix(path, "/racks/"), "/contents"))
 	case path == "/discrepancies":
 		writeJSON(w, http.StatusOK, page([]obj{{
 			"id": 5, "kind": "value_mismatch", "fingerprint": "fp-5", "object_id": oid(idSwA1), "key": "os_version",
@@ -393,6 +395,45 @@ func (a *api) one(w http.ResponseWriter, rest string) {
 	default:
 		problem(w, http.StatusNotFound, "not-found", "No such endpoint")
 	}
+}
+
+// rackContents answers like the server: the devices mounted in the rack with
+// their position, face and model, in one call.
+func (a *api) rackContents(w http.ResponseWriter, id string) {
+	rack := a.inv.byID(id)
+	if rack == nil || rack["type"] != "rack" {
+		problem(w, http.StatusNotFound, "not-found", "No such rack")
+		return
+	}
+	model := map[int]int{}
+	for _, r := range a.inv.relations {
+		if r.typ == "instance_of" {
+			model[r.from] = r.to
+		}
+	}
+	var items []obj
+	for _, r := range a.inv.relations {
+		if r.typ != "mounted_in" || oid(r.to) != id {
+			continue
+		}
+		d := a.inv.byID(oid(r.from))
+		it := obj{"device": obj{"id": d["id"], "type": d["type"], "display": d["display"]}, "full_depth": false}
+		for _, k := range []string{"position", "face"} {
+			if v, ok := r.attrs[k]; ok {
+				it[k] = v
+			}
+		}
+		if m := a.inv.byID(oid(model[r.from])); m != nil {
+			it["model"] = obj{"id": m["id"], "type": m["type"], "display": m["display"]}
+			attrs, _ := m["attributes"].(obj)
+			if h, ok := attrs["u_height"]; ok {
+				it["u_height"] = h
+			}
+			it["full_depth"] = attrs["full_depth"] == true
+		}
+		items = append(items, it)
+	}
+	writeJSON(w, http.StatusOK, page(items))
 }
 
 func (a *api) provenanceOf(o obj) []obj {

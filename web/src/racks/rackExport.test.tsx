@@ -1,9 +1,9 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ObjectView, RelationView } from "../api/types";
+import type { ObjectView } from "../api/types";
 import { ID, page } from "../test/fixtures";
-import { defaultRoutes, mockApi, renderApp, type Call } from "../test/support";
+import { defaultRoutes, mockApi, renderApp } from "../test/support";
 
 const obj = (
   id: string,
@@ -22,24 +22,6 @@ const obj = (
 
 const DEV = "0a000000-0000-4000-8000-000000000101";
 const MODEL = "0a000000-0000-4000-8000-0000000000c2";
-const rel = (
-  type: string,
-  direction: string,
-  other: RelationView["other"],
-  attributes: Record<string, unknown>,
-): RelationView => ({
-  id: 1,
-  type,
-  direction,
-  from_id: DEV,
-  to_id: ID.rack,
-  other,
-  source: "declared:lab-file",
-  confidence: "declared",
-  valid_from: "2026-03-01T08:00:00Z",
-  attributes,
-});
-
 describe("rack export", () => {
   const saved: { name: string; blob: Blob }[] = [];
   const texts: string[] = [];
@@ -86,26 +68,16 @@ describe("rack export", () => {
       [`GET /objects/${ID.rack}`]: obj(ID.rack, "rack", "r12", {
         u_height: 12,
       }),
-      [`GET /objects/${ID.rack}/relations`]: page([
-        rel(
-          "mounted_in",
-          "in",
-          { id: DEV, type: "device", display: "sw-a1" },
-          { position: 10, face: "front" },
-        ),
+      [`GET /racks/${ID.rack}/contents`]: page([
+        {
+          device: { id: DEV, type: "device", display: "sw-a1" },
+          position: 10,
+          face: "front",
+          model: { id: MODEL, type: "device_type", display: "ex-2u" },
+          u_height: 2,
+          full_depth: false,
+        },
       ]),
-      [`GET /objects/${DEV}/relations`]: page([
-        rel(
-          "instance_of",
-          "out",
-          { id: MODEL, type: "device_type", display: "model" },
-          {},
-        ),
-      ]),
-      "GET /objects": (c: Call) =>
-        c.query.get("type") === "device_type"
-          ? page([obj(MODEL, "device_type", "ex-2u", { u_height: 2 })])
-          : page([]),
     });
   });
   afterEach(() => vi.restoreAllMocks());
