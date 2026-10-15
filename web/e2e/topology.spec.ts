@@ -118,12 +118,19 @@ const PNG_SIGNATURE = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
 ]);
 
-function expectPdf(bytes: Buffer): void {
+/** A one-page PDF: a picture (the rack sheet) or lines and text (the topology). */
+function expectPdf(bytes: Buffer, kind: "picture" | "vector"): string {
   const text = bytes.toString("latin1");
   expect(text.startsWith("%PDF-1.")).toBe(true);
   expect(text.trimEnd().endsWith("%%EOF")).toBe(true);
   expect(text).toMatch(/\/MediaBox \[0 0 \d+(\.\d+)? \d+(\.\d+)?\]/);
-  expect(text).toContain("/DCTDecode");
+  if (kind === "picture") {
+    expect(text).toContain("/DCTDecode");
+  } else {
+    expect(text).not.toContain("/DCTDecode");
+    expect(text).toContain("/BaseFont /Helvetica");
+  }
+  return text;
 }
 
 test("the topology shows every kind of link, apart, and is accessible", async ({
@@ -239,7 +246,10 @@ test("the topology exports a PNG and a PDF under the page's policy", async ({
 
   const pdf = await downloadOf(page, "Export PDF");
   expect(pdf.name).toMatch(/^trica-topology-\d{4}-\d{2}-\d{2}\.pdf$/);
-  expectPdf(pdf.bytes);
+  // The labels are text in the file, so they can be selected and searched.
+  const drawn = expectPdf(pdf.bytes, "vector");
+  expect(drawn).toContain("(deduced, high) Tj");
+  expect((drawn.match(/ re f|h B/g) ?? []).length).toBeGreaterThanOrEqual(3);
   await expect(page.getByText("PDF file saved.")).toBeVisible();
   expect(await csp()).toEqual([]);
 });
@@ -272,7 +282,7 @@ test("the rack elevation exports a PNG and a PDF under the page's policy", async
 
   const pdf = await downloadOf(page, "Export PDF");
   expect(pdf.name).toBe("trica-rack-r12.pdf");
-  expectPdf(pdf.bytes);
+  expectPdf(pdf.bytes, "picture");
   expect(await csp()).toEqual([]);
 });
 

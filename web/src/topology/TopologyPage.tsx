@@ -118,6 +118,11 @@ function Topo({ data }: { data: TopologyData }) {
               if (!d) return Promise.reject(new Error(t("topology.notDrawn")));
               return d.raster(format);
             }}
+            vector={() => {
+              const d = drawingRef.current;
+              if (!d) return Promise.reject(new Error(t("topology.notDrawn")));
+              return d.vector();
+            }}
           />
           <p className="hint">{t("topology.keyboard", { count: number(rows.length) })}</p>
           <LinksTable rows={rows} topology={topology} />

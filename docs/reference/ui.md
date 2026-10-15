@@ -85,8 +85,12 @@ the page's own script).
   faces side by side, the title, and "Exported from trica on <date>". The topology is Cytoscape's
   own image of the whole graph, on white, up to 16 million pixels (the ratio drops for a very large
   graph).
-- The PDF is one page holding the same image as a JPEG at its size (1 CSS px = 0.75 pt). **It is a
-  picture: the text in it cannot be selected or searched.** Use the PNG for slides, the PDF to print.
+- The PDF is one page at the figure's size (1 CSS px = 0.75 pt, at most 200 inches a side).
+  - **Topology: drawn as lines, boxes and text** (ADR 0037). The names and labels can be selected
+    and searched, and the drawing stays sharp when zoomed. The font is Helvetica, which every PDF
+    viewer has; characters outside Latin-1 are printed `?`. The boxes are sized for that font, so the
+    page is close to the screen but not identical.
+  - **Rack: a picture**, the same sheet as the PNG in a JPEG: its text cannot be selected.
 - Files are named `trica-rack-<name>.png` and `trica-topology-<date>.png`; a failure is said in
   words next to the buttons.
 
@@ -217,5 +221,5 @@ menu click, of which layout under 6 s).
 
 ## Not in this version
 
-Selectable text in the PDF exports (they are pictures), patch-panel front/rear ports in the topology, saved queries, history ("which device had this
+Selectable text in the rack PDF (it is a picture; the topology's is vector), patch-panel front/rear ports in the topology, saved queries, history ("which device had this
 address on 3 March").

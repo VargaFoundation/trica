@@ -13,6 +13,7 @@ import cytoscape, {
 } from "cytoscape";
 import elk from "cytoscape-elk";
 import type { Raster } from "../export/download";
+import { textWidth, type Figure, type Shape } from "../export/vectorPdf";
 import type { Graph, LinkClass } from "./model";
 
 let registered = false;
@@ -166,6 +167,8 @@ export interface Drawing {
   destroy(): void;
   /** The whole graph as an image, on white. */
   raster(format: "png" | "jpeg"): Promise<Raster>;
+  /** The whole graph as lines, boxes and text, for a vector PDF. */
+  vector(): Promise<Figure>;
 }
 
 /** The largest image exported: beyond it browsers refuse a canvas. */
@@ -199,6 +202,110 @@ export function claimCytoscapeStyle(doc: Document): void {
   m.name = "trica-cytoscape-style";
   m.content = "the rule is in the application's stylesheet";
   doc.head.append(m);
+}
+
+const NODE_FONT = 12;
+const NODE_PAD = 8;
+const NODE_HEIGHT = 26;
+const EDGE_FONT = 10;
+/** How far apart two lines between the same devices are drawn: cytoscape's own step. */
+const PARALLEL_STEP = 40;
+const DASH: Record<"solid" | "dotted" | "dashed", number[] | undefined> = {
+  solid: undefined,
+  dotted: [1, 4],
+  dashed: [6, 4],
+};
+const MARGIN = 20;
+
+/**
+ * The drawing as shapes: the nodes where the layout put them, the lines from
+ * centre to centre, the lines between the same two devices bent apart as on
+ * the screen, the labels on white. The boxes are sized for the PDF's font
+ * (Helvetica), not measured on the screen, so that a headless drawing gives
+ * the same figure.
+ */
+export function figureOf(cy: Core): Figure {
+  const nodes = cy.nodes().map((n) => {
+    const label = String(n.data("label") ?? "");
+    const { x, y } = n.position();
+    const w = textWidth(label, NODE_FONT) + 2 * NODE_PAD;
+    return { id: n.id(), label, x, y, w, h: NODE_HEIGHT, unresolved: Boolean(n.data("unresolved")) };
+  });
+  const at = new Map(nodes.map((n) => [n.id, n]));
+
+  // Lines between the same pair, whatever their direction, are fanned out.
+  const pairs = new Map<string, cytoscape.EdgeSingular[]>();
+  cy.edges().forEach((e) => {
+    const key = [e.source().id(), e.target().id()].sort().join("\u0000");
+    pairs.set(key, [...(pairs.get(key) ?? []), e]);
+  });
+
+  const lines: Shape[] = [];
+  const labels: Shape[] = [];
+  const bounds: { x: number; y: number }[] = nodes.flatMap((n) => [
+    { x: n.x - n.w / 2, y: n.y - n.h / 2 },
+    { x: n.x + n.w / 2, y: n.y + n.h / 2 },
+  ]);
+  for (const group of pairs.values()) {
+    group.sort((a, b) => (a.id() < b.id() ? -1 : 1));
+    group.forEach((e, i) => {
+      // Oriented the same way for the whole group, so that the offsets do not cancel out.
+      const [a, b] = [e.source().id(), e.target().id()].sort().map((id) => at.get(id));
+      if (!a || !b) return;
+      const from = { x: a.x, y: a.y };
+      const to = { x: b.x, y: b.y };
+      const len = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+      const offset = (i - (group.length - 1) / 2) * PARALLEL_STEP;
+      // The curve's middle sits `offset` away from the straight line, its control point twice as far.
+      const mid = {
+        x: (from.x + to.x) / 2 - ((to.y - from.y) / len) * offset,
+        y: (from.y + to.y) / 2 + ((to.x - from.x) / len) * offset,
+      };
+      const via = offset === 0 ? undefined : { x: 2 * mid.x - (from.x + to.x) / 2, y: 2 * mid.y - (from.y + to.y) / 2 };
+      const style = EDGE_STYLE[e.data("klass") as LinkClass] ?? EDGE_STYLE.declared;
+      lines.push({ kind: "line", from, to, via, stroke: { color: style.color, width: style.width, dash: DASH[style.style] } });
+      if (via) bounds.push(via);
+      const label = String(e.data("label") ?? "");
+      if (label) {
+        labels.push({ kind: "text", at: mid, text: label, size: EDGE_FONT, color: "#1f2328", background: PAPER });
+        const half = textWidth(label, EDGE_FONT) / 2 + 2;
+        bounds.push({ x: mid.x - half, y: mid.y - EDGE_FONT }, { x: mid.x + half, y: mid.y + EDGE_FONT });
+      }
+    });
+  }
+
+  const boxes: Shape[] = nodes.flatMap((n): Shape[] => [
+    {
+      kind: "box",
+      x: n.x - n.w / 2,
+      y: n.y - n.h / 2,
+      w: n.w,
+      h: n.h,
+      radius: 6,
+      fill: n.unresolved ? "#eaeef2" : "#ddf4ff",
+      stroke: { color: n.unresolved ? "#424a53" : "#0550ae", width: 1.5, dash: n.unresolved ? DASH.dashed : undefined },
+    },
+    { kind: "text", at: { x: n.x, y: n.y }, text: n.label, size: NODE_FONT, color: "#1f2328" },
+  ]);
+
+  // The page starts a margin away from the leftmost and topmost ink.
+  const xs = bounds.map((p) => p.x);
+  const ys = bounds.map((p) => p.y);
+  const [minX, maxX] = xs.length ? [Math.min(...xs), Math.max(...xs)] : [0, 0];
+  const [minY, maxY] = ys.length ? [Math.min(...ys), Math.max(...ys)] : [0, 0];
+  const dx = MARGIN - minX;
+  const dy = MARGIN - minY;
+  const move = (p: { x: number; y: number }) => ({ x: p.x + dx, y: p.y + dy });
+  const shapes = [...lines, ...boxes, ...labels].map((sh): Shape => {
+    if (sh.kind === "line") return { ...sh, from: move(sh.from), to: move(sh.to), via: sh.via && move(sh.via) };
+    if (sh.kind === "box") return { ...sh, x: sh.x + dx, y: sh.y + dy };
+    return { ...sh, at: move(sh.at) };
+  });
+  return {
+    width: maxX - minX + 2 * MARGIN,
+    height: maxY - minY + 2 * MARGIN,
+    shapes,
+  };
 }
 
 export function draw(
@@ -269,6 +376,10 @@ export function draw(
         height: Math.ceil(bb.h * ratio),
         ratio,
       };
+    },
+    vector: async () => {
+      await ready;
+      return figureOf(cy);
     },
   };
 }
