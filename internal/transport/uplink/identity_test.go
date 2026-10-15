@@ -1,4 +1,4 @@
-package transport
+package uplink
 
 import (
 	"crypto/ecdsa"
@@ -18,7 +18,7 @@ func provisionMismatch(t *testing.T, dir string, a, b tls.Certificate) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, identityFile), append(keyPEM, pki.CertPEM(b.Leaf)...), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, IdentityFile), append(keyPEM, pki.CertPEM(b.Leaf)...), 0o600); err != nil {
 		t.Fatal(err)
 	}
 }

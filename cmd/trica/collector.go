@@ -23,7 +23,7 @@ import (
 	_ "github.com/VargaFoundation/trica/internal/collect/all" // every collector registers itself in an init function
 	"github.com/VargaFoundation/trica/internal/collect/runner"
 	"github.com/VargaFoundation/trica/internal/pki"
-	"github.com/VargaFoundation/trica/internal/transport"
+	"github.com/VargaFoundation/trica/internal/transport/uplink"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -130,17 +130,17 @@ func runCollector(ctx context.Context, args []string, stderr io.Writer, getenv f
 // a client certificate is bound to one source, so every target has its own
 // client, state directory and spool.
 type remoteEmitter struct {
-	clients map[string]*transport.Client
+	clients map[string]*uplink.Client
 }
 
 func newRemoteEmitter(ctx context.Context, cfg *collectorConfig, targets []collect.Target, log *slog.Logger, reg prometheus.Registerer) (*remoteEmitter, error) {
-	e := &remoteEmitter{clients: map[string]*transport.Client{}}
+	e := &remoteEmitter{clients: map[string]*uplink.Client{}}
 	for _, t := range targets {
 		src := t.Source()
 		if err := pki.ValidBinding(src); err != nil {
 			return nil, fmt.Errorf("target %s cannot be enrolled: %w", src, err)
 		}
-		cl, err := transport.NewClient(transport.ClientConfig{
+		cl, err := uplink.NewClient(uplink.ClientConfig{
 			ServerURL:      cfg.ServerURL,
 			ServerName:     cfg.ServerName,
 			CAFile:         cfg.CAFile,
@@ -175,7 +175,7 @@ func (e *remoteEmitter) close() {
 
 // registerClientMetrics exposes what an operator alerts on: batches waiting in
 // the spool, and batches lost to a full one.
-func registerClientMetrics(reg prometheus.Registerer, source string, c *transport.Client) {
+func registerClientMetrics(reg prometheus.Registerer, source string, c *uplink.Client) {
 	l := prometheus.Labels{"source": source}
 	reg.MustRegister(
 		prometheus.NewGaugeFunc(prometheus.GaugeOpts{

@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/VargaFoundation/trica/internal/pki"
-	"github.com/VargaFoundation/trica/internal/transport"
+	"github.com/VargaFoundation/trica/internal/transport/wire"
 )
 
 // The footprint the agent promises (ADR-0015, ADR-0022): under 50 MB resident
@@ -173,7 +173,7 @@ func TestRealFootprintWithTransport(t *testing.T) {
 	var batches atomic.Int32
 	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.Copy(io.Discard, r.Body)
-		if r.URL.Path == transport.PathBatches && r.TLS != nil && len(r.TLS.VerifiedChains) > 0 {
+		if r.URL.Path == wire.PathBatches && r.TLS != nil && len(r.TLS.VerifiedChains) > 0 {
 			batches.Add(1)
 			w.WriteHeader(http.StatusNoContent)
 			return

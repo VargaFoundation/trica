@@ -1,6 +1,9 @@
 # Transport reference
 
-Packages `internal/transport` (server, client, spool, registry) and `internal/pki` (CA, binding).
+Packages `internal/transport` (server, registry), `internal/transport/uplink` (client, spool),
+`internal/transport/wire` (endpoints and JSON bodies both sides share) and `internal/pki` (CA,
+binding). The agent and remote collectors link `uplink` and `wire` only, never the server and
+its PostgreSQL registry (#64, checked by `TestAgentDoesNotLinkTheServer`).
 Design: [ADR 0008](../adr/0008-transport.md). Status of what is and is not proven:
 [STATUS](../plan/STATUS.md), row 15.
 
@@ -85,12 +88,12 @@ Tables (migration `00003_transport.sql`): `enrol_tokens`, `issued_certs`, `revok
 ## Client
 
 ```go
-c, err := transport.NewClient(transport.ClientConfig{
+c, err := uplink.NewClient(uplink.ClientConfig{
     ServerURL: "https://trica.example.test:8443", CAFile: "/etc/trica/ca.pem",
     Dir: "/var/lib/trica-agent", EnrolToken: token, // or EnrolTokenFile
 })
 go c.Run(ctx, 30*time.Second) // background flush of the spool
-err = c.Emit(ctx, batch)      // transport.Client implements sdk.Emitter
+err = c.Emit(ctx, batch)      // uplink.Client implements sdk.Emitter
 ```
 
 - Identity: key and certificate in one file `Dir/identity.pem` (0600), written atomically.

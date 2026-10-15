@@ -1,4 +1,4 @@
-package transport
+package uplink
 
 import (
 	"compress/gzip"
@@ -6,174 +6,18 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/VargaFoundation/trica/internal/pki"
+	"github.com/VargaFoundation/trica/internal/transport/wire"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
-
-var fixedTime = time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
-
-// sized returns a batch of a fixed observation time, so that batches of
-// sources of equal length have the same encoded size.
-func sized(source string) *sdk.Batch {
-	b := batch(source)
-	b.ObservedAt = fixedTime
-	return b
-}
-
-func TestSpoolSurvivesServerOutageAndFlushesInOrder(t *testing.T) {
-	e := newEnv(t)
-	stop := e.start()
-	c := e.client("agent:host-01")
-	ctx := context.Background()
-	if err := c.Emit(ctx, batch("agent:host-01:1")); err != nil {
-		t.Fatal(err)
-	}
-
-	stop() // the outage
-	for _, src := range srcs("agent:host-01:", 2, 4) {
-		if err := c.Emit(ctx, batch(src)); err != nil {
-			t.Fatalf("an outage must not surface as an error: %v", err)
-		}
-	}
-	if st := c.Stats(); st.Spooled != 3 || st.Sent != 1 || st.Dropped != 0 {
-		t.Fatalf("stats during the outage = %+v", st)
-	}
-	if got := e.rec.sources(); len(got) != 1 {
-		t.Fatalf("sink got %v during the outage", got)
-	}
-
-	e.start() // the server is back, on the same address
-	// A new batch must queue behind the spooled ones, not overtake them.
-	if err := c.Emit(ctx, batch("agent:host-01:5")); err != nil {
-		t.Fatal(err)
-	}
-	if got, want := e.rec.sources(), srcs("agent:host-01:", 1, 5); !slices.Equal(got, want) {
-		t.Fatalf("order at the server = %v, want %v", got, want)
-	}
-	if st := c.Stats(); st.Spooled != 0 || st.Sent != 5 {
-		t.Fatalf("stats after = %+v", st)
-	}
-}
-
-// TestOutageKeepsThePort guards the test environment itself: while the server
-// is stopped, nobody else may listen on its address (#67).
-func TestOutageKeepsThePort(t *testing.T) {
-	e := newEnv(t)
-	stop := e.start()
-	stop()
-	if ln, err := net.Listen("tcp", e.addr); err == nil {
-		_ = ln.Close()
-		t.Fatalf("%s was free during the outage: another process could serve on it", e.addr)
-	}
-	e.start()
-	c := e.client("agent:host-01")
-	if err := c.Emit(context.Background(), batch("agent:host-01:1")); err != nil {
-		t.Fatal(err)
-	}
-	if st := c.Stats(); st.Sent != 1 {
-		t.Fatalf("after the restart on the held port: %+v", st)
-	}
-}
-
-func TestSpoolSurvivesClientRestartAndFlush(t *testing.T) {
-	e := newEnv(t)
-	stop := e.start()
-	c := e.client("agent:host-01")
-	ctx := context.Background()
-	if err := c.Emit(ctx, batch("agent:host-01:1")); err != nil {
-		t.Fatal(err)
-	}
-	stop()
-	for _, src := range srcs("agent:host-01:", 2, 4) {
-		if err := c.Emit(ctx, batch(src)); err != nil {
-			t.Fatal(err)
-		}
-	}
-	c.Close()
-
-	// The process restarts: a new client on the same directories. It has its
-	// identity (no token any more) and finds the spool.
-	cfg := c.cfg
-	cfg.EnrolToken = ""
-	again, err := NewClient(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer again.Close()
-	if st := again.Stats(); st.Spooled != 3 {
-		t.Fatalf("spool after restart = %+v", st)
-	}
-	if err := again.Flush(ctx); err == nil {
-		t.Fatal("Flush against a dead server must report the failure")
-	}
-	if st := again.Stats(); st.Spooled != 3 {
-		t.Fatalf("a failed flush must keep the spool: %+v", st)
-	}
-	// A batch emitted now is spooled behind the others.
-	if err := again.Emit(ctx, batch("agent:host-01:5")); err != nil {
-		t.Fatal(err)
-	}
-	e.start()
-	if err := again.Flush(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if got, want := e.rec.sources(), srcs("agent:host-01:", 1, 5); !slices.Equal(got, want) {
-		t.Fatalf("order at the server = %v, want %v", got, want)
-	}
-	if st := again.Stats(); st.Spooled != 0 {
-		t.Fatalf("spool after flush = %+v", st)
-	}
-}
-
-func TestSpoolBoundDropsOldestAndCounts(t *testing.T) {
-	e := newEnv(t)
-	stop := e.start()
-	size := func() int64 {
-		b, err := encodeBatch(sized("agent:host-01:0"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		return int64(len(b))
-	}()
-	// Room for three batches, not four.
-	c := e.client("agent:host-01", func(cfg *ClientConfig) { cfg.MaxSpoolBytes = 3*size + size/2 })
-	ctx := context.Background()
-	if err := c.Emit(ctx, sized("agent:host-01:0")); err != nil { // enrols
-		t.Fatal(err)
-	}
-	stop()
-	for _, src := range srcs("agent:host-01:", 1, 6) {
-		if err := c.Emit(ctx, sized(src)); err != nil {
-			t.Fatal(err)
-		}
-	}
-	st := c.Stats()
-	if st.Spooled != 3 || st.Dropped != 3 || st.SpoolBytes > c.cfg.MaxSpoolBytes {
-		t.Fatalf("stats = %+v (budget %d)", st, c.cfg.MaxSpoolBytes)
-	}
-	e.start()
-	if err := c.Flush(ctx); err != nil {
-		t.Fatal(err)
-	}
-	// The oldest three (1, 2, 3) were dropped; the newest three survive, in order.
-	want := []string{"agent:host-01:0", "agent:host-01:4", "agent:host-01:5", "agent:host-01:6"}
-	if got := e.rec.sources(); !slices.Equal(got, want) {
-		t.Fatalf("sink got %v, want %v", got, want)
-	}
-	if st := c.Stats(); st.Dropped != 3 {
-		t.Fatalf("dropped = %d", st.Dropped)
-	}
-}
 
 func TestBatchLargerThanTheSpoolIsDroppedAndReported(t *testing.T) {
 	ca, _ := pki.NewCA("test", time.Now())
@@ -208,72 +52,13 @@ func randomHex(t *testing.T, n int) string {
 	return hexOf(b)
 }
 
-func TestRenewalHappensBeforeExpiry(t *testing.T) {
-	e := newEnv(t)
-	e.start()
-	clk := newClock()
-	c := e.client("agent:host-01", func(cfg *ClientConfig) { cfg.Now = clk.Now })
-	ctx := context.Background()
-	emit := func() {
-		t.Helper()
-		if err := c.Emit(ctx, batch("agent:host-01")); err != nil {
-			t.Fatal(err)
-		}
-	}
-	advance := func(d time.Duration) { // client and server share the story's time
-		clk.Advance(d)
-		e.regTime.Advance(d)
-	}
-	emit() // enrols: a 7 day certificate
-	first := c.currentCert()
-	if got := first.NotAfter.Sub(first.NotBefore); got < 7*24*time.Hour {
-		t.Fatalf("validity = %v", got)
-	}
-
-	advance(4 * 24 * time.Hour) // 3 days left of 7: more than a third
-	emit()
-	if st := c.Stats(); st.Renewals != 0 || c.currentCert().SerialNumber.Cmp(first.SerialNumber) != 0 {
-		t.Fatalf("renewed too early: %+v", st)
-	}
-
-	advance(24 * time.Hour) // 2 days left: less than a third (2d8h)
-	emit()
-	renewed := c.currentCert()
-	if st := c.Stats(); st.Renewals != 1 || renewed.SerialNumber.Cmp(first.SerialNumber) == 0 {
-		t.Fatalf("not renewed before expiry: %+v", st)
-	}
-	if !renewed.NotAfter.After(first.NotAfter) {
-		t.Fatal("the renewed certificate must outlive the old one")
-	}
-	if b, _ := pki.BindingFromCert(renewed); b != "agent:host-01" {
-		t.Fatalf("binding = %q", b)
-	}
-	// The new identity is on disk: a restart does not fall back to the old one.
-	cfg := c.cfg
-	cfg.EnrolToken = ""
-	again, err := NewClient(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer again.Close()
-	if again.currentCert().SerialNumber.Cmp(renewed.SerialNumber) != 0 {
-		t.Fatal("the renewed certificate was not persisted")
-	}
-	if got := e.rec.sources(); len(got) != 3 {
-		t.Fatalf("batches at the server = %v", got)
-	}
-	if info, err := os.Stat(filepath.Join(c.cfg.Dir, identityFile)); err != nil || info.Mode().Perm() != 0o600 {
-		t.Fatalf("identity file: %v %v", info, err)
-	}
-}
-
-// prog is a server whose answers the test scripts.
 type prog struct {
 	mu          sync.Mutex
 	batchStatus int
 	renewStatus int
 	enrolFn     http.HandlerFunc
 	got         []string
+	protos      []string
 	renews      int
 }
 
@@ -292,8 +77,9 @@ func (p *prog) sources() []string {
 func (p *prog) handler(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.protos = append(p.protos, r.Proto)
 	switch r.URL.Path {
-	case PathBatches:
+	case wire.PathBatches:
 		if p.batchStatus >= 200 && p.batchStatus < 300 {
 			zr, err := gzip.NewReader(r.Body)
 			if err == nil {
@@ -304,11 +90,27 @@ func (p *prog) handler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		w.WriteHeader(p.batchStatus)
-	case PathRenew:
+	case wire.PathRenew:
 		p.renews++
 		w.WriteHeader(p.renewStatus)
-	case PathEnrol:
+	case wire.PathEnrol:
 		p.enrolFn(w, r)
+	}
+}
+
+// TestClientSpeaksHTTP2 checks the client's half of HTTP/2; the server's half
+// is checked in internal/transport (TestEndToEndHTTP2).
+func TestClientSpeaksHTTP2(t *testing.T) {
+	p := &prog{}
+	p.set(http.StatusAccepted, http.StatusOK)
+	c, _ := fakeClient(t, p, "agent:host-01", time.Hour)
+	if err := c.Emit(context.Background(), batch("agent:host-01")); err != nil {
+		t.Fatal(err)
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if len(p.protos) == 0 || p.protos[0] != "HTTP/2.0" {
+		t.Fatalf("protocols = %v, want HTTP/2.0", p.protos)
 	}
 }
 
@@ -496,73 +298,12 @@ func TestRenewalFailure(t *testing.T) {
 
 func TestEnrolmentErrors(t *testing.T) {
 	ctx := context.Background()
-	t.Run("no token", func(t *testing.T) {
-		e := newEnv(t)
-		e.start()
-		c := e.client("agent:host-01", func(cfg *ClientConfig) { cfg.EnrolToken = "" })
-		err := c.Emit(ctx, batch("agent:host-01"))
-		if err == nil || !strings.Contains(err.Error(), "no enrolment token") {
-			t.Fatalf("err = %v", err)
-		}
-		if st := c.Stats(); st.Spooled != 0 {
-			t.Fatalf("a missing token cannot be fixed by retrying: %+v", st)
-		}
-	})
-	t.Run("token file", func(t *testing.T) {
-		e := newEnv(t)
-		e.start()
-		tf := filepath.Join(t.TempDir(), "token")
-		c := e.client("agent:host-01", func(cfg *ClientConfig) {
-			if err := os.WriteFile(tf, []byte(cfg.EnrolToken+"\n"), 0o600); err != nil {
-				t.Fatal(err)
-			}
-			cfg.EnrolToken, cfg.EnrolTokenFile = "", tf
-		})
-		if err := c.Emit(ctx, batch("agent:host-01")); err != nil {
-			t.Fatal(err)
-		}
-		if st := c.Stats(); st.Enrolments != 1 || st.Sent != 1 {
-			t.Fatalf("stats = %+v", st)
-		}
-	})
-	t.Run("missing token file", func(t *testing.T) {
-		e := newEnv(t)
-		c := e.client("agent:host-01", func(cfg *ClientConfig) {
-			cfg.EnrolToken, cfg.EnrolTokenFile = "", filepath.Join(t.TempDir(), "absent")
-		})
-		if err := c.Emit(ctx, batch("agent:host-01")); err == nil {
-			t.Fatal("a missing token file must be an error")
-		}
-	})
-	t.Run("enrol after an outage", func(t *testing.T) {
-		e := newEnv(t)
-		stop := e.start()
-		stop()
-		c := e.client("agent:host-01")
-		// Never enrolled, server down: the batch waits.
-		if err := c.Emit(ctx, batch("agent:host-01:1")); err != nil {
-			t.Fatal(err)
-		}
-		if st := c.Stats(); st.Spooled != 1 || st.Enrolments != 0 {
-			t.Fatalf("stats = %+v", st)
-		}
-		e.start()
-		if err := c.Flush(ctx); err != nil {
-			t.Fatal(err)
-		}
-		if st := c.Stats(); st.Spooled != 0 || st.Enrolments != 1 || st.Sent != 1 {
-			t.Fatalf("stats = %+v", st)
-		}
-		if got := e.rec.sources(); !slices.Equal(got, []string{"agent:host-01:1"}) {
-			t.Fatalf("sink got %v", got)
-		}
-	})
 	t.Run("certificate from another CA", func(t *testing.T) {
 		p := &prog{}
 		ca, _ := pki.NewCA("trusted", time.Now())
 		rogue, _ := pki.NewCA("rogue", time.Now())
 		p.enrolFn = func(w http.ResponseWriter, r *http.Request) {
-			var req enrolRequest
+			var req wire.EnrolRequest
 			_ = json.NewDecoder(r.Body).Decode(&req)
 			csr, _ := pki.ParseCSRPEM([]byte(req.CSR))
 			cert, err := rogue.IssueClient(csr, "agent:host-01", time.Hour, time.Now())
@@ -570,7 +311,7 @@ func TestEnrolmentErrors(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			_ = json.NewEncoder(w).Encode(certResponse{Certificate: string(pki.CertPEM(cert))})
+			_ = json.NewEncoder(w).Encode(wire.CertResponse{Certificate: string(pki.CertPEM(cert))})
 		}
 		url, caFile := fakeServer(t, ca, p.handler)
 		c, err := NewClient(ClientConfig{ServerURL: url, CAFile: caFile, Dir: t.TempDir(), EnrolToken: "tok", Timeout: 5 * time.Second})
@@ -581,7 +322,7 @@ func TestEnrolmentErrors(t *testing.T) {
 		if err := c.Emit(ctx, batch("agent:host-01")); err == nil || !strings.Contains(err.Error(), "cannot verify") {
 			t.Fatalf("a certificate not signed by our CA must be refused: %v", err)
 		}
-		if c.currentCert() != nil {
+		if c.Certificate() != nil {
 			t.Fatal("an unverifiable certificate must not be installed")
 		}
 	})
@@ -590,7 +331,7 @@ func TestEnrolmentErrors(t *testing.T) {
 		ca, _ := pki.NewCA("trusted", time.Now())
 		p.enrolFn = func(w http.ResponseWriter, _ *http.Request) {
 			other := issueIdentity(t, ca, "agent:host-01", time.Hour, time.Now())
-			_ = json.NewEncoder(w).Encode(certResponse{Certificate: string(pki.CertPEM(other.Leaf))})
+			_ = json.NewEncoder(w).Encode(wire.CertResponse{Certificate: string(pki.CertPEM(other.Leaf))})
 		}
 		url, caFile := fakeServer(t, ca, p.handler)
 		c, err := NewClient(ClientConfig{ServerURL: url, CAFile: caFile, Dir: t.TempDir(), EnrolToken: "tok", Timeout: 5 * time.Second})
@@ -606,7 +347,7 @@ func TestEnrolmentErrors(t *testing.T) {
 		p := &prog{}
 		ca, _ := pki.NewCA("trusted", time.Now())
 		p.enrolFn = func(w http.ResponseWriter, _ *http.Request) {
-			_ = json.NewEncoder(w).Encode(certResponse{Certificate: "junk"})
+			_ = json.NewEncoder(w).Encode(wire.CertResponse{Certificate: "junk"})
 		}
 		url, caFile := fakeServer(t, ca, p.handler)
 		c, err := NewClient(ClientConfig{ServerURL: url, CAFile: caFile, Dir: t.TempDir(), EnrolToken: "tok", Timeout: 5 * time.Second})
@@ -618,40 +359,6 @@ func TestEnrolmentErrors(t *testing.T) {
 			t.Fatal("garbage must be refused")
 		}
 	})
-}
-
-func TestRunFlushesInTheBackground(t *testing.T) {
-	e := newEnv(t)
-	stop := e.start()
-	c := e.client("agent:host-01")
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if err := c.Emit(ctx, batch("agent:host-01:1")); err != nil {
-		t.Fatal(err)
-	}
-	stop()
-	for _, src := range srcs("agent:host-01:", 2, 3) {
-		if err := c.Emit(ctx, batch(src)); err != nil {
-			t.Fatal(err)
-		}
-	}
-	done := make(chan struct{})
-	go func() { c.Run(ctx, 20*time.Millisecond); close(done) }()
-	time.Sleep(100 * time.Millisecond) // a few failed ticks while the server is down
-	e.start()
-	deadline := time.Now().Add(60 * time.Second)
-	for len(e.rec.sources()) < 3 && time.Now().Before(deadline) {
-		time.Sleep(20 * time.Millisecond)
-	}
-	if got, want := e.rec.sources(), srcs("agent:host-01:", 1, 3); !slices.Equal(got, want) {
-		t.Fatalf("sink got %v, want %v", got, want)
-	}
-	cancel()
-	select {
-	case <-done:
-	case <-time.After(30 * time.Second):
-		t.Fatal("Run did not return after cancellation")
-	}
 }
 
 func TestNewClientValidation(t *testing.T) {
@@ -691,7 +398,7 @@ func TestNewClientValidation(t *testing.T) {
 	for name, content := range map[string]string{"junk": "junk", "key only": "-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"} {
 		cfg := ok
 		cfg.Dir = t.TempDir()
-		if err := os.WriteFile(filepath.Join(cfg.Dir, identityFile), []byte(content), 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(cfg.Dir, IdentityFile), []byte(content), 0o600); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := NewClient(cfg); err == nil {

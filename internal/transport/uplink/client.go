@@ -1,4 +1,10 @@
-package transport
+// Package uplink is the client side of the transport (docs/adr/0008-transport.md):
+// it enrols with a one-time token, renews its certificate before expiry, and
+// sends batches over HTTP/2 and mutual TLS, keeping them in a bounded disk
+// spool while the server is unreachable. The agent and the remote collector
+// link it; it does not link the server nor its PostgreSQL registry
+// (internal/transport), and TestAgentDoesNotLinkTheServer guards that (#64).
+package uplink
 
 import (
 	"bytes"
@@ -22,6 +28,7 @@ import (
 	"time"
 
 	"github.com/VargaFoundation/trica/internal/pki"
+	"github.com/VargaFoundation/trica/internal/transport/wire"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -29,7 +36,8 @@ import (
 const (
 	DefaultMaxSpoolBytes = 64 << 20
 	DefaultTimeout       = 30 * time.Second
-	identityFile         = "identity.pem"
+	// IdentityFile, in [ClientConfig.Dir], holds the key and the certificate.
+	IdentityFile = "identity.pem"
 )
 
 // StatusError is a non-2xx answer from the server.
@@ -325,7 +333,7 @@ func encodeBatch(b *sdk.Batch) ([]byte, error) {
 }
 
 func (c *Client) postBatch(ctx context.Context, body []byte) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.base+PathBatches, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.base+wire.PathBatches, bytes.NewReader(body))
 	if err != nil {
 		return permanentError{err}
 	}
@@ -374,7 +382,7 @@ func (c *Client) postJSON(ctx context.Context, hc *http.Client, path string, in,
 // is none, and renews when less than a third of the validity remains. A failed
 // renewal is not an error while the current certificate is still valid.
 func (c *Client) prepareLocked(ctx context.Context) error {
-	cert := c.currentCert()
+	cert := c.Certificate()
 	if cert == nil {
 		return c.enrolLocked(ctx)
 	}
@@ -398,7 +406,8 @@ func (c *Client) needsRenewal(cert *x509.Certificate) bool {
 	return cert.NotAfter.Sub(c.now()) < total/3
 }
 
-func (c *Client) currentCert() *x509.Certificate {
+// Certificate is the client certificate in use, nil before enrolment.
+func (c *Client) Certificate() *x509.Certificate {
 	c.certMu.RLock()
 	defer c.certMu.RUnlock()
 	return c.cert
@@ -424,8 +433,8 @@ func (c *Client) enrolLocked(ctx context.Context) error {
 	if err != nil {
 		return permanentError{err}
 	}
-	var resp certResponse
-	if err := c.postJSON(ctx, c.enrol, PathEnrol, enrolRequest{Token: token, CSR: string(csr)}, &resp); err != nil {
+	var resp wire.CertResponse
+	if err := c.postJSON(ctx, c.enrol, wire.PathEnrol, wire.EnrolRequest{Token: token, CSR: string(csr)}, &resp); err != nil {
 		return err
 	}
 	if err := c.install(key, resp.Certificate); err != nil {
@@ -445,8 +454,8 @@ func (c *Client) renewLocked(ctx context.Context) error {
 	if err != nil {
 		return permanentError{err}
 	}
-	var resp certResponse
-	if err := c.postJSON(ctx, c.main, PathRenew, renewRequest{CSR: string(csr)}, &resp); err != nil {
+	var resp wire.CertResponse
+	if err := c.postJSON(ctx, c.main, wire.PathRenew, wire.RenewRequest{CSR: string(csr)}, &resp); err != nil {
 		return err
 	}
 	if err := c.install(key, resp.Certificate); err != nil {
@@ -458,7 +467,7 @@ func (c *Client) renewLocked(ctx context.Context) error {
 }
 
 func (c *Client) binding() string {
-	if cert := c.currentCert(); cert != nil {
+	if cert := c.Certificate(); cert != nil {
 		b, _ := pki.BindingFromCert(cert)
 		return b
 	}
@@ -491,7 +500,7 @@ func (c *Client) install(key *ecdsa.PrivateKey, certPEM string) error {
 		return permanentError{err}
 	}
 	file := slices.Concat(keyPEM, pki.CertPEM(cert))
-	if err := atomicWrite(filepath.Join(c.cfg.Dir, identityFile), file, 0o600); err != nil {
+	if err := atomicWrite(filepath.Join(c.cfg.Dir, IdentityFile), file, 0o600); err != nil {
 		return permanentError{err}
 	}
 	c.setIdentity(key, cert)
@@ -507,7 +516,7 @@ func (c *Client) setIdentity(key *ecdsa.PrivateKey, cert *x509.Certificate) {
 
 // loadIdentity reads the identity file when it exists.
 func (c *Client) loadIdentity() error {
-	data, err := os.ReadFile(filepath.Join(c.cfg.Dir, identityFile))
+	data, err := os.ReadFile(filepath.Join(c.cfg.Dir, IdentityFile))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}

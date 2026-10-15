@@ -23,6 +23,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/VargaFoundation/trica/internal/pki"
+	"github.com/VargaFoundation/trica/internal/transport/uplink"
+	"github.com/VargaFoundation/trica/internal/transport/wire"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -39,30 +41,18 @@ func mustJSON(t *testing.T, v any) []byte {
 
 func statusOf(t *testing.T, err error) int {
 	t.Helper()
-	var se *StatusError
+	var se *uplink.StatusError
 	if !errors.As(err, &se) {
-		t.Fatalf("want a StatusError, got %T: %v", err, err)
+		t.Fatalf("want a uplink.StatusError, got %T: %v", err, err)
 	}
 	return se.Code
 }
 
-type roundTripFunc func(*http.Request) (*http.Response, error)
-
-func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
-
 func TestEndToEndHTTP2(t *testing.T) {
 	e := newEnv(t)
 	e.start()
-	c := e.client("agent:host-01")
-	real := c.main.Transport
-	var proto string
-	c.main.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
-		resp, err := real.RoundTrip(r)
-		if resp != nil {
-			proto = resp.Proto
-		}
-		return resp, err
-	})
+	cfg := e.clientCfg("agent:host-01")
+	c := e.clientFrom(cfg)
 
 	if err := c.Emit(context.Background(), batch("agent:host-01")); err != nil {
 		t.Fatal(err)
@@ -70,8 +60,15 @@ func TestEndToEndHTTP2(t *testing.T) {
 	if got := e.rec.sources(); !slices.Equal(got, []string{"agent:host-01"}) {
 		t.Fatalf("sink got %v", got)
 	}
-	if proto != "HTTP/2.0" {
-		t.Fatalf("protocol = %q, want HTTP/2.0", proto)
+	// The server's half of HTTP/2; the client's is checked in uplink
+	// (TestClientSpeaksHTTP2).
+	resp, err := e.rawClient(nil).Get(e.url() + wire.PathBatches)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	if resp.Proto != "HTTP/2.0" {
+		t.Fatalf("protocol = %q, want HTTP/2.0", resp.Proto)
 	}
 	e.rec.mu.Lock()
 	id := e.rec.ids[0]
@@ -89,10 +86,10 @@ func TestEndToEndHTTP2(t *testing.T) {
 	}
 	// A second client built on the same directory needs no token: it reuses
 	// the identity enrolled by the first.
-	cfg := e.clientCfg("agent:other-01")
-	token := c.cfg.EnrolToken
-	cfg.Dir, cfg.EnrolToken = c.cfg.Dir, ""
-	c2, err := NewClient(cfg)
+	token := cfg.EnrolToken
+	cfg2 := e.clientCfg("agent:other-01")
+	cfg2.Dir, cfg2.EnrolToken = cfg.Dir, ""
+	c2, err := uplink.NewClient(cfg2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +131,7 @@ func TestTokenWorksOnce(t *testing.T) {
 	e := newEnv(t)
 	e.start()
 	first := e.clientCfg("agent:host-01")
-	c1, err := NewClient(first)
+	c1, err := uplink.NewClient(first)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +142,7 @@ func TestTokenWorksOnce(t *testing.T) {
 	// Another machine replays the same token.
 	second := e.clientCfg("agent:host-99")
 	second.EnrolToken = first.EnrolToken
-	c2, err := NewClient(second)
+	c2, err := uplink.NewClient(second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +154,7 @@ func TestTokenWorksOnce(t *testing.T) {
 	if st := c2.Stats(); st.Spooled != 0 || st.Enrolments != 0 {
 		t.Fatalf("a refused enrolment must neither spool nor count: %+v", st)
 	}
-	if c2.currentCert() != nil {
+	if c2.Certificate() != nil {
 		t.Fatal("no certificate must be issued for a used token")
 	}
 }
@@ -167,7 +164,7 @@ func TestExpiredTokenRejected(t *testing.T) {
 	e.start()
 	cfg := e.clientCfg("agent:host-01") // valid one hour
 	e.regTime.Advance(time.Hour + time.Second)
-	c, err := NewClient(cfg)
+	c, err := uplink.NewClient(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,15 +183,15 @@ func TestUnknownAndMissingToken(t *testing.T) {
 	hc := e.rawClient(nil)
 	key, _ := pki.GenerateKey()
 	csr, _ := pki.NewCSR(key)
-	body, _ := json.Marshal(enrolRequest{Token: "not-a-token", CSR: string(csr)})
-	if code, _ := post(t, hc, e.url()+PathEnrol, body, nil); code != http.StatusUnauthorized {
+	body, _ := json.Marshal(wire.EnrolRequest{Token: "not-a-token", CSR: string(csr)})
+	if code, _ := post(t, hc, e.url()+wire.PathEnrol, body, nil); code != http.StatusUnauthorized {
 		t.Fatalf("unknown token: %d", code)
 	}
-	body, _ = json.Marshal(enrolRequest{CSR: string(csr)})
-	if code, _ := post(t, hc, e.url()+PathEnrol, body, nil); code != http.StatusBadRequest {
+	body, _ = json.Marshal(wire.EnrolRequest{CSR: string(csr)})
+	if code, _ := post(t, hc, e.url()+wire.PathEnrol, body, nil); code != http.StatusBadRequest {
 		t.Fatalf("missing token: %d", code)
 	}
-	if code, _ := post(t, hc, e.url()+PathEnrol, []byte("{"), nil); code != http.StatusBadRequest {
+	if code, _ := post(t, hc, e.url()+wire.PathEnrol, []byte("{"), nil); code != http.StatusBadRequest {
 		t.Fatalf("malformed JSON: %d", code)
 	}
 }
@@ -211,20 +208,20 @@ func TestBadCSRDoesNotBurnTheToken(t *testing.T) {
 	der, _ := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{}, rk)
 	rsaCSR := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: der})
 	for name, csr := range map[string]string{"rsa": string(rsaCSR), "garbage": "nope"} {
-		body, _ := json.Marshal(enrolRequest{Token: token, CSR: csr})
-		if code, _ := post(t, hc, e.url()+PathEnrol, body, nil); code != http.StatusBadRequest {
+		body, _ := json.Marshal(wire.EnrolRequest{Token: token, CSR: csr})
+		if code, _ := post(t, hc, e.url()+wire.PathEnrol, body, nil); code != http.StatusBadRequest {
 			t.Fatalf("%s CSR: status %d, want 400", name, code)
 		}
 	}
 	// The token still works with a good CSR.
 	key, _ := pki.GenerateKey()
 	csr, _ := pki.NewCSR(key)
-	body, _ := json.Marshal(enrolRequest{Token: token, CSR: string(csr)})
-	code, out := post(t, hc, e.url()+PathEnrol, body, nil)
+	body, _ := json.Marshal(wire.EnrolRequest{Token: token, CSR: string(csr)})
+	code, out := post(t, hc, e.url()+wire.PathEnrol, body, nil)
 	if code != http.StatusOK {
 		t.Fatalf("good CSR after bad ones: %d %s", code, out)
 	}
-	var resp certResponse
+	var resp wire.CertResponse
 	if err := json.Unmarshal([]byte(out), &resp); err != nil {
 		t.Fatal(err)
 	}
@@ -241,8 +238,8 @@ func TestBadCSRDoesNotBurnTheToken(t *testing.T) {
 		Subject: pkix.Name{CommonName: "agent:host-01"},
 		URIs:    []*url.URL{{Scheme: "urn", Opaque: "trica:source:agent:host-01"}},
 	}, key)
-	body, _ = json.Marshal(enrolRequest{Token: token2, CSR: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: der}))})
-	code, out = post(t, hc, e.url()+PathEnrol, body, nil)
+	body, _ = json.Marshal(wire.EnrolRequest{Token: token2, CSR: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: der}))})
+	code, out = post(t, hc, e.url()+wire.PathEnrol, body, nil)
 	if code != http.StatusOK {
 		t.Fatalf("%d %s", code, out)
 	}
@@ -283,7 +280,8 @@ func TestSourceSpoofingRejected(t *testing.T) {
 func TestRevokedCertificateRejected(t *testing.T) {
 	e := newEnv(t)
 	e.start()
-	c := e.client("agent:host-01")
+	cfg := e.clientCfg("agent:host-01")
+	c := e.clientFrom(cfg)
 	other := e.client("agent:host-02")
 	ctx := context.Background()
 	if err := c.Emit(ctx, batch("agent:host-01")); err != nil {
@@ -292,7 +290,7 @@ func TestRevokedCertificateRejected(t *testing.T) {
 	if err := other.Emit(ctx, batch("agent:host-02")); err != nil {
 		t.Fatal(err)
 	}
-	serial := pki.SerialString(c.currentCert())
+	serial := pki.SerialString(c.Certificate())
 	if err := e.reg.Revoke(ctx, serial, "lost laptop"); err != nil {
 		t.Fatal(err)
 	}
@@ -311,7 +309,7 @@ func TestRevokedCertificateRejected(t *testing.T) {
 		t.Fatalf("an unrelated client must keep working: %v", err)
 	}
 	// A revoked certificate cannot renew itself either.
-	if code, _ := post(t, e.rawClient(c.tlsc), e.url()+PathRenew, []byte(`{}`), nil); code != http.StatusUnauthorized {
+	if code, _ := post(t, e.rawClient(identityOf(t, cfg.Dir)), e.url()+wire.PathRenew, []byte(`{}`), nil); code != http.StatusUnauthorized {
 		t.Fatalf("renew with a revoked certificate: %d", code)
 	}
 	// Revoking by binding.
@@ -359,10 +357,10 @@ func TestNoClientCertificateRejected(t *testing.T) {
 	e.start()
 	hc := e.rawClient(nil)
 	body := gz(t, batch("agent:host-01"))
-	if code, _ := post(t, hc, e.url()+PathBatches, body, gzipHdr); code != http.StatusUnauthorized {
+	if code, _ := post(t, hc, e.url()+wire.PathBatches, body, gzipHdr); code != http.StatusUnauthorized {
 		t.Fatalf("batches without certificate: %d, want 401", code)
 	}
-	if code, _ := post(t, hc, e.url()+PathRenew, []byte(`{}`), nil); code != http.StatusUnauthorized {
+	if code, _ := post(t, hc, e.url()+wire.PathRenew, []byte(`{}`), nil); code != http.StatusUnauthorized {
 		t.Fatalf("renew without certificate: %d, want 401", code)
 	}
 	if got := e.rec.sources(); len(got) != 0 {
@@ -379,7 +377,7 @@ func TestForeignCAClientCertificateRejected(t *testing.T) {
 	}
 	id := issueIdentity(t, other, "agent:host-01", time.Hour, time.Now())
 	hc := e.rawClient(&id)
-	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, e.url()+PathBatches, strings.NewReader(""))
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, e.url()+wire.PathBatches, strings.NewReader(""))
 	// Go clients do not even offer a certificate the server's CA list does
 	// not cover: the request then arrives anonymous and gets a 401. Either
 	// way it must not be served.
@@ -399,7 +397,7 @@ func TestServerCertificateCannotBeUsedAsClientCertificate(t *testing.T) {
 	e := newEnv(t)
 	e.start()
 	hc := e.rawClient(&e.srvCert)
-	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, e.url()+PathBatches, strings.NewReader(""))
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, e.url()+wire.PathBatches, strings.NewReader(""))
 	if resp, err := hc.Do(req); err == nil {
 		defer resp.Body.Close()
 		t.Fatalf("the server certificate authenticated a client: %d", resp.StatusCode)
@@ -412,7 +410,7 @@ func TestExpiredCertificateRejected(t *testing.T) {
 	// Issued 8 days ago for 7: expired at the handshake.
 	old := e.identity("agent:host-01", 7*24*time.Hour, time.Now().Add(-8*24*time.Hour))
 	hc := e.rawClient(&old)
-	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, e.url()+PathBatches, strings.NewReader(""))
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, e.url()+wire.PathBatches, strings.NewReader(""))
 	if resp, err := hc.Do(req); err == nil {
 		defer resp.Body.Close()
 		t.Fatalf("an expired certificate got an answer: %d", resp.StatusCode)
@@ -424,11 +422,11 @@ func TestExpiredCertificateRejected(t *testing.T) {
 	live := e.identity("agent:host-01", time.Hour, time.Now())
 	hc = e.rawClient(&live)
 	body := gz(t, batch("agent:host-01"))
-	if code, out := post(t, hc, e.url()+PathBatches, body, gzipHdr); code != http.StatusNoContent {
+	if code, out := post(t, hc, e.url()+wire.PathBatches, body, gzipHdr); code != http.StatusNoContent {
 		t.Fatalf("valid certificate: %d %s", code, out)
 	}
 	e.regTime.Advance(2 * time.Hour)
-	if code, _ := post(t, hc, e.url()+PathBatches, body, gzipHdr); code != http.StatusUnauthorized {
+	if code, _ := post(t, hc, e.url()+wire.PathBatches, body, gzipHdr); code != http.StatusUnauthorized {
 		t.Fatalf("expired on a live connection: %d, want 401", code)
 	}
 }
@@ -436,19 +434,25 @@ func TestExpiredCertificateRejected(t *testing.T) {
 func TestRenewKeepsTheBinding(t *testing.T) {
 	e := newEnv(t)
 	e.start()
-	c := e.client("agent:host-01")
+	clk := newClock()
+	cfg := e.clientCfg("agent:host-01")
+	cfg.Now = clk.Now
+	c := e.clientFrom(cfg)
 	ctx := context.Background()
 	if err := c.Emit(ctx, batch("agent:host-01")); err != nil {
 		t.Fatal(err)
 	}
-	old := c.currentCert()
-	c.mu.Lock()
-	err := c.renewLocked(ctx)
-	c.mu.Unlock()
-	if err != nil {
+	old := c.Certificate()
+	// Five days into a seven day certificate, the next exchange renews it.
+	clk.Advance(5 * 24 * time.Hour)
+	e.regTime.Advance(5 * 24 * time.Hour)
+	if err := c.Emit(ctx, batch("agent:host-01")); err != nil {
 		t.Fatal(err)
 	}
-	cur := c.currentCert()
+	if st := c.Stats(); st.Renewals != 1 {
+		t.Fatalf("renewals = %d, want 1", st.Renewals)
+	}
+	cur := c.Certificate()
 	if cur.SerialNumber.Cmp(old.SerialNumber) == 0 {
 		t.Fatal("renewal must produce a new certificate")
 	}
@@ -469,10 +473,10 @@ func TestRenewKeepsTheBinding(t *testing.T) {
 		t.Fatalf("issued = %v", serials)
 	}
 	// A bad CSR on renew is a 400.
-	if code, _ := post(t, e.rawClient(c.tlsc), e.url()+PathRenew, []byte(`{"csr":"nope"}`), nil); code != http.StatusBadRequest {
+	if code, _ := post(t, e.rawClient(identityOf(t, cfg.Dir)), e.url()+wire.PathRenew, []byte(`{"csr":"nope"}`), nil); code != http.StatusBadRequest {
 		t.Fatalf("renew with a bad CSR: %d", code)
 	}
-	if code, _ := post(t, e.rawClient(c.tlsc), e.url()+PathRenew, []byte(`{`), nil); code != http.StatusBadRequest {
+	if code, _ := post(t, e.rawClient(identityOf(t, cfg.Dir)), e.url()+wire.PathRenew, []byte(`{`), nil); code != http.StatusBadRequest {
 		t.Fatalf("renew with malformed JSON: %d", code)
 	}
 }
@@ -482,7 +486,7 @@ func TestIngestGuards(t *testing.T) {
 	e.start()
 	id := e.identity("agent:host-01", time.Hour, time.Now())
 	hc := e.rawClient(&id)
-	url := e.url() + PathBatches
+	url := e.url() + wire.PathBatches
 
 	invalid := batch("agent:host-01")
 	invalid.Scope = "weekly" // fails Validate
@@ -543,11 +547,11 @@ func TestSinkErrors(t *testing.T) {
 	body := gz(t, batch("agent:host-01"))
 
 	e.rec.setFail(errors.Join(ErrRejected, errors.New("schema says no")))
-	if code, _ := post(t, hc, e.url()+PathBatches, body, gzipHdr); code != http.StatusUnprocessableEntity {
+	if code, _ := post(t, hc, e.url()+wire.PathBatches, body, gzipHdr); code != http.StatusUnprocessableEntity {
 		t.Fatalf("ErrRejected: %d, want 422", code)
 	}
 	e.rec.setFail(errors.New("database is down"))
-	code, out := post(t, hc, e.url()+PathBatches, body, gzipHdr)
+	code, out := post(t, hc, e.url()+wire.PathBatches, body, gzipHdr)
 	if code != http.StatusInternalServerError {
 		t.Fatalf("sink failure: %d, want 500", code)
 	}

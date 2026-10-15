@@ -24,6 +24,7 @@ import (
 	"github.com/VargaFoundation/trica/internal/store"
 	"github.com/VargaFoundation/trica/internal/testdb"
 	"github.com/VargaFoundation/trica/internal/transport"
+	"github.com/VargaFoundation/trica/internal/transport/uplink"
 	"github.com/VargaFoundation/trica/internal/web"
 	"github.com/VargaFoundation/trica/internal/wiring"
 	"github.com/VargaFoundation/trica/pkg/sdk"
@@ -358,7 +359,7 @@ transport:
 		if err != nil {
 			t.Fatal(err)
 		}
-		cl, err := transport.NewClient(transport.ClientConfig{
+		cl, err := uplink.NewClient(uplink.ClientConfig{
 			ServerURL: "https://" + addr, ServerName: "localhost", CAFile: filepath.Join(r.caDir, "ca.pem"),
 			Dir: t.TempDir(), EnrolToken: tok,
 		})

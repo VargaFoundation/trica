@@ -18,7 +18,7 @@ used it.
 format `collect.Target` already decodes), builds each collector with `collect.New`, and runs each
 target every `Target.EffectiveInterval()` under `collect.Context`. The emitter is the only thing
 that differs between modes: in the server it submits to the reconcile engine in-process, in a
-remote collector it sends through `transport.Client`. A collector therefore behaves the same in
+remote collector it sends through `uplink.Client`. A collector therefore behaves the same in
 both, and only `internal/reconcile` writes the inventory in both.
 
 **A run never leaves the board silent.** Collectors already emit `collect.Failed` or
