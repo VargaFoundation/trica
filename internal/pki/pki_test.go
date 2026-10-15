@@ -60,6 +60,39 @@ func TestBindingRules(t *testing.T) {
 	}
 }
 
+func TestPrefixRules(t *testing.T) {
+	for _, p := range []string{"agent", "agent:k8s-build", "a.b_c-d"} {
+		if err := pki.ValidPrefix(p); err != nil {
+			t.Errorf("prefix %q should be valid: %v", p, err)
+		}
+	}
+	for _, p := range []string{"", "agent:", ":agent", "agent::k8s", "agent:*", "agent k8s", strings.Repeat("a", 127)} {
+		if err := pki.ValidPrefix(p); err == nil {
+			t.Errorf("prefix %q should be invalid", p)
+		}
+	}
+	cases := []struct {
+		prefix, binding string
+		ok              bool
+	}{
+		{"agent", "agent:host-01", true},
+		{"agent:k8s", "agent:k8s:node-1", true},
+		{"agent", "agent", false},
+		{"agent", "agent:", false},
+		{"agent", "agent:host-01:docker", false}, // inside agent:host-01's own sources
+		{"agent", "agentx:host-01", false},
+		{"agent", "collector:host-01", false},
+		{"agent", "agent:host 01", false},
+		{"agent", "agent:*", false},
+		{"agent", "agent:" + strings.Repeat("h", 130), false},
+	}
+	for _, c := range cases {
+		if err := pki.UnderPrefix(c.prefix, c.binding); (err == nil) != c.ok {
+			t.Errorf("UnderPrefix(%q, %q) = %v, want ok=%v", c.prefix, c.binding, err, c.ok)
+		}
+	}
+}
+
 func TestAllows(t *testing.T) {
 	cases := []struct {
 		binding, source string

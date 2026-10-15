@@ -80,7 +80,8 @@ next tick, and does not stop the server.
 | `trica token create --name N --owner SUBJECT --roles R1,R2 --scopes read\|write\|admin [--types …] [--sites …] [--source kind:name] [--expires 720h]` | Create an API token; the token is the only thing on stdout, shown once, the metadata goes to stderr. Roles must exist in the configured policy ([security](security.md#minting-the-first-token)). |
 | `trica token list` | List the tokens (id, name, owner, roles, scopes, restrictions, dates). Never a secret or a hash; revoked tokens stay listed. |
 | `trica token revoke --id N` | Revoke a token at once; the row is kept. |
-| `trica enrol create --binding KIND:NAME [--ttl 24h]` | Create a one-time enrolment token for an agent or collector ([transport](transport.md)); prints it once on stdout, and where the CA certificate is on stderr. |
+| `trica enrol create --binding KIND:NAME \| --prefix KIND [--ttl 24h]` | Create a one-time enrolment token, or with `--prefix` a class token that enrols each name under the prefix once (ADR 0035), for an agent or collector ([transport](transport.md)); prints it once on stdout, and its id and where the CA certificate is on stderr. |
+| `trica enrol revoke --id HEX` | End an enrolment token now, by the id printed at its creation. Certificates already issued stay valid. |
 | `trica version` | Print the version. |
 
 `token` and `enrol` take `--config` (or `TRICA_CONFIG`) and read the database URL like `migrate`

@@ -63,6 +63,8 @@ the client. The transport package never writes inventory tables.
 
 ```bash
 trica enrol create --binding agent:host-01 --ttl 24h   # the token alone on stdout
+trica enrol create --prefix agent --ttl 24h            # a class token for a fleet (ADR 0035)
+trica enrol revoke --id 0123456789abcdef                # the id is printed on stderr at creation
 ```
 
 Run it next to the server, with the server's configuration ([getting started](../getting-started.md#first-credentials)).
@@ -76,8 +78,20 @@ token, err := reg.NewEnrolmentToken(ctx, "agent:host-01", time.Hour) // ttl 0 = 
 ```
 
 The token (256 random bits) is returned once and only its SHA-256 is stored (`enrol_tokens`).
-It works once (`used_at`), until `expires_at`, and only for its binding. Give the machine the
-token and the CA certificate file (`ca.pem`, public).
+It works once (`used_at`), until `expires_at`, and only for its binding; a client that asks
+for another binding (`EnrolRequest.Binding`) gets a 403. Give the machine the token and the CA
+certificate file (`ca.pem`, public).
+
+A **class token** (`reg.NewClassEnrolmentToken(ctx, "agent", ttl)`, column `class`, migration
+`00006_class_enrol_tokens.sql`) stores a prefix instead of a binding and is not consumed. The
+client must name its binding: exactly one segment under the prefix (`agent:host-01` under
+`agent`, not `agent:host-01:docker`, which would speak for host-01's sources). The server
+refuses with a 409 a binding that an unexpired, unrevoked certificate already holds; the check
+and the issue run in one transaction under an advisory lock on the binding, so two clients
+racing for one name get one certificate. Revoking the certificates of a binding frees the name.
+`reg.RevokeEnrolmentToken(ctx, id)` ends a token of either kind; logs carry the token id
+(`TokenID`: the first 8 bytes of its SHA-256, in hex), never the token. See
+[ADR 0035](../adr/0035-class-enrolment-tokens.md) for what a leaked class token allows.
 
 Revocation: `reg.Revoke(ctx, serial, reason)`, or `reg.RevokeBinding(ctx, binding, reason)` for
 every certificate issued to a binding (`reg.IssuedTo` lists them). A revoked certificate is

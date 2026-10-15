@@ -21,6 +21,13 @@ const maxBindingLen = 128
 // segment binding ("agent") would be a wildcard over every agent.
 var bindingRE = regexp.MustCompile(`^[A-Za-z0-9._-]+(:[A-Za-z0-9._-]+)+$`)
 
+// prefixRE: one or more segments, the prefix a class enrolment token mints
+// bindings under ("agent" mints "agent:<host>").
+var prefixRE = regexp.MustCompile(`^[A-Za-z0-9._-]+(:[A-Za-z0-9._-]+)*$`)
+
+// segmentRE is one segment of a binding.
+var segmentRE = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+
 // ErrNoBinding is returned when a certificate carries no source binding.
 var ErrNoBinding = errors.New("pki: certificate carries no source binding")
 
@@ -33,6 +40,32 @@ func ValidBinding(s string) error {
 		return fmt.Errorf("pki: invalid binding %q (want kind:name, e.g. agent:host-01)", s)
 	}
 	return nil
+}
+
+// ValidPrefix checks that s is usable as the prefix of a class enrolment
+// token (ADR 0035). Unlike a binding it may have one segment: the token never
+// grants the prefix itself, only bindings one segment below it.
+func ValidPrefix(s string) error {
+	if len(s) > maxBindingLen-2 {
+		return fmt.Errorf("pki: prefix longer than %d bytes", maxBindingLen-2)
+	}
+	if !prefixRE.MatchString(s) {
+		return fmt.Errorf("pki: invalid prefix %q (want kind, e.g. agent)", s)
+	}
+	return nil
+}
+
+// UnderPrefix checks that binding is exactly one segment below prefix: the
+// bindings a class token for "agent" mints are "agent:host-01", never "agent"
+// nor "agent:host-01:docker". The second would take a source a node enrolled
+// as "agent:host-01" may already report as (see [Allows]), so a holder of the
+// class token could speak for that node.
+func UnderPrefix(prefix, binding string) error {
+	name, ok := strings.CutPrefix(binding, prefix+":")
+	if !ok || !segmentRE.MatchString(name) {
+		return fmt.Errorf("pki: binding %q is not one segment below %q", binding, prefix)
+	}
+	return ValidBinding(binding)
 }
 
 // Allows reports whether a client bound to binding may report as source: the

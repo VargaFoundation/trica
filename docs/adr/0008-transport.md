@@ -33,4 +33,6 @@ Reference: [transport](../reference/transport.md).
   equals it or starts with `binding:`. It travels in a URI SAN, `urn:trica:source:<binding>`.
 - 408 and 429 are retried through the spool like a 5xx; every other 4xx is final and not spooled.
 - Revocation is a PostgreSQL lookup on every request, failing closed.
+- A fleet enrols with a class token that mints each name under a prefix once
+  ([ADR 0035](0035-class-enrolment-tokens.md)).
 - Per-source rate limiting is not implemented yet; only body size limits are.

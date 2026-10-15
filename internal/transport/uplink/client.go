@@ -92,6 +92,12 @@ type ClientConfig struct {
 	// there is no certificate.
 	EnrolToken     string
 	EnrolTokenFile string
+	// Binding is the binding asked for at enrolment, e.g. "agent:<hostname>".
+	// A class token (ADR 0035) needs it: it grants a prefix and the client
+	// names itself below it. A one-time token grants one binding and refuses
+	// any other, so a client enrolling with the wrong token fails at
+	// enrolment instead of at every batch. Empty takes the token's binding.
+	Binding string
 	// MaxSpoolBytes bounds the spool; DefaultMaxSpoolBytes when zero.
 	MaxSpoolBytes int64
 	// Timeout bounds each request; DefaultTimeout when zero.
@@ -447,7 +453,7 @@ func (c *Client) enrolLocked(ctx context.Context) error {
 		return permanentError{err}
 	}
 	var resp wire.CertResponse
-	if err := c.postJSON(ctx, c.enrol, wire.PathEnrol, wire.EnrolRequest{Token: token, CSR: string(csr)}, &resp); err != nil {
+	if err := c.postJSON(ctx, c.enrol, wire.PathEnrol, wire.EnrolRequest{Token: token, CSR: string(csr), Binding: c.cfg.Binding}, &resp); err != nil {
 		return err
 	}
 	if err := c.install(key, resp.Certificate); err != nil {

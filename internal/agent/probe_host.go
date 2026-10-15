@@ -56,7 +56,7 @@ func (c *collector) dmi(field string) string {
 // DMI fields. A host without any name is a failure: nothing can be reported.
 func (c *collector) probeHost() error {
 	h := &c.inv.Host
-	h.Hostname = strings.ToLower(firstNonEmpty(readOptional(c.fs, "/proc/sys/kernel/hostname"), readOptional(c.fs, "/etc/hostname")))
+	h.Hostname = hostname(c.fs)
 	if id := strings.ToLower(readOptional(c.fs, "/etc/machine-id")); machineIDRe.MatchString(id) && meaningful(id) {
 		h.MachineID = id
 	}
@@ -71,6 +71,11 @@ func (c *collector) probeHost() error {
 		return errors.New("no hostname in /proc/sys/kernel/hostname or /etc/hostname")
 	}
 	return nil
+}
+
+// hostname is the name the batches carry in their source, lower case.
+func hostname(fsys FS) string {
+	return strings.ToLower(firstNonEmpty(readOptional(fsys, "/proc/sys/kernel/hostname"), readOptional(fsys, "/etc/hostname")))
 }
 
 func firstNonEmpty(ss ...string) string {

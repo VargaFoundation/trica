@@ -8,7 +8,7 @@
 //	trica backup  [--config FILE] (--file F | --dir D)
 //	trica restore [--config FILE] --file F [--replace]
 //	trica token   [--config FILE] create|list|revoke   (API tokens)
-//	trica enrol   [--config FILE] create   (agent and collector enrolment tokens)
+//	trica enrol   [--config FILE] create|revoke (agent and collector enrolment tokens)
 //	trica version
 //
 // Logic lives in internal packages; this package only wires flags.
@@ -66,7 +66,7 @@ commands:
            existing one (--replace, server stopped); runs migrations up
   token    create (prints the token once on stdout), list or revoke API tokens
   enrol    create an enrolment token for an agent or collector (prints it once
-           on stdout)
+           on stdout; --prefix for a class token shared by a fleet), or revoke one
   version  print the version
 
 server, migrate, backup, restore, token and enrol read the database URL from TRICA_DATABASE_URL or the file

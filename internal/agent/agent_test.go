@@ -117,6 +117,29 @@ func TestCollectWithoutIdentityEmitsNothing(t *testing.T) {
 	}
 }
 
+// The binding the agent asks for at enrolment is the source its batches carry.
+func TestSourceIsTheBatchSource(t *testing.T) {
+	a, _ := newTestAgent(t, "debian12")
+	var got string
+	if err := a.Collect(context.Background(), sdk.EmitterFunc(func(_ context.Context, b *sdk.Batch) error {
+		got = b.Source
+		return nil
+	})); err != nil {
+		t.Fatal(err)
+	}
+	src, err := a.Source()
+	if err != nil || src != got || !strings.HasPrefix(src, SourcePrefix) {
+		t.Fatalf("Source() = %q, %v; the batch says %q", src, err, got)
+	}
+	nameless, err := New(Config{FS: tmpRoot(t, map[string]string{"etc/": ""}), Logger: quietLogger()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if src, err := nameless.Source(); err == nil {
+		t.Fatalf("a host without a name has the source %q", src)
+	}
+}
+
 func TestCollectReturnsEmitError(t *testing.T) {
 	a, _ := newTestAgent(t, "debian12")
 	boom := errors.New("spool full")

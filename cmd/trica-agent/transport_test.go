@@ -499,6 +499,39 @@ func TestTokenForAnotherBindingIsRefused(t *testing.T) {
 	if n := spooled(dir); n != 0 {
 		t.Fatalf("a refused batch was spooled: %d files", n)
 	}
+	// Refused at enrolment, since the agent asks for its own binding: no
+	// certificate for host-02 is left on host-01.
+	if _, err := os.Stat(filepath.Join(dir, "identity.pem")); !os.IsNotExist(err) {
+		t.Fatalf("an identity was issued for the wrong binding (%v)", err)
+	}
+}
+
+// One class token for a fleet (#63): the agent asks for agent:<its hostname>
+// and gets it; a second agent claiming the same hostname does not.
+func TestAgentEnrolsWithAClassToken(t *testing.T) {
+	e := newSrvEnv(t)
+	e.start()
+	tok, err := e.reg.NewClassEnrolmentToken(context.Background(), "agent", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tokFile := filepath.Join(t.TempDir(), "enrol-token")
+	if err := os.WriteFile(tokFile, []byte(tok+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, errs := e.agent(t.TempDir(), "--enrol-token-file", tokFile); code != 0 {
+		t.Fatalf("exit %d: %s", code, errs)
+	}
+	if got := e.rec.bindings(); !slices.Equal(got, []string{"agent:host-01"}) {
+		t.Fatalf("batch bound to %v, want agent:host-01", got)
+	}
+	code, _, errs := e.agent(t.TempDir(), "--enrol-token-file", tokFile)
+	if code != 1 || !strings.Contains(errs, "409") {
+		t.Fatalf("a second host-01: exit %d: %s", code, errs)
+	}
+	if strings.Contains(errs, tok) {
+		t.Fatal("the class token leaked to the output")
+	}
 }
 
 // Probation: the new version is healthy when its batch was accepted, or only

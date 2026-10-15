@@ -93,6 +93,17 @@ func New(cfg Config) (*Agent, error) {
 // Close releases the root directory.
 func (a *Agent) Close() error { return a.closer() }
 
+// Source is the source the batches of this host carry, "agent:<hostname>": the
+// binding the agent asks for at enrolment (ADR 0035). It reads the hostname as
+// a collection does, so the two cannot disagree.
+func (a *Agent) Source() (string, error) {
+	h := hostname(a.fs)
+	if h == "" {
+		return "", errors.New("agent: no hostname in /proc/sys/kernel/hostname or /etc/hostname")
+	}
+	return SourcePrefix + h, nil
+}
+
 // Kind implements sdk.Collector.
 func (a *Agent) Kind() string { return CollectorName }
 
