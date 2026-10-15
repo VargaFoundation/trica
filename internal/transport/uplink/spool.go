@@ -131,13 +131,21 @@ func (s *spool) remove(name string) error {
 	return nil
 }
 
-// stats returns the number and total size of the pending batches.
-func (s *spool) stats() (n int, bytes int64) {
+// stats returns the number and total size of the pending batches, and when
+// the oldest was spooled (zero when there is none): its name is the time of
+// its emission in nanoseconds.
+func (s *spool) stats() (n int, bytes int64, oldest time.Time) {
 	list, _ := s.list()
 	for _, e := range list {
 		bytes += e.size
 	}
-	return len(list), bytes
+	if len(list) > 0 {
+		var seq int64
+		if _, err := fmt.Sscanf(list[0].name, "%d", &seq); err == nil {
+			oldest = time.Unix(0, seq).UTC()
+		}
+	}
+	return len(list), bytes, oldest
 }
 
 // atomicWrite writes data to path through a synced temporary file in the same

@@ -107,6 +107,13 @@ type Stats struct {
 	Sent       uint64 // batches the server accepted
 	Spooled    int    // batches waiting in the spool
 	SpoolBytes int64
+	// OldestSpooled is when the oldest waiting batch was spooled, zero when
+	// the spool is empty: its age is how long the server has been out of
+	// reach, the number to alert on before the spool fills (#65).
+	OldestSpooled time.Time
+	// LastSent is when the server last accepted a batch, zero if never since
+	// the client was created.
+	LastSent time.Time
 	// Dropped counts batches evicted from a full spool, oldest first, or too
 	// large for it. They are lost: this is the number to alert on.
 	Dropped uint64
@@ -215,7 +222,7 @@ func (c *Client) Stats() Stats {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	st := c.stats
-	st.Spooled, st.SpoolBytes = c.sp.stats()
+	st.Spooled, st.SpoolBytes, st.OldestSpooled = c.sp.stats()
 	st.Dropped = c.sp.dropped
 	return st
 }
@@ -245,7 +252,7 @@ func (c *Client) Emit(ctx context.Context, b *sdk.Batch) error {
 	}
 	if err == nil {
 		if err = c.postBatch(ctx, body); err == nil {
-			c.stats.Sent++
+			c.sent()
 			return nil
 		}
 	}
@@ -287,6 +294,12 @@ func (c *Client) Run(ctx context.Context, interval time.Duration) {
 	}
 }
 
+// sent counts a batch the server accepted. The caller holds c.mu.
+func (c *Client) sent() {
+	c.stats.Sent++
+	c.stats.LastSent = c.now()
+}
+
 func (c *Client) flushLocked(ctx context.Context) error {
 	list, err := c.sp.list()
 	if err != nil {
@@ -304,7 +317,7 @@ func (c *Client) flushLocked(ctx context.Context) error {
 		var se *StatusError
 		switch {
 		case err == nil:
-			c.stats.Sent++
+			c.sent()
 		case errors.As(err, &se) && se.Code == http.StatusUnauthorized:
 			return err
 		case !transient(err):

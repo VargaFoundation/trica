@@ -80,7 +80,10 @@ With --server the batches are sent to a trica server over mutual TLS. The agent
 enrols once with a one-time token (--enrol-token-file), keeps its client
 certificate and an on-disk spool in --state-dir, and spools batches while the
 server is unreachable. --output then only adds a local copy when given.
-Environment: TRICA_AGENT_SERVER, TRICA_AGENT_CA_FILE, TRICA_AGENT_ENROL_TOKEN_FILE.
+With --metrics-file the agent writes the state of its spool, in the Prometheus
+text format, for the node exporter's textfile collector: it opens no port.
+Environment: TRICA_AGENT_SERVER, TRICA_AGENT_CA_FILE, TRICA_AGENT_ENROL_TOKEN_FILE,
+TRICA_AGENT_METRICS_FILE.
 
 Usage:
   trica-agent [flags]
@@ -99,6 +102,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	server := fl.String("server", os.Getenv(envServer), "https://host:port of the trica transport listener; batches are sent there over mTLS (needs --ca-file and --state-dir) [$"+envServer+"]")
 	caFile := fl.String("ca-file", os.Getenv(envCAFile), "PEM file of the CA certificate that signs the server certificate [$"+envCAFile+"]")
 	tokenFile := fl.String("enrol-token-file", os.Getenv(envEnrolTokenFile), "file holding the one-time enrolment token, read only while the agent has no certificate [$"+envEnrolTokenFile+"]")
+	metricsFile := fl.String("metrics-file", os.Getenv(envMetricsFile), "file the transport metrics are written to, every minute, in the Prometheus text format for the node exporter's textfile collector (name it *.prom; needs --server) [$"+envMetricsFile+"]")
 	healthTimeout := fl.Duration("health-timeout", 2*time.Minute, "how long a newly staged version has to complete a collection before it is rolled back")
 	fl.Usage = func() {
 		fmt.Fprint(stderr, usage)
@@ -119,6 +123,10 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
+	if *metricsFile != "" && *server == "" {
+		fmt.Fprintln(stderr, "--metrics-file needs --server: the metrics are those of the transport")
+		return 2
+	}
 	if msg := checkServerFlags(*server, *caFile, *stateDir); msg != "" {
 		fmt.Fprintln(stderr, msg)
 		return 2
@@ -169,6 +177,21 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 				defer wg.Done()
 				client.Run(ctx, flushEvery)
 			}()
+		}
+		if *metricsFile != "" {
+			if *once { // after the collection, before the client is closed
+				defer func() {
+					if err := writeMetrics(*metricsFile, version, client.Stats(), time.Now()); err != nil {
+						logger.Warn("cannot write the metrics file", "collector", agent.CollectorName, "target", *metricsFile, "error", err)
+					}
+				}()
+			} else {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					metricsWriter(ctx, *metricsFile, flushEvery, client.Stats, logger)
+				}()
+			}
 		}
 		emit = client
 		delivery = func() (uint64, int) { st := client.Stats(); return st.Sent, st.Spooled }

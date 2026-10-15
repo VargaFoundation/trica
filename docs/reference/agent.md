@@ -71,13 +71,65 @@ trica-agent --server https://trica.example.com:8443 --ca-file /etc/trica-agent/c
 
 | What you see (stderr, JSON) | Cause | What to do |
 |---|---|---|
-| `server unreachable or failing, batch spooled` | network, TLS or 5xx failure | nothing: it is delivered when the server is back; check `spool/` growing if it stays |
+| `server unreachable or failing, batch spooled` | network, TLS or 5xx failure | nothing: it is delivered when the server is back; if it stays, `trica_agent_spool_oldest_age_seconds` grows ([Metrics](#metrics)) |
 | `read enrolment token file` | no certificate yet and the token file is missing or unreadable | create the file, readable by the agent's user |
 | `server answered 401` at enrolment | token unknown, used or expired (the server does not say which) | ask for a new token |
 | `server answered 403` on a batch | the token was for another binding than `agent:<hostname>` | revoke, then a token for the right binding; `hostname` is what the agent reads, not what DNS says |
 | `x509: certificate signed by unknown authority` | `--ca-file` is not the CA of that server (it was recreated?) | copy the current `ca.pem` |
 | `certificate expired and renewal failed` | the agent was off longer than the certificate lived | new token (the old binding can enrol again) |
 | spool files that never leave | a 401 stops the flush and keeps the spool | the certificate was revoked: enrol again with a new token, delete `identity.pem` first |
+
+### Metrics
+
+The agent opens no port. With `--metrics-file` (or `TRICA_AGENT_METRICS_FILE`), it writes
+the state of its transport in the Prometheus text format, for the node exporter's
+[textfile collector](https://github.com/prometheus/node_exporter#textfile-collector)
+(ADR 0033): every minute and at exit for a running agent, after the collection with
+`--once`. The file is replaced atomically (a temporary file in the same directory, then a
+rename, mode 0644; it holds no secret), so its directory must be writable by the agent, and
+its name must end in `.prom`. It needs `--server`: there is nothing to report without one.
+
+| Metric | Type | Meaning |
+|---|---|---|
+| `trica_agent_spooled_batches` | gauge | Batches waiting in the spool. |
+| `trica_agent_spool_bytes` | gauge | Their size; the spool holds 64 MiB, oldest dropped first. |
+| `trica_agent_spool_oldest_age_seconds` | gauge | Age of the oldest waiting batch: how long the server has been out of reach; 0 when the spool is empty. **The one to alert on.** |
+| `trica_agent_last_delivery_timestamp_seconds` | gauge | When the server last accepted a batch from this process; 0 if never. |
+| `trica_agent_sent_batches_total` | counter | Batches the server accepted. |
+| `trica_agent_dropped_batches_total` | counter | Batches lost to a full spool. |
+| `trica_agent_rejected_batches_total` | counter | Spooled batches the server refused on resend, discarded. |
+| `trica_agent_metrics_timestamp_seconds` | gauge | When the file was written: a stale value means the agent stopped. |
+| `trica_agent_build_info` | gauge | 1, label `version`. |
+
+Counters start at zero with each process, as an endpoint's would: with `--once` (a timer
+running the agent), they count one run, and `rate()` means nothing; the gauges do.
+
+Alerts, as a starting point (PromQL; the node exporter adds the `instance` label):
+
+```yaml
+- alert: TricaAgentSpoolGrowing        # the server has been out of reach for an hour
+  expr: trica_agent_spool_oldest_age_seconds > 3600
+- alert: TricaAgentLosingBatches       # the spool is full: inventory is being lost
+  expr: increase(trica_agent_dropped_batches_total[1h]) > 0
+- alert: TricaAgentMetricsStale        # the agent stopped writing (stopped, or crash-looping)
+  expr: time() - trica_agent_metrics_timestamp_seconds > 900
+```
+
+With the packages, the unit's file system is read-only outside `/var/lib/trica-agent`:
+give it the textfile directory with a drop-in, and the directory to the agent's group.
+
+```
+# /etc/systemd/system/trica-agent.service.d/metrics.conf
+[Service]
+ReadWritePaths=/var/lib/node_exporter/textfile_collector
+# /etc/trica-agent/agent.env
+TRICA_AGENT_METRICS_FILE=/var/lib/node_exporter/textfile_collector/trica-agent.prom
+```
+
+In the example DaemonSet the only writable host path is `/var/lib/trica-agent`: write to
+`/var/lib/trica-agent/metrics/trica-agent.prom` (the agent creates the directory, mode 0755)
+and mount that directory as the node exporter's textfile directory. Not verified: neither layout has been run against a real
+node exporter (the tests parse the file with the Prometheus text parser).
 
 ## Guarantees
 
@@ -382,8 +434,8 @@ The decision is taken at the first emitted batch if it is already healthy, and o
 at `--health-timeout`, so that a flush of the spool in between counts. A version that spools
 while the previous one delivered is stopped at the timeout and rolled back. The cost: a server
 outage that starts during the probation window and outlasts `--health-timeout` rolls back a
-good version and marks it bad on this host. The spool is not exported as a metric (the agent
-has no metrics endpoint): watch `--state-dir/spool`.
+good version and marks it bad on this host. A version that only spools shows in
+`trica_agent_spool_oldest_age_seconds` ([Metrics](#metrics)).
 
 Not verified: the staged binary has been executed in tests through a simulated
 service manager, not through systemd; whether a real cosign produces a signature

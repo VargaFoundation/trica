@@ -63,12 +63,16 @@ func TestSpoolOrderAtomicityAndRestart(t *testing.T) {
 			t.Fatalf("unexpected file %q in the spool", e)
 		}
 	}
-	n, size := s2.stats()
-	if n != 4 || size != 4 {
-		t.Fatalf("stats = %d, %d", n, size)
+	n, size, oldest := s2.stats()
+	if n != 4 || size != 4 || !oldest.Equal(frozen) {
+		t.Fatalf("stats = %d, %d, %s; want 4, 4, %s", n, size, oldest, frozen)
 	}
 	if err := s2.remove(list[0].name); err != nil {
 		t.Fatal(err)
+	}
+	// The age is the oldest batch still waiting: "b" was spooled 1 ns after "a".
+	if _, _, oldest := s2.stats(); !oldest.Equal(frozen.Add(time.Nanosecond)) {
+		t.Fatalf("oldest after removing the first = %s", oldest)
 	}
 	if err := s2.remove(list[0].name); err != nil {
 		t.Fatalf("removing twice must be harmless: %v", err)
@@ -96,8 +100,18 @@ func TestSpoolEvictsOldestFirst(t *testing.T) {
 	if err := s.add([]byte(strings.Repeat("x", 11))); !errors.Is(err, ErrSpoolFull) || s.dropped != 2 {
 		t.Fatalf("err = %v, dropped = %d", err, s.dropped)
 	}
-	if n, _ := s.stats(); n != 2 {
+	if n, _, _ := s.stats(); n != 2 {
 		t.Fatal("an oversized batch must not evict the others")
+	}
+}
+
+func TestEmptySpoolHasNoOldest(t *testing.T) {
+	s, err := newSpool(t.TempDir(), 10, time.Now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n, size, oldest := s.stats(); n != 0 || size != 0 || !oldest.IsZero() {
+		t.Fatalf("stats of an empty spool = %d, %d, %s", n, size, oldest)
 	}
 }
 
