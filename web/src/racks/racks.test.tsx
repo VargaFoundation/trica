@@ -337,6 +337,17 @@ describe("rooms", () => {
     await expectNoA11yViolations();
   });
 
+  it("counts floor positions in the room's own tile_mm, and says so", async () => {
+    const small = obj(ROOM, "room", "dc-1a", { width_mm: 3000, depth_mm: 2400, tile_mm: 300 }, { site_id: ID.site });
+    // Tile (9, 7) is inside a 3000 x 2400 mm room of 300 mm tiles, outside one of 600 mm tiles.
+    mockApi(roomRoutes([rack(1, "r01", ROOM, { floor_x: 9, floor_y: 7 })], small));
+    renderApp({ at: `/rooms/${ROOM}` });
+    expect(await screen.findByText("One square is a 300 mm floor tile. The bar on a rack is its front.")).toBeInTheDocument();
+    expect(document.querySelector(".floor-room")?.getAttribute("width")).toBe(String(10 * 64));
+    expect(document.querySelector(".floor-room")?.getAttribute("height")).toBe(String(8 * 64));
+    expect(screen.queryByText(/outside the size recorded/)).toBeNull();
+  });
+
   it("marks the front of a rack on the side it faces", async () => {
     const mine = rack(1, "r01", ROOM, { floor_x: 0, floor_y: 0, facing: "east" });
     mockApi(roomRoutes([mine]));

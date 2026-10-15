@@ -36,6 +36,7 @@ types:
       name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Room name."}
       width_mm: {kind: int, unit: mm, label: {en: Width, fr: Largeur}, description: "Room width for the floor plan."}
       depth_mm: {kind: int, unit: mm, label: {en: Depth, fr: Profondeur}, description: "Room depth for the floor plan."}
+      tile_mm: {kind: int, unit: mm, label: {en: Floor tile, fr: Carreau}, description: "Side of one floor plan tile, the unit of rack floor_x and floor_y; 600 when not set."}
   row:
     layer: location
     label: {en: Row, fr: Rangée}
@@ -64,8 +65,8 @@ types:
       depth_mm: {kind: int, unit: mm, label: {en: Depth, fr: Profondeur}, description: "Inner mounting depth."}
       width_mm: {kind: int, unit: mm, label: {en: Width, fr: Largeur}, description: "Outer width."}
       facing: {kind: enum, values: [north, east, south, west], label: {en: Front faces, fr: Face avant vers}, description: "Direction the front door faces on the floor plan."}
-      floor_x: {kind: int, label: {en: Floor X, fr: Position X}, description: "Floor plan column (tiles from the room origin)."}
-      floor_y: {kind: int, label: {en: Floor Y, fr: Position Y}, description: "Floor plan row (tiles from the room origin)."}
+      floor_x: {kind: int, label: {en: Floor X, fr: Position X}, description: "Floor plan column: tiles east of the room's north-west corner (tile size: the room's tile_mm)."}
+      floor_y: {kind: int, label: {en: Floor Y, fr: Position Y}, description: "Floor plan row: tiles south of the room's north-west corner (tile size: the room's tile_mm)."}
       power_capacity_w: {kind: int, unit: W, label: {en: Power capacity, fr: Puissance disponible}, description: "Usable power budget of the rack."}
       lifecycle: {kind: enum, values: [planned, active, decommissioned], label: {en: Lifecycle, fr: Cycle de vie}, description: "Declared lifecycle state."}
 

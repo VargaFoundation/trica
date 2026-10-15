@@ -1,13 +1,18 @@
 // Floor plan arithmetic: where racks stand in a room. The schema gives each
-// rack floor_x / floor_y ("tiles from the room origin") and a facing, and the
-// room width_mm / depth_mm; it does not say how big a tile is, so the UI uses
-// the usual data-centre floor tile (see TILE_MM).
+// rack floor_x / floor_y (tiles east and south of the room's north-west
+// corner) and a facing, and the room width_mm / depth_mm and tile_mm, the side
+// of a tile (DEFAULT_TILE_MM when not set).
 
 export type Facing = "north" | "east" | "south" | "west";
 export const FACINGS: readonly Facing[] = ["north", "east", "south", "west"];
 
-/** A 600 mm floor tile. Not in the schema: a finding is filed for it. */
-export const TILE_MM = 600;
+/** The tile of a room without tile_mm: the usual 600 mm raised-floor tile. */
+export const DEFAULT_TILE_MM = 600;
+
+/** The room's tile_mm when it is a positive integer, else the default. */
+export function tileOf(tileMm: unknown): number {
+  return typeof tileMm === "number" && Number.isInteger(tileMm) && tileMm > 0 ? tileMm : DEFAULT_TILE_MM;
+}
 
 export interface FloorRack {
   id: string;
@@ -37,7 +42,12 @@ export interface FloorPlan {
 
 const whole = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n) && n >= 0;
 
-export function layoutFloor(widthMm: number | undefined, depthMm: number | undefined, racks: readonly FloorRack[]): FloorPlan {
+export function layoutFloor(
+  widthMm: number | undefined,
+  depthMm: number | undefined,
+  racks: readonly FloorRack[],
+  tileMm: number = DEFAULT_TILE_MM,
+): FloorPlan {
   const placed: PlacedRack[] = [];
   const unplaced: FloorRack[] = [];
   for (const r of racks) {
@@ -54,8 +64,8 @@ export function layoutFloor(widthMm: number | undefined, depthMm: number | undef
     } else seen.set(key, r);
   }
   const known = typeof widthMm === "number" && widthMm > 0 && typeof depthMm === "number" && depthMm > 0;
-  const cols = known ? Math.ceil(widthMm / TILE_MM) : Math.max(1, ...placed.map((r) => r.x + 1));
-  const rows = known ? Math.ceil(depthMm / TILE_MM) : Math.max(1, ...placed.map((r) => r.y + 1));
+  const cols = known ? Math.ceil(widthMm / tileMm) : Math.max(1, ...placed.map((r) => r.x + 1));
+  const rows = known ? Math.ceil(depthMm / tileMm) : Math.max(1, ...placed.map((r) => r.y + 1));
   const outside = known ? placed.filter((r) => r.x >= cols || r.y >= rows).map((r) => r.id) : [];
   placed.sort((a, b) => a.y - b.y || a.x - b.x || a.name.localeCompare(b.name));
   return { cols, rows, placed, unplaced, sizeFromRacks: !known, outside };
