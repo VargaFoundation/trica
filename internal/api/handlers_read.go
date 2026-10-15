@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -418,13 +419,31 @@ func (c *call) visibleRefs(ids []string) (map[string]ObjectRef, error) {
 
 // visibleEnds is visibleRefs with the parent and the site of each object.
 func (c *call) visibleEnds(ids []string) (map[string]RelationEnd, error) {
-	out := map[string]RelationEnd{}
+	objs, sites, err := c.visibleObjects(ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]RelationEnd, len(objs))
+	for id, o := range objs {
+		e := RelationEnd{ID: o.ID, Type: o.Type, Display: o.Display, SiteID: sites[id]}
+		if o.ParentID != nil {
+			e.ParentID = *o.ParentID
+		}
+		out[id] = e
+	}
+	return out, nil
+}
+
+// visibleObjects loads the objects with these ids and keeps the ones the
+// caller may read, with the site of each.
+func (c *call) visibleObjects(ids []string) (map[string]*store.Object, map[string]string, error) {
+	out := map[string]*store.Object{}
 	if len(ids) == 0 {
-		return out, nil
+		return out, nil, nil
 	}
 	objs, err := c.s.st.Objects(c.ctx(), ids)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	objIDs := make([]string, 0, len(objs))
 	for _, o := range objs {
@@ -432,18 +451,106 @@ func (c *call) visibleEnds(ids []string) (map[string]RelationEnd, error) {
 	}
 	sites, err := c.s.siteIDs(c.ctx(), objIDs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for _, o := range objs {
 		if c.s.auth.Allow(c.p, ActionRead, o.Type, sites[o.ID]) {
-			e := RelationEnd{ID: o.ID, Type: o.Type, Display: o.Display, SiteID: sites[o.ID]}
-			if o.ParentID != nil {
-				e.ParentID = *o.ParentID
-			}
-			out[o.ID] = e
+			out[o.ID] = o
 		}
 	}
-	return out, nil
+	return out, sites, nil
+}
+
+// hRackContents lists the devices mounted in a rack with their position, face
+// and model, in three queries whatever the number of devices (finding #42).
+func (s *Server) hRackContents(c *call) error {
+	id, err := c.idParam()
+	if err != nil {
+		return err
+	}
+	pp, err := parsePage(c.r)
+	if err != nil {
+		return err
+	}
+	rack, _, err := c.loadObject(id)
+	if err != nil {
+		return err
+	}
+	if rack.Type != "rack" {
+		return notFound("%s is a %s, not a rack", id, rack.Type)
+	}
+	rels, err := s.st.RelationsOf(c.ctx(), id, nil)
+	if err != nil {
+		return err
+	}
+	var mounts []store.Relation
+	var devices []string
+	for _, r := range redactRelations(rels) {
+		if r.Type == "mounted_in" && r.ToID == id {
+			mounts = append(mounts, r)
+			devices = append(devices, r.FromID)
+		}
+	}
+	models, err := s.st.CurrentRelationsFrom(c.ctx(), "instance_of", devices)
+	if err != nil {
+		return err
+	}
+	modelOf := map[string]string{}
+	ids := append([]string(nil), devices...)
+	for _, r := range models {
+		if _, seen := modelOf[r.FromID]; !seen {
+			modelOf[r.FromID] = r.ToID
+			ids = append(ids, r.ToID)
+		}
+	}
+	objs, _, err := c.visibleObjects(ids)
+	if err != nil {
+		return err
+	}
+	items := []RackItem{}
+	for _, m := range mounts {
+		d, ok := objs[m.FromID]
+		if !ok {
+			continue
+		}
+		it := RackItem{Device: ObjectRef{ID: d.ID, Type: d.Type, Display: d.Display}, Position: number(m.Attrs["position"])}
+		if f, _ := m.Attrs["face"].(string); f == "front" || f == "rear" {
+			it.Face = f
+		}
+		if t, ok := objs[modelOf[d.ID]]; ok {
+			attrs := redactMap(t.Attrs)
+			it.Model = &ObjectRef{ID: t.ID, Type: t.Type, Display: t.Display}
+			it.UHeight = number(attrs["u_height"])
+			it.FullDepth = attrs["full_depth"] == true
+		}
+		items = append(items, it)
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		a, b := items[i].Position, items[j].Position
+		if (a == nil) != (b == nil) {
+			return a != nil
+		}
+		if a != nil && *a != *b {
+			return *a < *b
+		}
+		return items[i].Device.Display < items[j].Device.Display
+	})
+	return c.json(200, pageOf(items, pp, false))
+}
+
+// number reads a JSON number attribute; anything else is unknown.
+func number(v any) *float64 {
+	switch n := v.(type) {
+	case float64:
+		return &n
+	case int:
+		f := float64(n)
+		return &f
+	case int64:
+		f := float64(n)
+		return &f
+	}
+	return nil
 }
 
 // maxRelationTypes bounds the type list of a bulk relation read.

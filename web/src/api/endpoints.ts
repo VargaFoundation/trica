@@ -14,6 +14,7 @@ import type {
   Proposal,
   Provenance,
   QueryOf,
+  RackItem,
   RelationLink,
   RelationView,
   SchemaDoc,
@@ -39,6 +40,9 @@ export const api = {
   /** The current relations of some types across the inventory, both ends named (comma-separated types). */
   relationLinks: (q: QueryOf<"/relations">, signal?: AbortSignal) =>
     request<Page<RelationLink>>("/relations", { query: q, signal }),
+  /** The devices mounted in a rack, with position, face, model, height and depth. */
+  rackContents: (id: string, q: Paging = {}, signal?: AbortSignal) =>
+    request<Page<RackItem>>(`/racks/${encodeURIComponent(id)}/contents`, { query: q, signal }),
   timeline: (id: string, q: Paging = {}, signal?: AbortSignal) =>
     request<Page<Change>>(`/objects/${encodeURIComponent(id)}/timeline`, { query: q, signal }),
 

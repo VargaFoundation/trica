@@ -172,6 +172,20 @@ type RelationLink struct {
 	To   RelationEnd `json:"to"`
 }
 
+// RackItem is one device mounted in a rack, with what an elevation needs.
+type RackItem struct {
+	Device ObjectRef `json:"device"`
+	// Position is the lowest U the device occupies (1 is the bottom), when known.
+	Position *float64 `json:"position,omitempty"`
+	// Face is front or rear, when known.
+	Face string `json:"face,omitempty"`
+	// Model is the device's model (its instance_of relation), when it has one
+	// the caller may read; UHeight and FullDepth come from it.
+	Model     *ObjectRef `json:"model,omitempty"`
+	UHeight   *float64   `json:"u_height,omitempty"`
+	FullDepth bool       `json:"full_depth"`
+}
+
 // ChangeView is a change with its object's rights already checked.
 type ChangeView = store.Change
 

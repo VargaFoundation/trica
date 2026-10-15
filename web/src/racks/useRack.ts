@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/endpoints";
-import type { ObjectView } from "../api/types";
 import { FACINGS, type Facing, type FloorRack } from "./floor";
 import type { Mounted } from "./layout";
 
@@ -13,42 +12,23 @@ export interface RackContents {
   truncated: boolean;
 }
 
-/**
- * Everything the elevation needs, from the public API only: the devices
- * mounted in the rack (relations of the rack), the model of each (relation
- * instance_of of the device) and the height of each model (the device_type
- * list). There is no endpoint that returns this in one call, hence one request
- * per device; see the finding linked from docs/reference/ui.md.
- */
+/** Everything the elevation needs, in one call (GET /racks/{id}/contents). */
 export async function loadRackContents(rackId: string, signal?: AbortSignal): Promise<RackContents> {
-  const [mounts, types] = await Promise.all([
-    api.relations(rackId, { limit: 1000 }, signal),
-    api.objects({ type: "device_type", limit: 1000 }, signal),
-  ]);
-  const byType = new Map<string, ObjectView>(types.items.map((t) => [t.id, t]));
-  const holds = mounts.items.filter((r) => r.type === "mounted_in" && r.direction === "in");
-  const items = await Promise.all(
-    holds.map(async (r): Promise<Mounted> => {
-      const model = await modelOf(r.other.id, signal);
-      const t = model ? byType.get(model) : undefined;
-      const face = r.attributes?.face;
-      return {
-        id: r.other.id,
-        name: r.other.display,
-        position: num(r.attributes?.position),
-        face: face === "rear" || face === "front" ? face : undefined,
-        heightU: num(t?.attributes?.u_height),
-        fullDepth: t?.attributes?.full_depth === true,
-        typeName: t?.display,
-      };
-    }),
-  );
-  return { items, truncated: mounts.total > mounts.items.length };
-}
-
-async function modelOf(deviceId: string, signal?: AbortSignal): Promise<string | undefined> {
-  const rels = await api.relations(deviceId, { limit: 200 }, signal);
-  return rels.items.find((r) => r.type === "instance_of" && r.direction === "out")?.other.id;
+  const p = await api.rackContents(rackId, { limit: 1000 }, signal);
+  return {
+    items: p.items.map(
+      (it): Mounted => ({
+        id: it.device.id,
+        name: it.device.display,
+        position: num(it.position),
+        face: it.face === "rear" || it.face === "front" ? it.face : undefined,
+        heightU: num(it.u_height),
+        fullDepth: it.full_depth === true,
+        typeName: it.model?.display,
+      }),
+    ),
+    truncated: p.total > p.items.length,
+  };
 }
 
 export function useRackContents(rackId: string) {

@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import type { ObjectView, RelationView } from "../api/types";
+import type { ObjectView, RackItem } from "../api/types";
 import { Providers } from "../App";
 import { expectNoA11yViolations } from "../test/axe";
 import { ID, page, rackR12 } from "../test/fixtures";
@@ -30,31 +30,19 @@ const deviceTypes = [
 
 const dev = (n: number) => `0a000000-0000-4000-8000-0000000001${String(n).padStart(2, "0")}`;
 
-const mountedIn = (device: string, name: string, position: number | undefined, face: string | undefined): RelationView => ({
-  id: Math.floor(Math.random() * 1e6),
-  type: "mounted_in",
-  direction: "in",
-  from_id: device,
-  to_id: ID.rack,
-  other: { id: device, type: "device", display: name },
-  source: "declared:lab-file",
-  confidence: "declared",
-  valid_from: "2026-03-01T08:00:00Z",
-  attributes: { ...(position === undefined ? {} : { position }), ...(face === undefined ? {} : { face }) },
-});
-
-const instanceOf = (device: string, type: string): RelationView => ({
-  id: Math.floor(Math.random() * 1e6),
-  type: "instance_of",
-  direction: "out",
-  from_id: device,
-  to_id: type,
-  other: { id: type, type: "device_type", display: "model" },
-  source: "declared:lab-file",
-  confidence: "declared",
-  valid_from: "2026-03-01T08:00:00Z",
-  attributes: {},
-});
+/** What the server answers for one mounted device; the model comes from deviceTypes. */
+const rackItem = (device: string, name: string, position: number | undefined, face: string | undefined, type?: string): RackItem => {
+  const t = deviceTypes.find((d) => d.id === type);
+  const height = t?.attributes.u_height;
+  return {
+    device: { id: device, type: "device", display: name },
+    ...(position === undefined ? {} : { position }),
+    ...(face === undefined ? {} : { face }),
+    ...(t ? { model: { id: t.id, type: "device_type", display: t.display } } : {}),
+    ...(typeof height === "number" ? { u_height: height } : {}),
+    full_depth: t?.attributes.full_depth === true,
+  };
+};
 
 interface Mount {
   n: number;
@@ -69,11 +57,9 @@ function rackRoutes(mounts: Mount[], rack: ObjectView = obj(ID.rack, "rack", "r1
   const routes: Record<string, Handler> = {
     ...defaultRoutes(),
     [`GET /objects/${ID.rack}`]: rack,
-    [`GET /objects/${ID.rack}/relations`]: page(mounts.map((m) => mountedIn(dev(m.n), m.name, m.position, m.face))),
-    "GET /objects": (c: Call) => (c.query.get("type") === "device_type" ? page(deviceTypes) : page([])),
+    [`GET /racks/${ID.rack}/contents`]: page(mounts.map((m) => rackItem(dev(m.n), m.name, m.position, m.face, m.type))),
     ...extra,
   };
-  for (const m of mounts) routes[`GET /objects/${dev(m.n)}/relations`] = page(m.type ? [instanceOf(dev(m.n), m.type)] : []);
   return routes;
 }
 
@@ -186,25 +172,26 @@ describe("rack elevation page", () => {
   });
 
   it("warns when the API holds more mounted devices than it returned", async () => {
-    mockApi(rackRoutes([{ n: 1, name: "sw-a1", position: 1, face: "front", type: T_1U }], undefined, { [`GET /objects/${ID.rack}/relations`]: page([mountedIn(dev(1), "sw-a1", 1, "front")], { total: 1500 }) }));
+    mockApi(rackRoutes([{ n: 1, name: "sw-a1", position: 1, face: "front", type: T_1U }], undefined, { [`GET /racks/${ID.rack}/contents`]: page([rackItem(dev(1), "sw-a1", 1, "front", T_1U)], { total: 1500 }) }));
     renderApp({ at: `/racks/${ID.rack}` });
     expect(await screen.findByText(/Only the first 1 mounted devices are shown/)).toBeInTheDocument();
   });
 
-  it("ignores relations that are not mounts", async () => {
-    const other = { ...mountedIn(dev(9), "not-a-mount", 1, "front"), type: "connected_to" };
-    const out = { ...mountedIn(dev(8), "mounted-elsewhere", 1, "front"), direction: "out" as const };
-    mockApi(rackRoutes([], undefined, { [`GET /objects/${ID.rack}/relations`]: page([other, out]) }));
+  it("reads the rack's contents in one call, whatever the number of devices (reads, never writes)", async () => {
+    const api = mockApi(
+      rackRoutes([
+        { n: 1, name: "sw-a1", position: 1, face: "front", type: T_1U },
+        { n: 2, name: "sw-a2", position: 2, face: "front", type: T_1U },
+        { n: 3, name: "srv-a3", position: 3, face: "front", type: T_FULL },
+      ]),
+    );
     renderApp({ at: `/racks/${ID.rack}` });
-    expect(await screen.findByText("Nothing is mounted in this rack.")).toBeInTheDocument();
-  });
-
-  it("asks the API for the rack's mounts and the device models only (reads, never writes)", async () => {
-    const api = mockApi(rackRoutes([{ n: 1, name: "sw-a1", position: 1, face: "front", type: T_1U }]));
-    renderApp({ at: `/racks/${ID.rack}` });
-    await screen.findByRole("rowheader", { name: "sw-a1" });
+    await screen.findByRole("rowheader", { name: "srv-a3" });
     expect(api.calls.every((c) => c.method === "GET")).toBe(true);
-    expect(api.calls.some((c) => c.path === "/objects" && c.query.get("type") === "device_type")).toBe(true);
+    expect(api.calls.filter((c) => c.path === `/racks/${ID.rack}/contents`)).toHaveLength(1);
+    // No request per device, and no device type list: the server joins them (finding #42).
+    expect(api.calls.filter((c) => c.path.startsWith("/objects/0a000000-0000-4000-8000-0000000001"))).toEqual([]);
+    expect(api.calls.some((c) => c.path === "/objects" && c.query.get("type") === "device_type")).toBe(false);
     expect(api.unmatched).toEqual([]);
   });
 

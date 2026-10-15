@@ -6133,6 +6133,35 @@
         ],
         "type": "object"
       },
+      "PageRackItem": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RackItem"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "total"
+        ],
+        "type": "object"
+      },
       "PageRelationLink": {
         "properties": {
           "items": {
@@ -6488,6 +6517,33 @@
           "source",
           "valid_from",
           "value"
+        ],
+        "type": "object"
+      },
+      "RackItem": {
+        "properties": {
+          "device": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "face": {
+            "type": "string"
+          },
+          "full_depth": {
+            "type": "boolean"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "position": {
+            "type": "number"
+          },
+          "u_height": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "device",
+          "full_depth"
         ],
         "type": "object"
       },
@@ -8327,6 +8383,79 @@
         ],
         "x-trica-action": "approve",
         "x-trica-audited": true
+      }
+    },
+    "/racks/{id}/contents": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "getRackContents",
+        "parameters": [
+          {
+            "description": "Rack id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size, 1 to 1000 (default 50).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items to skip (default 0).",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageRackItem"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "The devices mounted in a rack, with position, face, model, height and depth: one call for an elevation. A device is listed only if the caller may read it, its model only if the caller may read the model. Ordered by position, unknown positions last.",
+        "tags": [
+          "inventory"
+        ],
+        "x-trica-action": "read"
       }
     },
     "/readyz": {

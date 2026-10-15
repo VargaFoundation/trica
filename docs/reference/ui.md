@@ -39,8 +39,10 @@ set; ADR 0030).
   note), no device height means 1 U, no face means front, no position lists the device apart.
 - A device that overlaps another on the same face, or sticks out of the rack, has a red outline, a
   `!` and a note in the table; two racks on one tile, or racks outside the room's size, are flagged.
-- Known limits: one request per mounted device to learn its model (finding #42); at most 1000
-  relations per rack and 1000 racks per room are read (the page says when it is cut).
+- The elevation reads the rack's contents in one call (`GET /racks/{id}/contents`), whatever the
+  number of devices.
+- Known limits: at most 1000 devices per rack and 1000 racks per room are read (the page says when
+  it is cut).
 
 ### Topology: what the graph relies on
 
@@ -205,4 +207,4 @@ menu click, of which layout under 6 s).
 ## Not in this version
 
 Selectable text in the PDF exports (they are pictures), patch-panel front/rear ports in the topology, saved queries, history ("which device had this
-address on 3 March"), a rack-contents endpoint (finding #42).
+address on 3 March").

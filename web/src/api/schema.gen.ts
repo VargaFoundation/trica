@@ -381,6 +381,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/racks/{id}/contents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The devices mounted in a rack, with position, face, model, height and depth: one call for an elevation. A device is listed only if the caller may read it, its model only if the caller may read the model. Ordered by position, unknown positions last.
+         * @description Requires the "read" action.
+         */
+        get: operations["getRackContents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/readyz": {
         parameters: {
             query?: never;
@@ -3359,6 +3379,13 @@ export interface components {
             total: number;
             truncated?: boolean;
         };
+        PageRackItem: {
+            items: components["schemas"]["RackItem"][];
+            limit: number;
+            offset: number;
+            total: number;
+            truncated?: boolean;
+        };
         PageRelationLink: {
             items: components["schemas"]["RelationLink"][];
             limit: number;
@@ -3453,6 +3480,14 @@ export interface components {
             /** Format: date-time */
             valid_from: string;
             value: unknown;
+        };
+        RackItem: {
+            device: components["schemas"]["ObjectRef"];
+            face?: string;
+            full_depth: boolean;
+            model?: components["schemas"]["ObjectRef"];
+            position?: number;
+            u_height?: number;
         };
         RelationDoc: {
             attributes: components["schemas"]["AttributeDoc"][];
@@ -4276,6 +4311,39 @@ export interface operations {
             403: components["responses"]["Problem403"];
             404: components["responses"]["Problem404"];
             409: components["responses"]["Problem409"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getRackContents: {
+        parameters: {
+            query?: {
+                /** @description Page size, 1 to 1000 (default 50). */
+                limit?: number;
+                /** @description Items to skip (default 0). */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Rack id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageRackItem"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
             500: components["responses"]["Problem500"];
         };
     };

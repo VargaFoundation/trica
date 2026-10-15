@@ -33,14 +33,15 @@ test("the floor plan links each rack to its elevation", async ({ page }) => {
 test("a fully populated 48 U rack (96 devices, both faces) renders in under a second", async ({ page }) => {
   await signInWithToken(page, `/rooms/${ID.room}`);
   await expect(page.locator("svg.floor-svg a.floor-rack")).toHaveCount(3);
-  // From the click to the last slot painted: 97 requests to the mock API, the layout and the SVG.
+  // From the click to the last slot painted: the rack and its contents from the mock API (one call
+  // each since finding #42, 97 requests before), the layout and the SVG.
   const started = Date.now();
   await page.locator(`svg.floor-svg a.floor-rack[data-id="${ID.r48}"]`).click();
   await expect(page.locator('svg[data-face="front"] a.rack-slot')).toHaveCount(48);
   await expect(page.locator('svg[data-face="rear"] a.rack-slot')).toHaveCount(48);
   const elapsed = Date.now() - started;
   test.info().annotations.push({ type: "rack-render-ms", description: String(elapsed) });
-  console.log(`48 U rack, 96 devices, click to fully drawn (incl. 97 mock API calls): ${elapsed} ms`);
+  console.log(`48 U rack, 96 devices, click to fully drawn: ${elapsed} ms`);
   expect(elapsed).toBeLessThan(1000);
   await expectAccessible(page);
 });
