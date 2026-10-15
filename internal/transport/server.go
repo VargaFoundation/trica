@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/VargaFoundation/trica/internal/pki"
@@ -75,7 +76,8 @@ type ServerConfig struct {
 	Registry *Registry
 	Sink     Sink
 	// ServerCert is the certificate presented to clients, for enrolment and
-	// for mutual TLS. [pki.CA.IssueServer] makes one.
+	// for mutual TLS. [pki.CA.IssueServer] makes one; [Server.SetServerCert]
+	// replaces it while the server runs.
 	ServerCert tls.Certificate
 	Logger     *slog.Logger
 	// CertTTL is the validity of the certificates issued; pki.DefaultClientTTL
@@ -91,8 +93,9 @@ type ServerConfig struct {
 
 // Server serves the transport endpoints.
 type Server struct {
-	cfg ServerConfig
-	log *slog.Logger
+	cfg  ServerConfig
+	log  *slog.Logger
+	cert atomic.Pointer[tls.Certificate]
 }
 
 // NewServer checks cfg and returns a Server.
@@ -116,7 +119,20 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 	if log == nil {
 		log = slog.New(slog.NewJSONHandler(io.Discard, nil))
 	}
-	return &Server{cfg: cfg, log: log}, nil
+	s := &Server{cfg: cfg, log: log}
+	s.cert.Store(&cfg.ServerCert)
+	return s, nil
+}
+
+// SetServerCert replaces the certificate presented from the next handshake
+// on. The listener and the connections already open are left alone, so a
+// renewal leaves no moment when agents cannot connect (#57).
+func (s *Server) SetServerCert(c tls.Certificate) error {
+	if len(c.Certificate) == 0 {
+		return errors.New("transport: empty server certificate")
+	}
+	s.cert.Store(&c)
+	return nil
 }
 
 // TLSConfig is the server TLS configuration: TLS 1.3, HTTP/2, and a client
@@ -125,12 +141,13 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 // an identity refuse a request without a verified certificate.
 func (s *Server) TLSConfig() *tls.Config {
 	return &tls.Config{
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{s.cfg.ServerCert},
-		ClientAuth:   tls.VerifyClientCertIfGiven,
-		Time:         s.cfg.Registry.now, // one clock for the handshake and the per-request check
-		ClientCAs:    s.cfg.CA.Pool(),
-		NextProtos:   []string{"h2", "http/1.1"},
+		MinVersion: tls.VersionTLS13,
+		// Read at each handshake, so that SetServerCert takes effect at once.
+		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) { return s.cert.Load(), nil },
+		ClientAuth:     tls.VerifyClientCertIfGiven,
+		Time:           s.cfg.Registry.now, // one clock for the handshake and the per-request check
+		ClientCAs:      s.cfg.CA.Pool(),
+		NextProtos:     []string{"h2", "http/1.1"},
 	}
 }
 

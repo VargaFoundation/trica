@@ -48,7 +48,7 @@ secret does not exist (the UI is a public PKCE client).
 | `transport.ca_dir` | | none, required with `transport.addr` | Directory holding `ca.pem` and `ca-key.pem`, created on first start. Mount a persistent volume: losing the CA un-enrols every agent. |
 | `transport.hosts` | | none, required with `transport.addr` | Names and IPs of the server certificate: what agents dial. |
 | `transport.cert_ttl` | | `168h` | Validity of agent certificates. |
-| `transport.server_cert_ttl` | | `2160h` | Validity of the server certificate; the listener reopens on the same address with a new one after two thirds of it. |
+| `transport.server_cert_ttl` | | `2160h` | Validity of the server certificate; a new one is presented from the next handshake on after two thirds of it, without closing the listener or the open connections. A failed renewal is logged and retried within a minute. |
 
 The device type library (ADR 0020) is matched against the devices at start, after the
 migrations, then every `deduce.interval` (also when the deducer is disabled), so a device

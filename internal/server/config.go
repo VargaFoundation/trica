@@ -127,8 +127,8 @@ type TransportConfig struct {
 	// CertTTL is the validity of client certificates; seven days when zero.
 	CertTTL time.Duration `yaml:"cert_ttl"`
 	// ServerCertTTL is the validity of the server certificate, issued at
-	// start and renewed (the listener is re-opened) after two thirds of it;
-	// 90 days when zero.
+	// start and renewed after two thirds of it, in place: the listener and
+	// the open connections are kept. 90 days when zero.
 	ServerCertTTL time.Duration `yaml:"server_cert_ttl"`
 }
 

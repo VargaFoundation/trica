@@ -63,7 +63,9 @@ policy, the Service and the firewall treat agents apart from browsers. It is off
 emptyDir un-enrols every agent at the next restart, so the chart requires a claim.
 The server certificate is issued at start for `transport.hosts` and renewed after two thirds of
 `transport.server_cert_ttl` by reopening the listener on the same address (agents spool and
-retry, ADR 0008). A transport that cannot start stops the server, like any component (ADR 0014).
+retry, ADR 0008). *Amended (#57, STATUS row 57): the new certificate is swapped in for the next
+handshakes, through `tls.Config.GetCertificate`; the listener and the open connections stay. A
+failed renewal is logged and retried within a minute.* A transport that cannot start stops the server, like any component (ADR 0014).
 
 **The deducer runs on an interval of our own** (`deduce.interval`, five minutes), not
 `Deducer.Loop`: the loop has no metrics, and the singleton rule of ADR 0014 asks for a lock, so
@@ -98,4 +100,5 @@ page and logs a warning at start.
   429 never reaches them, and the chain is still not anchored outside the database (ADR 0013).
 - The graph of a replica is at most `mcp.graph_refresh` behind a commit made by another one
   (ADR 0032: now as soon as the notification arrives; the timer is the bound when it does not).
-- Renewing the transport certificate closes the listener for a moment; clients retry.
+- ~~Renewing the transport certificate closes the listener for a moment; clients retry.~~ No longer
+  (STATUS row 57): the renewal leaves the listener open.
