@@ -166,9 +166,24 @@ func (c *call) runSearch(q *tql.Query, label string, pp pageParams) error {
 	if err != nil {
 		return err
 	}
+	items := objectViews(res.Items)
+	// The site of each item, in one query for the page, as GET /objects/{id}
+	// gives it (#100). The caller reads these types across all sites, so the
+	// site reveals nothing it could not read.
+	ids := make([]string, len(items))
+	for i := range items {
+		ids[i] = items[i].ID
+	}
+	sites, err := c.s.siteIDs(c.ctx(), ids)
+	if err != nil {
+		return err
+	}
+	for i := range items {
+		items[i].SiteID = sites[items[i].ID]
+	}
 	return c.json(200, SearchPage{
 		Summary: SearchSummary{Query: res.Query, Total: res.Total, ByType: res.ByType, Fuzzy: res.Fuzzy, TookMS: res.Took.Milliseconds()},
-		Total:   res.Total, Limit: res.Limit, Offset: res.Offset, Items: objectViews(res.Items),
+		Total:   res.Total, Limit: res.Limit, Offset: res.Offset, Items: items,
 	})
 }
 
