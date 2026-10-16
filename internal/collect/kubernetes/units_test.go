@@ -361,6 +361,8 @@ func TestOptions(t *testing.T) {
 		{"in-cluster by default", target("", map[string]any{"cluster": "lab"}), ""},
 		{"in-cluster, explicit", target("In-Cluster", map[string]any{"cluster": "lab"}), ""},
 		{"kubeconfig", target("https://192.0.2.10:6443", map[string]any{"cluster": "lab", "kubeconfig": "/etc/trica/kubeconfig", "context": "lab"}), ""},
+		{"finished pods", target("", map[string]any{"cluster": "lab", "finished_pods": true}), ""},
+		{"finished pods, not a bool", target("", map[string]any{"cluster": "lab", "finished_pods": "sometimes"}), "into bool"},
 		{"no options", target("", nil), "option cluster is required"},
 		{"blank cluster", target("", map[string]any{"cluster": "  "}), "option cluster is required"},
 		{"unknown option", target("", map[string]any{"cluster": "lab", "kubeconf": "x"}), "kubeconf"},

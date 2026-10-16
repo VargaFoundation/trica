@@ -272,6 +272,8 @@ func (f *Fake) AddMalformedVMI() *Fake {
 // Request is one request received by the fake.
 type Request struct {
 	Verb, Resource, Namespace, Subresource string
+	// FieldSelector is the field selector of a list, empty otherwise.
+	FieldSelector string
 }
 
 // Requests returns every request the fake received, typed and dynamic, in
@@ -280,7 +282,13 @@ func (f *Fake) Requests() []Request {
 	var out []Request
 	for _, set := range [][]clienttesting.Action{f.kube.Actions(), f.dyn.Actions()} {
 		for _, a := range set {
-			out = append(out, Request{Verb: a.GetVerb(), Resource: a.GetResource().Resource, Namespace: a.GetNamespace(), Subresource: a.GetSubresource()})
+			r := Request{Verb: a.GetVerb(), Resource: a.GetResource().Resource, Namespace: a.GetNamespace(), Subresource: a.GetSubresource()}
+			if l, ok := a.(clienttesting.ListAction); ok {
+				if fs := l.GetListRestrictions().Fields; fs != nil && !fs.Empty() {
+					r.FieldSelector = fs.String()
+				}
+			}
+			out = append(out, r)
 		}
 	}
 	return out

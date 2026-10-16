@@ -328,7 +328,7 @@ func (x *builder) exposes(svcRef string, s corev1.Service) {
 	sel := labels.SelectorFromSet(s.Spec.Selector)
 	workloads := map[string]bool{}
 	for _, p := range x.snap.pods {
-		if p.Namespace != s.Namespace || p.Status.Phase == corev1.PodSucceeded || p.Status.Phase == corev1.PodFailed {
+		if p.Namespace != s.Namespace || finished(p) {
 			continue
 		}
 		if !sel.Matches(labels.Set(p.Labels)) {

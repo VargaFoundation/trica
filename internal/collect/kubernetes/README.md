@@ -21,6 +21,7 @@ targets:
     name: prod
     options:
       cluster: prod
+      finished_pods: false # the default: pods that have ended are not collected
 
   # From outside: a kubeconfig.
   - kind: kubernetes
@@ -41,6 +42,7 @@ targets:
 | `options.cluster` | required | Name of the cluster: the identity of the `k8s_cluster` object and the scope of everything below it. Two clusters need two names, or their objects merge. |
 | `options.kubeconfig` | path | Kubeconfig file. Required unless in-cluster. |
 | `options.context` | name | Context of the kubeconfig; empty is its current context. |
+| `options.finished_pods` | bool, default `false` | Also collects the pods that have ended (phase `Succeeded` or `Failed`). Off by default: on a cluster running CI or batch jobs they outnumber the live pods by far (on one cluster, 2 000 finished Tekton pods out of 2 363 made `pods -A` a 118 MB answer that outlasted the 30 s timeout), and they run nothing. |
 | `password` | secret reference | Optional bearer token (`file:` or `env:`), overrides the kubeconfig's credentials. Never read from the cluster. |
 | `tls.ca_file` | path | CA that signed the API server's certificate. |
 | `tls.insecure` | bool | Skips verification (and ignores the CA). Explicit, per target. `tls.min_version` is not applied: client-go negotiates its own. |
@@ -58,13 +60,19 @@ supports them; prefer a static ServiceAccount token for a collector.
 | `Namespace` | `namespace` in the cluster | identity `name`, `uid`; `labels` |
 | `Deployment`, `StatefulSet`, `DaemonSet`, `CronJob`, `Job` | `workload` in its namespace | identity `name`, `uid`; `kind`, `replicas` and `ready_replicas` (not for cron jobs and jobs), `images` (pod template containers). A Job started by a CronJob is `served_by` it. |
 | `ReplicaSet` | nothing | Only used to attach a pod to its Deployment. |
-| `Pod` | `pod` in its namespace | identity `name`, `uid`; `phase`, `pod_ip`, `node_name`, `restarts` (sum over containers), `images`. Relations: `hosts` node -> pod; `served_by` workload -> pod (through the ReplicaSet for a Deployment). Pods owned by a Node (static pods), by a KubeVirt instance (virt-launcher) or by nothing have no workload. |
+| `Pod` (live ones; all with `finished_pods`) | `pod` in its namespace | identity `name`, `uid`; `phase`, `pod_ip`, `node_name`, `restarts` (sum over containers), `images`. Relations: `hosts` node -> pod; `served_by` workload -> pod (through the ReplicaSet for a Deployment). Pods owned by a Node (static pods), by a KubeVirt instance (virt-launcher) or by nothing have no workload. |
 | `Service` | `k8s_service` in its namespace | identity `name`, `uid`; `type`, `cluster_ip` (`None` for headless), `ports` (name, port, protocol, target port, node port), `selector`. Relations: `served_by` service -> pod (pods of the same namespace matching the selector, not finished); `exposed_by` workload -> service (workloads owning those pods). A service without selector has no relation. |
 | `Ingress` | `ingress` in its namespace | identity `name`, `uid`; `hosts`; `rules` (one entry per host and path: host, path, path type, backend service, port). Relation `exposed_by` service -> ingress for each backend service. |
 | KubeVirt `VirtualMachineInstance` | `vm` | identity `uuid` (firmware UUID, else the instance UID) and `name`; `namespace`, `vcpus` (cores x sockets x threads, when the instance declares a cpu block), `memory_bytes` (guest memory, else the pod's memory request or limit), `power_state` (Running -> running, Paused condition -> paused, Succeeded/Failed -> stopped, otherwise unknown), `os_name` (guest agent). Relation `hosts` node -> vm. |
 | VMI `status.interfaces` | `interface` in the `vm` | `name`, `kind: virtual`, `mac`; each address (loopback and link-local are dropped) is an `ip_address` `assigned_to` the interface. |
 
 Lists are sorted, so two runs on an unchanged cluster emit the same batch.
+
+Pods that have ended are left out by the API server itself (field selector
+`status.phase!=Succeeded,status.phase!=Failed`, applied before paging), and
+again on the way back in case a server ignores the selector. A pod that ends
+between two runs is not seen by the second one and becomes `absent`, like any
+object a full-scope run no longer sees; its Job keeps its own object.
 
 ### Caveats
 
@@ -188,5 +196,6 @@ servers, but this has not been run against a real 1.29 or 1.31 server.
 | Stopped `VirtualMachine` resources | Only running instances are observed; reserved for the follow-up. |
 | PersistentVolumes and claims, StorageClasses, CRDs other than KubeVirt | Out of the model so far. |
 | Pod and service IPs as `ip_address` | The address alone identifies an `ip_address`, and pod networks overlap between clusters. |
+| Pods that have ended, unless `finished_pods` | They run nothing, and on a CI cluster they are most of the pods. |
 | Events, metrics, logs | Not inventory. |
 | Real-time updates | A run lists everything. Informers (watch) per resource, with a resync, would turn changes into batches within seconds instead of at the next run; the role already grants `watch`. |

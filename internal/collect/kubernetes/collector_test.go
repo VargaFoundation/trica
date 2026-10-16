@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -84,6 +85,61 @@ func count(b *sdk.Batch, typ string) int {
 		}
 	}
 	return n
+}
+
+// TestFinishedPods: a pod that has ended is left out by default, filtered by
+// the API server (the selector is sent) and again on the way back (the fake,
+// like an old server, ignores the selector); finished_pods brings it back.
+func TestFinishedPods(t *testing.T) {
+	const backup = "pod/shop/shop-backup-28812340-x7b2d"
+
+	t.Run("left out by default", func(t *testing.T) {
+		f := FakeKubernetes()
+		b := collectOne(t, f)
+		if _, ok := b.Lookup(backup); ok {
+			t.Errorf("the Succeeded pod %s was collected", backup)
+		}
+		if !relate(b, "served_by", "workload/shop/cronjob/shop-backup", "workload/shop/job/shop-backup-28812340") {
+			t.Error("the job of the finished pod must stay")
+		}
+		var selectors []string
+		for _, r := range f.Requests() {
+			if r.Verb == "list" && r.Resource == "pods" {
+				selectors = append(selectors, r.FieldSelector)
+			}
+		}
+		if len(selectors) == 0 {
+			t.Fatal("pods were not listed")
+		}
+		for _, s := range selectors {
+			req := strings.Split(s, ",")
+			sort.Strings(req)
+			if !reflect.DeepEqual(req, []string{"status.phase!=Failed", "status.phase!=Succeeded"}) {
+				t.Errorf("pods listed with field selector %q, want the live pods only", s)
+			}
+		}
+	})
+
+	t.Run("finished_pods", func(t *testing.T) {
+		f := FakeKubernetes()
+		b := collectOne(t, f, func(tg *collect.Target) {
+			if err := tg.Options.Encode(map[string]any{"cluster": "lab-cluster", "finished_pods": true}); err != nil {
+				t.Fatal(err)
+			}
+		})
+		if n := count(b, "pod"); n != 17 {
+			t.Errorf("%d pods, want 17", n)
+		}
+		wantAttrs(t, object(t, b, backup), map[string]any{"phase": "Succeeded"})
+		if !relate(b, "served_by", "workload/shop/job/shop-backup-28812340", backup) {
+			t.Error("the finished pod is not served by its job")
+		}
+		for _, r := range f.Requests() {
+			if r.Resource == "pods" && r.FieldSelector != "" {
+				t.Errorf("pods listed with field selector %q, want none", r.FieldSelector)
+			}
+		}
+	})
 }
 
 func TestK3sCluster(t *testing.T) {
@@ -175,8 +231,9 @@ func TestK3sCluster(t *testing.T) {
 	})
 
 	t.Run("pods", func(t *testing.T) {
-		if n := count(b, "pod"); n != 17 {
-			t.Errorf("%d pods, want 17", n)
+		// 17 in the fixture, one of which has ended (TestFinishedPods).
+		if n := count(b, "pod"); n != 16 {
+			t.Errorf("%d pods, want 16", n)
 		}
 		p := object(t, b, "pod/shop/shop-web-7d9f8c6b5-q8m4z")
 		if p.Parent != "ns/shop" || p.Identity["uid"] != "00000000-0000-4000-8000-000000000023" {
@@ -189,13 +246,11 @@ func TestK3sCluster(t *testing.T) {
 			{"served_by", "workload/shop/deployment/shop-web", "pod/shop/shop-web-7d9f8c6b5-q8m4z"},
 			{"served_by", "workload/shop/statefulset/shop-db", "pod/shop/shop-db-0"},
 			{"served_by", "workload/kube-system/daemonset/cilium", "pod/kube-system/cilium-m2p6s"},
-			{"served_by", "workload/shop/job/shop-backup-28812340", "pod/shop/shop-backup-28812340-x7b2d"},
 		} {
 			if !relate(b, c.typ, c.from, c.to) {
 				t.Errorf("missing %s %s -> %s", c.typ, c.from, c.to)
 			}
 		}
-		wantAttrs(t, object(t, b, "pod/shop/shop-backup-28812340-x7b2d"), map[string]any{"phase": "Succeeded"})
 		for _, r := range b.Relations {
 			if r.Type == "served_by" && r.To.Ref == "pod/vms/virt-launcher-app-vm-01-9t4xk" && r.From.Ref != "" && strings.HasPrefix(r.From.Ref, "workload/") {
 				t.Errorf("a virt-launcher pod is the VM's, not a workload's: %v", r.From)
@@ -490,7 +545,7 @@ func TestFailures(t *testing.T) {
 			scope:     sdk.ScopePartial,
 			objects:   true,
 			errHas:    "virtualmachineinstances: forbidden",
-			wantCount: map[string]int{"vm": 0, "pod": 17},
+			wantCount: map[string]int{"vm": 0, "pod": 16},
 		},
 		{
 			name:      "one instance is malformed",
