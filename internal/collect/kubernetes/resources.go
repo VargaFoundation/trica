@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -16,6 +17,11 @@ import (
 // pageSize bounds one list call, so that a large cluster is read in chunks
 // rather than in one response the API server has to hold in memory.
 const pageSize = 500
+
+// livePods is the field selector that leaves out the pods that have ended.
+// The API server filters them before paging, so they cost neither transfer
+// nor decoding.
+const livePods = "status.phase!=" + string(corev1.PodSucceeded) + ",status.phase!=" + string(corev1.PodFailed)
 
 // vmiResource is the KubeVirt resource listed when KubeVirt is installed.
 var vmiResource = schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachineinstances"}
@@ -42,7 +48,8 @@ type snapshot struct {
 // gather lists every resource the collector maps. A list that fails is
 // recorded in the snapshot and the others still run; only an expired context,
 // refused credentials, or every list failing ends the run with an error.
-func gather(ctx context.Context, cl *clients) (*snapshot, error) {
+// Pods that have ended are left out unless finishedPods is set.
+func gather(ctx context.Context, cl *clients, finishedPods bool) (*snapshot, error) {
 	s := &snapshot{}
 	attempted, failed := 0, 0
 	var aborted error
@@ -80,7 +87,19 @@ func gather(ctx context.Context, cl *clients) (*snapshot, error) {
 		return err
 	})
 	step("pods", false, func() (err error) {
-		s.pods, err = listAll(ctx, core.Pods(metav1.NamespaceAll).List, func(l *corev1.PodList) ([]corev1.Pod, string) { return l.Items, l.Continue })
+		list := core.Pods(metav1.NamespaceAll).List
+		if !finishedPods {
+			list = func(ctx context.Context, o metav1.ListOptions) (*corev1.PodList, error) {
+				o.FieldSelector = livePods
+				return core.Pods(metav1.NamespaceAll).List(ctx, o)
+			}
+		}
+		s.pods, err = listAll(ctx, list, func(l *corev1.PodList) ([]corev1.Pod, string) { return l.Items, l.Continue })
+		if !finishedPods {
+			// A server that ignores the selector (an old one, a proxy, the
+			// fake of client-go) must not bring them back.
+			s.pods = slices.DeleteFunc(s.pods, finished)
+		}
 		return err
 	})
 	step("services", false, func() (err error) {
@@ -156,4 +175,9 @@ func listAll[L any, T any](
 		}
 		opts.Continue = next
 	}
+}
+
+// finished reports whether a pod has ended: it runs nothing any more.
+func finished(p corev1.Pod) bool {
+	return p.Status.Phase == corev1.PodSucceeded || p.Status.Phase == corev1.PodFailed
 }

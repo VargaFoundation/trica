@@ -43,6 +43,11 @@ type options struct {
 	Kubeconfig string `yaml:"kubeconfig"`
 	// Context selects a context of the kubeconfig; empty is its current one.
 	Context string `yaml:"context"`
+	// FinishedPods also collects the pods that have ended (phase Succeeded or
+	// Failed). Off by default: on a cluster running CI or batch jobs they
+	// outnumber the live pods by far, and listing them all can outlast the
+	// run's timeout.
+	FinishedPods bool `yaml:"finished_pods"`
 }
 
 // clients is what a run needs from the cluster.
@@ -129,7 +134,7 @@ func (c *Collector) run(ctx context.Context, started time.Time) *sdk.Batch {
 	if err != nil {
 		return collect.Failed(c.target, Kind, "", started, fmt.Errorf("server version: %w", err))
 	}
-	snap, err := gather(ctx, cl)
+	snap, err := gather(ctx, cl, c.opts.FinishedPods)
 	if err != nil {
 		return collect.Failed(c.target, Kind, ver.GitVersion, started, err)
 	}

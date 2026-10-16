@@ -73,6 +73,7 @@ targets:
     address: in-cluster
     options:
       cluster: prod
+      finished_pods: false     # default: pods that have ended are not collected
 
   - kind: kubernetes           # from outside: a kubeconfig
     name: lab
