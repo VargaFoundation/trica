@@ -92,7 +92,8 @@ func TestDeducedCablesReachTheTopologyAsWritten(t *testing.T) {
 		}
 		lv, _ := l.Attributes["level"].(string)
 		w, ok := want[lv]
-		if !ok || l.Type != "cabled_to" || l.Confidence != "deduced" || l.Attributes["evidence"] != w[0] {
+		reason, _ := l.Attributes["reason"].(string)
+		if !ok || l.Type != "cabled_to" || l.Confidence != "deduced" || l.Attributes["evidence"] != w[0] || reason == "" {
 			t.Errorf("deduced cable read back wrong: %+v", l)
 			continue
 		}

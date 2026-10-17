@@ -33,6 +33,7 @@ const (
 	typeCable         = "cable"
 	typeDevice        = "device"
 	kindPhysical      = "physical"
+	kindBMC           = "bmc"
 	attrKind          = "kind"
 	attrMAC           = "mac"
 	attrLearned       = "learned_macs"
@@ -51,6 +52,26 @@ type Cable struct {
 	A, B     string
 	Evidence string
 	Level    string
+	// Reason says, in a sentence, why the deducer believes this cable.
+	Reason string
+}
+
+// macCand is the host port a forwarding table points at, and why.
+type macCand struct {
+	host, reason string
+}
+
+// sameDevice reports whether the BMC ports are all on the device of port.
+func sameDevice(g *graph, port string, bmc []string) bool {
+	if len(bmc) == 0 {
+		return false
+	}
+	for _, b := range bmc {
+		if g.ports[b].device != g.ports[port].device {
+			return false
+		}
+	}
+	return true
 }
 
 // Skip is a port the deducer could not decide on, and why.
@@ -85,8 +106,10 @@ type Plan struct {
 type port struct {
 	id, device string
 	physical   bool
-	mac        string
-	learned    []string
+	// bmc marks the port of a management controller (kind bmc).
+	bmc     bool
+	mac     string
+	learned []string
 }
 
 // Deduce computes the cables the current inventory supports. objs and rels
@@ -135,7 +158,8 @@ func Deduce(objs []*store.Object, rels []store.Relation) *Plan {
 	}
 	for _, k := range keys {
 		if c := cands[k]; c.mutual && mutualPer[c.a] == 1 && mutualPer[c.b] == 1 {
-			p.Cables = append(p.Cables, Cable{A: c.a, B: c.b, Evidence: EvidenceLLDP, Level: LevelHigh})
+			p.Cables = append(p.Cables, Cable{A: c.a, B: c.b, Evidence: EvidenceLLDP, Level: LevelHigh,
+				Reason: "LLDP: each port sees the other as its only neighbour"})
 			cabled[c.a], cabled[c.b] = true, true
 		}
 	}
@@ -145,7 +169,8 @@ func Deduce(objs []*store.Object, rels []store.Relation) *Plan {
 			continue
 		}
 		if anyPer[c.a] == 1 && anyPer[c.b] == 1 {
-			p.Cables = append(p.Cables, Cable{A: c.a, B: c.b, Evidence: EvidenceLLDPOne, Level: LevelMedium})
+			p.Cables = append(p.Cables, Cable{A: c.a, B: c.b, Evidence: EvidenceLLDPOne, Level: LevelMedium,
+				Reason: "LLDP seen from one end only; neither port has another neighbour"})
 			cabled[c.a], cabled[c.b] = true, true
 		}
 	}
@@ -165,18 +190,20 @@ func Deduce(objs []*store.Object, rels []store.Relation) *Plan {
 			byMAC[pt.mac] = append(byMAC[pt.mac], id)
 		}
 	}
-	macCands := map[string]string{}
+	macCands := map[string]macCand{}
 	learnedOn := map[string][]string{}
 	for _, id := range sortedKeys(g.ports) {
 		pt := g.ports[id]
-		if len(pt.learned) == 0 || cabled[id] {
+		// A port LLDP has an opinion about is not an edge port: either it is
+		// cabled already, or its neighbours conflict and were reported.
+		if len(pt.learned) == 0 || cabled[id] || anyPer[id] > 0 {
 			continue
 		}
 		if !pt.physical {
 			p.Skipped = append(p.Skipped, Skip{Port: id, Reason: "addresses learned on a port that is not physical (an aggregate): the member link is unknown"})
 			continue
 		}
-		hosts := map[string]bool{}
+		hosts := map[string]string{}
 		for _, e := range pt.learned {
 			m := macOf(e)
 			if m == "" {
@@ -184,26 +211,45 @@ func Deduce(objs []*store.Object, rels []store.Relation) *Plan {
 			}
 			for _, h := range byMAC[m] {
 				if hp := g.ports[h]; hp.device != pt.device {
-					hosts[h] = true
+					hosts[h] = m
 				}
 			}
 		}
-		var physical []string
+		// Host ports that take a cable: physical ports, and the dedicated
+		// ports of management controllers, which speak no LLDP and are only
+		// ever found this way.
+		var physical, bmc []string
 		for _, h := range sortedKeys(hosts) {
-			if g.ports[h].physical {
+			switch hp := g.ports[h]; {
+			case hp.physical:
 				physical = append(physical, h)
+			case hp.bmc:
+				bmc = append(bmc, h)
 			}
 		}
+		var c macCand
 		switch {
-		case len(physical) == 1:
-			macCands[id] = physical[0]
-			learnedOn[physical[0]] = append(learnedOn[physical[0]], id)
-		case len(physical) > 1:
-			p.Skipped = append(p.Skipped, Skip{Port: id, Reason: fmt.Sprintf("learned addresses match %d physical ports (a bond, or several hosts)", len(physical))})
+		case len(physical) == 1 && len(bmc) == 0:
+			c = macCand{host: physical[0], reason: fmt.Sprintf("forwarding table: the only known address learned on this edge port, %s, is the MAC of this host port", hosts[physical[0]])}
+		case len(physical) == 0 && len(bmc) == 1:
+			c = macCand{host: bmc[0], reason: fmt.Sprintf("forwarding table: the only known address learned on this edge port, %s, is the MAC of this management controller port (Redfish), which speaks no LLDP", hosts[bmc[0]])}
+		case len(physical) == 1 && sameDevice(g, physical[0], bmc):
+			// A management controller sharing a host port (shared LOM) is
+			// learned on the same switch port as that host port: the cable
+			// goes to the host port.
+			c = macCand{host: physical[0], reason: fmt.Sprintf("forwarding table: the addresses learned on this edge port are those of one host port, %s, and of the management controller sharing it (shared LOM)", hosts[physical[0]])}
+		case len(physical)+len(bmc) > 1:
+			p.Skipped = append(p.Skipped, Skip{Port: id, Reason: fmt.Sprintf("learned addresses match %d host ports (a bond, or several hosts)", len(physical)+len(bmc))})
+			continue
+		default:
+			continue
 		}
+		macCands[id] = c
+		learnedOn[c.host] = append(learnedOn[c.host], id)
 	}
 	for _, id := range sortedKeys(macCands) {
-		h := macCands[id]
+		c := macCands[id]
+		h := c.host
 		switch {
 		case cabled[h]:
 			p.Skipped = append(p.Skipped, Skip{Port: id, Reason: "the host port its addresses belong to is cabled elsewhere by LLDP"})
@@ -211,7 +257,7 @@ func Deduce(objs []*store.Object, rels []store.Relation) *Plan {
 			p.Skipped = append(p.Skipped, Skip{Port: id, Reason: fmt.Sprintf("the host port is learned on %d edge ports", len(learnedOn[h]))})
 		default:
 			a, b := order(id, h)
-			p.Cables = append(p.Cables, Cable{A: a, B: b, Evidence: EvidenceMACTable, Level: LevelLow})
+			p.Cables = append(p.Cables, Cable{A: a, B: b, Evidence: EvidenceMACTable, Level: LevelLow, Reason: c.reason})
 			cabled[id], cabled[h] = true, true
 		}
 	}
@@ -303,6 +349,7 @@ func newGraph(objs []*store.Object) *graph {
 			pt := &port{id: o.ID, device: deviceOf(byID, o)}
 			kind, _ := o.Attrs[attrKind].(string)
 			pt.physical = kind == "" || kind == kindPhysical
+			pt.bmc = kind == kindBMC
 			if m, ok := o.Attrs[attrMAC].(string); ok {
 				pt.mac = macOf(m)
 			}

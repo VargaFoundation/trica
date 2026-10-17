@@ -46,6 +46,9 @@ restricted NetworkPolicy, collectors, transport). Where the image comes from is 
 | `collect.targetsConfigMap` / `targetsKey` | `""` / `targets.yaml` | An existing ConfigMap holding the targets file instead of `collect.targets`. |
 | `collect.secrets` | `[]` | Existing Secrets to mount at `/var/run/secrets/collect/<name>/` (one file per key), for targets' `file:` references. |
 | `collect.kubernetes.rbac.enabled` | `false` | ClusterRole and binding, read-only (`get`/`list`/`watch`, no Secrets, no ConfigMaps), for a `kubernetes` target with address `in-cluster`; mounts the service account token. |
+| `live.enabled` | `false` | The live topology overlay ([reference](../../docs/reference/configuration.md#live-topology-overlay), ADR 0041): the server reads link throughput and state from a Prometheus-compatible endpoint. Needs `live.config.url` and `live.config.sources`. |
+| `live.config` | `{}` | The server's `live` block, rendered as is and checked by the values schema. Credentials are `file:` references to `live.secrets`, never values. |
+| `live.secrets` | `[]` | Existing Secrets to mount at `/var/run/secrets/live/<name>/` (one file per key), for `live.config`'s `file:` references. |
 | `backup.enabled` | `false` | Renders the backup CronJob below. |
 | `backup.schedule` | `17 2 * * *` | Cron schedule. |
 | `backup.existingClaim` | `""` (required when enabled) | PersistentVolumeClaim receiving the archives. |
@@ -91,6 +94,27 @@ collect:
 ```
 
 For devices the cluster cannot reach, run `trica collector` next to them instead.
+
+## Live topology
+
+With `live.enabled`, the topology can overlay link throughput and state read by the server from a
+Prometheus-compatible endpoint; the browser never reaches it. With `networkPolicy.egressTo` set,
+list the endpoint there. Example, with the password in a Secret you created
+(`kubectl create secret generic metrics-credentials --from-file=password`):
+
+```yaml
+live:
+  enabled: true
+  secrets: [{name: metrics-credentials}]
+  config:
+    url: https://metrics.example.net/prometheus
+    username: trica-reader
+    password: file:/var/run/secrets/live/metrics-credentials/password
+    sources:
+      - kind: node
+      - kind: arista
+        matchers: {job: arista-exporter}
+```
 
 ## Backup
 

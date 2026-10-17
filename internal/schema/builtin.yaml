@@ -727,6 +727,7 @@ relations:
     attributes:
       evidence: {kind: enum, values: [lldp, lldp_one_sided, mac_table], label: {en: Evidence, fr: Preuve}, description: "What a deduced cable rests on: LLDP seen from both ends, LLDP seen from one end, or a switch forwarding table."}
       level: {kind: enum, values: [high, medium, low], label: {en: Confidence level, fr: Niveau de confiance}, description: "Confidence of a deduced cable: high for LLDP seen from both ends, medium from one end, low from a forwarding table."}
+      reason: {kind: text, label: {en: Reason, fr: Motif}, description: "Why the deducer believes a deduced cable, in a sentence: which neighbours or which learned address it rests on."}
   maps_to:
     label: {en: maps to, fr: correspond à}
     inverse: {en: is mapped from, fr: est la cible de}

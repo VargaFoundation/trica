@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/VargaFoundation/trica/internal/live"
 	"github.com/VargaFoundation/trica/internal/reconcile"
 	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/internal/search"
@@ -49,6 +50,14 @@ type Config struct {
 	// Images serves the face images of the device-type library. Nil: no
 	// model has an image.
 	Images DeviceTypeImages
+	// Live serves the live topology overlay (ADR 0041); nil when the server
+	// has no live block, and GET /topology/live answers enabled: false.
+	Live LiveSource
+}
+
+// LiveSource is the live overlay: a shared, cached measurement set.
+type LiveSource interface {
+	Snapshot(ctx context.Context) *live.Snapshot
 }
 
 // Server is the REST API.
@@ -63,6 +72,7 @@ type Server struct {
 	now      func() time.Time
 	images   DeviceTypeImages
 	routes   []route
+	live     LiveSource
 }
 
 // New builds a Server. It fails without an engine, an Authorizer and an
@@ -80,6 +90,7 @@ func New(cfg Config) (*Server, error) {
 		eng: cfg.Engine, st: cfg.Engine.Store, searcher: &search.Searcher{Store: cfg.Engine.Store},
 		auth: cfg.Authorizer, audit: cfg.Auditor, log: cfg.Logger, version: cfg.Version, now: cfg.Now,
 		images: cfg.Images,
+		live:   cfg.Live,
 	}
 	if s.log == nil {
 		s.log = slog.Default()

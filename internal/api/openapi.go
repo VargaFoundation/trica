@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/VargaFoundation/trica/internal/live"
 	"github.com/VargaFoundation/trica/internal/reconcile"
 	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/internal/search"
@@ -296,6 +297,8 @@ var (
 		reflect.TypeOf(reconcile.Result{}):        "ApplyResult",
 		reflect.TypeOf(reconcile.PlannedChange{}): "PlannedChange",
 		reflect.TypeOf(search.Saved{}):            "SavedQuery",
+		reflect.TypeOf(live.Link{}):               "LiveLink",
+		reflect.TypeOf(live.SourceStatus{}):       "LiveSourceStatus",
 	}
 )
 

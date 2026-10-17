@@ -138,3 +138,42 @@ func TestDatabaseURL(t *testing.T) {
 		t.Fatal("missing file accepted")
 	}
 }
+
+func TestLiveBlock(t *testing.T) {
+	t.Setenv("TRICA_HTTP_ADDR", "")
+	t.Setenv("TRICA_LOG_LEVEL", "")
+	c, err := LoadConfig("")
+	if err != nil || c.Live != nil {
+		t.Fatalf("without a live block the overlay is off: %v %+v", err, c.Live)
+	}
+	p := writeFile(t, "trica.yaml", `
+live:
+  url: https://metrics.example.net/prometheus
+  username: trica
+  password: file:/run/secrets/live/password
+  refresh: 1m
+  tls: {ca_file: /etc/trica/ca.pem}
+  sources:
+    - kind: arista
+      matchers: {job: arista-exporter}
+    - kind: generic
+      name: snmp
+      metrics: {rx: ifHCInOctets, tx: ifHCOutOctets, oper: "-"}
+      labels: {device: [instance], interface: ifName}
+`)
+	c, err = LoadConfig(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Live == nil || c.Live.Refresh != time.Minute || c.Live.Timeout != 5*time.Second || len(c.Live.Sources) != 2 {
+		t.Fatalf("live block: %+v", c.Live)
+	}
+	bad := writeFile(t, "bad.yaml", "live:\n  url: https://metrics.example.net\n  password: hunter2\n  sources: [{kind: node}]\n")
+	if _, err := LoadConfig(bad); err == nil || !strings.Contains(err.Error(), "live.password") {
+		t.Fatalf("a password value stops the start: %v", err)
+	}
+	typo := writeFile(t, "typo.yaml", "live:\n  url: https://metrics.example.net\n  sources: [{kind: node, metric: {rx: x}}]\n")
+	if _, err := LoadConfig(typo); err == nil {
+		t.Fatal("an unknown key in the live block stops the start")
+	}
+}

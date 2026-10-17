@@ -1,6 +1,6 @@
 # ADR-0010: Cabling is deduced from LLDP and MAC tables, with a confidence
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10); amended by ADR 0041 (management controller ports, shared LOM, the `reason` attribute)
 - **Concerns**: `internal/deduce`, network collectors
 
 ## Context

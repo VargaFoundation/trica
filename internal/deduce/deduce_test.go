@@ -65,7 +65,16 @@ func base() *inv {
 		port("h2n1", "h2", "mac", "02:00:00:00:02:01")
 }
 
-func cables(p *Plan) []Cable { return p.Cables }
+// cables returns the deduced cables without their reasons, which
+// TestDeduceReasons checks.
+func cables(p *Plan) []Cable {
+	var out []Cable
+	for _, c := range p.Cables {
+		c.Reason = ""
+		out = append(out, c)
+	}
+	return out
+}
 
 func TestDeduceCables(t *testing.T) {
 	cases := []struct {
@@ -75,18 +84,18 @@ func TestDeduceCables(t *testing.T) {
 		skip int
 	}{
 		{"lldp both ends", base().lldp("s1e1", "s2e1").lldp("s2e1", "s1e1"),
-			[]Cable{{"s1e1", "s2e1", EvidenceLLDP, LevelHigh}}, 0},
+			[]Cable{{"s1e1", "s2e1", EvidenceLLDP, LevelHigh, ""}}, 0},
 		{"lldp one end", base().lldp("s2e1", "s1e1"),
-			[]Cable{{"s1e1", "s2e1", EvidenceLLDPOne, LevelMedium}}, 0},
+			[]Cable{{"s1e1", "s2e1", EvidenceLLDPOne, LevelMedium, ""}}, 0},
 		{"lldp self loop ignored", base().lldp("s1e1", "s1e1"), nil, 0},
 		{"lldp hub: two neighbours on one port", base().lldp("s1e1", "s2e1").lldp("s1e1", "s2e2"),
 			nil, 3},
 		{"two mutual neighbours on one port", base().lldp("s1e1", "s2e1").lldp("s2e1", "s1e1").lldp("s1e1", "s2e2").lldp("s2e2", "s1e1"),
 			nil, 3},
 		{"mutual wins over a stale one-sided entry", base().lldp("s1e1", "s2e1").lldp("s2e1", "s1e1").lldp("s1e2", "s2e1"),
-			[]Cable{{"s1e1", "s2e1", EvidenceLLDP, LevelHigh}}, 1},
+			[]Cable{{"s1e1", "s2e1", EvidenceLLDP, LevelHigh, ""}}, 1},
 		{"mac table: one host port", base().port("s1e9", "s1", "learned_macs", learned("02-00-00-00-01-01")),
-			[]Cable{{"h1n1", "s1e9", EvidenceMACTable, LevelLow}}, 0},
+			[]Cable{{"h1n1", "s1e9", EvidenceMACTable, LevelLow, ""}}, 0},
 		{"mac table: unknown address", base().port("s1e9", "s1", "learned_macs", learned("02:00:00:00:09:09")), nil, 0},
 		{"mac table: malformed entry", base().port("s1e9", "s1", "learned_macs", []any{"junk", 3}), nil, 0},
 		{"mac table: two hosts on one port", base().port("s1e9", "s1", "learned_macs", learned("02:00:00:00:01:01", "02:00:00:00:02:01")),
@@ -104,7 +113,7 @@ func TestDeduceCables(t *testing.T) {
 		{"mac table: a bridge sharing the address is not a second port", base().
 			port("h2br", "h2", "kind", "bridge", "mac", "02:00:00:00:02:01").
 			port("s1e9", "s1", "learned_macs", learned("02:00:00:00:02:01")),
-			[]Cable{{"h2n1", "s1e9", EvidenceMACTable, LevelLow}}, 0},
+			[]Cable{{"h2n1", "s1e9", EvidenceMACTable, LevelLow, ""}}, 0},
 		{"mac table: own address ignored", base().port("s1e9", "s1", "mac", "02:00:00:00:0a:0a", "learned_macs", learned("02:00:00:00:0a:0a")),
 			nil, 0},
 		{"mac table: vm address is not a cable", base().vm("vm1").port("vm1n", "vm1", "mac", "02:00:00:00:0b:0b").
@@ -112,11 +121,11 @@ func TestDeduceCables(t *testing.T) {
 			nil, 0},
 		{"mac table yields to lldp on the host port", base().lldp("h1n1", "s2e2").
 			port("s1e9", "s1", "learned_macs", learned("02:00:00:00:01:01")),
-			[]Cable{{"h1n1", "s2e2", EvidenceLLDPOne, LevelMedium}}, 1},
+			[]Cable{{"h1n1", "s2e2", EvidenceLLDPOne, LevelMedium, ""}}, 1},
 		{"mac table ignored on an lldp port", base().
 			port("s1e9", "s1", "learned_macs", learned("02:00:00:00:01:01")).
 			lldp("s1e9", "s2e2").lldp("s2e2", "s1e9"),
-			[]Cable{{"s1e9", "s2e2", EvidenceLLDP, LevelHigh}}, 0},
+			[]Cable{{"s1e9", "s2e2", EvidenceLLDP, LevelHigh, ""}}, 0},
 		{"absent objects ignored", func() *inv {
 			v := base().lldp("s1e1", "s2e1").lldp("s2e1", "s1e1")
 			for _, o := range v.objs {
@@ -220,5 +229,86 @@ func TestDeviceOfThroughModules(t *testing.T) {
 	g := newGraph(v.objs)
 	if g.ports["p"].device != "s1" || g.ports["orphan"].device != "" {
 		t.Errorf("devices: %q %q", g.ports["p"].device, g.ports["orphan"].device)
+	}
+}
+
+// Every server is cabled to two switches and its management controller to a
+// third; the controllers speak no LLDP. Everything is invented.
+func bmcLab() *inv {
+	return base().
+		port("h1bmc", "h1", "kind", "bmc", "mac", "02:00:00:00:01:0b").
+		port("h2bmc", "h2", "kind", "bmc", "mac", "02:00:00:00:02:0b").
+		device("oob").port("oob1", "oob").port("oob2", "oob").port("oob3", "oob")
+}
+
+func TestDeduceManagementControllerPorts(t *testing.T) {
+	cases := []struct {
+		name string
+		v    *inv
+		want []Cable
+		skip int
+	}{
+		{"dedicated BMC port on an edge port", bmcLab().port("oob1", "oob", "learned_macs", learned("02:00:00:00:01:0b")),
+			[]Cable{{"h1bmc", "oob1", EvidenceMACTable, LevelLow, ""}}, 0},
+		{"two servers: two BMC cables, and their data ports elsewhere", bmcLab().
+			port("oob1", "oob", "learned_macs", learned("02:00:00:00:01:0b")).
+			port("oob2", "oob", "learned_macs", learned("02:00:00:00:02:0b")).
+			port("s1e9", "s1", "learned_macs", learned("02:00:00:00:01:01")).
+			port("s2e9", "s2", "learned_macs", learned("02:00:00:00:01:02")),
+			[]Cable{
+				{"h1bmc", "oob1", EvidenceMACTable, LevelLow, ""},
+				{"h1n1", "s1e9", EvidenceMACTable, LevelLow, ""},
+				{"h1n2", "s2e9", EvidenceMACTable, LevelLow, ""},
+				{"h2bmc", "oob2", EvidenceMACTable, LevelLow, ""},
+			}, 0},
+		{"shared LOM: host port and its BMC on one switch port", bmcLab().
+			port("s1e9", "s1", "learned_macs", learned("02:00:00:00:01:01", "02:00:00:00:01:0b")),
+			[]Cable{{"h1n1", "s1e9", EvidenceMACTable, LevelLow, ""}}, 0},
+		{"BMCs of two servers behind one port: an unmanaged switch", bmcLab().
+			port("oob1", "oob", "learned_macs", learned("02:00:00:00:01:0b", "02:00:00:00:02:0b")),
+			nil, 1},
+		{"a host port and another server's BMC: undecided", bmcLab().
+			port("s1e9", "s1", "learned_macs", learned("02:00:00:00:01:01", "02:00:00:00:02:0b")),
+			nil, 1},
+		{"a BMC learned on two edge ports", bmcLab().
+			port("oob1", "oob", "learned_macs", learned("02:00:00:00:01:0b")).
+			port("oob2", "oob", "learned_macs", learned("02:00:00:00:01:0b")),
+			nil, 2},
+		{"an edge port with conflicting LLDP neighbours is not an edge port", bmcLab().
+			port("oob1", "oob", "learned_macs", learned("02:00:00:00:01:0b")).
+			lldp("oob1", "s1e1").lldp("oob1", "s1e2"),
+			nil, 3},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p := Deduce(c.v.objs, c.v.rels)
+			if !reflect.DeepEqual(cables(p), c.want) {
+				t.Errorf("cables = %+v, want %+v", p.Cables, c.want)
+			}
+			if len(p.Skipped) != c.skip {
+				t.Errorf("skipped = %+v, want %d", p.Skipped, c.skip)
+			}
+		})
+	}
+}
+
+func TestDeduceReasons(t *testing.T) {
+	v := bmcLab().lldp("s1e1", "s2e1").lldp("s2e1", "s1e1").lldp("s2e2", "s1e2").
+		port("oob1", "oob", "learned_macs", learned("02:00:00:00:01:0b")).
+		port("oob2", "oob", "learned_macs", learned("02:00:00:00:02:01", "02:00:00:00:02:0b"))
+	want := map[string]string{
+		"s1e1|s2e1":  "LLDP: each port sees",
+		"s1e2|s2e2":  "LLDP seen from one end only",
+		"h1bmc|oob1": "02:00:00:00:01:0b, is the MAC of this management controller port",
+		"h2n1|oob2":  "shared LOM",
+	}
+	p := Deduce(v.objs, v.rels)
+	if len(p.Cables) != len(want) {
+		t.Fatalf("cables %+v", p.Cables)
+	}
+	for _, c := range p.Cables {
+		if w := want[pairKey(c.A, c.B)]; w == "" || !strings.Contains(c.Reason, w) {
+			t.Errorf("%s-%s: reason %q, want it to say %q", c.A, c.B, c.Reason, w)
+		}
 	}
 }

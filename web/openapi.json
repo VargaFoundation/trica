@@ -4802,6 +4802,103 @@
         ],
         "type": "object"
       },
+      "LiveLink": {
+        "properties": {
+          "aggregated": {
+            "type": "boolean"
+          },
+          "members": {
+            "type": "integer"
+          },
+          "oper": {
+            "type": "string"
+          },
+          "rx_bps": {
+            "type": "number"
+          },
+          "source": {
+            "type": "string"
+          },
+          "tx_bps": {
+            "type": "number"
+          },
+          "util": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "type": "object"
+      },
+      "LiveSourceStatus": {
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "last_success": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "matched": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "series": {
+            "type": "integer"
+          },
+          "stale": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "matched",
+          "name",
+          "series",
+          "stale"
+        ],
+        "type": "object"
+      },
+      "LiveTopology": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "links": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/LiveLink"
+            },
+            "type": "object"
+          },
+          "refresh_seconds": {
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/LiveSourceStatus"
+            },
+            "type": "array"
+          },
+          "stale": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "links",
+          "refresh_seconds",
+          "sources",
+          "stale"
+        ],
+        "type": "object"
+      },
       "Me": {
         "properties": {
           "actions": {
@@ -9016,6 +9113,38 @@
           }
         },
         "summary": "Search: a counted summary first, then a page of objects.",
+        "tags": [
+          "inventory"
+        ],
+        "x-trica-action": "read"
+      }
+    },
+    "/topology/live": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "getLiveTopology",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveTopology"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "Live state of the links: throughput, link state and utilisation per interface id, read by the server from the configured metrics endpoint and cached (refresh_seconds). enabled is false when the server has no live block; stale is true when the last refresh failed and the values are the last good ones. Only interfaces the caller may read are listed. Nothing here is stored in the inventory.",
         "tags": [
           "inventory"
         ],

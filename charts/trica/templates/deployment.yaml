@@ -4,6 +4,12 @@
 {{- if and .Values.collect.enabled (not .Values.collect.targets) (not .Values.collect.targetsConfigMap) }}
 {{- fail "collect.targets or collect.targetsConfigMap is required when collect.enabled: what to collect from" }}
 {{- end }}
+{{- if and .Values.live.enabled (or (not .Values.live.config.url) (not .Values.live.config.sources)) }}
+{{- fail "live.enabled needs live.config.url and live.config.sources: where to read the measurements and what" }}
+{{- end }}
+{{- if and .Values.live.enabled .Values.config.live }}
+{{- fail "set the live block in live.config, not config.live" }}
+{{- end }}
 {{- if and .Values.collect.kubernetes.rbac.enabled (not .Values.collect.enabled) }}
 {{- fail "collect.kubernetes.rbac.enabled needs collect.enabled: the role is for the in-server collectors" }}
 {{- end }}
@@ -106,6 +112,14 @@ spec:
               readOnly: true
             {{- end }}
             {{- end }}
+            {{- if .Values.live.enabled }}
+            {{- range .Values.live.secrets }}
+            # live.config refers to these with "file:/var/run/secrets/live/<secret>/<key>".
+            - name: live-secret-{{ .name }}
+              mountPath: /var/run/secrets/live/{{ .name }}
+              readOnly: true
+            {{- end }}
+            {{- end }}
             - name: tmp
               mountPath: /tmp
             {{- if .Values.deviceTypes.existingClaim }}
@@ -155,6 +169,14 @@ spec:
           persistentVolumeClaim:
             claimName: {{ .Values.deviceTypes.existingClaim }}
             readOnly: true
+        {{- end }}
+        {{- if .Values.live.enabled }}
+        {{- range .Values.live.secrets }}
+        - name: live-secret-{{ .name }}
+          secret:
+            secretName: {{ .name }}
+            defaultMode: 0440
+        {{- end }}
         {{- end }}
         {{- if .Values.transport.enabled }}
         - name: transport-ca
