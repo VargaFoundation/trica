@@ -59,6 +59,6 @@ is a hope.
 
 ## Kubernetes
 
-The reference deployment (Zalando operator with WAL-G) takes physical backups with point-in-time
-recovery: use those, and leave the chart's CronJob off. `backup.enabled` is for standalone
+A PostgreSQL operator with WAL archiving takes physical backups with point-in-time recovery: use
+those, and leave the chart's CronJob off. `backup.enabled` is for standalone
 installs on a PostgreSQL that has nothing of its own; see the chart README.

@@ -45,8 +45,20 @@ username trica privilege 1 role network-operator secret <password>
 ```
 
 `management api http-commands` must be enabled (`no shutdown`, and `protocol
-http` or `protocol https` to match `address`). Nothing else on the switch needs
-to change. Do not give the account `network-admin`, and do not enable
+http` or `protocol https` to match `address`).
+
+EOS enforces a role's command rules only when command authorization is on:
+
+```
+aaa authorization commands all default local
+```
+
+Without it the role is accepted but not applied, and what the account may run is
+decided by its privilege level alone. Turn it on in a session that keeps an
+administrator logged in, and check that the administrator accounts still have a
+role that permits configuration (`network-admin`) before closing it. Then check
+the collector's account: `show version` must answer, `configure` must be
+refused. Nothing else on the switch needs to change. Do not give the account `network-admin`, and do not enable
 `configure` access for it: the collector never needs it.
 
 eAPI takes commands only by `POST`, reads included. That is protocol, not a

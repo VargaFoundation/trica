@@ -1,0 +1,88 @@
+# A fuller install, every value generic: an Ingress with TLS, OIDC sign-in,
+# a restricted NetworkPolicy, Prometheus scraping, two replicas, server-side
+# collectors and the mutual-TLS endpoint for agents. Adapt the names, then
+#   helm install trica ./charts/trica -n trica -f charts/trica/examples/production.yaml
+image:
+  repository: registry.example.com/trica
+  tag: "0.1.2"
+imagePullSecrets:
+  - name: registry-credentials
+
+replicaCount: 2
+podDisruptionBudget:
+  enabled: true
+
+database:
+  existingSecret: trica-db
+
+config:
+  log_level: info
+  policy:
+    absent_after: 30m
+    propose: ["mcp:*"]
+  auth:
+    oidc:
+      issuer: https://sso.example.com/realms/example
+      audience: [trica]
+      groups_claim: groups
+    group_roles:
+      infra-admins: [admin]
+      infra-operators: [operator]
+      everyone: [viewer]
+  web:
+    oidc:
+      client_id: trica-ui
+      scopes: [openid, profile, email]
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts: [trica.example.com]
+  tls:
+    - secretName: trica-tls
+      hosts: [trica.example.com]
+
+networkPolicy:
+  enabled: true
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels: {kubernetes.io/metadata.name: ingress-system}
+    - namespaceSelector:
+        matchLabels: {kubernetes.io/metadata.name: monitoring}
+  egressTo:
+    # The database.
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: databases}
+      ports:
+        - {port: 5432, protocol: TCP}
+    # The identity provider (discovery and keys) and the devices collected,
+    # here a management network.
+    - to:
+        - ipBlock: {cidr: 192.0.2.0/24}
+        - ipBlock: {cidr: 198.51.100.0/24}
+      ports:
+        - {port: 443, protocol: TCP}
+
+serviceMonitor:
+  enabled: true
+
+collect:
+  enabled: true
+  secrets:
+    - name: arista-credentials
+  targets:
+    - kind: arista
+      name: sw-a1
+      address: https://192.0.2.10
+      username: monitor
+      password: file:/var/run/secrets/collect/arista-credentials/password
+      interval: 5m
+
+transport:
+  enabled: true
+  hosts: [trica-agents.example.com]
+  existingClaim: trica-ca
+  # Agents outside the cluster: the source of their traffic.
+  ingressFrom:
+    - ipBlock: {cidr: 198.51.100.0/24}

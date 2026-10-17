@@ -17,7 +17,7 @@ types:
     description: A geographical site (datacenter, office, colocation).
     attributes:
       name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Short site name."}
-      code: {kind: string, identity: strong, search: true, label: {en: Code, fr: Code}, description: "Unique site code, e.g. MOJI-FR1."}
+      code: {kind: string, identity: strong, search: true, label: {en: Code, fr: Code}, description: "Unique site code, e.g. SITE-A1."}
       address: {kind: text, search: true, label: {en: Address, fr: Adresse}, description: "Postal address."}
       timezone: {kind: string, label: {en: Time zone, fr: Fuseau horaire}, description: "IANA time zone of the site."}
   building:

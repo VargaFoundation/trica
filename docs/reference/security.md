@@ -75,7 +75,7 @@ comes from the command line, run next to the server (`kubectl exec`, `docker com
 Job; see [getting started](../getting-started.md#first-credentials)).
 
 ```bash
-trica token create --name claude-code --owner vincent --roles admin --scopes write \
+trica token create --name claude-code --owner alice --roles admin --scopes write \
   [--types device,rack] [--sites paris-1] [--expires 720h]   # the token alone on stdout
 trica token list                                            # no secret, no hash
 trica token revoke --id 7                                   # marks revoked_at, keeps the row

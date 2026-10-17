@@ -7,7 +7,12 @@ Secret and refuses to render without one.
 helm install trica ./charts/trica -n trica --set database.existingSecret=trica-db
 ```
 
-No chart or image is published yet; see [getting started](../../docs/getting-started.md).
+Nothing in the chart is specific to one site: no secret manager, policy engine, CNI or ingress
+controller is assumed. `values.schema.json` rejects unknown and mistyped keys. Two example values
+files are in [`examples/`](examples/): [`minimal.yaml`](examples/minimal.yaml) (the database Secret
+and the image, nothing else) and [`production.yaml`](examples/production.yaml) (Ingress, OIDC,
+restricted NetworkPolicy, collectors, transport). Where the image comes from is in
+[getting started](../../docs/getting-started.md#the-image).
 
 ## Values
 
@@ -20,6 +25,9 @@ No chart or image is published yet; see [getting started](../../docs/getting-sta
 | `image.repository` / `tag` / `digest` | `ghcr.io/vargafoundation/trica` / appVersion / `""` | A digest takes precedence over the tag. |
 | `replicaCount` | `1` | Migrations and the sweep are safe with several replicas (ADR 0014). |
 | `service.type` / `port` | `ClusterIP` / `8080` | |
+| `ingress.enabled` | `false` | An Ingress for the HTTP port (UI, API, MCP); needs `ingress.hosts`. With the default NetworkPolicy, add the ingress controller's namespace to `networkPolicy.ingressFrom`. |
+| `ingress.className` / `annotations` / `hosts` / `tls` | `""` / `{}` / `[]` / `[]` | Controller-agnostic: the class (cluster default when empty), the annotations your controller needs, host names, standard Ingress TLS entries. |
+| `imagePullSecrets` | `[]` | For a private registry. |
 | `transport.enabled` | `false` | Mutual-TLS endpoint for agents, on its own port and Service port (ADR 0025). Needs `transport.hosts` and `transport.existingClaim`; the chart refuses to render without them. |
 | `transport.port` / `hosts` | `8443` / `[]` | Listen port; names and IPs agents dial (the server certificate's). |
 | `transport.existingClaim` / `subPath` | `""` / `""` | PersistentVolumeClaim holding the CA (`ca.pem`, `ca-key.pem`). Losing it un-enrols every agent; ReadWriteMany with several replicas. |
@@ -41,7 +49,7 @@ No chart or image is published yet; see [getting started](../../docs/getting-sta
 | `backup.schedule` | `17 2 * * *` | Cron schedule. |
 | `backup.existingClaim` | `""` (required when enabled) | PersistentVolumeClaim receiving the archives. |
 | `backup.subPath` | `""` | Subdirectory of the claim. |
-| `backup.image.repository` / `tag` | `ghcr.io/vargafoundation/trica-ops` / appVersion | The `ops` image (`docker build --target ops .`): the server binary plus `pg_dump` 17. Not published yet. |
+| `backup.image.repository` / `tag` | `ghcr.io/vargafoundation/trica-ops` / appVersion | The `ops` image (`docker build --target ops .`): the server binary plus `pg_dump` 17. Build it with that command when you cannot pull it. |
 
 ## First token
 
@@ -85,8 +93,8 @@ For devices the cluster cannot reach, run `trica collector` next to them instead
 
 ## Backup
 
-The reference deployment (Zalando operator with WAL-G) takes its own physical backups with
-point-in-time recovery: leave `backup.enabled` off there. The CronJob is for standalone
+A PostgreSQL operator with WAL archiving (CloudNativePG, Zalando, a managed service) takes its own
+physical backups with point-in-time recovery: leave `backup.enabled` off there. The CronJob is for standalone
 installs, where PostgreSQL has nothing of its own: it runs `trica backup --dir /backups` on the
 schedule with the same database Secret as the server (a mounted file, no credential in values) and
 writes `trica-<timestamp>.dump` to the claim. It never deletes: prune the volume yourself. For an
@@ -96,9 +104,28 @@ see [`deploy/compose/README.md`](../../deploy/compose/README.md) for the procedu
 command with the same image (`kubectl run`, scale the server to 0 first) and
 [ADR 0021](../../docs/adr/0021-backup-restore.md).
 
+## Authentication (OIDC)
+
+Everything under `config` is passed to the server as is ([configuration](../../docs/reference/configuration.md)).
+Any OpenID Connect provider works; the UI is a public PKCE client, so no client secret exists:
+
+```yaml
+config:
+  auth:
+    oidc:
+      issuer: https://sso.example.com/realms/example
+      audience: [trica]
+    group_roles:
+      infra-admins: [admin]
+  web:
+    oidc:
+      client_id: trica-ui
+```
+
 ## Tests
 
 ```bash
+helm lint charts/trica --set database.existingSecret=ci
 helm unittest charts/trica
-helm template ci charts/trica --set database.existingSecret=ci | kubeconform -strict -summary
+for f in charts/trica/examples/*.yaml; do helm template ci charts/trica -f "$f" | kubeconform -strict -summary; done
 ```

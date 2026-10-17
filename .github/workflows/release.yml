@@ -119,9 +119,38 @@ jobs:
           digest=$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{json .Manifest}}' | jq -r .digest)
           cosign sign --yes "${IMAGE}@${digest}"
 
+  ops-image:
+    # The backup image the chart's CronJob defaults to (docker build --target ops):
+    # small next to the server, so one runner builds both architectures.
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: v
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: ops
+          platforms: linux/amd64,linux/arm64
+          build-args: VERSION=${{ github.ref_name }}
+          # The chart's backup.image.tag defaults to appVersion, without the v.
+          tags: ghcr.io/vargafoundation/trica-ops:${{ steps.v.outputs.version }}
+          push: true
+
   chart:
     # After the images: a published chart never points at a missing image.
-    needs: manifest
+    needs: [manifest, ops-image]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -147,13 +176,17 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with: { go-version-file: go.mod }
+      - uses: actions/setup-node@v7
+        with: { node-version: 22.23.3 }
+      - name: build the UI (embedded by -tags webui, as in the image)
+        run: make web-install web-build
       - name: build static binaries
         run: |
           mkdir -p dist
           for arch in amd64 arm64; do
             for cmd in cmd/*/; do
               name=$(basename "$cmd")
-              CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath \
+              CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath -tags webui \
                 -ldflags "-s -w -X main.version=${GITHUB_REF_NAME}" \
                 -o "dist/${name}_${GITHUB_REF_NAME#v}_linux_${arch}" "./$cmd"
             done

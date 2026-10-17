@@ -14,8 +14,8 @@ imagePullSecrets: []
 # PostgreSQL advisory locks.
 replicaCount: 1
 
-# PostgreSQL is external (a Zalando or CloudNativePG cluster, a managed
-# instance). The connection URL is read from an existing Secret, mounted as a
+# PostgreSQL 17 is external (an operator-managed cluster, a managed instance,
+# a plain server). The connection URL is read from an existing Secret, mounted as a
 # file; the chart never holds it.
 database:
   existingSecret: ""
@@ -44,6 +44,21 @@ schemaOverlays: {}
 service:
   type: ClusterIP
   port: 8080
+
+# Optional Ingress for the HTTP port (UI, REST API, MCP). Controller-agnostic:
+# set the class and the annotations your controller needs. With the default
+# NetworkPolicy, also list the controller's namespace in
+# networkPolicy.ingressFrom, or its traffic is dropped.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # Host names, e.g. [trica.example.com].
+  hosts: []
+  # Standard Ingress TLS entries, e.g.
+  #  - secretName: trica-tls
+  #    hosts: [trica.example.com]
+  tls: []
 
 # Mutual-TLS ingestion for agents and collectors (ADR 0008, 0025), on a port of
 # its own. Off by default. The CA lives on a persistent volume: losing it
@@ -131,12 +146,12 @@ networkPolicy:
   # Who may reach the HTTP port. Empty: any pod in the release namespace.
   ingressFrom: []
   #  - namespaceSelector:
-  #      matchLabels: {kubernetes.io/metadata.name: ingress-nginx}
+  #      matchLabels: {kubernetes.io/metadata.name: ingress-system}
   # Where the server may connect besides DNS. The database must be listed;
   # empty allows all egress.
   egressTo: []
   #  - to:
-  #      - podSelector: {matchLabels: {application: spilo}}
+  #      - podSelector: {matchLabels: {app: postgresql}}
   #    ports:
   #      - {port: 5432, protocol: TCP}
 
@@ -150,8 +165,9 @@ podDisruptionBudget:
   minAvailable: 1
 
 # Scheduled logical backup (`trica backup`, ADR 0021) for standalone installs:
-# a plain PostgreSQL the chart does not manage. A deployment on Zalando with
-# WAL-G already has physical backups and point-in-time recovery: leave this off.
+# a plain PostgreSQL that takes no backups of its own. A PostgreSQL operator
+# with WAL archiving already has physical backups and point-in-time recovery:
+# leave this off there.
 # The CronJob never deletes old archives; prune them on the volume side.
 backup:
   enabled: false

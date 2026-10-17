@@ -1,0 +1,32 @@
+suite: ingress
+templates:
+  - templates/ingress.yaml
+set:
+  database.existingSecret: trica-db
+tests:
+  - it: renders no Ingress by default
+    asserts:
+      - hasDocuments: {count: 0}
+  - it: refuses an Ingress without a host
+    set: {ingress.enabled: true}
+    asserts:
+      - failedTemplate:
+          errorMessage: "ingress.hosts is required when ingress.enabled: the names the UI and the API are served under"
+  - it: routes every host to the HTTP port, with the class, annotations and TLS given
+    set:
+      ingress.enabled: true
+      ingress.className: example
+      ingress.annotations: {example.com/timeout: "60"}
+      ingress.hosts: [trica.example.com]
+      ingress.tls: [{secretName: trica-tls, hosts: [trica.example.com]}]
+    asserts:
+      - equal: {path: spec.ingressClassName, value: example}
+      - equal: {path: "metadata.annotations[\"example.com/timeout\"]", value: "60"}
+      - equal: {path: "spec.rules[0].host", value: trica.example.com}
+      - equal: {path: "spec.rules[0].http.paths[0].backend.service.port.name", value: http}
+      - equal: {path: "spec.tls[0].secretName", value: trica-tls}
+  - it: leaves the class to the cluster default when unset
+    set: {ingress.enabled: true, ingress.hosts: [trica.example.com]}
+    asserts:
+      - notExists: {path: spec.ingressClassName}
+      - notExists: {path: spec.tls}

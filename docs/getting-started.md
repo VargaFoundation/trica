@@ -32,12 +32,27 @@ helm install trica ./charts/trica -n trica \
 kubectl -n trica rollout status deploy/trica
 ```
 
-Releases publish the image to `ghcr.io/vargafoundation/trica` and the chart to
-`oci://ghcr.io/vargafoundation/charts/trica` ([releasing](reference/releasing.md)). No
-release has been tagged yet: until then, build the image (`docker build -t REGISTRY/trica:TAG .`)
-and push it to a registry the cluster can pull from.
+The chart's values are documented in [`charts/trica/README.md`](../charts/trica/README.md), with
+two example files in [`charts/trica/examples/`](../charts/trica/examples/). Nothing in it assumes a
+particular secret manager, policy engine, CNI or ingress controller.
 
-The chart's values are documented in [`charts/trica/README.md`](../charts/trica/README.md).
+### The image
+
+Release tags publish the image to `ghcr.io/vargafoundation/trica` and the chart to
+`oci://ghcr.io/vargafoundation/charts/trica` ([releasing](reference/releasing.md)); pull them
+anonymously only if the packages are public, otherwise with credentials the organisation gives
+you. The image always builds from this repository alone, with no other input:
+
+```bash
+git checkout vX.Y.Z
+docker build --build-arg VERSION=vX.Y.Z -t REGISTRY/trica:X.Y.Z .
+docker build --build-arg VERSION=vX.Y.Z --target ops -t REGISTRY/trica-ops:X.Y.Z .   # backup CronJob only
+docker push REGISTRY/trica:X.Y.Z
+```
+
+Point `image.repository` (and `imagePullSecrets` for a private registry) at it. Without Kubernetes
+or Docker, the static binary works too: `make web-build` then
+`CGO_ENABLED=0 go build -tags webui -o trica ./cmd/trica`, and `trica server --config FILE`.
 
 ## First credentials
 
@@ -77,8 +92,8 @@ machine over a channel you trust. The token works once.
 
 `trica backup` and `trica restore` take and load a consistent archive of the database. The
 procedure for Compose is in [`deploy/compose/README.md`](../deploy/compose/README.md); on Kubernetes
-the reference deployment relies on the PostgreSQL operator's WAL archiving, and the chart has an
-optional CronJob for standalone installs ([chart README](../charts/trica/README.md)).
+a PostgreSQL operator with WAL archiving has its own backups, and the chart has an optional
+CronJob for standalone installs ([chart README](../charts/trica/README.md)).
 
 ## What you get today
 
@@ -87,10 +102,12 @@ One server process with the migrations, the absence sweep, `/healthz`, `/readyz`
 - the REST API at `/api/v1/` and the MCP server at `/mcp`, both behind a bearer credential (an
   API token, or an OIDC JWT when `auth.oidc` is set), rate-limited and audited;
 - the web UI at `/` (a placeholder page in a build without the `webui` tag);
-- the cabling deducer, which runs every five minutes, and the device type library, matched once
-  at start;
-- the mutual-TLS endpoint for agents, on its own port, when `transport.addr` is set.
+- the cabling deducer, which runs every five minutes, and the device type library, matched at
+  start and then at the same interval;
+- the mutual-TLS endpoint for agents, on its own port, when `transport.addr` is set;
+- the collectors listed in `collect.targets_file`, on schedule ([collectors](reference/collectors.md)).
 
 There is no anonymous access: create the first API token with `trica token create`
 ([below](#first-credentials)), or sign in through OIDC ([configuration](reference/configuration.md)).
-The collectors and the agent are not started by the server; see [`plan/STATUS.md`](plan/STATUS.md).
+The host agent runs on each machine and sends to the transport endpoint ([agent](reference/agent.md));
+what is proven and what is not is in [`plan/STATUS.md`](plan/STATUS.md).
