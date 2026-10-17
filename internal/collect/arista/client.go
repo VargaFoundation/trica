@@ -32,6 +32,18 @@ type eapiError struct {
 
 func (e *eapiError) Error() string { return fmt.Sprintf("eAPI error %d: %s", e.Code, e.Message) }
 
+// codeUnconverted is the eAPI error of a command that exists on the switch but
+// has no JSON model on its release ("... failed: unconverted command"). It
+// answers the same at every run: the data is not there, nothing went wrong.
+const codeUnconverted = 1003
+
+// isUnconverted reports whether err is eAPI saying a command has no JSON output
+// on this release.
+func isUnconverted(err error) bool {
+	var ee *eapiError
+	return errors.As(err, &ee) && ee.Code == codeUnconverted
+}
+
 type rpcRequest struct {
 	JSONRPC string    `json:"jsonrpc"`
 	Method  string    `json:"method"`

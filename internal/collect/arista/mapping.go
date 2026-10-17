@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
@@ -32,6 +33,7 @@ type ipInfo struct {
 
 // builder turns the gathered command results into one batch.
 type builder struct {
+	now      time.Time
 	c        *Collector
 	b        *sdk.Batch
 	d        *data
@@ -44,9 +46,9 @@ type builder struct {
 
 // build maps the results to a batch. The caller has checked that show version
 // worked; every other command is optional and its absence only leaves data out.
-func (c *Collector) build(d *data, ver *showVersion) (*sdk.Batch, []string) {
+func (c *Collector) build(d *data, ver *showVersion, now time.Time) (*sdk.Batch, []string) {
 	bd := &builder{
-		c: c, d: d, b: sdk.NewBatch(c.target.Source(), sdk.ScopeFull),
+		c: c, d: d, b: sdk.NewBatch(c.target.Source(), sdk.ScopeFull), now: now,
 		ifRef: map[string]string{}, psuRef: map[string]string{}, vlanRef: map[string]string{},
 	}
 	dev := bd.device(ver)
@@ -103,8 +105,8 @@ func (bd *builder) device(ver *showVersion) *sdk.Object {
 		// memTotal is in kibibytes.
 		dev.Set("memory_bytes", int64(ver.MemTotal.V)*1024)
 	}
-	if up != nil && up.UpTime.OK && up.UpTime.V >= 0 {
-		dev.Set("uptime_s", int64(up.UpTime.V))
+	if s, ok := uptime(up, ver, bd.now); ok {
+		dev.Set("uptime_s", s)
 	}
 	if inv != nil && ver.ModelName == "" {
 		dev.Set("model", strings.TrimSpace(inv.SystemInformation.Name))
@@ -334,25 +336,58 @@ func (in *ifaceInfo) tagged(vid int64) (tagged, known bool) {
 	return false, false
 }
 
-func (bd *builder) portChannels() {
-	pc := decode[showPortChannel](bd.d, cmdPortChannel)
-	if pc == nil {
-		return
+// uptime is the switch's uptime in seconds: "show uptime" where it has JSON
+// output, else the uptime of "show version" (4.20), else now minus the boot
+// time (4.14).
+func uptime(up *showUptime, ver *showVersion, now time.Time) (int64, bool) {
+	switch {
+	case up != nil && up.UpTime.OK && up.UpTime.V >= 0:
+		return int64(up.UpTime.V), true
+	case ver.Uptime.OK && ver.Uptime.V >= 0:
+		return int64(ver.Uptime.V), true
+	case ver.BootupTimestamp.OK && ver.BootupTimestamp.V > 0 && !now.IsZero():
+		if s := now.Unix() - int64(ver.BootupTimestamp.V); s >= 0 {
+			return s, true
+		}
 	}
-	for _, raw := range sdk.SortedKeys(pc.PortChannels) {
-		lag := canonicalInterface(raw)
+	return 0, false
+}
+
+// portChannels relates LAG members to their Port-Channel: from "show
+// port-channel", or, on a release without JSON output for it, from the
+// memberInterfaces of "show interfaces".
+func (bd *builder) portChannels() {
+	lags := map[string]map[string]bool{}
+	if pc := decode[showPortChannel](bd.d, cmdPortChannel); pc != nil {
+		for raw, rec := range pc.PortChannels {
+			members := map[string]bool{}
+			for m := range rec.ActivePorts {
+				members[canonicalInterface(m)] = true
+			}
+			for m := range rec.InactivePorts {
+				members[canonicalInterface(m)] = true
+			}
+			lags[canonicalInterface(raw)] = members
+		}
+	} else if bd.d.unavailable[cmdPortChannel] {
+		if in := decode[showInterfaces](bd.d, cmdInterfaces); in != nil {
+			for raw, rec := range in.Interfaces {
+				if len(rec.MemberInterfaces) == 0 {
+					continue
+				}
+				members := map[string]bool{}
+				for m := range rec.MemberInterfaces {
+					members[canonicalInterface(m)] = true
+				}
+				lags[canonicalInterface(raw)] = members
+			}
+		}
+	}
+	for _, lag := range sdk.SortedKeys(lags) {
 		if _, ok := bd.ifRef[lag]; !ok {
 			continue
 		}
-		rec := pc.PortChannels[raw]
-		members := map[string]bool{}
-		for m := range rec.ActivePorts {
-			members[canonicalInterface(m)] = true
-		}
-		for m := range rec.InactivePorts {
-			members[canonicalInterface(m)] = true
-		}
-		for _, m := range sdk.SortedKeys(members) {
+		for _, m := range sdk.SortedKeys(lags[lag]) {
 			// Peer ports of an MLAG pair ("PeerEthernet1") are not ours.
 			if ref, ok := bd.ifRef[m]; ok {
 				bd.b.Relate("member_of", ref, bd.ifRef[lag])
@@ -403,6 +438,7 @@ func (bd *builder) learnedMACs() {
 func (bd *builder) lldp() {
 	n := decode[showLLDPNeighbors](bd.d, cmdLLDPNeighbors)
 	if n == nil {
+		bd.lldpBrief()
 		return
 	}
 	seen := map[string]bool{}
@@ -438,6 +474,51 @@ func (bd *builder) lldp() {
 				Parent:   &sdk.Endpoint{Type: "device", Identity: dev},
 			}).With("protocol", "lldp")
 		}
+	}
+}
+
+// lldpBrief maps "show lldp neighbors", asked where the detail has no JSON
+// output (EOS 4.14). It names the neighbour and its port, nothing else: the
+// neighbour is identified by name only, and a neighbour whose port id is a MAC
+// address (Linux hosts) is left out, since the brief table carries no port
+// description to name that port by.
+func (bd *builder) lldpBrief() {
+	n := decode[showLLDPBrief](bd.d, cmdLLDPBrief)
+	if n == nil {
+		return
+	}
+	seen := map[string]bool{}
+	byMAC := 0
+	for _, e := range n.Neighbors {
+		local := canonicalInterface(e.Port)
+		ref, ok := bd.ifRef[local]
+		if !ok {
+			bd.warnings = append(bd.warnings, fmt.Sprintf("lldp: neighbor on unknown interface %q ignored", e.Port))
+			continue
+		}
+		name := shortName(strings.Trim(strings.TrimSpace(e.NeighborDevice), `"`))
+		port := strings.Trim(strings.TrimSpace(e.NeighborPort), `"`)
+		if _, isMAC := validMAC(port); isMAC {
+			byMAC++
+			continue
+		}
+		if name == "" || port == "" {
+			continue
+		}
+		key := local + "|" + name + "|" + port
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		bd.b.RelateEndpoints("neighbor_of", sdk.Ref(ref), sdk.Endpoint{
+			Type:     "interface",
+			Identity: map[string]string{"name": port},
+			Parent:   &sdk.Endpoint{Type: "device", Identity: map[string]string{"name": name}},
+		}).With("protocol", "lldp")
+	}
+	if byMAC > 0 {
+		bd.warnings = append(bd.warnings, fmt.Sprintf(
+			"lldp: %d neighbor(s) whose port is identified by MAC address only left out (no port name in %q on this EOS release)", byMAC, cmdLLDPBrief))
 	}
 }
 

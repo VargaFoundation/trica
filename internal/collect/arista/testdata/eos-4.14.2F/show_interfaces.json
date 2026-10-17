@@ -69,7 +69,11 @@
       "interfaceStatus": "connected", "lineProtocolStatus": "up",
       "physicalAddress": "02:1c:73:00:00:01", "burnedInAddress": "00:00:00:00:00:00",
       "description": "mlag peer-link", "bandwidth": 80000000000, "mtu": 9214,
-      "duplex": "duplexFull", "interfaceAddress": []
+      "duplex": "duplexFull", "interfaceAddress": [],
+      "memberInterfaces": {
+        "Ethernet49": {"duplex": "duplexFull", "bandwidth": 40000000000},
+        "Ethernet50": {"duplex": "duplexFull", "bandwidth": 40000000000}
+      }
     },
     "Vlan100": {
       "name": "Vlan100", "hardware": "vlan", "forwardingModel": "routed",

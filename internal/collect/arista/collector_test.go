@@ -1,9 +1,11 @@
 package arista
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"go.yaml.in/yaml/v3"
 
@@ -27,11 +29,38 @@ func collectFrom(t *testing.T, version string, tweak func(*collect.Target)) (*sd
 	if err != nil {
 		t.Fatal(err)
 	}
+	pinClock(c)
 	batches := collecttest.Run(t, c)
 	if len(batches) != 1 {
 		t.Fatalf("got %d batches, want 1", len(batches))
 	}
 	return batches[0], f
+}
+
+// testNow is the clock of the runs of the tests: the 4.14 fixture booted
+// 1234567 s before it.
+var testNow = time.Unix(1759234567, 0)
+
+// pinClock makes the uptime a switch derives from its boot time deterministic.
+func pinClock(c sdk.Collector) {
+	if ac, ok := c.(*Collector); ok {
+		ac.now = func() time.Time { return testNow }
+	}
+}
+
+// checkWarning asserts that one of the health warnings contains every part.
+func checkWarning(t *testing.T, b *sdk.Batch, parts ...string) {
+	t.Helper()
+	for _, w := range b.Health.Warnings {
+		all := true
+		for _, p := range parts {
+			all = all && strings.Contains(w, p)
+		}
+		if all {
+			return
+		}
+	}
+	t.Errorf("no warning contains %q; warnings: %q", parts, b.Health.Warnings)
 }
 
 // mustOptions parses a YAML "options:" mapping; the documents are literals of
@@ -125,9 +154,12 @@ func checkRels(t *testing.T, b *sdk.Batch, typ string, want []wantRel) {
 func TestEOS414(t *testing.T) {
 	b, f := collectFrom(t, EOS414, nil)
 
+	// Four commands have no JSON output on 4.14: that is the release, not a
+	// failure, and the run is still full and healthy.
 	if b.Scope != sdk.ScopeFull || !b.Health.OK || b.Source != "arista:sw" {
 		t.Fatalf("scope=%v ok=%v source=%q err=%q", b.Scope, b.Health.OK, b.Source, b.Health.Error)
 	}
+	checkWarning(t, b, "not available on this EOS release", cmdLLDPLocal, cmdLLDPNeighbors, cmdPortChannel, cmdUptime)
 	if b.Health.Collector != Kind || b.Health.Items != len(b.Objects)+len(b.Relations) {
 		t.Errorf("health = %+v, %d objects, %d relations", b.Health, len(b.Objects), len(b.Relations))
 	}
@@ -225,22 +257,24 @@ func TestEOS414(t *testing.T) {
 			{"if/Port-Channel1", "vlan/4094", map[string]any{"tagged": true}},
 			{"if/Vlan100", "vlan/100", nil},
 			{"if/Vlan4094", "vlan/4094", nil},
-			// LAG membership: the peer's ports (PeerEthernet*) are not ours.
+			// LAG membership, from memberInterfaces of show interfaces: 4.14 has
+			// no JSON for show port-channel.
 			{"if/Ethernet49", "if/Port-Channel1", nil},
 			{"if/Ethernet50", "if/Port-Channel1", nil},
 		})
 	})
 
 	t.Run("lldp", func(t *testing.T) {
-		// Ethernet1: a Linux host identified by MAC; the port is named by its description.
-		// Ethernet2: chassis id of type local (no MAC), quoted port id (EOS 4.14).
+		// 4.14 has no JSON for the detail: the brief table names neighbours by
+		// name only. Ethernet1's neighbour (a Linux host) gives a MAC address
+		// as its port id and no port name: it is left out, and said so.
 		checkNeighbors(t, b, map[string]nb{
-			"if/Ethernet1":  {map[string]string{"base_mac": "02:aa:00:00:01:01", "name": "srv-01"}, "eno1"},
 			"if/Ethernet2":  {map[string]string{"name": "srv-02"}, "eth0"},
-			"if/Ethernet49": {map[string]string{"base_mac": "02:1c:73:00:00:02", "name": "sw-a2"}, "Ethernet49"},
-			"if/Ethernet50": {map[string]string{"base_mac": "02:1c:73:00:00:02", "name": "sw-a2"}, "Ethernet50"},
-			"if/Ethernet51": {map[string]string{"base_mac": "02:1c:73:00:10:01", "name": "sw-b1"}, "Ethernet49"},
+			"if/Ethernet49": {map[string]string{"name": "sw-a2"}, "Ethernet49"},
+			"if/Ethernet50": {map[string]string{"name": "sw-a2"}, "Ethernet50"},
+			"if/Ethernet51": {map[string]string{"name": "sw-b1"}, "Ethernet49"},
 		})
+		checkWarning(t, b, "1 neighbor(s)", "MAC address only")
 	})
 
 	t.Run("hardware", func(t *testing.T) {
@@ -301,6 +335,18 @@ func TestEOS420(t *testing.T) {
 
 	if b.Scope != sdk.ScopeFull || !b.Health.OK {
 		t.Fatalf("scope=%v ok=%v err=%q", b.Scope, b.Health.OK, b.Health.Error)
+	}
+	// show uptime has no JSON output on 4.20 either: the uptime comes from show version.
+	checkWarning(t, b, "not available on this EOS release", cmdUptime)
+	for _, w := range b.Health.Warnings {
+		if strings.Contains(w, cmdLLDPNeighbors) || strings.Contains(w, cmdPortChannel) {
+			t.Errorf("warning %q: 4.20 has JSON for those", w)
+		}
+	}
+	for _, c := range f.Commands() {
+		if c == cmdLLDPBrief {
+			t.Errorf("%s asked although the detail worked", cmdLLDPBrief)
+		}
 	}
 	dev := obj(t, b, "device", "serial", "FAKE7280B0001")
 	if !reflect.DeepEqual(dev.Identity, map[string]string{
@@ -452,10 +498,75 @@ func checkReadOnly(t *testing.T, f *FakeArista) {
 			}
 		}
 	}
-	// A clean run needs one request per group, and asks every command once.
-	got := f.Commands()
-	if len(reqs) != len(groups) || len(got) != len(Commands()) {
-		t.Errorf("%d requests, %d commands; want %d and %d", len(reqs), len(got), len(groups), len(Commands()))
+	// Every command of the groups is asked, none outside Commands(); a group
+	// holding a command the release has no JSON for is replayed one command per
+	// request, so a command is asked at most twice (TestCleanRun pins the count
+	// of a run with nothing to replay).
+	known := map[string]bool{}
+	for _, c := range Commands() {
+		known[c] = true
+	}
+	asked := map[string]int{}
+	for _, c := range f.Commands() {
+		if !known[c] {
+			t.Errorf("command %q is not in Commands()", c)
+		}
+		asked[c]++
+	}
+	for _, g := range groups {
+		for _, c := range g {
+			if asked[c] < 1 || asked[c] > 2 {
+				t.Errorf("%s asked %d times", c, asked[c])
+			}
+		}
+	}
+}
+
+// TestCleanRun pins the request count of a release that has JSON output for
+// every command: one request per group, every command asked once, no fallback.
+func TestCleanRun(t *testing.T) {
+	b, f := runWith(t, EOS420, func(f *FakeArista) { f.ConvertAll() }, nil)
+	if b.Scope != sdk.ScopeFull || !b.Health.OK || len(b.Health.Warnings) != 0 {
+		t.Fatalf("scope=%v ok=%v warnings=%q", b.Scope, b.Health.OK, b.Health.Warnings)
+	}
+	reqs, got := f.Requests(), f.Commands()
+	want := len(Commands()) - len(fallbacks)
+	if len(reqs) != len(groups) || len(got) != want {
+		t.Errorf("%d requests, %d commands; want %d and %d", len(reqs), len(got), len(groups), want)
+	}
+	// show uptime answered: it is the source of the uptime.
+	checkAttrs(t, obj(t, b, "device", "serial", "FAKE7280B0001"), map[string]any{"uptime_s": int64(2234567)})
+}
+
+// TestUptime pins where the uptime comes from on each release.
+func TestUptime(t *testing.T) {
+	ver := func(up, boot string) *showVersion {
+		var v showVersion
+		if err := json.Unmarshal([]byte(`{"uptime": `+up+`, "bootupTimestamp": `+boot+`}`), &v); err != nil {
+			t.Fatal(err)
+		}
+		return &v
+	}
+	var up showUptime
+	_ = json.Unmarshal([]byte(`{"upTime": 10.5}`), &up)
+	for _, tc := range []struct {
+		name string
+		up   *showUptime
+		ver  *showVersion
+		now  time.Time
+		want int64
+		ok   bool
+	}{
+		{"show uptime wins", &up, ver("20", "1000"), time.Unix(5000, 0), 10, true},
+		{"show version uptime (4.20)", nil, ver("20", "1000"), time.Unix(5000, 0), 20, true},
+		{"boot time (4.14)", nil, ver("null", "1000.9"), time.Unix(5000, 0), 4000, true},
+		{"boot time in the future", nil, ver("null", "9000"), time.Unix(5000, 0), 0, false},
+		{"nothing", nil, ver("null", "null"), time.Unix(5000, 0), 0, false},
+	} {
+		got, ok := uptime(tc.up, tc.ver, tc.now)
+		if got != tc.want || ok != tc.ok {
+			t.Errorf("%s: uptime = %d, %v; want %d, %v", tc.name, got, ok, tc.want, tc.ok)
+		}
 	}
 }
 
@@ -543,9 +654,19 @@ func TestRegistration(t *testing.T) {
 	}
 }
 
+// asked reports whether a run against version sends cmd.
+func asked(version, cmd string) bool {
+	for orig, fb := range fallbacks {
+		if fb == cmd {
+			return unconverted[version][orig]
+		}
+	}
+	return true
+}
+
 func TestCommandsAreAllShow(t *testing.T) {
 	cmds := Commands()
-	if len(cmds) != 17 {
+	if len(cmds) != 18 {
 		t.Errorf("%d commands: %v", len(cmds), cmds)
 	}
 	seen := map[string]bool{}
@@ -557,8 +678,13 @@ func TestCommandsAreAllShow(t *testing.T) {
 			t.Errorf("%q listed twice", c)
 		}
 		seen[c] = true
-		// Every command has a fixture for every modelled version.
+		// Every command a modelled version is asked has a fixture there, or is
+		// one that version has no JSON output for. A fallback is asked only
+		// where the command it replaces has none.
 		for _, v := range []string{EOS414, EOS420} {
+			if unconverted[v][c] || !asked(v, c) {
+				continue
+			}
 			if _, err := fixtures.ReadFile(fixturePath(v, c)); err != nil {
 				t.Errorf("%s: %v", v, err)
 			}

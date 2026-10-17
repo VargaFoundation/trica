@@ -32,6 +32,7 @@ func runWith(t *testing.T, version string, setup func(*FakeArista), tweak func(*
 	if err != nil {
 		t.Fatal(err)
 	}
+	pinClock(c)
 	batches := collecttest.Run(t, c)
 	if len(batches) != 1 {
 		t.Fatalf("got %d batches, want 1", len(batches))
@@ -213,6 +214,10 @@ func TestPartialFailures(t *testing.T) {
 			if !strings.Contains(b.Health.Error, "partial collection") {
 				t.Errorf("health error = %q", b.Health.Error)
 			}
+			// What the release has no JSON for is not counted with the failures.
+			if strings.Contains(b.Health.Error, cmdUptime) || strings.Contains(b.Health.Error, "unconverted") {
+				t.Errorf("health error %q counts an unavailable command as failed", b.Health.Error)
+			}
 			obj(t, b, "device", "serial", "FAKE7050A0001") // the rest is kept
 			tc.check(t, b)
 			checkReadOnly2(t, f)
@@ -232,7 +237,7 @@ func checkReadOnly2(t *testing.T, f *FakeArista) {
 // batched request of its group fails, then the group is replayed one command
 // per request, so only that command's data is lost.
 func TestFallbackPerCommand(t *testing.T) {
-	_, f := runWith(t, EOS414, func(f *FakeArista) { f.FailCommand(cmdMLAG) }, nil)
+	_, f := runWith(t, EOS420, func(f *FakeArista) { f.ConvertAll(); f.FailCommand(cmdMLAG) }, nil)
 	reqs := f.Requests()
 
 	var batched, single int
@@ -417,5 +422,30 @@ func TestFakeRejectsBadRequests(t *testing.T) {
 	var ee *eapiError
 	if !errors.As(err, &ee) || ee.Code != 1002 {
 		t.Errorf("unknown command error = %v, want an eAPI error 1002", err)
+	}
+}
+
+// TestUnconvertedFallbacks pins what a release without JSON for a command
+// costs: the brief LLDP table is asked once, only on the release that needs
+// it, and a command that is refused for another reason still fails the run.
+func TestUnconvertedFallbacks(t *testing.T) {
+	_, f := runWith(t, EOS414, nil, nil)
+	n := 0
+	for _, c := range f.Commands() {
+		if c == cmdLLDPBrief {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Errorf("%s asked %d times on 4.14, want 1", cmdLLDPBrief, n)
+	}
+
+	// The brief table refused for a reason other than its release: a failure.
+	b, _ := runWith(t, EOS414, func(f *FakeArista) { f.FailCommand(cmdLLDPBrief) }, nil)
+	if b.Scope != sdk.ScopePartial || b.Health.OK || !strings.Contains(b.Health.Error, cmdLLDPBrief) {
+		t.Errorf("scope=%v ok=%v err=%q, want partial naming %s", b.Scope, b.Health.OK, b.Health.Error, cmdLLDPBrief)
+	}
+	if n := len(collecttest.Relations([]*sdk.Batch{b}, "neighbor_of")); n != 0 {
+		t.Errorf("%d neighbor_of relations without LLDP data", n)
 	}
 }
