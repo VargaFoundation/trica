@@ -185,6 +185,21 @@ type RackItem struct {
 	Model     *ObjectRef `json:"model,omitempty"`
 	UHeight   *float64   `json:"u_height,omitempty"`
 	FullDepth bool       `json:"full_depth"`
+	// ModelName is the model's commercial name (its model attribute).
+	ModelName string `json:"model_name,omitempty"`
+	// Role is the device's role (server, switch, firewall...), when known:
+	// what a face is drawn as when the model has no image.
+	Role string `json:"role,omitempty"`
+	// Health is the device's own health (ok, warning, critical, unknown).
+	Health string `json:"health,omitempty"`
+	// PartsHealth is the worst health among the device's parts the caller
+	// may read (power supplies, fans, disks, modules and their own parts),
+	// counting ok, warning and critical only; absent parts are left out.
+	PartsHealth string `json:"parts_health,omitempty"`
+	// FrontImage and RearImage are the API paths of the model's face images,
+	// when the device-type library has them (GET /device-types/{slug}/{face}).
+	FrontImage string `json:"front_image,omitempty"`
+	RearImage  string `json:"rear_image,omitempty"`
 }
 
 // ChangeView is a change with its object's rights already checked.

@@ -155,6 +155,7 @@ func buildInventory() *inventory {
 	}
 	buildNetwork(inv)
 	buildComponents(inv)
+	buildFaces(inv)
 	return inv
 }
 
@@ -346,6 +347,8 @@ func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.search(w, r.URL.Query().Get("q"))
 	case strings.HasPrefix(path, "/objects/"):
 		a.one(w, strings.TrimPrefix(path, "/objects/"))
+	case strings.HasPrefix(path, "/device-types/"):
+		image(w, r, strings.TrimPrefix(path, "/device-types/"))
 	case strings.HasPrefix(path, "/racks/") && strings.HasSuffix(path, "/contents"):
 		a.rackContents(w, strings.TrimSuffix(strings.TrimPrefix(path, "/racks/"), "/contents"))
 	case path == "/discrepancies":
@@ -529,7 +532,11 @@ func (a *api) rackContents(w http.ResponseWriter, id string) {
 				it[k] = v
 			}
 		}
-		if m := a.inv.byID(oid(model[r.from])); m != nil {
+		var m obj
+		if id, ok := model[r.from]; ok {
+			m = a.inv.byID(oid(id))
+		}
+		if m != nil {
 			it["model"] = obj{"id": m["id"], "type": m["type"], "display": m["display"]}
 			attrs, _ := m["attributes"].(obj)
 			if h, ok := attrs["u_height"]; ok {
@@ -537,6 +544,7 @@ func (a *api) rackContents(w http.ResponseWriter, id string) {
 			}
 			it["full_depth"] = attrs["full_depth"] == true
 		}
+		a.faceFields(it, d, m)
 		items = append(items, it)
 	}
 	writeJSON(w, http.StatusOK, page(items))

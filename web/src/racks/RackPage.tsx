@@ -13,8 +13,10 @@ import { useI18n, type MessageKey } from "../i18n";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { useCrumbs } from "../components/crumbs";
 import { usePageTitle } from "../usePageTitle";
-import { DEFAULT_RACK_U, freeUnits, formatRange, layoutRack, type Issue, type Slot } from "./layout";
+import { DEFAULT_RACK_U, freeUnits, formatRange, layoutRack, overallHealth, slotImage, type Issue, type Slot } from "./layout";
+import { HealthPill } from "../components/ui";
 import { RackElevation } from "./RackElevation";
+import { loadFaceImages } from "./faceImages";
 import { useRackContents, type RackContents } from "./useRack";
 import { EditPanel, useCanDeclare, useCanMount } from "../edit/EditPanel";
 import { ObjectForm } from "../edit/ObjectForm";
@@ -155,11 +157,12 @@ function Elevations({
         ))}
       </div>
       <p className="hint">{t("rack.legend")}</p>
+      <p className="hint">{t("rack.facesLegend")}</p>
       {onPick ? <p className="hint">{t("edit.place.clickHint")}</p> : null}
       <ExportButtons
         basename={`trica-rack-${fileSlug(rack.display)}`}
         title={t("rack.pageTitle", { rack: rack.display })}
-        render={(format) =>
+        render={async (format) =>
           rackRaster(
             {
               title: t("rack.pageTitle", { rack: rack.display }),
@@ -169,6 +172,10 @@ function Elevations({
                 { caption: t("rack.rear"), slots: layout.rear },
               ],
               footer: t("export.footer", { date: new Date().toISOString().slice(0, 10) }),
+              // The same images as on screen, fetched from this origin with the session's token.
+              images: await loadFaceImages(
+                [...layout.front, ...layout.rear].map(slotImage).filter((u): u is string => !!u),
+              ),
             },
             format,
           )
@@ -200,6 +207,7 @@ function Elevations({
                 <th scope="col">{t("rack.col.position")}</th>
                 <th scope="col">{t("rack.col.face")}</th>
                 <th scope="col">{t("rack.col.height")}</th>
+                <th scope="col">{t("health.label")}</th>
                 <th scope="col">{t("rack.col.notes")}</th>
               </tr>
             </thead>
@@ -229,6 +237,9 @@ function Row({ slot: s }: { slot: Slot }) {
         {s.item.fullDepth ? ` (${t("rack.fullDepth")})` : ""}
       </td>
       <td data-label={t("rack.col.height")}>{t("rack.units", { units: number(s.height) })}</td>
+      <td data-label={t("health.label")}>
+        <HealthPill value={overallHealth(s.item)} />
+      </td>
       <td data-label={t("rack.col.notes")}>
         {s.issues.length === 0 ? "—" : s.issues.map((i) => t(ISSUE_TEXT[i])).join(" · ")}
       </td>

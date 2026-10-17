@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { expect, test, type Page } from "@playwright/test";
 import { expectAccessible, ID, signInWithToken } from "./support";
 
 test("a rack draws both faces from the schema's position attributes", async ({
@@ -91,3 +92,69 @@ function rackMedian(samples: number[]): number {
   const sorted = [...samples].sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length / 2)] ?? Number.POSITIVE_INFINITY; // no sample: no proof
 }
+
+/** Policy violations, from the first script on. */
+async function cspViolations(page: Page): Promise<() => Promise<string[]>> {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __csp: string[] };
+    w.__csp = [];
+    document.addEventListener("securitypolicyviolation", (e) => w.__csp.push(`${e.violatedDirective} ${e.blockedURI}`));
+  });
+  const errors: string[] = [];
+  page.on("console", (m) => {
+    if (m.type() === "error" && /Content Security Policy|Refused to/i.test(m.text())) errors.push(m.text());
+  });
+  return async () => [...errors, ...(await page.evaluate(() => (window as unknown as { __csp: string[] }).__csp))];
+}
+
+// r20 holds library models with images (Arista 7050SX-64-R, HPE DL380 Gen10 and DL360 Gen9),
+// library models without (7280SE-64, CRS354, the pfSense appliance, DL380 Gen9), devices with no
+// model at all, and every health. The images come from the device-type library through the API,
+// with the token, under img-src 'self': no blob: or data: URL.
+test("devices show their model's picture, else a face drawn for their role, and their health", async ({ page }) => {
+  const csp = await cspViolations(page);
+  await signInWithToken(page, `/racks/${ID.r20}`);
+  const front = page.locator('svg[data-face="front"]');
+  const device = (name: string) => front.locator(`a.rack-slot[aria-label^="${name},"]`);
+  for (const name of ["sw-f1", "srv-f10", "srv-f12"]) {
+    await expect(device(name)).toHaveAttribute("data-face-drawn", "image");
+  }
+  // The picture is really painted: the canvas holds opaque pixels.
+  const painted = await device("srv-f10")
+    .locator("canvas")
+    .evaluate((c: HTMLCanvasElement) => {
+      const d = (c.getContext("2d") as CanvasRenderingContext2D).getImageData(0, 0, c.width, c.height).data;
+      let opaque = 0;
+      for (let i = 3; i < d.length; i += 4) if ((d[i] ?? 0) > 0) opaque++;
+      return opaque / (c.width * c.height);
+    });
+  expect(painted).toBeGreaterThan(0.9);
+  for (const [name, kind] of [
+    ["sw-f2", "switch"],
+    ["sw-f3", "switch"],
+    ["fw-f1", "firewall"],
+    ["srv-f11", "server"],
+    ["pp-f1", "patch_panel"],
+    ["nas-f1", "storage"],
+    ["ups-f1", "ups"],
+    ["kvm-f1", "kvm"],
+  ] as const) {
+    await expect(device(name)).toHaveAttribute("data-face-drawn", "generic");
+    await expect(device(name).locator(`.rack-face-${kind}`)).toHaveCount(1);
+  }
+  await expect(page.locator('svg[data-face="rear"] a.rack-slot[aria-label^="pdu-f1,"] .rack-face-pdu')).toHaveCount(1);
+  // The rear of a full-depth server with a rear image is that image, faded.
+  await expect(page.locator('svg[data-face="rear"] .rack-shadow foreignObject')).toHaveCount(2);
+  // Health in colour and in words: srv-f10 is healthy, its power supply is not.
+  await expect(device("srv-f10")).toHaveAttribute("data-health", "critical");
+  await expect(device("srv-f10")).toHaveAttribute("aria-label", "srv-f10, U14-U15, Health: Critical");
+  await expect(device("sw-f2")).toHaveAttribute("data-health", "warning");
+  await expect(device("nas-f1")).toHaveAttribute("data-health", "unknown");
+  await expectAccessible(page);
+
+  // The export paints the same pictures, from the same origin.
+  const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export PNG" }).click()]);
+  expect(d.suggestedFilename()).toBe("trica-rack-r20.png");
+  expect(readFileSync(await d.path()).subarray(0, 4).toString("latin1")).toBe("\x89PNG");
+  expect(await csp()).toEqual([]);
+});

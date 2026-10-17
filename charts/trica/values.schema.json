@@ -72,13 +72,26 @@
     "config": {
       "type": "object",
       "additionalProperties": true,
-      "description": "Server configuration (docs/reference/configuration.md); http.addr, database.url_file, transport.addr/ca_dir/hosts, collect.targets_file and schema_overlays are set by the chart."
+      "description": "Server configuration (docs/reference/configuration.md); http.addr, database.url_file, transport.addr/ca_dir/hosts, collect.targets_file, schema_overlays and devicetypes.extra_dir (with deviceTypes.existingClaim) are set by the chart."
     },
     "schemaOverlays": {
       "type": "object",
       "additionalProperties": {
         "type": "string"
       }
+    },
+    "deviceTypes": {
+      "type": "object",
+      "description": "The operator's device models and face images (devicetypes.extra_dir, docs/reference/devicetypes.md), on a PersistentVolumeClaim mounted read-only at /etc/trica/devicetypes.",
+      "properties": {
+        "existingClaim": {
+          "type": "string"
+        },
+        "subPath": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
     },
     "service": {
       "type": "object",

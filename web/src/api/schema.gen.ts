@@ -64,6 +64,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/device-types/{slug}/{face}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The image of one face of a device model, from the device-type library or the operator's directory (devicetypes.extra_dir). Library content, not inventory data: any caller who may read gets it. Cached privately for an hour, then revalidated with the ETag. The rack contents name the images that exist.
+         * @description Requires the "read" action.
+         */
+        get: operations["getDeviceTypeImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/discrepancies": {
         parameters: {
             query?: never;
@@ -1132,7 +1152,7 @@ export interface components {
             end_of_support?: string;
             /**
              * Front image
-             * @description Path of the front illustration in the library.
+             * @description Library path of the front illustration, when the library or the operator's directory has one. The image is served by GET /api/v1/device-types/{slug}/front.
              */
             front_image?: string;
             /**
@@ -1172,7 +1192,7 @@ export interface components {
             psu_count?: number;
             /**
              * Rear image
-             * @description Path of the rear illustration in the library.
+             * @description Library path of the rear illustration, when the library or the operator's directory has one. The image is served by GET /api/v1/device-types/{slug}/rear.
              */
             rear_image?: string;
             /**
@@ -3499,9 +3519,15 @@ export interface components {
         RackItem: {
             device: components["schemas"]["ObjectRef"];
             face?: string;
+            front_image?: string;
             full_depth: boolean;
+            health?: string;
             model?: components["schemas"]["ObjectRef"];
+            model_name?: string;
+            parts_health?: string;
             position?: number;
+            rear_image?: string;
+            role?: string;
             u_height?: number;
         };
         RelationDoc: {
@@ -3843,6 +3869,45 @@ export interface operations {
             400: components["responses"]["Problem400"];
             401: components["responses"]["Problem401"];
             403: components["responses"]["Problem403"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getDeviceTypeImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Model slug (the device_type's slug). */
+                slug: string;
+                /** @description Face of the device. */
+                face: "front" | "rear";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The image. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description The copy the caller holds (If-None-Match) is current. */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
             500: components["responses"]["Problem500"];
         };
     };

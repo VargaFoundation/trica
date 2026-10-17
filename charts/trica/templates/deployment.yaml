@@ -108,6 +108,14 @@ spec:
             {{- end }}
             - name: tmp
               mountPath: /tmp
+            {{- if .Values.deviceTypes.existingClaim }}
+            - name: devicetypes
+              mountPath: /etc/trica/devicetypes
+              readOnly: true
+              {{- with .Values.deviceTypes.subPath }}
+              subPath: {{ . }}
+              {{- end }}
+            {{- end }}
             {{- if .Values.transport.enabled }}
             - name: transport-ca
               mountPath: /var/lib/trica/ca
@@ -141,6 +149,12 @@ spec:
             secretName: {{ .name }}
             defaultMode: 0440
         {{- end }}
+        {{- end }}
+        {{- if .Values.deviceTypes.existingClaim }}
+        - name: devicetypes
+          persistentVolumeClaim:
+            claimName: {{ .Values.deviceTypes.existingClaim }}
+            readOnly: true
         {{- end }}
         {{- if .Values.transport.enabled }}
         - name: transport-ca

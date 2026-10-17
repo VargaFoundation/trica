@@ -28,6 +28,7 @@ restricted NetworkPolicy, collectors, transport). Where the image comes from is 
 | `ingress.enabled` | `false` | An Ingress for the HTTP port (UI, API, MCP); needs `ingress.hosts`. With the default NetworkPolicy, add the ingress controller's namespace to `networkPolicy.ingressFrom`. |
 | `ingress.className` / `annotations` / `hosts` / `tls` | `""` / `{}` / `[]` / `[]` | Controller-agnostic: the class (cluster default when empty), the annotations your controller needs, host names, standard Ingress TLS entries. |
 | `imagePullSecrets` | `[]` | For a private registry. |
+| `deviceTypes.existingClaim` / `subPath` | `""` / `""` | PersistentVolumeClaim holding the operator's device models and face images, mounted read-only at `/etc/trica/devicetypes` and configured as `devicetypes.extra_dir` ([layout](../../docs/reference/devicetypes.md#your-own-models-and-images)). Read at start. |
 | `transport.enabled` | `false` | Mutual-TLS endpoint for agents, on its own port and Service port (ADR 0025). Needs `transport.hosts` and `transport.existingClaim`; the chart refuses to render without them. |
 | `transport.port` / `hosts` | `8443` / `[]` | Listen port; names and IPs agents dial (the server certificate's). |
 | `transport.existingClaim` / `subPath` | `""` / `""` | PersistentVolumeClaim holding the CA (`ca.pem`, `ca-key.pem`). Losing it un-enrols every agent; ReadWriteMany with several replicas. |

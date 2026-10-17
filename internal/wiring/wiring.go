@@ -15,6 +15,7 @@ import (
 	"github.com/VargaFoundation/trica/internal/api"
 	"github.com/VargaFoundation/trica/internal/audit"
 	"github.com/VargaFoundation/trica/internal/auth"
+	"github.com/VargaFoundation/trica/internal/devicetypes"
 	"github.com/VargaFoundation/trica/internal/graph"
 	"github.com/VargaFoundation/trica/internal/mcp"
 	"github.com/VargaFoundation/trica/internal/reconcile"
@@ -35,6 +36,9 @@ type Wiring struct {
 	coreErr error
 
 	transportAddr atomic.Value // string, the bound address of the transport
+
+	libOnce sync.Once
+	lib     *devicetypes.Index // nil when the library did not load
 }
 
 // core is the shared state.
@@ -166,7 +170,8 @@ func (w *Wiring) mountAPI(mux *http.ServeMux, d server.Deps) error {
 	if err != nil {
 		return err
 	}
-	srv, err := api.New(api.Config{Engine: d.Engine, Authorizer: c.authz, Auditor: c.auditor, Logger: d.Log, Version: w.version})
+	srv, err := api.New(api.Config{Engine: d.Engine, Authorizer: c.authz, Auditor: c.auditor, Logger: d.Log, Version: w.version,
+		Images: Images{Index: w.library(d)}})
 	if err != nil {
 		return err
 	}

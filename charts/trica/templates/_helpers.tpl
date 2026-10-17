@@ -52,6 +52,9 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- if .Values.collect.enabled -}}
 {{- $_ := set $cfg "collect" (dict "targets_file" "/etc/trica/collect/targets.yaml") -}}
 {{- end -}}
+{{- if .Values.deviceTypes.existingClaim -}}
+{{- $_ := set $cfg "devicetypes" (dict "extra_dir" "/etc/trica/devicetypes") -}}
+{{- end -}}
 {{- if .Values.schemaOverlays -}}
 {{- $paths := list -}}
 {{- range $name, $_ := .Values.schemaOverlays -}}

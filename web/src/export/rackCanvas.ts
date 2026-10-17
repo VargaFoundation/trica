@@ -4,8 +4,9 @@
 // variables from an SVG, so the sheet has its own fixed light palette. The
 // geometry is the screen figure's (same constants), so the two agree.
 
-import { BODY, CHAR_PX, GUTTER, PAD, UNIT_PX } from "../racks/RackElevation";
-import { formatRange, type Slot } from "../racks/layout";
+import { BODY, clipName, GUTTER, LABEL_X, PAD, STRIP_PX, UNIT_PX } from "../racks/RackElevation";
+import { faceKind, genericFace, type PrimClass } from "../racks/faces";
+import { formatRange, overallHealth, slotImage, type Health, type Slot } from "../racks/layout";
 import { canvasBlob, type Raster, type RasterFormat } from "./download";
 
 export const SHEET = {
@@ -21,7 +22,26 @@ export const SHEET = {
   shadowInk: "#424a53",
   problemFill: "#ffebe9",
   problemInk: "#a40e26",
+  labelFill: "rgba(255, 255, 255, 0.88)",
 } as const;
+
+/** The health strip, as on screen (green, amber, red, grey). */
+export const HEALTH_INK: Record<Health, string> = {
+  ok: "#116329",
+  warning: "#7d4e00",
+  critical: "#a40e26",
+  unknown: "#424a53",
+};
+
+/** Generic faces: fill and stroke of each primitive class ("" for none). */
+const FACE_INK: Record<PrimClass, { fill: string; stroke: string }> = {
+  plate: { fill: "#f6f8fa", stroke: "#6e7781" },
+  bay: { fill: "#eaeef2", stroke: "#424a53" },
+  port: { fill: "#424a53", stroke: "" },
+  led: { fill: "#116329", stroke: "" },
+  vent: { fill: "", stroke: "#d0d7de" },
+  accent: { fill: "#ddf4ff", stroke: "#0550ae" },
+};
 
 export interface SheetFace {
   caption: string;
@@ -34,6 +54,8 @@ export interface RackSheet {
   faces: readonly SheetFace[];
   /** "Exported from trica on 2026-10-14", already translated. */
   footer: string;
+  /** The face images already decoded, by API path (see racks/faceImages.ts); a slot whose image is missing gets its generic face. */
+  images?: ReadonlyMap<string, CanvasImageSource>;
 }
 
 const MARGIN = 16;
@@ -66,17 +88,16 @@ export type Ctx = Pick<
   | "save"
   | "restore"
   | "translate"
+  | "drawImage"
+  | "arc"
+  | "fill"
 > & {
   fillStyle: string | CanvasGradient | CanvasPattern;
   strokeStyle: string | CanvasGradient | CanvasPattern;
   lineWidth: number;
+  globalAlpha: number;
   font: string;
   textAlign: CanvasTextAlign;
-};
-
-const clip = (name: string) => {
-  const max = Math.max(3, Math.floor((BODY - 12) / CHAR_PX));
-  return name.length > max ? `${name.slice(0, max - 1)}…` : name;
 };
 
 export function drawRackSheet(ctx: Ctx, s: RackSheet): void {
@@ -96,7 +117,7 @@ export function drawRackSheet(ctx: Ctx, s: RackSheet): void {
     ctx.textAlign = "left";
     ctx.fillText(face.caption, GUTTER, 14);
     ctx.translate(0, CAPTION_H);
-    drawFace(ctx, s.uHeight, face.slots);
+    drawFace(ctx, s.uHeight, face.slots, s.images);
     ctx.restore();
   });
 
@@ -106,7 +127,7 @@ export function drawRackSheet(ctx: Ctx, s: RackSheet): void {
   ctx.fillText(s.footer, MARGIN, height - MARGIN);
 }
 
-function drawFace(ctx: Ctx, uHeight: number, slots: readonly Slot[]): void {
+function drawFace(ctx: Ctx, uHeight: number, slots: readonly Slot[], images?: ReadonlyMap<string, CanvasImageSource>): void {
   const yOf = (topU: number) => Math.min(Math.max(PAD + (uHeight - topU) * UNIT_PX, PAD), PAD + uHeight * UNIT_PX);
   ctx.fillStyle = SHEET.frameFill;
   ctx.fillRect(GUTTER, PAD, BODY, uHeight * UNIT_PX);
@@ -138,17 +159,73 @@ function drawFace(ctx: Ctx, uHeight: number, slots: readonly Slot[]): void {
       : slot.shadow
         ? { fill: SHEET.shadowFill, ink: SHEET.shadowInk, width: 1, dash: [4, 3] }
         : { fill: SHEET.slotFill, ink: SHEET.slotInk, width: 1, dash: [] as number[] };
+    const x = GUTTER + 1;
+    const w = BODY - 2;
     ctx.fillStyle = look.fill;
-    ctx.fillRect(GUTTER + 1, y + 1, BODY - 2, h);
-    ctx.strokeStyle = look.ink;
-    ctx.lineWidth = look.width;
+    ctx.fillRect(x, y + 1, w, h);
+    const url = slotImage(slot);
+    const image = url ? images?.get(url) : undefined;
+    const faced = !!image || !slot.shadow;
+    if (image) {
+      // The other face of a full-depth device is faded, as on screen.
+      ctx.globalAlpha = slot.shadow ? 0.55 : 1;
+      ctx.drawImage(image, x, y + 1, w, h);
+      ctx.globalAlpha = 1;
+    } else if (!slot.shadow) {
+      drawGenericFace(ctx, faceKind(slot.item.role), x, y + 1, w, h);
+    }
+    const health = overallHealth(slot.item);
+    if (!slot.shadow) {
+      ctx.fillStyle = HEALTH_INK[health];
+      ctx.fillRect(x, y + 1, STRIP_PX, h);
+    }
+    const alarm = !bad && !slot.shadow && (health === "warning" || health === "critical");
+    ctx.strokeStyle = alarm ? HEALTH_INK[health] : look.ink;
+    ctx.lineWidth = alarm ? 2 : look.width;
     ctx.setLineDash(look.dash);
-    ctx.strokeRect(GUTTER + 1, y + 1, BODY - 2, h);
+    ctx.strokeRect(x, y + 1, w, h);
     ctx.setLineDash([]);
-    ctx.fillStyle = look.ink;
+    const label = `${bad ? "! " : ""}${clipName(slot.item.name)}  ${formatRange(slot.bottom, slot.height)}`;
+    const labelY = y + 1 + Math.min(h, UNIT_PX) / 2;
+    if (faced) {
+      ctx.fillStyle = SHEET.labelFill;
+      ctx.fillRect(LABEL_X - 3, labelY - 7, label.length * 6.2 + 6, 13);
+    }
+    ctx.fillStyle = faced && !bad ? SHEET.ink : look.ink;
     ctx.font = `${slot.shadow ? 400 : 600} 11px system-ui, sans-serif`;
-    ctx.fillText(`${bad ? "! " : ""}${clip(slot.item.name)}  ${formatRange(slot.bottom, slot.height)}`, GUTTER + 8, y + 1 + Math.min(h, UNIT_PX) / 2 + 4);
+    ctx.fillText(label, LABEL_X, labelY + 4);
   }
+}
+
+function drawGenericFace(ctx: Ctx, kind: ReturnType<typeof faceKind>, x: number, y: number, w: number, h: number): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.lineWidth = 0.75;
+  for (const p of genericFace(kind, w, h)) {
+    const ink = FACE_INK[p.c];
+    if (p.k === "rect") {
+      if (ink.fill) {
+        ctx.fillStyle = ink.fill;
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+      }
+      if (ink.stroke) {
+        ctx.strokeStyle = ink.stroke;
+        ctx.strokeRect(p.x, p.y, p.w, p.h);
+      }
+    } else if (p.k === "circle") {
+      ctx.fillStyle = ink.fill || ink.stroke;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = ink.stroke || ink.fill;
+      ctx.beginPath();
+      ctx.moveTo(p.x1, p.y1);
+      ctx.lineTo(p.x2, p.y2);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 
 /** The sheet on a canvas of the given pixel ratio. Browser only. */

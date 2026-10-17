@@ -1,0 +1,132 @@
+---
+# Written by the trica project (Apache-2.0), not taken from the upstream
+# library, which has no DCS-7280SE-64 (it has the -68 and -72). Built from the
+# Arista 7280E data sheet: 1U, 48 x 1/10GbE SFP+ and 4 x 40GbE QSFP+, two
+# hot-swap power supplies, front-to-rear (-F) or rear-to-front (-R) airflow.
+# The depth is taken from the DCS-7280SE-68 of the same family; the weight is
+# left out until it is checked against a real chassis. Same format as the
+# upstream files, so it can be contributed upstream as is.
+manufacturer: Arista
+model: DCS-7280SE-64-R
+slug: arista-dcs-7280se-64-r
+part_number: DCS-7280SE-64-R
+u_height: 1
+is_full_depth: true
+airflow: rear-to-front
+comments: '[Arista 7280E Data Sheet](https://www.arista.com/assets/data/pdf/Datasheets/7280E-Datasheet.pdf)'
+console-ports:
+  - name: Console
+    type: rj-45
+power-ports:
+  - name: PS1
+    type: iec-60320-c14
+  - name: PS2
+    type: iec-60320-c14
+interfaces:
+  - name: Management1
+    type: 1000base-t
+    mgmt_only: true
+  - name: Ethernet1
+    type: 10gbase-x-sfpp
+  - name: Ethernet2
+    type: 10gbase-x-sfpp
+  - name: Ethernet3
+    type: 10gbase-x-sfpp
+  - name: Ethernet4
+    type: 10gbase-x-sfpp
+  - name: Ethernet5
+    type: 10gbase-x-sfpp
+  - name: Ethernet6
+    type: 10gbase-x-sfpp
+  - name: Ethernet7
+    type: 10gbase-x-sfpp
+  - name: Ethernet8
+    type: 10gbase-x-sfpp
+  - name: Ethernet9
+    type: 10gbase-x-sfpp
+  - name: Ethernet10
+    type: 10gbase-x-sfpp
+  - name: Ethernet11
+    type: 10gbase-x-sfpp
+  - name: Ethernet12
+    type: 10gbase-x-sfpp
+  - name: Ethernet13
+    type: 10gbase-x-sfpp
+  - name: Ethernet14
+    type: 10gbase-x-sfpp
+  - name: Ethernet15
+    type: 10gbase-x-sfpp
+  - name: Ethernet16
+    type: 10gbase-x-sfpp
+  - name: Ethernet17
+    type: 10gbase-x-sfpp
+  - name: Ethernet18
+    type: 10gbase-x-sfpp
+  - name: Ethernet19
+    type: 10gbase-x-sfpp
+  - name: Ethernet20
+    type: 10gbase-x-sfpp
+  - name: Ethernet21
+    type: 10gbase-x-sfpp
+  - name: Ethernet22
+    type: 10gbase-x-sfpp
+  - name: Ethernet23
+    type: 10gbase-x-sfpp
+  - name: Ethernet24
+    type: 10gbase-x-sfpp
+  - name: Ethernet25
+    type: 10gbase-x-sfpp
+  - name: Ethernet26
+    type: 10gbase-x-sfpp
+  - name: Ethernet27
+    type: 10gbase-x-sfpp
+  - name: Ethernet28
+    type: 10gbase-x-sfpp
+  - name: Ethernet29
+    type: 10gbase-x-sfpp
+  - name: Ethernet30
+    type: 10gbase-x-sfpp
+  - name: Ethernet31
+    type: 10gbase-x-sfpp
+  - name: Ethernet32
+    type: 10gbase-x-sfpp
+  - name: Ethernet33
+    type: 10gbase-x-sfpp
+  - name: Ethernet34
+    type: 10gbase-x-sfpp
+  - name: Ethernet35
+    type: 10gbase-x-sfpp
+  - name: Ethernet36
+    type: 10gbase-x-sfpp
+  - name: Ethernet37
+    type: 10gbase-x-sfpp
+  - name: Ethernet38
+    type: 10gbase-x-sfpp
+  - name: Ethernet39
+    type: 10gbase-x-sfpp
+  - name: Ethernet40
+    type: 10gbase-x-sfpp
+  - name: Ethernet41
+    type: 10gbase-x-sfpp
+  - name: Ethernet42
+    type: 10gbase-x-sfpp
+  - name: Ethernet43
+    type: 10gbase-x-sfpp
+  - name: Ethernet44
+    type: 10gbase-x-sfpp
+  - name: Ethernet45
+    type: 10gbase-x-sfpp
+  - name: Ethernet46
+    type: 10gbase-x-sfpp
+  - name: Ethernet47
+    type: 10gbase-x-sfpp
+  - name: Ethernet48
+    type: 10gbase-x-sfpp
+  - name: Ethernet49/1
+    type: 40gbase-x-qsfpp
+  - name: Ethernet50/1
+    type: 40gbase-x-qsfpp
+  - name: Ethernet51/1
+    type: 40gbase-x-qsfpp
+  - name: Ethernet52/1
+    type: 40gbase-x-qsfpp
