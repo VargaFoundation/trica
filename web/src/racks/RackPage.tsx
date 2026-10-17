@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { ApiError } from "../api/client";
 import { api } from "../api/endpoints";
@@ -12,11 +12,16 @@ import { ObjectLink } from "../components/ObjectLink";
 import { useI18n, type MessageKey } from "../i18n";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { usePageTitle } from "../usePageTitle";
-import { freeUnits, formatRange, layoutRack, type Issue, type Slot } from "./layout";
+import { DEFAULT_RACK_U, freeUnits, formatRange, layoutRack, type Issue, type Slot } from "./layout";
 import { RackElevation } from "./RackElevation";
 import { useRackContents, type RackContents } from "./useRack";
+import { EditPanel, useCanDeclare, useCanMount } from "../edit/EditPanel";
+import { ObjectForm } from "../edit/ObjectForm";
+import { PlaceDeviceForm } from "../edit/PlaceDeviceForm";
+import { useFloorContext, useRoomOf } from "../edit/useFloor";
+import type { Face } from "./layout";
 
-export const DEFAULT_RACK_U = 42;
+type Panel = { kind: "place"; u?: number; face?: Face } | { kind: "edit" } | null;
 
 const ISSUE_TEXT: Record<Issue, MessageKey> = {
   overlap: "rack.issue.overlap",
@@ -39,23 +44,74 @@ function Rack({ rack }: { rack: ObjectView }) {
   usePageTitle(t("rack.pageTitle", { rack: rack.display }));
   const declared = rack.attributes?.u_height;
   const uHeight = typeof declared === "number" && declared > 0 ? Math.floor(declared) : DEFAULT_RACK_U;
+  const can = useCanDeclare();
+  const canMount = useCanMount();
+  const [panel, setPanel] = useState<Panel>(null);
   return (
     <>
       <h1>{t("rack.pageTitle", { rack: rack.display })}</h1>
       <p>
         <ObjectLink id={rack.id} display={t("rack.openObject")} />
       </p>
+      {can && panel === null ? (
+        <p className="actions">
+          {canMount ? (
+            <>
+              <button type="button" className="primary" onClick={() => setPanel({ kind: "place" })}>
+                {t("edit.place.button")}
+              </button>{" "}
+            </>
+          ) : null}
+          <button type="button" onClick={() => setPanel({ kind: "edit" })}>
+            {t("edit.rack.button")}
+          </button>
+        </p>
+      ) : null}
+      {canMount && panel?.kind === "place" ? (
+        <EditPanel title={t("edit.place.titleRack", { rack: rack.display })}>
+          <PlaceDeviceForm
+            key={`${panel.u ?? ""}-${panel.face ?? ""}`}
+            rack={{ id: rack.id, display: rack.display }}
+            initialPosition={panel.u}
+            initialFace={panel.face}
+            onClose={() => setPanel(null)}
+          />
+        </EditPanel>
+      ) : null}
+      {can && panel?.kind === "edit" ? <EditRack rack={rack} onClose={() => setPanel(null)} /> : null}
       {uHeight !== declared ? (
         <p role="note" className="notice">
           {t("rack.assumedHeight", { units: number(uHeight) })}
         </p>
       ) : null}
-      <Async query={contents}>{(c) => <Elevations rack={rack} uHeight={uHeight} contents={c} />}</Async>
+      <Async query={contents}>
+        {(c) => <Elevations rack={rack} uHeight={uHeight} contents={c} onPick={canMount ? (u, face) => setPanel({ kind: "place", u, face }) : undefined} />}
+      </Async>
     </>
   );
 }
 
-function Elevations({ rack, uHeight, contents }: { rack: ObjectView; uHeight: number; contents: RackContents }) {
+function EditRack({ rack, onClose }: { rack: ObjectView; onClose: () => void }) {
+  const { t } = useI18n();
+  const floor = useFloorContext(useRoomOf(rack));
+  return (
+    <EditPanel title={t("edit.rack.title", { rack: rack.display })}>
+      <ObjectForm mode="edit" object={rack} floor={floor} onClose={onClose} />
+    </EditPanel>
+  );
+}
+
+function Elevations({
+  rack,
+  uHeight,
+  contents,
+  onPick,
+}: {
+  rack: ObjectView;
+  uHeight: number;
+  contents: RackContents;
+  onPick?: (u: number, face: Face) => void;
+}) {
   const { t, tp, number } = useI18n();
   const layout = useMemo(() => layoutRack(uHeight, contents.items), [uHeight, contents.items]);
   const rows = useMemo(
@@ -92,11 +148,12 @@ function Elevations({ rack, uHeight, contents }: { rack: ObjectView; uHeight: nu
         {(["front", "rear"] as const).map((face) => (
           <figure key={face} className="rack-face">
             <figcaption>{t(face === "front" ? "rack.front" : "rack.rear")}</figcaption>
-            <RackElevation rack={rack.display} uHeight={uHeight} face={face} slots={layout[face]} />
+            <RackElevation rack={rack.display} uHeight={uHeight} face={face} slots={layout[face]} onPick={onPick} />
           </figure>
         ))}
       </div>
       <p className="hint">{t("rack.legend")}</p>
+      {onPick ? <p className="hint">{t("edit.place.clickHint")}</p> : null}
       <ExportButtons
         basename={`trica-rack-${fileSlug(rack.display)}`}
         title={t("rack.pageTitle", { rack: rack.display })}

@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { api } from "../api/endpoints";
 import type { Change, ObjectView, Provenance, ProvenanceEntry, RelationView } from "../api/types";
@@ -12,6 +13,11 @@ import { useI18n } from "../i18n";
 import { usePageTitle } from "../usePageTitle";
 import { NotFoundPage } from "./NotFoundPage";
 import { ApiError } from "../api/client";
+import { DevicePlacement } from "../edit/DevicePlacement";
+import { EditPanel, useCanDeclare } from "../edit/EditPanel";
+import { ObjectForm } from "../edit/ObjectForm";
+import { CONTAINER_TYPES } from "../edit/rules";
+import { useFloorContext, useRoomOf } from "../edit/useFloor";
 
 export function ObjectPage() {
   const { id = "" } = useParams();
@@ -97,10 +103,34 @@ function ObjectDetail({ obj }: { obj: ObjectView }) {
           <dd>{obj.observed ? t("app.yes") : t("object.notObserved")}</dd>
         </div>
       </dl>
+      {CONTAINER_TYPES.includes(obj.type) ? <EditContainer obj={obj} /> : null}
+      {obj.type === "device" ? <DevicePlacement device={obj} /> : null}
       <AttributesSection obj={obj} lookup={lookup} />
       <RelationsSection id={obj.id} lookup={lookup} />
       <TimelineSection id={obj.id} lookup={lookup} />
     </>
+  );
+}
+
+/** "Edit" on a site, building, room, row or rack: rename it, set a rack's height or floor tile. */
+function EditContainer({ obj }: { obj: ObjectView }) {
+  const { t } = useI18n();
+  const can = useCanDeclare();
+  const [open, setOpen] = useState(false);
+  const floor = useFloorContext(useRoomOf(open && obj.type === "rack" ? obj : undefined));
+  if (!can) return null;
+  if (!open)
+    return (
+      <p className="actions">
+        <button type="button" onClick={() => setOpen(true)}>
+          {t("edit.object.button")}
+        </button>
+      </p>
+    );
+  return (
+    <EditPanel title={t("edit.object.title", { name: obj.display })}>
+      <ObjectForm mode="edit" object={obj} floor={floor} onClose={() => setOpen(false)} />
+    </EditPanel>
   );
 }
 

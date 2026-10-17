@@ -51,7 +51,9 @@ type Result struct {
 
 // PlannedChange is one change, as shown in a proposal preview.
 type PlannedChange struct {
-	Op       string `json:"op"` // create, set, unset, relate, unrelate, move
+	// create, set, unset, relate, unrelate, move. A relate with Before is an
+	// existing relation whose attributes change (After holds the new ones).
+	Op       string `json:"op"`
 	ObjectID string `json:"object_id"`
 	Type     string `json:"type"`
 	Key      string `json:"key,omitempty"`
@@ -1235,6 +1237,14 @@ func (r *run) resolveRelations(ctx context.Context) error {
 			r.record(PlannedChange{Op: "relate", ObjectID: k.From, Key: k.Type, OtherID: k.To, After: a})
 		} else {
 			r.touched[k.From], r.touched[k.To] = true, true
+			// The same link with other attributes (a device moved to another U
+			// of the same rack) is a change a preview must show, not silence.
+			if !bytes.Equal(canonical(curAttrs), wa) {
+				var before, after any
+				_ = json.Unmarshal(curAttrs, &before)
+				_ = json.Unmarshal(wa, &after)
+				r.record(PlannedChange{Op: "relate", ObjectID: k.From, Key: k.Type, OtherID: k.To, Before: before, After: after})
+			}
 		}
 	}
 	return nil

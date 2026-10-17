@@ -132,6 +132,7 @@ types:
       warranty_end: {kind: time, label: {en: Warranty end, fr: Fin de garantie}, description: "End of hardware warranty."}
       lifecycle: {kind: enum, values: [planned, active, maintenance, decommissioned], label: {en: Lifecycle, fr: Cycle de vie}, description: "Declared lifecycle state."}
       description: {kind: text, search: true, label: {en: Description, fr: Description}, description: "Free text."}
+      u_height: {kind: float, unit: U, label: {en: Height, fr: Hauteur}, description: "Height in rack units, declared for a device whose model is unknown or does not say (a PDU, a shelf, a patch panel). The model's u_height wins when it has one."}
       logical_cpus: {kind: int, label: {en: Logical CPUs, fr: Processeurs logiques}, description: "Logical processors (cores or threads) the OS sees. Not the socket count: that is cpu_count."}
       provisioning_owner: {kind: string, search: true, label: {en: Provisioning owner, fr: Propriétaire (provisioning)}, description: "User who has allocated or deployed the machine in the provisioning tool (MAAS owner); empty when nobody holds it."}
       provisioning_zone: {kind: string, search: true, label: {en: Provisioning zone, fr: Zone (provisioning)}, description: "Availability zone of the machine in the provisioning tool (MAAS zone)."}

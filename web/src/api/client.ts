@@ -36,6 +36,8 @@ export function buildQuery(query: object | undefined): string {
 export interface RequestOptions {
   method?: "GET" | "POST";
   query?: object;
+  /** Sent as JSON. Only the batch calls have one: the UI writes nothing else. */
+  body?: unknown;
   signal?: AbortSignal;
 }
 
@@ -48,12 +50,14 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   const headers: Record<string, string> = { Accept: "application/json, application/problem+json" };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
+  if (opts.body !== undefined) headers["Content-Type"] = "application/json";
 
   let res: Response;
   try {
     res = await fetch(`${API_BASE}${path}${buildQuery(opts.query)}`, {
       method: opts.method ?? "GET",
       headers,
+      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
       signal: opts.signal,
       credentials: "omit",
     });

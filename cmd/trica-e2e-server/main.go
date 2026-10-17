@@ -8,14 +8,15 @@
 //   - the real web UI, through the real internal/web handler (so the real
 //     Content-Security-Policy, security headers, SPA fallback and
 //     /ui-config.json), embedded with -tags webui;
-//   - /api/v1, a read-only mock of the trica API over a small anonymised
-//     inventory (documentation addresses, invented names), answering 401
-//     unless the bearer token is one it issued;
+//   - /api/v1, a mock of the trica API over a small anonymised inventory
+//     (documentation addresses, invented names), answering 401 unless the
+//     bearer token is one it issued; batches are previewed and "queued" but
+//     never applied, so the inventory never changes;
 //   - /idp, a fake OpenID provider: discovery, authorisation (redirects at
 //     once, no login form), and a token endpoint that verifies the PKCE S256
 //     verifier against the challenge it saw, as a real provider does.
 //
-// Nothing here writes anywhere: the mock API has no write endpoint.
+// Nothing here writes anywhere: the mock API answers batches without keeping them.
 package main
 
 import (

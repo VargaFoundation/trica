@@ -1,0 +1,331 @@
+{
+  "createRoom": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [
+      {
+        "ref": "parent",
+        "type": "site",
+        "identity": {
+          "id": "@paris"
+        }
+      },
+      {
+        "ref": "new",
+        "type": "room",
+        "identity": {
+          "name": "salle-2"
+        },
+        "attributes": {
+          "width_mm": 6000,
+          "depth_mm": 3600,
+          "tile_mm": 600
+        },
+        "parent": "parent"
+      }
+    ],
+    "relations": []
+  },
+  "createRack": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [
+      {
+        "ref": "parent",
+        "type": "room",
+        "identity": {
+          "id": "@room"
+        }
+      },
+      {
+        "ref": "new",
+        "type": "rack",
+        "identity": {
+          "name": "r14"
+        },
+        "attributes": {
+          "u_height": 42,
+          "floor_x": 2,
+          "floor_y": 1,
+          "facing": "south"
+        },
+        "parent": "parent"
+      }
+    ],
+    "relations": []
+  },
+  "placeNewPdu": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [
+      {
+        "ref": "device",
+        "type": "device",
+        "identity": {
+          "name": "pdu-r14-a"
+        },
+        "attributes": {
+          "role": "pdu",
+          "vendor": "Example",
+          "u_height": 1
+        }
+      }
+    ],
+    "relations": [
+      {
+        "type": "mounted_in",
+        "from": {
+          "ref": "device"
+        },
+        "to": {
+          "type": "rack",
+          "identity": {
+            "id": "@rack"
+          }
+        },
+        "attributes": {
+          "position": 1.5,
+          "face": "rear"
+        }
+      }
+    ]
+  },
+  "moveWithin": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [],
+    "relations": [
+      {
+        "type": "mounted_in",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@pdu"
+          }
+        },
+        "to": {
+          "type": "rack",
+          "identity": {
+            "id": "@rack"
+          }
+        },
+        "attributes": {
+          "position": 7,
+          "face": "rear"
+        }
+      }
+    ]
+  },
+  "newNamedLikeExisting": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [
+      {
+        "ref": "device",
+        "type": "device",
+        "identity": {
+          "name": "sw-a1"
+        },
+        "attributes": {
+          "role": "switch"
+        }
+      }
+    ],
+    "relations": [
+      {
+        "type": "mounted_in",
+        "from": {
+          "ref": "device"
+        },
+        "to": {
+          "type": "rack",
+          "identity": {
+            "id": "@rack"
+          }
+        },
+        "attributes": {
+          "position": 20,
+          "face": "front"
+        }
+      }
+    ]
+  },
+  "moveObserved": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [],
+    "relations": [
+      {
+        "type": "mounted_in",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@sw"
+          }
+        },
+        "to": {
+          "type": "rack",
+          "identity": {
+            "id": "@rack"
+          }
+        },
+        "attributes": {
+          "position": 40,
+          "face": "front"
+        }
+      }
+    ],
+    "unrelations": [
+      {
+        "type": "mounted_in",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@sw"
+          }
+        },
+        "to": {
+          "type": "rack",
+          "identity": {
+            "id": "@rack-p"
+          }
+        }
+      }
+    ]
+  },
+  "moveOwn": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [
+      {
+        "ref": "device",
+        "type": "device",
+        "identity": {
+          "id": "@pdu"
+        },
+        "attributes": {
+          "u_height": 2
+        }
+      }
+    ],
+    "relations": [
+      {
+        "type": "mounted_in",
+        "from": {
+          "ref": "device"
+        },
+        "to": {
+          "type": "rack",
+          "identity": {
+            "id": "@rack-p"
+          }
+        },
+        "attributes": {
+          "position": 3,
+          "face": "front"
+        }
+      }
+    ],
+    "unrelations": [
+      {
+        "type": "mounted_in",
+        "from": {
+          "ref": "device"
+        },
+        "to": {
+          "type": "rack",
+          "identity": {
+            "id": "@rack"
+          }
+        }
+      }
+    ]
+  },
+  "unplace": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [],
+    "relations": [],
+    "unrelations": [
+      {
+        "type": "mounted_in",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@pdu"
+          }
+        },
+        "to": {
+          "type": "rack",
+          "identity": {
+            "id": "@rack-p"
+          }
+        }
+      }
+    ]
+  },
+  "renameRack": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [
+      {
+        "ref": "obj",
+        "type": "rack",
+        "identity": {
+          "id": "@rack"
+        },
+        "attributes": {
+          "name": "r14b",
+          "u_height": 48
+        }
+      }
+    ],
+    "relations": []
+  },
+  "badFace": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [],
+    "relations": [
+      {
+        "type": "mounted_in",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@pdu"
+          }
+        },
+        "to": {
+          "type": "rack",
+          "identity": {
+            "id": "@rack"
+          }
+        },
+        "attributes": {
+          "position": 5,
+          "face": "side"
+        }
+      }
+    ]
+  }
+}

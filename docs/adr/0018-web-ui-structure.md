@@ -1,6 +1,6 @@
 # ADR-0018: Web UI structure: embedded SPA, generated API types, own i18n, TanStack Query
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10); the UI's writes are extended by ADR 0039 (declaring the physical layout as batches)
 - **Concerns**: `web/`, `internal/web`, `Dockerfile`, the `web` CI job, `GET /api/v1/me`
 
 ## Context

@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { useI18n } from "../i18n";
-import { formatRange, type Face, type Slot } from "./layout";
+import { formatRange, intervalsOverlap, type Face, type Slot } from "./layout";
 
 // Geometry, in SVG user units. U 1 is the bottom row.
 export const UNIT_PX = 22;
@@ -9,8 +9,26 @@ export const BODY = 280; // width of the mounting area
 export const PAD = 6;
 export const CHAR_PX = 6.4; // average advance of the 11 px label font
 
-/** One face of a rack, drawn from its slots. Devices are links to their object page. */
-export function RackElevation({ rack, uHeight, face, slots }: { rack: string; uHeight: number; face: Face; slots: readonly Slot[] }) {
+/**
+ * One face of a rack, drawn from its slots. Devices are links to their object page.
+ * With onPick (a caller who may propose), every free unit is a target: a click
+ * opens "place a device here". It is a pointer shortcut only, kept out of the
+ * tab order and of the accessibility tree: the page's "Place a device" button
+ * is the keyboard path to the same form.
+ */
+export function RackElevation({
+  rack,
+  uHeight,
+  face,
+  slots,
+  onPick,
+}: {
+  rack: string;
+  uHeight: number;
+  face: Face;
+  slots: readonly Slot[];
+  onPick?: (u: number, face: Face) => void;
+}) {
   const { t } = useI18n();
   const width = GUTTER + BODY + 2 * PAD;
   const height = uHeight * UNIT_PX + 2 * PAD;
@@ -41,6 +59,25 @@ export function RackElevation({ rack, uHeight, face, slots }: { rack: string; uH
           </g>
         );
       })}
+      {onPick
+        ? Array.from({ length: uHeight }, (_, i) => i + 1)
+            .filter((u) => !slots.some((s) => intervalsOverlap(u, 1, s.bottom, s.height)))
+            .map((u) => (
+              <rect
+                key={`free-${u}`}
+                className="rack-free"
+                data-u={u}
+                aria-hidden="true"
+                x={GUTTER + 1}
+                y={yOf(u) + 1}
+                width={BODY - 2}
+                height={UNIT_PX - 2}
+                onClick={() => onPick(u, face)}
+              >
+                <title>{t("edit.place.here", { u, face: faceName })}</title>
+              </rect>
+            ))
+        : null}
       {slots.map((s) => {
         const y = yOf(s.top);
         const h = Math.max(s.height * UNIT_PX - 2, 6);

@@ -34,6 +34,8 @@ export interface Call {
   path: string;
   query: URLSearchParams;
   headers: Headers;
+  /** The JSON body, parsed; undefined without one. */
+  body?: unknown;
 }
 
 const isReply = (v: unknown): v is Reply => typeof v === "object" && v !== null && "status" in v && "body" in v;
@@ -64,6 +66,7 @@ export function mockApi(routes: Record<string, Handler>) {
       path: url.pathname.replace(/^\/api\/v1/, ""),
       query: url.searchParams,
       headers: new Headers(init?.headers),
+      body: typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined,
     };
     calls.push(call);
     const key = `${call.method} ${call.path}`;

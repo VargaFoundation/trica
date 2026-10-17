@@ -1226,6 +1226,17 @@
               "fr": "Numéro de série"
             }
           },
+          "u_height": {
+            "description": "Height in rack units, declared for a device whose model is unknown or does not say (a PDU, a shelf, a patch panel). The model's u_height wins when it has one.",
+            "title": "Height",
+            "type": "number",
+            "x-trica-kind": "float",
+            "x-trica-label": {
+              "en": "Height",
+              "fr": "Hauteur"
+            },
+            "x-trica-unit": "U"
+          },
           "uptime_s": {
             "description": "Seconds since last boot.",
             "title": "Uptime",

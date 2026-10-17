@@ -95,6 +95,44 @@ the page's own script).
 - Files are named `trica-rack-<name>.png` and `trica-topology-<date>.png`; a failure is said in
   words next to the buttons.
 
+## Declaring the physical layout
+
+What collectors cannot see is entered on the pages that show it (ADR 0039). The controls appear
+for a caller who holds `propose` (`GET /me`); the API checks every write again.
+
+| Where | What |
+|---|---|
+| `/rooms` | **Add a site**, **Add a room** (in a site or building chosen from the schema's parents) |
+| `/rooms/<id>` | **Add a rack** in the room, on a floor tile (click a free tile: its X and Y are filled in); **Edit this room** (name, size, tile) |
+| `/racks/<id>` | **Place a device** (click a free unit: its U and face are filled in): a device the inventory has (search by name), or one no collector sees (a PDU, a UPS, a patch panel, a shelf: name or serial or asset tag, role, vendor, model, height); **Edit this rack** (name, height, floor tile, facing) |
+| `/objects/<id>` of a device | **Rack placement**: where it is mounted and who said so; **Place in a rack** / **Move**, **Remove from this rack** |
+| `/objects/<id>` of a site, building, room, row or rack | **Edit**: its attributes from the schema; emptying a field withdraws your own value only |
+
+- **Every write is a batch** sent to `POST /batches`, never anything else: partial (it adds or
+  withdraws your claims, it never withdraws by omission), attributed by the server to
+  `user:<subject>` (or the token's source) at `declared` confidence.
+- **Preview first.** "Preview the change" sends the batch to `POST /batches/preview` and shows the
+  engine's answer in words: what it creates, the values and links it opens or closes, its warnings,
+  and the page's own. "Submit" exists only under a preview of the form as it is; changing the form
+  drops the preview. The answer is said: **applied** (200, the pages are read again), **sent for
+  approval** (202, with a link to the proposal), or the refusal (400, 403, 409, 422) with the
+  server's words.
+- **Checked before asking**: the position (U 1 at the bottom; half units when the schema's
+  `mounted_in.position` is a float) and the top unit inside the rack's height, a positive height, a
+  whole floor tile. **Said, not blocked**: an overlap on the same face (a full-depth device counts
+  on both), a tile already holding a rack, a tile outside the room, a device whose height nobody
+  says (checked and drawn as 1 U), a "new" device the engine recognises as one it has.
+- **Heights**: a device's height is its model's (`device_type.u_height`); when it has no known
+  model, the form asks for it and stores it on the device (`device.u_height`).
+- **Moving** places the device in the new rack and withdraws *your* placement in the racks it
+  leaves. A placement another source said (a collector, a colleague) stays: the form says so
+  before anything is sent.
+- Fields, enum values, units and labels come from `GET /schema`; nothing is offered for an
+  attribute the schema does not have.
+- Keyboard: free units and free tiles are pointer shortcuts only; the **Place a device** and **Add
+  a rack** buttons open the same forms. A form opens in the page, focus moves to its title, and
+  the preview and the outcome take the focus when they arrive.
+
 ## Keyboard and accessibility
 
 - `/` or Ctrl+K (Cmd+K on macOS) focuses the search field from anywhere. `/` is a character while
@@ -136,8 +174,10 @@ Keycloak either add an audience mapper to the access token or choose `id_token`.
 `GET /api/v1/me` returns the actions the caller holds (`read`, `propose`, `approve`, `admin`). The
 UI shows **Approve** and **Reject** only to a caller who holds `approve`, only on pending
 proposals, and asks for a confirmation. The decision is the API's: a 403 (a grant limited to a
-type or site) or a 409 (someone decided first) is shown as the server wrote it. The UI never
-writes the inventory: approving a proposal asks the engine to apply it.
+type or site) or a 409 (someone decided first) is shown as the server wrote it. The declaring
+controls (above) appear to a caller who holds `propose`. The UI never writes the inventory itself:
+approving a proposal asks the engine to apply it, and a declaration is a batch the engine applies
+or queues.
 
 ## The API client
 
@@ -209,7 +249,8 @@ distroless.
 ## Browser tests (`web/e2e`)
 
 `make web-e2e` runs Playwright (Chromium; `make web-e2e-browsers` adds Firefox and WebKit, ADR 0038) against `cmd/trica-e2e-server`: the real `internal/web`
-handler with the built UI, a read-only mock of `/api/v1` over an invented inventory, and a fake
+handler with the built UI, a mock of `/api/v1` over an invented inventory (it previews batches and
+answers a submitted one "queued as proposal 12", applying nothing), and a fake
 OpenID provider on one self-signed TLS origin (`https://127.0.0.1:18443`, `TRICA_E2E_PORT` changes
 it). The specs cover every page in English (and a rack page in French) with `@axe-core/playwright`
 (WCAG 2.0 to 2.2 A and AA, contrast included), the full SSO flow with the provider verifying PKCE,
@@ -219,7 +260,9 @@ after a warm-up render, each from a reloaded room page, under one second). The
 topology specs check every kind of link, the filters, the table as keyboard path, PNG and PDF
 downloads of the rack and of the graph (signature, size, pixels inked, no content-security-policy
 violation), axe in English and French, and the time to draw 200 devices (budget: under 8 s from the
-menu click, of which layout under 6 s).
+menu click, of which layout under 6 s). `declare.spec.ts` places a declared PDU from a free unit
+through preview to "sent for approval", refuses a position outside a rack before sending, and
+adds a rack from a free floor tile, with axe on the open forms.
 
 ## Not in this version
 
