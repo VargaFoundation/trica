@@ -107,3 +107,30 @@ func TestRackContentsKeepToWhatTheCallerMayRead(t *testing.T) {
 	}
 	wantStatus(t, e.get("/api/v1/racks/"+e.ids["rack-l"]+"/contents", tokSiteParis), 403)
 }
+
+// A device whose model is unknown (a patch panel, a PDU nobody can query)
+// carries its own height, declared from the UI; the model's height wins when
+// the model has one, so a wrong declaration cannot redraw a known model.
+func TestRackContentsFallBackOnTheDeviceHeight(t *testing.T) {
+	e := newEnv(t, reconcile.Policy{})
+	e.furnish()
+	b := sdk.NewBatch("declaration:test", sdk.ScopePartial)
+	b.Confidence = sdk.Declared
+	b.Object("pp", "device").Identify("name", "pp-a1").Set("u_height", 0.5)
+	b.Object("sw2", "device").Identify("name", "sw-a2").Set("u_height", 4)
+	e.apply(b)
+	items := rackItems(t, e.page("/api/v1/racks/"+e.ids["rack-p"]+"/contents", tokReader))
+	by := map[string]rackItem{}
+	for _, it := range items {
+		by[it.Device.Display] = it
+	}
+	if pp := by["pp-a1"]; pp.UHeight == nil || *pp.UHeight != 0.5 || pp.Model != nil {
+		t.Fatalf("pp-a1 height %v model %+v, want its own 0.5 U and no model", pp.UHeight, pp.Model)
+	}
+	if sw := by["sw-a2"]; sw.UHeight == nil || *sw.UHeight != 1 {
+		t.Fatalf("sw-a2 height %v, want its model's 1 U over its own 4 U", sw.UHeight)
+	}
+	if sw1 := by["sw-a1"]; sw1.UHeight != nil {
+		t.Fatalf("sw-a1 height %v, want none (no model, no height of its own)", *sw1.UHeight)
+	}
+}

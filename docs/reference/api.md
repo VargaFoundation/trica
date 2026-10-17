@@ -30,7 +30,7 @@ collector it stands for, and gets a warning instead ([ADR 0005](../adr/0005-sing
 | `GET /objects/{id}/provenance` | read | Source, confidence and age of each attribute |
 | `GET /objects/{id}/history` | read | Values over time; `key` restricts to one attribute |
 | `GET /objects/{id}/relations` | read | Relations now, or `at` a date |
-| `GET /racks/{id}/contents` | read | The devices mounted in a rack, each with `position`, `face`, `model` (its `instance_of`), `u_height` and `full_depth` (from the model): what an elevation needs, in one call. A device is listed only if the caller may read it, its model only if the caller may read the model. Ordered by position, unknown positions last, then by name. Pages. 404 for an object that is not a rack |
+| `GET /racks/{id}/contents` | read | The devices mounted in a rack, each with `position`, `face`, `model` (its `instance_of`), `u_height` and `full_depth` (from the model; when the model is unknown or has no height, `u_height` is the device's own, ADR 0039): what an elevation needs, in one call. A device is listed only if the caller may read it, its model only if the caller may read the model. Ordered by position, unknown positions last, then by name. Pages. 404 for an object that is not a rack |
 | `GET /objects/{id}/timeline` | read | Changes that touched the object (`from`, `to`) |
 | `GET /search` | read | `q` free text or TQL: counts per type first, then a page |
 | `GET /whohad` | read | `key`, `value`, optional `at`: which objects had it |

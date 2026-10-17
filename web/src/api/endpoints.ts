@@ -1,16 +1,21 @@
 // One function per API operation the UI uses. Parameters are typed from the
 // OpenAPI document (QueryOf reads them out of the generated `paths`), so a
 // parameter the server renames fails the type check once openapi.json is
-// regenerated. The UI only reads, except for the two decisions on a proposal:
-// those are API calls, and the server applies them through the reconcile engine.
+// regenerated. The UI reads, decides proposals, and declares what collectors
+// cannot see (racks, placements, PDUs) as batches: every write is a call the
+// server hands to the reconcile engine, which applies it or queues it as a
+// proposal (ADR 0039).
 import { request } from "./client";
 import type {
+  Batch,
+  BatchOutcome,
   Change,
   DecisionOutcome,
   Discrepancy,
   Me,
   ObjectView,
   Page,
+  PreviewOutcome,
   Proposal,
   Provenance,
   QueryOf,
@@ -51,6 +56,11 @@ export const api = {
   proposal: (id: number, signal?: AbortSignal) => request<Proposal>(`/proposals/${id}`, { signal }),
   approve: (id: number) => request<DecisionOutcome>(`/proposals/${id}/approve`, { method: "POST" }),
   reject: (id: number) => request<DecisionOutcome>(`/proposals/${id}/reject`, { method: "POST" }),
+
+  /** What a batch would change, nothing written. */
+  previewBatch: (batch: Batch) => request<PreviewOutcome>("/batches/preview", { method: "POST", body: batch }),
+  /** Submits a batch: status "applied" (200) or "proposed" (202, queued for approval). */
+  submitBatch: (batch: Batch, reason?: string) => request<BatchOutcome>("/batches", { method: "POST", body: batch, query: { reason } }),
 
   discrepancies: (q: QueryOf<"/discrepancies">, signal?: AbortSignal) =>
     request<Page<Discrepancy>>("/discrepancies", { query: q, signal }),

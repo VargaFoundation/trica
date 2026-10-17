@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { ApiError } from "../api/client";
 import { api } from "../api/endpoints";
@@ -11,6 +11,8 @@ import { NotFoundPage } from "../pages/NotFoundPage";
 import { usePageTitle } from "../usePageTitle";
 import { layoutFloor, tileOf, type FloorPlan, type PlacedRack } from "./floor";
 import { useRoomContents, type RoomContents } from "./useRack";
+import { EditPanel, useCanDeclare } from "../edit/EditPanel";
+import { ObjectForm } from "../edit/ObjectForm";
 
 /** /rooms — every room, each linking to its floor plan. */
 export function RoomsPage() {
@@ -21,10 +23,27 @@ export function RoomsPage() {
     queryFn: ({ signal }) => api.objects({ type: "room", sort: "name", limit: 1000 }, signal),
     staleTime: 30_000,
   });
+  const can = useCanDeclare();
+  const [adding, setAdding] = useState<"site" | "room" | null>(null);
   return (
     <>
       <h1>{t("rooms.title")}</h1>
       <p>{t("rooms.intro")}</p>
+      {can && adding === null ? (
+        <p className="actions">
+          <button type="button" onClick={() => setAdding("site")}>
+            {t("edit.site.add")}
+          </button>{" "}
+          <button type="button" onClick={() => setAdding("room")}>
+            {t("edit.room.add")}
+          </button>
+        </p>
+      ) : null}
+      {can && adding ? (
+        <EditPanel title={t(adding === "site" ? "edit.site.add" : "edit.room.add")}>
+          <ObjectForm key={adding} mode="create" type={adding} onClose={() => setAdding(null)} />
+        </EditPanel>
+      ) : null}
       <Async query={rooms}>
         {(page) =>
           page.items.length === 0 ? (
@@ -70,33 +89,72 @@ export function RoomPage() {
   return <Async query={room}>{(r) => (r.type === "room" ? <Room room={r} /> : <NotFoundPage />)}</Async>;
 }
 
+type RoomPanel = { kind: "rack"; x?: number; y?: number } | { kind: "edit" } | null;
+
 function Room({ room }: { room: ObjectView }) {
   const { t } = useI18n();
   const contents = useRoomContents(room.id);
+  const can = useCanDeclare();
+  const [panel, setPanel] = useState<RoomPanel>(null);
   usePageTitle(t("room.pageTitle", { room: room.display }));
+  const w = room.attributes?.width_mm;
+  const d = room.attributes?.depth_mm;
+  const widthMm = typeof w === "number" ? w : undefined;
+  const depthMm = typeof d === "number" ? d : undefined;
+  const tileMm = tileOf(room.attributes?.tile_mm);
   return (
     <>
       <h1>{t("room.pageTitle", { room: room.display })}</h1>
       <p>
         <ObjectLink id={room.id} display={t("room.openObject")} />
       </p>
+      {can && panel === null ? (
+        <p className="actions">
+          <button type="button" className="primary" onClick={() => setPanel({ kind: "rack" })}>
+            {t("edit.rack.add")}
+          </button>{" "}
+          <button type="button" onClick={() => setPanel({ kind: "edit" })}>
+            {t("edit.room.button")}
+          </button>
+        </p>
+      ) : null}
+      {can && panel?.kind === "rack" && contents.data ? (
+        <EditPanel title={t("edit.rack.addTitle", { room: room.display })}>
+          <ObjectForm
+            key={`${panel.x ?? ""}-${panel.y ?? ""}`}
+            mode="create"
+            type="rack"
+            parent={{ type: "room", id: room.id, display: room.display }}
+            initial={{ floor_x: panel.x === undefined ? "" : String(panel.x), floor_y: panel.y === undefined ? "" : String(panel.y) }}
+            floor={floorContext(widthMm, depthMm, tileMm, contents.data)}
+            onClose={() => setPanel(null)}
+          />
+        </EditPanel>
+      ) : null}
+      {can && panel?.kind === "edit" ? (
+        <EditPanel title={t("edit.room.title", { room: room.display })}>
+          <ObjectForm mode="edit" object={room} onClose={() => setPanel(null)} />
+        </EditPanel>
+      ) : null}
       <Async query={contents}>
-        {(c) => {
-          const w = room.attributes?.width_mm;
-          const d = room.attributes?.depth_mm;
-          return (
-            <Plan
-              roomName={room.display}
-              widthMm={typeof w === "number" ? w : undefined}
-              depthMm={typeof d === "number" ? d : undefined}
-              tileMm={tileOf(room.attributes?.tile_mm)}
-              contents={c}
-            />
-          );
-        }}
+        {(c) => (
+          <Plan
+            roomName={room.display}
+            widthMm={widthMm}
+            depthMm={depthMm}
+            tileMm={tileMm}
+            contents={c}
+            onPick={can ? (x, y) => setPanel({ kind: "rack", x, y }) : undefined}
+          />
+        )}
       </Async>
     </>
   );
+}
+
+function floorContext(widthMm: number | undefined, depthMm: number | undefined, tileMm: number, c: RoomContents) {
+  const plan = layoutFloor(widthMm, depthMm, c.racks, tileMm);
+  return { racks: c.racks, size: plan.sizeFromRacks ? undefined : { cols: plan.cols, rows: plan.rows } };
 }
 
 const TILE_PX = 64;
@@ -108,12 +166,14 @@ function Plan({
   depthMm,
   tileMm,
   contents,
+  onPick,
 }: {
   roomName: string;
   widthMm?: number;
   depthMm?: number;
   tileMm: number;
   contents: RoomContents;
+  onPick?: (x: number, y: number) => void;
 }) {
   const { t, number } = useI18n();
   const plan = useMemo(() => layoutFloor(widthMm, depthMm, contents.racks, tileMm), [widthMm, depthMm, contents.racks, tileMm]);
@@ -136,10 +196,11 @@ function Plan({
         </p>
       ) : null}
       {contents.racks.length === 0 ? <p>{t("room.empty")}</p> : null}
-      {plan.placed.length > 0 ? (
+      {plan.placed.length > 0 || (onPick && !plan.sizeFromRacks) ? (
         <figure className="floor-plan">
           <figcaption>{t("room.tile", { mm: number(tileMm) })}</figcaption>
-          <FloorSvg roomName={roomName} plan={plan} />
+          <FloorSvg roomName={roomName} plan={plan} onPick={onPick} />
+          {onPick ? <p className="hint">{t("edit.rack.clickHint")}</p> : null}
         </figure>
       ) : null}
       {contents.racks.length > 0 ? (
@@ -189,7 +250,12 @@ const FACING_EDGE = {
   east: (x: number, y: number) => ({ x1: x + TILE_PX - 2, y1: y + 4, x2: x + TILE_PX - 2, y2: y + TILE_PX - 4 }),
 } as const;
 
-function FloorSvg({ roomName, plan }: { roomName: string; plan: FloorPlan }) {
+/**
+ * With onPick (a caller who may propose), each free tile of the room is a
+ * pointer shortcut to "add a rack here", kept out of the tab order and of the
+ * accessibility tree: the page's "Add a rack" button is the keyboard path.
+ */
+function FloorSvg({ roomName, plan, onPick }: { roomName: string; plan: FloorPlan; onPick?: (x: number, y: number) => void }) {
   const { t } = useI18n();
   const cols = Math.max(plan.cols, ...plan.placed.map((r) => r.x + 1));
   const rows = Math.max(plan.rows, ...plan.placed.map((r) => r.y + 1));
@@ -204,6 +270,25 @@ function FloorSvg({ roomName, plan }: { roomName: string; plan: FloorPlan }) {
       {Array.from({ length: rows + 1 }, (_, i) => (
         <line key={`r${i}`} className="rack-grid" y1={PAD + i * TILE_PX} y2={PAD + i * TILE_PX} x1={PAD} x2={PAD + cols * TILE_PX} />
       ))}
+      {onPick
+        ? Array.from({ length: plan.cols * plan.rows }, (_, i) => ({ x: i % plan.cols, y: Math.floor(i / plan.cols) }))
+            .filter((tile) => !plan.placed.some((r) => r.x === tile.x && r.y === tile.y))
+            .map((tile) => (
+              <rect
+                key={`free-${tile.x}-${tile.y}`}
+                className="floor-free"
+                data-tile={`${tile.x},${tile.y}`}
+                aria-hidden="true"
+                x={PAD + tile.x * TILE_PX + 2}
+                y={PAD + tile.y * TILE_PX + 2}
+                width={TILE_PX - 4}
+                height={TILE_PX - 4}
+                onClick={() => onPick(tile.x, tile.y)}
+              >
+                <title>{t("edit.rack.here", { x: tile.x, y: tile.y })}</title>
+              </rect>
+            ))
+        : null}
       {plan.placed.map((r) => {
         const x = PAD + r.x * TILE_PX;
         const y = PAD + r.y * TILE_PX;

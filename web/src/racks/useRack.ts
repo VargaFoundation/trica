@@ -32,7 +32,12 @@ export async function loadRackContents(rackId: string, signal?: AbortSignal): Pr
 }
 
 export function useRackContents(rackId: string) {
-  return useQuery({ queryKey: ["rack-contents", rackId], queryFn: ({ signal }) => loadRackContents(rackId, signal), staleTime: 30_000 });
+  return useQuery({
+    queryKey: ["rack-contents", rackId],
+    queryFn: ({ signal }) => loadRackContents(rackId, signal),
+    enabled: rackId !== "",
+    staleTime: 30_000,
+  });
 }
 
 export interface RoomContents {
@@ -61,6 +66,11 @@ export async function loadRoomContents(roomId: string, signal?: AbortSignal): Pr
   };
 }
 
-export function useRoomContents(roomId: string) {
-  return useQuery({ queryKey: ["room-contents", roomId], queryFn: ({ signal }) => loadRoomContents(roomId, signal), staleTime: 30_000 });
+export function useRoomContents(roomId: string | undefined) {
+  return useQuery({
+    queryKey: ["room-contents", roomId],
+    queryFn: ({ signal }) => loadRoomContents(roomId as string, signal),
+    enabled: !!roomId,
+    staleTime: 30_000,
+  });
 }

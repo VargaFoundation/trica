@@ -538,6 +538,11 @@ func (s *Server) hRackContents(c *call) error {
 			it.UHeight = number(attrs["u_height"])
 			it.FullDepth = attrs["full_depth"] == true
 		}
+		// A device nobody knows the model of (a PDU, a shelf) can carry its
+		// own height; the model's wins when it has one.
+		if it.UHeight == nil {
+			it.UHeight = number(redactMap(d.Attrs)["u_height"])
+		}
 		items = append(items, it)
 	}
 	sort.SliceStable(items, func(i, j int) bool {

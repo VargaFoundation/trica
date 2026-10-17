@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -288,11 +290,15 @@ func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		problem(w, http.StatusUnauthorized, "unauthenticated", "A valid bearer token is required")
 		return
 	}
-	if r.Method != http.MethodGet {
-		problem(w, http.StatusMethodNotAllowed, "read-only", "The e2e mock API is read-only")
+	path := r.URL.Path
+	if r.Method == http.MethodPost && (path == "/batches" || path == "/batches/preview") {
+		a.batch(w, r, path == "/batches/preview")
 		return
 	}
-	path := r.URL.Path
+	if r.Method != http.MethodGet {
+		problem(w, http.StatusMethodNotAllowed, "read-only", "The e2e mock API writes nothing")
+		return
+	}
 	switch {
 	case path == "/me":
 		writeJSON(w, http.StatusOK, obj{"subject": "e2e-user", "kind": "token", "source": "e2e", "actions": []string{"read", "propose", "approve"}})
@@ -333,6 +339,54 @@ func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		problem(w, http.StatusNotFound, "not-found", "No such endpoint")
 	}
+}
+
+// batch answers POST /batches and /batches/preview without writing anything,
+// so that the browser tests stay independent of each other (they run in
+// parallel against one server). The preview lists what the batch says, as the
+// engine's preview would for objects it does not know: one create per object
+// that is not designated by id, one relate or unrelate per relation. A submit
+// is always queued as proposal 12, the pending proposal of the mock: the page
+// shows "sent for approval" and links to it.
+func (a *api) batch(w http.ResponseWriter, r *http.Request, preview bool) {
+	var b struct {
+		Objects []struct {
+			Ref      string            `json:"ref"`
+			Type     string            `json:"type"`
+			Identity map[string]string `json:"identity"`
+		} `json:"objects"`
+		Relations   []struct{ Type string } `json:"relations"`
+		Unrelations []struct{ Type string } `json:"unrelations"`
+	}
+	raw, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil || json.Unmarshal(raw, &b) != nil {
+		problem(w, http.StatusBadRequest, "invalid-batch", "The body is not a batch")
+		return
+	}
+	changes := []obj{}
+	objects := obj{}
+	for i, o := range b.Objects {
+		if o.Identity["id"] != "" {
+			objects[o.Ref] = o.Identity["id"]
+			continue
+		}
+		id := oid(0xf000 + i)
+		objects[o.Ref] = id
+		changes = append(changes, obj{"op": "create", "object_id": id, "type": o.Type})
+	}
+	for _, rel := range b.Relations {
+		changes = append(changes, obj{"op": "relate", "object_id": oid(0xf000), "type": "", "key": rel.Type, "other_id": oid(idRack)})
+	}
+	for _, rel := range b.Unrelations {
+		changes = append(changes, obj{"op": "unrelate", "object_id": oid(0xf000), "type": "", "key": rel.Type, "other_id": oid(idRack)})
+	}
+	result := obj{"created": len(changes), "values_changed": 0, "relations_opened": len(b.Relations), "relations_closed": len(b.Unrelations), "objects": objects, "changes": changes}
+	if preview {
+		writeJSON(w, http.StatusOK, obj{"source": "e2e", "result": result})
+		return
+	}
+	result["proposal_id"] = 12
+	writeJSON(w, http.StatusAccepted, obj{"source": "e2e", "status": "proposed", "result": result})
 }
 
 func proposal(id int, status string) obj {
@@ -537,23 +591,35 @@ func schemaDoc() obj {
 				attr("os_version", "string", "OS version", "Version de l'OS", obj{"search": true}),
 				attr("mgmt_ip", "ip", "Management address", "Adresse de gestion", obj{"search": true}),
 				attr("power_w", "number", "Power draw", "Consommation", obj{"unit": "W"}),
+				attr("name", "string", "Name", "Nom", obj{"identity": "weak"}),
+				attr("role", "enum", "Role", "Rôle", obj{"values": []string{"server", "switch", "pdu", "ups", "patch_panel", "other"}}),
+				attr("u_height", "float", "Height", "Hauteur", obj{"unit": "U"}),
 			}),
 			typeDoc("rack", "Rack", "Baie", []string{"room", "row", "site"}, []obj{
-				attr("u_height", "integer", "Height in U", "Hauteur en U", nil),
-				attr("floor_x", "integer", "Floor column", "Colonne au sol", nil),
-				attr("floor_y", "integer", "Floor row", "Rangée au sol", nil),
-				attr("facing", "string", "Front faces", "Face avant vers", nil),
+				attr("name", "string", "Name", "Nom", obj{"required": true, "identity": "weak"}),
+				attr("u_height", "int", "Height", "Hauteur", obj{"unit": "U"}),
+				attr("floor_x", "int", "Floor X", "Position X", nil),
+				attr("floor_y", "int", "Floor Y", "Position Y", nil),
+				attr("facing", "enum", "Front faces", "Face avant vers", obj{"values": []string{"north", "east", "south", "west"}}),
 			}),
 			typeDoc("row", "Row", "Rangée", []string{"room"}, nil),
-			typeDoc("room", "Room", "Salle", []string{"site"}, nil),
-			typeDoc("site", "Site", "Site", []string{}, nil),
+			typeDoc("room", "Room", "Salle", []string{"site"}, []obj{
+				attr("name", "string", "Name", "Nom", obj{"required": true, "identity": "weak"}),
+				attr("width_mm", "int", "Width", "Largeur", obj{"unit": "mm"}),
+				attr("depth_mm", "int", "Depth", "Profondeur", obj{"unit": "mm"}),
+				attr("tile_mm", "int", "Floor tile", "Carreau", obj{"unit": "mm"}),
+			}),
+			typeDoc("site", "Site", "Site", []string{}, []obj{attr("name", "string", "Name", "Nom", obj{"required": true, "identity": "weak"})}),
 			typeDoc("device_type", "Device model", "Modèle d'équipement", []string{}, nil),
 			typeDoc("interface", "Interface", "Interface", []string{"device"}, nil),
 			typeDoc("vlan", "VLAN", "VLAN", []string{}, nil),
 			typeDoc("cable", "Cable", "Câble", []string{}, nil),
 		},
 		"relations": []obj{
-			{"name": "mounted_in", "label": obj{"en": "mounted in", "fr": "monté dans"}, "inverse": obj{"en": "hosts", "fr": "héberge"}, "description": "", "from": []string{"device"}, "to": []string{"rack"}, "attributes": []obj{}, "custom": false},
+			{"name": "mounted_in", "label": obj{"en": "mounted in", "fr": "monté dans"}, "inverse": obj{"en": "hosts", "fr": "héberge"}, "description": "", "from": []string{"device"}, "to": []string{"rack"}, "attributes": []obj{
+				attr("position", "float", "Position", "Position", obj{"unit": "U"}),
+				attr("face", "enum", "Face", "Face", obj{"values": []string{"front", "rear"}}),
+			}, "custom": false},
 			{"name": "instance_of", "label": obj{"en": "instance of", "fr": "instance de"}, "inverse": obj{"en": "instances", "fr": "instances"}, "description": "", "from": []string{"device"}, "to": []string{"device_type"}, "attributes": []obj{}, "custom": false},
 			{"name": "cabled_to", "label": obj{"en": "cabled to", "fr": "câblé à"}, "inverse": obj{"en": "cabled to", "fr": "câblé à"}, "description": "", "from": []string{"interface"}, "to": []string{"interface"}, "attributes": []obj{}, "custom": false},
 			{"name": "connects", "label": obj{"en": "connects", "fr": "relie"}, "inverse": obj{"en": "connected by", "fr": "relié par"}, "description": "", "from": []string{"cable"}, "to": []string{"interface"}, "attributes": []obj{}, "custom": false},

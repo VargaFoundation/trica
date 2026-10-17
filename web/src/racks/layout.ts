@@ -47,6 +47,9 @@ export interface RackLayout {
 
 export const DEFAULT_HEIGHT_U = 1;
 
+/** The height drawn for a rack whose u_height nobody recorded. */
+export const DEFAULT_RACK_U = 42;
+
 const finite = (n: number | undefined): n is number => typeof n === "number" && Number.isFinite(n);
 
 /** Whether [a, a+ha) and [b, b+hb) share any rack space. A tiny tolerance keeps 0.5 U arithmetic exact. */

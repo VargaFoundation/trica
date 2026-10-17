@@ -479,3 +479,51 @@ func TestWithdrawAndUnrelate(t *testing.T) {
 		t.Fatal("description still set")
 	}
 }
+
+// Moving a device to another U of the same rack changes the attributes of a
+// relation that stays open. The preview must list it: a person who previews
+// such a move from the UI would otherwise read "nothing would change".
+func TestPreviewShowsARelationWhoseAttributesChange(t *testing.T) {
+	e, _, c := newEngine(t, reconcile.Policy{})
+	ctx := context.Background()
+	mount := func(position int) *sdk.Batch {
+		b := batch(c, "user:v", sdk.ScopePartial)
+		b.Confidence = sdk.Declared
+		b.Object("r", "rack").Identify("name", "R1")
+		b.Object("d", "device").Identify("name", "pdu-1")
+		b.Relate("mounted_in", "d", "r").With("position", position).With("face", "rear")
+		return b
+	}
+	r := apply(t, e, mount(10))
+	c.advance(time.Minute)
+	same, err := e.Preview(ctx, mount(10))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ch := range same.Changes {
+		if ch.Op == "relate" {
+			t.Fatalf("the same mount again is reported as a change: %+v", ch)
+		}
+	}
+	moved, err := e.Preview(ctx, mount(12))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got *reconcile.PlannedChange
+	for i, ch := range moved.Changes {
+		if ch.Op == "relate" && ch.Key == "mounted_in" {
+			got = &moved.Changes[i]
+		}
+	}
+	if got == nil || got.ObjectID != r.Objects["d"] || got.OtherID != r.Objects["r"] {
+		t.Fatalf("changes %+v, want the mount of pdu-1 in R1", moved.Changes)
+	}
+	before, _ := got.Before.(map[string]any)
+	after, _ := got.After.(map[string]any)
+	if before["position"] != float64(10) || after["position"] != float64(12) || after["face"] != "rear" {
+		t.Fatalf("mount change %v -> %v, want position 10 -> 12 on the rear", got.Before, got.After)
+	}
+	if moved.RelationsOpened != 0 {
+		t.Fatalf("relations opened %d, want 0: the link stays, its attributes change", moved.RelationsOpened)
+	}
+}

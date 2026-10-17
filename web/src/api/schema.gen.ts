@@ -1082,6 +1082,11 @@ export interface components {
              */
             serial?: string;
             /**
+             * Height
+             * @description Height in rack units, declared for a device whose model is unknown or does not say (a PDU, a shelf, a patch panel). The model's u_height wins when it has one.
+             */
+            u_height?: number;
+            /**
              * Uptime
              * @description Seconds since last boot.
              */

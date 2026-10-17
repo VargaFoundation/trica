@@ -180,7 +180,8 @@ type RackItem struct {
 	// Face is front or rear, when known.
 	Face string `json:"face,omitempty"`
 	// Model is the device's model (its instance_of relation), when it has one
-	// the caller may read; UHeight and FullDepth come from it.
+	// the caller may read; UHeight and FullDepth come from it. When the model
+	// is unknown or has no height, UHeight is the device's own u_height.
 	Model     *ObjectRef `json:"model,omitempty"`
 	UHeight   *float64   `json:"u_height,omitempty"`
 	FullDepth bool       `json:"full_depth"`
