@@ -112,7 +112,7 @@ func TestTokenCreateAuthenticatesThroughTheWiring(t *testing.T) {
 	e := newAdminEnv(t)
 	az := e.authorizer()
 
-	out, errOut, err := e.run("token", "create", "--name", "claude-code", "--owner", "vincent", "--roles", "netops", "--scopes", "write", "--types", "device", "--expires", "720h")
+	out, errOut, err := e.run("token", "create", "--name", "claude-code", "--owner", "alice", "--roles", "netops", "--scopes", "write", "--types", "device", "--expires", "720h")
 	if err != nil {
 		t.Fatalf("create: %v\n%s", err, errOut)
 	}
@@ -123,7 +123,7 @@ func TestTokenCreateAuthenticatesThroughTheWiring(t *testing.T) {
 	if strings.Contains(errOut, token) {
 		t.Fatalf("the token is on stderr:\n%s", errOut)
 	}
-	if !strings.Contains(errOut, "claude-code") || !strings.Contains(errOut, "user:vincent") {
+	if !strings.Contains(errOut, "claude-code") || !strings.Contains(errOut, "user:alice") {
 		t.Fatalf("metadata missing from stderr: %q", errOut)
 	}
 
@@ -150,14 +150,14 @@ func TestTokenCreateAuthenticatesThroughTheWiring(t *testing.T) {
 	if err != nil || len(toks) != 1 {
 		t.Fatalf("list: %v %v", toks, err)
 	}
-	if tk := toks[0]; tk.CreatedBy != "user:vincent" || tk.ExpiresAt == nil || time.Until(*tk.ExpiresAt) < 719*time.Hour || len(tk.Types) != 1 {
+	if tk := toks[0]; tk.CreatedBy != "user:alice" || tk.ExpiresAt == nil || time.Until(*tk.ExpiresAt) < 719*time.Hour || len(tk.Types) != 1 {
 		t.Fatalf("stored token = %+v", tk)
 	}
 }
 
 func TestTokenCreateBoundSource(t *testing.T) {
 	e := newAdminEnv(t)
-	out, errOut, err := e.run("token", "create", "--name", "arista", "--owner", "vincent", "--roles", "admin", "--scopes", "write", "--source", "arista:sw-a1")
+	out, errOut, err := e.run("token", "create", "--name", "arista", "--owner", "alice", "--roles", "admin", "--scopes", "write", "--source", "arista:sw-a1")
 	if err != nil {
 		t.Fatalf("create: %v\n%s", err, errOut)
 	}
@@ -179,7 +179,7 @@ func TestTokenCreateBoundSource(t *testing.T) {
 
 func TestTokenCreateRefusals(t *testing.T) {
 	e := newAdminEnv(t)
-	base := []string{"token", "create", "--name", "x", "--owner", "vincent"}
+	base := []string{"token", "create", "--name", "x", "--owner", "alice"}
 	for _, c := range []struct {
 		name string
 		args []string
@@ -217,11 +217,11 @@ func TestTokenListAndRevoke(t *testing.T) {
 	e := newAdminEnv(t)
 	ctx := context.Background()
 	az := e.authorizer()
-	secret1, _, err := e.run("token", "create", "--name", "first", "--owner", "vincent", "--roles", "admin", "--scopes", "admin")
+	secret1, _, err := e.run("token", "create", "--name", "first", "--owner", "alice", "--roles", "admin", "--scopes", "admin")
 	if err != nil {
 		t.Fatal(err)
 	}
-	secret2, _, err := e.run("token", "create", "--name", "second", "--owner", "vincent", "--roles", "viewer", "--scopes", "read")
+	secret2, _, err := e.run("token", "create", "--name", "second", "--owner", "alice", "--roles", "viewer", "--scopes", "read")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +234,7 @@ func TestTokenListAndRevoke(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, s := range []string{"first", "second", "user:vincent", "ID"} {
+	for _, s := range []string{"first", "second", "user:alice", "ID"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("list lacks %q:\n%s", s, out)
 		}

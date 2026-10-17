@@ -2273,7 +2273,7 @@ export interface components {
             address?: string;
             /**
              * Code
-             * @description Unique site code, e.g. MOJI-FR1.
+             * @description Unique site code, e.g. SITE-A1.
              */
             code?: string;
             /**

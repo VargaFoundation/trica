@@ -3678,7 +3678,7 @@
             }
           },
           "code": {
-            "description": "Unique site code, e.g. MOJI-FR1.",
+            "description": "Unique site code, e.g. SITE-A1.",
             "title": "Code",
             "type": "string",
             "x-trica-kind": "string",

@@ -12,7 +12,7 @@ tests:
     template: templates/networkpolicy.yaml
     set:
       networkPolicy.egressTo:
-        - to: [{podSelector: {matchLabels: {application: spilo}}}]
+        - to: [{podSelector: {matchLabels: {app: postgresql}}}]
           ports: [{port: 5432, protocol: TCP}]
     asserts:
       - equal: {path: "spec.policyTypes", value: [Ingress, Egress]}

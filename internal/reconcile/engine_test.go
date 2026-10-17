@@ -265,7 +265,7 @@ func TestPriorityRuleAndValueMismatch(t *testing.T) {
 	r := apply(t, e, b)
 	id := r.Objects["sw"]
 	c.advance(time.Minute)
-	u := batch(c, "user:vincent", sdk.ScopePartial)
+	u := batch(c, "user:alice", sdk.ScopePartial)
 	u.Confidence = sdk.Declared
 	u.Object("x", "device").Identify(sdk.IDKey, id).Set("description", "core switch, room 1").Set("os_version", "4.28")
 	apply(t, e, u)
@@ -282,7 +282,7 @@ func TestPriorityRuleAndValueMismatch(t *testing.T) {
 	}
 	// The user aligns the declared version: that gap closes.
 	c.advance(time.Minute)
-	u = batch(c, "user:vincent", sdk.ScopePartial)
+	u = batch(c, "user:alice", sdk.ScopePartial)
 	u.Confidence = sdk.Declared
 	u.Object("x", "device").Identify(sdk.IDKey, id).Set("os_version", "4.20")
 	apply(t, e, u)
@@ -400,11 +400,11 @@ func TestProposalFlow(t *testing.T) {
 	if err != nil || p.Preview == nil || p.Preview.Created != 1 {
 		t.Fatalf("get proposal %+v %v", p, err)
 	}
-	applied, err := e.Approve(ctx, res.ProposalID, "vincent")
+	applied, err := e.Approve(ctx, res.ProposalID, "alice")
 	if err != nil || applied.Created != 1 {
 		t.Fatalf("approve %+v %v", applied, err)
 	}
-	if _, err := e.Approve(ctx, res.ProposalID, "vincent"); !errors.Is(err, reconcile.ErrConflict) {
+	if _, err := e.Approve(ctx, res.ProposalID, "alice"); !errors.Is(err, reconcile.ErrConflict) {
 		t.Fatalf("double approval: %v", err)
 	}
 	if _, n, _ := s.List(ctx, store.ListFilter{Type: "device"}); n != 1 {
@@ -414,7 +414,7 @@ func TestProposalFlow(t *testing.T) {
 	b2.Confidence = sdk.Declared
 	b2.Object("x", "device").Identify("name", "other")
 	r2, _ := e.Submit(ctx, b2, "claude", "")
-	if err := e.Reject(ctx, r2.ProposalID, "vincent"); err != nil {
+	if err := e.Reject(ctx, r2.ProposalID, "alice"); err != nil {
 		t.Fatal(err)
 	}
 	ps, _ := e.ListProposals(ctx, "rejected", 0)

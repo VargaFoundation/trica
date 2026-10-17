@@ -45,5 +45,6 @@ and validates every file; an invalid one fails the load.
 
 ## Not covered
 
-No command or schedule runs `Sync` yet; images and module bays are ignored; no
-model is picked by hand in the UI.
+The server runs `Sync` at start, after the migrations, then every `deduce.interval`
+([configuration](configuration.md)). Images and module bays are ignored; no model is picked by
+hand in the UI.

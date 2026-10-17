@@ -1,0 +1,11 @@
+# Smallest install: an external PostgreSQL 17 whose URL is in the Secret
+# `trica-db` (key `database-url`), the image built from this repository and
+# pushed to a registry the cluster can pull from.
+#   kubectl -n trica create secret generic trica-db \
+#     --from-literal=database-url='postgres://trica:PASSWORD@db.example.com:5432/trica?sslmode=require'
+#   helm install trica ./charts/trica -n trica -f charts/trica/examples/minimal.yaml
+image:
+  repository: registry.example.com/trica
+  tag: "0.1.2"
+database:
+  existingSecret: trica-db

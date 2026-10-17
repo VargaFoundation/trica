@@ -61,7 +61,7 @@ func TestObservedAtAgeBound(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.advance(48 * time.Hour)
-	if _, err := e.Approve(ctx, r.ProposalID, "vincent"); err != nil {
+	if _, err := e.Approve(ctx, r.ProposalID, "alice"); err != nil {
 		t.Errorf("approving a proposal that is old by now: %v", err)
 	}
 	// A future observed_at is still clamped, not rejected.
