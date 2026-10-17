@@ -177,8 +177,22 @@ func (t Target) HTTPClient() (*http.Client, error) {
 	cfg.InsecureSkipVerify = t.TLS.Insecure
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.TLSClientConfig = cfg
+	// Old BMCs (HP iLO 4) take more than the default 10 s to complete one TLS
+	// handshake, and fail the run with "TLS handshake timeout"; the request
+	// timeout still bounds the whole exchange.
+	tr.TLSHandshakeTimeout = min(TLSHandshakeTimeout, t.EffectiveTimeout())
+	// A run asks one device many things in a row: keep its connections open
+	// rather than paying that handshake for every request.
+	tr.MaxIdleConnsPerHost = MaxIdleConnsPerHost
 	return &http.Client{Transport: tr, Timeout: t.EffectiveTimeout()}, nil
 }
+
+// TLSHandshakeTimeout bounds one TLS handshake with a device (never beyond the
+// target's timeout).
+const TLSHandshakeTimeout = 30 * time.Second
+
+// MaxIdleConnsPerHost is how many idle connections to one device a client keeps.
+const MaxIdleConnsPerHost = 4
 
 // Factory builds a collector for a target.
 type Factory func(t Target) (sdk.Collector, error)

@@ -73,6 +73,11 @@ type showVersion struct {
 	Version          string `json:"version"`
 	MfgName          string `json:"mfgName"`
 	MemTotal         num    `json:"memTotal"`
+	// Uptime (seconds, 4.20 and later) and BootupTimestamp (epoch seconds,
+	// 4.14 and later) stand in for "show uptime", which has no JSON output on
+	// either release.
+	Uptime          num `json:"uptime"`
+	BootupTimestamp num `json:"bootupTimestamp"`
 }
 
 type showUptime struct {
@@ -110,6 +115,9 @@ type ifaceRecord struct {
 	LineProtocol     string          `json:"lineProtocolStatus"`
 	InterfaceAddress json.RawMessage `json:"interfaceAddress"`
 	InterfaceType    string          `json:"interfaceType"`
+	// MemberInterfaces lists the members of a Port-Channel, keyed by name. It
+	// stands in for "show port-channel" where that has no JSON output (4.14).
+	MemberInterfaces map[string]json.RawMessage `json:"memberInterfaces"`
 }
 
 type showInterfaces struct {
@@ -198,6 +206,16 @@ type lldpNeighbor struct {
 type showLLDPNeighbors struct {
 	Neighbors map[string]struct {
 		Info []lldpNeighbor `json:"lldpNeighborInfo"`
+	} `json:"lldpNeighbors"`
+}
+
+// showLLDPBrief is "show lldp neighbors": one line per neighbour, named but
+// not described (no chassis id, no port id type).
+type showLLDPBrief struct {
+	Neighbors []struct {
+		Port           string `json:"port"`
+		NeighborDevice string `json:"neighborDevice"`
+		NeighborPort   string `json:"neighborPort"`
 	} `json:"lldpNeighbors"`
 }
 

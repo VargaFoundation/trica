@@ -1,8 +1,0 @@
-{
-  "chassisId": "02:1c:73:00:00:01",
-  "chassisIdType": "macAddress",
-  "systemName": "sw-a1.example.net",
-  "systemDescription": "Arista Networks EOS version 4.14.2F running on an Arista Networks DCS-7050SX-64-F",
-  "managementAddresses": [{"addressType": "ipv4", "address": "192.0.2.11"}],
-  "systemCapabilities": {"bridge": true, "router": true, "station": false}
-}

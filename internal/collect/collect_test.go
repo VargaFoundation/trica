@@ -3,6 +3,7 @@ package collect
 import (
 	"context"
 	"errors"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -117,6 +118,28 @@ options:
 	tg.Timeout, tg.Interval = time.Second, time.Minute
 	if tg.EffectiveTimeout() != time.Second || tg.EffectiveInterval() != time.Minute {
 		t.Fatal("explicit timeout or interval ignored")
+	}
+}
+
+// TestHTTPClientSlowHandshake pins the transport settings that let a slow
+// BMC finish its TLS handshake and reuse the connection within a run.
+func TestHTTPClientSlowHandshake(t *testing.T) {
+	for _, tc := range []struct {
+		timeout, want time.Duration
+	}{
+		{0, TLSHandshakeTimeout}, // DefaultTimeout
+		{2 * time.Minute, TLSHandshakeTimeout},
+		{5 * time.Second, 5 * time.Second}, // never beyond the target's timeout
+	} {
+		c, err := (Target{Name: "x", Timeout: tc.timeout}).HTTPClient()
+		if err != nil {
+			t.Fatal(err)
+		}
+		tr := c.Transport.(*http.Transport)
+		if tr.TLSHandshakeTimeout != tc.want || tr.MaxIdleConnsPerHost != MaxIdleConnsPerHost {
+			t.Errorf("timeout %v: handshake %v, idle per host %d; want %v, %d",
+				tc.timeout, tr.TLSHandshakeTimeout, tr.MaxIdleConnsPerHost, tc.want, MaxIdleConnsPerHost)
+		}
 	}
 }
 

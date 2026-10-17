@@ -30,6 +30,15 @@ const (
 	EOS420 = "4.20.7M"
 )
 
+// unconverted lists, per version, the commands that exist on the release but
+// have no JSON model there: a real switch answers them with eAPI error 1003
+// ("unconverted command"). Measured on real 4.14.2F and 4.20.7M switches on
+// 2026-10-17 (see testdata/README.md).
+var unconverted = map[string]map[string]bool{
+	EOS414: {cmdUptime: true, cmdLLDPLocal: true, cmdLLDPNeighbors: true, cmdPortChannel: true},
+	EOS420: {cmdUptime: true},
+}
+
 // Credentials the fake accepts. They are fake, and meaningless anywhere else.
 const (
 	FakeUsername = "trica"
@@ -72,6 +81,7 @@ type FakeArista struct {
 	httpStatus    int
 	rejectAuth    bool
 	delay         time.Duration
+	convertAll    bool
 }
 
 // NewFakeArista starts a plain-HTTP fake playing version (EOS414 or EOS420).
@@ -137,6 +147,11 @@ func (f *FakeArista) MalformCommand(cmds ...string) {
 		f.malformedCmd[c] = true
 	}
 }
+
+// ConvertAll makes the fake answer every command it has a fixture for in JSON,
+// as a release with a JSON model for all of them would: no "unconverted
+// command" errors.
+func (f *FakeArista) ConvertAll() { f.set(func() { f.convertAll = true }) }
 
 // MalformBody makes every answer an unparsable body.
 func (f *FakeArista) MalformBody() { f.set(func() { f.malformedBody = true }) }
@@ -213,6 +228,10 @@ func (f *FakeArista) serve(w http.ResponseWriter, r *http.Request) {
 	rec := Request{Method: r.Method, Path: r.URL.Path, User: user, AuthOK: authOK}
 	failing, malformed := maps.Clone(f.failing), maps.Clone(f.malformedCmd)
 	malformedBody, short, status, delay := f.malformedBody, f.shortResult, f.httpStatus, f.delay
+	noJSON := unconverted[f.version]
+	if f.convertAll {
+		noJSON = nil
+	}
 	f.mu.Unlock()
 
 	record := func() {
@@ -263,6 +282,7 @@ func (f *FakeArista) serve(w http.ResponseWriter, r *http.Request) {
 		var (
 			res    json.RawMessage
 			reason string
+			code   = 1002
 		)
 		switch {
 		case !isShow(cmd):
@@ -271,6 +291,8 @@ func (f *FakeArista) serve(w http.ResponseWriter, r *http.Request) {
 			reason = "Invalid input"
 		case malformed[cmd]:
 			res = json.RawMessage(`"not what this command returns"`)
+		case noJSON[cmd]:
+			reason, code = "Unconverted command", codeUnconverted
 		default:
 			b, err := fixtures.ReadFile(fixturePath(f.version, cmd))
 			if err != nil {
@@ -281,7 +303,7 @@ func (f *FakeArista) serve(w http.ResponseWriter, r *http.Request) {
 		}
 		if reason != "" {
 			f.reply(w, call.ID, nil, map[string]any{
-				"code":    1002,
+				"code":    code,
 				"message": fmt.Sprintf("CLI command %d of %d '%s' failed: %s", i+1, len(call.Params.Cmds), cmd, strings.ToLower(reason)),
 				"data":    append(append([]any{}, rawAny(results)...), map[string]any{"errors": []string{reason + " (at token 1: '" + cmd + "')"}}),
 			})
@@ -315,7 +337,7 @@ func (f *FakeArista) reply(w http.ResponseWriter, id string, results []json.RawM
 }
 
 // fixturePath names the fixture of a command: "show lldp local-info" is
-// testdata/eos-4.14.2F/show_lldp_local_info.json.
+// testdata/eos-4.20.7M/show_lldp_local_info.json.
 func fixturePath(version, cmd string) string {
 	name := strings.NewReplacer(" ", "_", "-", "_").Replace(cmd)
 	return "testdata/eos-" + version + "/" + name + ".json"

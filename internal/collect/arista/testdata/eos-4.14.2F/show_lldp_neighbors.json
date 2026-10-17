@@ -1,0 +1,14 @@
+{
+  "tablesLastChangeTime": 1758100000.0,
+  "tablesAgeOuts": 0,
+  "tablesDeletes": 0,
+  "tablesDrops": 0,
+  "tablesInserts": 5,
+  "lldpNeighbors": [
+    {"port": "Ethernet1", "neighborDevice": "srv-01.example.net", "neighborPort": "02aa.0000.0101", "ttl": 120},
+    {"port": "Ethernet2", "neighborDevice": "srv-02", "neighborPort": "eth0", "ttl": 120},
+    {"port": "Ethernet49", "neighborDevice": "sw-a2.example.net", "neighborPort": "Ethernet49", "ttl": 120},
+    {"port": "Ethernet50", "neighborDevice": "sw-a2.example.net", "neighborPort": "Ethernet50", "ttl": 120},
+    {"port": "Ethernet51", "neighborDevice": "sw-b1.example.net", "neighborPort": "Ethernet49", "ttl": 120}
+  ]
+}

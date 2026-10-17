@@ -52,6 +52,9 @@ type Collector struct {
 	pass    collect.Secret
 	maxEdge int
 	domain  string
+	// now is the clock uptime is computed against when the switch reports
+	// only its boot time; tests pin it.
+	now func() time.Time
 }
 
 // New builds the collector of a target. It reads no credential yet.
@@ -88,6 +91,7 @@ func New(t collect.Target) (sdk.Collector, error) {
 		pass:    t.Password,
 		maxEdge: maxEdge,
 		domain:  domain,
+		now:     time.Now,
 	}, nil
 }
 
@@ -110,11 +114,14 @@ const (
 	cmdMLAG          = "show mlag"
 	cmdLLDPLocal     = "show lldp local-info"
 	cmdLLDPNeighbors = "show lldp neighbors detail"
-	cmdMACTable      = "show mac address-table"
-	cmdTemperature   = "show environment temperature"
-	cmdCooling       = "show environment cooling"
-	cmdPower         = "show environment power"
-	cmdTransceiver   = "show interfaces transceiver"
+	// cmdLLDPBrief is asked only when cmdLLDPNeighbors is not available on
+	// the switch's release (EOS 4.14 has no JSON model for the detail).
+	cmdLLDPBrief   = "show lldp neighbors"
+	cmdMACTable    = "show mac address-table"
+	cmdTemperature = "show environment temperature"
+	cmdCooling     = "show environment cooling"
+	cmdPower       = "show environment power"
+	cmdTransceiver = "show interfaces transceiver"
 )
 
 var groups = [][]string{
@@ -123,21 +130,48 @@ var groups = [][]string{
 	{cmdTemperature, cmdCooling, cmdPower, cmdTransceiver},
 }
 
-// Commands lists every command the collector sends, for documentation and
-// tests; all of them are show commands.
+// fallbacks maps a command to the one asked instead when the first is not
+// available on the switch's release. Only LLDP has a replacement that is a
+// command of its own; the others are derived from what is already asked (see
+// builder.device and builder.portChannels).
+var fallbacks = map[string]string{cmdLLDPNeighbors: cmdLLDPBrief}
+
+// Commands lists every command the collector may send, for documentation and
+// tests; all of them are show commands. The fallbacks are asked only when the
+// command they replace is not available.
 func Commands() []string {
 	var out []string
 	for _, g := range groups {
 		out = append(out, g...)
 	}
+	for _, cmd := range sdk.SortedKeys(fallbacks) {
+		out = append(out, fallbacks[cmd])
+	}
 	return out
 }
 
 // data holds what one run gathered: the raw result of each command that
-// worked, the error of each that did not.
+// worked, the error of each that did not, and the commands the switch's
+// release has no JSON model for. Those are not failures: the switch answered,
+// and it will answer the same at every run.
 type data struct {
-	raw    map[string]json.RawMessage
-	failed map[string]error
+	raw         map[string]json.RawMessage
+	failed      map[string]error
+	unavailable map[string]bool
+}
+
+// add files the outcome of one request group.
+func (d *data) add(results map[string]json.RawMessage, failed map[string]error) {
+	for k, v := range results {
+		d.raw[k] = v
+	}
+	for k, err := range failed {
+		if isUnconverted(err) {
+			d.unavailable[k] = true
+			continue
+		}
+		d.failed[k] = err
+	}
 }
 
 // decode returns the typed result of cmd, or nil when the command failed or
@@ -176,7 +210,7 @@ func (c *Collector) collect(ctx context.Context, started time.Time) (*sdk.Batch,
 	cl := *c.client
 	cl.pass = pass
 
-	d := &data{raw: map[string]json.RawMessage{}, failed: map[string]error{}}
+	d := &data{raw: map[string]json.RawMessage{}, failed: map[string]error{}, unavailable: map[string]bool{}}
 	for i, g := range groups {
 		results, failed, fatal := cl.runGroup(ctx, g)
 		if fatal != nil {
@@ -187,19 +221,28 @@ func (c *Collector) collect(ctx context.Context, started time.Time) (*sdk.Batch,
 			// answering eAPI, and the rest would fail the same way.
 			return nil, firstError(g, failed)
 		}
-		for k, v := range results {
-			d.raw[k] = v
+		d.add(results, failed)
+	}
+	for _, cmd := range sdk.SortedKeys(fallbacks) {
+		if !d.unavailable[cmd] {
+			continue
 		}
-		for k, v := range failed {
-			d.failed[k] = v
+		results, failed, fatal := cl.runGroup(ctx, []string{fallbacks[cmd]})
+		if fatal != nil {
+			return nil, fatal
 		}
+		d.add(results, failed)
 	}
 	ver := decode[showVersion](d, cmdVersion)
 	if ver == nil {
 		return nil, fmt.Errorf("%s: %w", cmdVersion, errOf(d, cmdVersion))
 	}
 
-	b, warnings := c.build(d, ver)
+	b, warnings := c.build(d, ver, c.now())
+	if len(d.unavailable) > 0 {
+		warnings = append(warnings, fmt.Sprintf("not available on this EOS release (no JSON output): %s",
+			strings.Join(sdk.SortedKeys(d.unavailable), ", ")))
+	}
 	collect.Succeeded(b, c.target, Kind, version, started, warnings)
 	if len(d.failed) > 0 {
 		b.Scope = sdk.ScopePartial
