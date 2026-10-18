@@ -89,8 +89,11 @@ address), next to `evidence` and `level`, which are unchanged: a BMC cable is `m
 
 ## Consequences
 
-- The topology can colour links by utilisation and state without a second origin in the CSP; the
-  UI work comes in a later change (the restyle lands first).
+- The topology colours links by utilisation and state without a second origin in the CSP
+  (docs/reference/ui.md, "Live overlay"): the page polls the endpoint every 30 s in a query of its
+  own, applies the figures to the lines already drawn (no new layout), and keeps the confidence in
+  the line style. Device icons are files of the application, because `img-src 'self'` refuses
+  `data:` URLs and cytoscape draws a node's picture from a URL.
 - The live view is only as good as the join: a device whose exporter labels carry neither an
   address nor a name trica knows is unmatched, and says so in `trica_live_series{state="unmatched"}`
   and in the answer's `sources`. Fixing it is a `labels` override or a relabelling on the metrics

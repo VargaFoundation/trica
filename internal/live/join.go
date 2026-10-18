@@ -20,6 +20,9 @@ type Link struct {
 	// Util is max(rx, tx) over the interface speed (speed_mbps), 0 to 1 and
 	// beyond on a misreported speed; absent when the speed is unknown.
 	Util *float64 `json:"util,omitempty"`
+	// SpeedMbps is the speed util is computed against: the interface's
+	// speed_mbps, or for an aggregated link the sum of its members'.
+	SpeedMbps *float64 `json:"speed_mbps,omitempty"`
 	// Source names the configured source the values come from.
 	Source string `json:"source"`
 	// Aggregated marks an aggregate (LAG) whose values are the sum of its
@@ -325,6 +328,7 @@ func (ix *index) build(results []sourceResult) (map[string]Link, []joinStats) {
 			}
 			l := Link{RX: m.rx, TX: m.tx, Oper: m.oper, Source: r.src.name}
 			l.Util = util(l.RX, l.TX, ix.speed[id])
+			l.SpeedMbps = positive(ix.speed[id])
 			links[id] = l
 		}
 	}
@@ -378,6 +382,7 @@ func (ix *index) build(results []sourceResult) (map[string]Link, []joinStats) {
 			speed = sp
 		}
 		agg.Util = util(agg.RX, agg.TX, speed)
+		agg.SpeedMbps = positive(speed)
 		links[lag] = agg
 	}
 	return links, stats
@@ -396,4 +401,11 @@ func util(rx, tx *float64, speedMbps float64) *float64 {
 	}
 	u := m / (speedMbps * 1e6)
 	return &u
+}
+
+func positive(v float64) *float64 {
+	if v <= 0 {
+		return nil
+	}
+	return &v
 }

@@ -4819,6 +4819,9 @@
           "source": {
             "type": "string"
           },
+          "speed_mbps": {
+            "type": "number"
+          },
           "tx_bps": {
             "type": "number"
           },

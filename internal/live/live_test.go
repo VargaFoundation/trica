@@ -168,6 +168,8 @@ func TestSnapshotJoinsEverySourceToItsInterfaces(t *testing.T) {
 	near(t, "po10 rx", po.RX, 2e7)
 	near(t, "po10 tx", po.TX, 4e7)
 	near(t, "po10 util", po.Util, 0.02)
+	near(t, "po10 speed, the sum of its members", po.SpeedMbps, 2000)
+	near(t, "sw-e1 speed", l["sw-e1"].SpeedMbps, 10000)
 	// MikroTik by routerboard_address, pfSense by a fully qualified name
 	// whose first label is the device name, node by name in another case.
 	near(t, "rtr rx", l["rtr-e1"].RX, 1e5)

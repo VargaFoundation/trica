@@ -78,6 +78,17 @@
   --trica-graph-declared: #edeef0;
   --trica-graph-observed: #70b8ff;
   --trica-graph-deduced: #ffca16;
+  /* The live overlay (ADR 0041): a line by its utilisation, a device by its worst health, an MLAG pair's box. */
+  --trica-graph-util-normal: #b0b4ba;
+  --trica-graph-util-warn: #ffca16;
+  --trica-graph-util-crit: #ff9592;
+  --trica-graph-down: #ff9592;
+  --trica-graph-util-unknown: #797e86;
+  --trica-graph-health-ok: #3dd68c;
+  --trica-graph-health-warn: #ffca16;
+  --trica-graph-health-crit: #ff9592;
+  --trica-graph-group: #212225;
+  --trica-graph-group-line: #797e86;
 }
 
 /* Not colours: one place for the type, the radii and the rhythm. */
@@ -144,6 +155,16 @@
   --trica-graph-declared: #1c2024;
   --trica-graph-observed: #0e60ae;
   --trica-graph-deduced: #8f560a;
+  --trica-graph-util-normal: #60646c;
+  --trica-graph-util-warn: #8f560a;
+  --trica-graph-util-crit: #ce2c31;
+  --trica-graph-down: #ce2c31;
+  --trica-graph-util-unknown: #80838d;
+  --trica-graph-health-ok: #1f6d4b;
+  --trica-graph-health-warn: #8f560a;
+  --trica-graph-health-crit: #ce2c31;
+  --trica-graph-group: #f0f0f3;
+  --trica-graph-group-line: #80838d;
 }
 :root[data-theme="light"] {
   --trica-shadow-raised: 0 1px 2px rgb(28 32 36 / 6%);
@@ -201,6 +222,16 @@
     --trica-graph-declared: #1c2024;
     --trica-graph-observed: #0e60ae;
     --trica-graph-deduced: #8f560a;
+    --trica-graph-util-normal: #60646c;
+    --trica-graph-util-warn: #8f560a;
+    --trica-graph-util-crit: #ce2c31;
+    --trica-graph-down: #ce2c31;
+    --trica-graph-util-unknown: #80838d;
+    --trica-graph-health-ok: #1f6d4b;
+    --trica-graph-health-warn: #8f560a;
+    --trica-graph-health-crit: #ce2c31;
+    --trica-graph-group: #f0f0f3;
+    --trica-graph-group-line: #80838d;
   }
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --trica-shadow-raised: 0 1px 2px rgb(28 32 36 / 6%);

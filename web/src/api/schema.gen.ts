@@ -2803,6 +2803,7 @@ export interface components {
             oper?: string;
             rx_bps?: number;
             source: string;
+            speed_mbps?: number;
             tx_bps?: number;
             util?: number;
         };

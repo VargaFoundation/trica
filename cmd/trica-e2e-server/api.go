@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // The mock inventory. Everything is invented: names (sw-a1, srv-01, paris-1),
@@ -121,9 +122,9 @@ func buildInventory() *inventory {
 	inv.add(object(idT2U, "device_type", "ex-2u", 0, 0, obj{"name": "ex-2u", "u_height": 2}))
 	inv.add(object(idTFull, "device_type", "ex-server", 0, 0, obj{"name": "ex-server", "u_height": 2, "full_depth": true}))
 
-	inv.add(object(idSwA1, "device", "sw-a1", idRack, idSite, obj{"hostname": "sw-a1", "vendor": "arista", "os_version": "4.28.3M", "mgmt_ip": "192.0.2.10", "power_w": 120,
+	inv.add(object(idSwA1, "device", "sw-a1", idRack, idSite, obj{"hostname": "sw-a1", "vendor": "arista", "os_version": "4.28.3M", "mgmt_ip": "192.0.2.10", "power_w": 120, "mlag_domain": "mlag-a",
 		"role": "switch", "health": "ok", "model": "ex-switch-48", "serial": "EXSW0001", "os_name": "ex-os", "uptime_s": 4060800, "inlet_temp_c": 24.5, "outlet_temp_c": 31}))
-	inv.add(object(idSwA2, "device", "sw-a2", idRack, idSite, obj{"hostname": "sw-a2", "vendor": "arista", "os_version": "4.28.3M", "mgmt_ip": "192.0.2.11",
+	inv.add(object(idSwA2, "device", "sw-a2", idRack, idSite, obj{"hostname": "sw-a2", "vendor": "arista", "os_version": "4.28.3M", "mgmt_ip": "192.0.2.11", "mlag_domain": "mlag-a",
 		"role": "switch", "health": "warning", "power_w": 135, "inlet_temp_c": 26, "outlet_temp_c": 41.5}))
 	inv.add(object(idSrv01, "device", "srv-01", idRack, idSite, obj{"hostname": "srv-01", "vendor": "dell", "mgmt_ip": "198.51.100.21",
 		"role": "server", "health": "critical", "model": "ex-server", "serial": "EXSV0001", "os_name": "linux", "os_version": "6.8", "power_w": 412.5,
@@ -210,6 +211,19 @@ func (p *ports) of(device int) int {
 	return id
 }
 
+// named adds an interface with its own name (an aggregate), outside the EthernetN count.
+func (p *ports) named(device int, name string) int {
+	id := p.next
+	p.next++
+	d := p.inv.byID(oid(device))
+	var site int
+	if s, ok := d["site_id"].(string); ok {
+		site = int(mustHex(s))
+	}
+	p.inv.add(object(id, "interface", name, device, site, obj{"name": name, "kind": "lag"}))
+	return id
+}
+
 func mustHex(id string) int64 {
 	n, err := strconv.ParseInt(id[len(id)-12:], 16, 64)
 	if err != nil {
@@ -254,6 +268,15 @@ func buildNetwork(inv *inventory) {
 	inv.wire("neighbor_of", a1e3, a2e2, lldp, "observed", obj{"protocol": "lldp"})
 	l1e2, l2e1 := p.of(idSwL1), p.of(idSwL2)
 	inv.wire("cabled_to", l1e2, l2e1, lldp, "observed", obj{})
+	// An aggregate between the MLAG peers: Ethernet5 and Ethernet6 of each side
+	// in a Port-Channel11, the live overlay draws them as one line.
+	a1e5, a1e6, a2e5, a2e6 := p.of(idSwA1), p.of(idSwA1), p.of(idSwA2), p.of(idSwA2)
+	inv.wire("cabled_to", a1e5, a2e5, lldp, "observed", obj{})
+	inv.wire("cabled_to", a1e6, a2e6, lldp, "observed", obj{})
+	a1po, a2po := p.named(idSwA1, "Port-Channel11"), p.named(idSwA2, "Port-Channel11")
+	for _, m := range [][2]int{{a1e5, a1po}, {a1e6, a1po}, {a2e5, a2po}, {a2e6, a2po}} {
+		inv.wire("member_of", m[0], m[1], lldp, "observed", obj{})
+	}
 	// VLAN membership, for the VLAN filter.
 	inv.wire("member_of", a1e1, idVlan10, lldp, "observed", obj{})
 	inv.wire("member_of", srvEno1, idVlan10, lldp, "observed", obj{})
@@ -375,6 +398,8 @@ func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}))
 	case path == "/schema":
 		writeJSON(w, http.StatusOK, schemaDoc())
+	case path == "/topology/live":
+		writeJSON(w, http.StatusOK, a.live())
 	default:
 		problem(w, http.StatusNotFound, "not-found", "No such endpoint")
 	}
@@ -734,4 +759,40 @@ func schemaDoc() obj {
 			{"name": "member_of", "label": obj{"en": "member of", "fr": "membre de"}, "inverse": obj{"en": "members", "fr": "membres"}, "description": "", "from": []string{"interface"}, "to": []string{"vlan"}, "attributes": []obj{}, "custom": false},
 		},
 	}
+}
+
+// live answers GET /topology/live as a server with a live block would: a
+// fake source measuring every physical interface of the small network and of
+// the fabric, with invented, stable figures that put some links under 50 %,
+// some between 50 and 80 %, some above, one down, and some not measured at
+// all. The aggregates have no series of their own, as on a switch that only
+// exports physical ports. generated_at is a few seconds ago.
+func (a *api) live() obj {
+	links := obj{}
+	for _, o := range a.inv.objects {
+		if o["type"] != "interface" {
+			continue
+		}
+		id, _ := o["id"].(string)
+		attrs, _ := o["attributes"].(obj)
+		if attrs["kind"] == "lag" {
+			continue
+		}
+		n := mustHex(id)
+		if n%11 == 3 {
+			continue // not measured
+		}
+		const speed = 10000.0
+		u := float64((n*7919)%100) / 100 // 0 to 0.99
+		tx := u * speed * 1e6
+		rx := tx * float64((n*31)%60+20) / 100
+		oper := "up"
+		if n%37 == 5 {
+			oper, tx, rx = "down", 0, 0
+		}
+		links[id] = obj{"rx_bps": rx, "tx_bps": tx, "util": max(rx, tx) / (speed * 1e6), "oper": oper, "speed_mbps": speed, "source": "e2e-fake"}
+	}
+	at := time.Now().Add(-4 * time.Second).UTC().Format(time.RFC3339)
+	return obj{"enabled": true, "generated_at": at, "stale": false, "refresh_seconds": 30, "links": links,
+		"sources": []obj{{"name": "e2e-fake", "kind": "generic", "series": len(links) * 3, "matched": len(links) * 3, "stale": false}}}
 }

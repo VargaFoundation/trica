@@ -113,3 +113,57 @@ export function sampleInput(over: Partial<TopologyInput> = {}): TopologyInput {
     ...over,
   };
 }
+
+// An aggregate: sw-a1 Ethernet5/6 to sw-a2 Ethernet5/6, both sides members of
+// a Port-Channel11, and the two switches one MLAG pair.
+export const L = {
+  a1e5: "p-if-a1-e5",
+  a1e6: "p-if-a1-e6",
+  a2e5: "p-if-a2-e5",
+  a2e6: "p-if-a2-e6",
+  a1po: "p-if-a1-po11",
+  a2po: "p-if-a2-po11",
+};
+export const A1E5 = port(L.a1e5, "Ethernet5", T.swA1);
+export const A1E6 = port(L.a1e6, "Ethernet6", T.swA1);
+export const A2E5 = port(L.a2e5, "Ethernet5", T.swA2);
+export const A2E6 = port(L.a2e6, "Ethernet6", T.swA2);
+export const A1PO = port(L.a1po, "Port-Channel11", T.swA1);
+export const A2PO = port(L.a2po, "Port-Channel11", T.swA2);
+
+export function lagLinks(): RelationLink[] {
+  return [
+    rel("cabled_to", A1E5, A2E5, { confidence: "observed" }),
+    rel("cabled_to", A2E6, A1E6, { confidence: "observed" }),
+  ];
+}
+
+export function lagContext(): RelationLink[] {
+  return [
+    rel("member_of", A1E5, A1PO, { source: "arista:sw-a1" }),
+    rel("member_of", A1E6, A1PO, { source: "arista:sw-a1" }),
+    rel("member_of", A2E5, A2PO, { source: "arista:sw-a2" }),
+    rel("member_of", A2E6, A2PO, { source: "arista:sw-a2" }),
+  ];
+}
+
+/** What GET /topology/live answers for the sample and the aggregate (invented figures). */
+export function sampleLive(over: Record<string, unknown> = {}) {
+  return {
+    enabled: true,
+    stale: false,
+    generated_at: "2026-10-18T10:00:00Z",
+    refresh_seconds: 30,
+    links: {
+      // sw-a1 Ethernet2 sends 3.2 Gb/s to srv-01 and receives 1.1 Gb/s, on 10G.
+      [T.a1e2]: { rx_bps: 1.1e9, tx_bps: 3.2e9, oper: "up", util: 0.32, speed_mbps: 10000, source: "arista" },
+      // Only the far end of the Lyon link is measured, and it is down.
+      [T.l1e1]: { rx_bps: 0, tx_bps: 0, oper: "down", source: "arista" },
+      // The aggregate's members, 10G each; Ethernet6 is measured on sw-a2's side only.
+      [L.a1e5]: { rx_bps: 2e9, tx_bps: 7e9, oper: "up", util: 0.7, speed_mbps: 10000, source: "arista" },
+      [L.a2e6]: { rx_bps: 8e9, tx_bps: 1e9, oper: "up", util: 0.8, speed_mbps: 10000, source: "arista" },
+    },
+    sources: [{ name: "arista", kind: "arista", series: 8, matched: 8, stale: false }],
+    ...over,
+  };
+}
