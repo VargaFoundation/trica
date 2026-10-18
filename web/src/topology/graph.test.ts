@@ -12,6 +12,9 @@ import {
   graphEnv,
   MAX_PIXELS,
   MAX_SIDE,
+  PAPER_PALETTE,
+  screenPalette,
+  stylesheetFor,
   toElements,
 } from "./graph";
 import { buildTopology, toGraph, type Graph } from "./model";
@@ -345,5 +348,53 @@ describe("the drawing as a vector figure", () => {
     expect(await d.vector()).toEqual({ width: 40, height: 40, shapes: [] });
     expect(figureOf(d.cy).shapes).toEqual([]);
     d.destroy();
+  });
+});
+
+describe("the screen follows the theme, the exports stay on paper", () => {
+  afterEach(() => {
+    document.documentElement.removeAttribute("style");
+  });
+
+  it("reads the page's --trica-graph-* tokens", () => {
+    document.documentElement.style.setProperty("--trica-graph-node", "#0d2847");
+    document.documentElement.style.setProperty("--trica-graph-deduced", "#ffca16");
+    const p = screenPalette(document);
+    expect(p.node).toBe("#0d2847");
+    expect(p.deduced).toBe("#ffca16");
+    // A token the page does not define falls back to paper.
+    expect(p.paper).toBe(PAPER_PALETTE.paper);
+  });
+
+  it("styles the nodes and the lines with the palette it is given", () => {
+    const sheet = stylesheetFor({ ...PAPER_PALETTE, node: "#111111", observed: "#222222" }) as { selector: string; style: Record<string, unknown> }[];
+    expect(sheet.find((r) => r.selector === "node")?.style["background-color"]).toBe("#111111");
+    expect(sheet.find((r) => r.selector === 'edge[klass = "observed"]')?.style["line-color"]).toBe("#222222");
+  });
+
+  it("restyles a drawn graph when the theme changes", async () => {
+    // Headless (no canvas in jsdom), but given its container: it watches that document's theme.
+    const box = document.createElement("div");
+    document.body.append(box);
+    const d = draw(box, graph(), text, () => {});
+    try {
+      document.documentElement.style.setProperty("--trica-graph-node", "#0d2847");
+      document.documentElement.dataset.theme = "dark";
+      await new Promise((r) => setTimeout(r, 0));
+      expect(d.cy.nodes().first().style("background-color")).toBe("rgb(13,40,71)");
+    } finally {
+      delete document.documentElement.dataset.theme;
+      d.destroy();
+      box.remove();
+    }
+  });
+
+  it("keeps the exports' figure on the paper palette", async () => {
+    document.documentElement.style.setProperty("--trica-graph-node", "#0d2847");
+    const d = draw(null, graph(), text, () => {});
+    const fig = await d.vector();
+    d.destroy();
+    const box = fig.shapes.find((s) => s.kind === "box");
+    expect(box && box.kind === "box" ? box.fill : undefined).toMatch(/^#(ddf4ff|eaeef2)$/);
   });
 });

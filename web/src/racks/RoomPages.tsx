@@ -8,6 +8,7 @@ import { Async } from "../components/Async";
 import { ObjectLink } from "../components/ObjectLink";
 import { useI18n } from "../i18n";
 import { NotFoundPage } from "../pages/NotFoundPage";
+import { useCrumbs } from "../components/crumbs";
 import { usePageTitle } from "../usePageTitle";
 import { layoutFloor, tileOf, type FloorPlan, type PlacedRack } from "./floor";
 import { useRoomContents, type RoomContents } from "./useRack";
@@ -97,6 +98,7 @@ function Room({ room }: { room: ObjectView }) {
   const can = useCanDeclare();
   const [panel, setPanel] = useState<RoomPanel>(null);
   usePageTitle(t("room.pageTitle", { room: room.display }));
+  useCrumbs([{ label: t("nav.rooms"), to: "/rooms" }, { label: room.display }]);
   const w = room.attributes?.width_mm;
   const d = room.attributes?.depth_mm;
   const widthMm = typeof w === "number" ? w : undefined;

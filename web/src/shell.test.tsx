@@ -132,7 +132,7 @@ describe("keyboard", () => {
   it("the skip link is the first stop of the tab order and leads to the content", async () => {
     mockApi(defaultRoutes());
     renderApp({ at: "/health" });
-    await screen.findByRole("heading", { level: 1, name: "Collection health" });
+    await screen.findByRole("heading", { level: 1, name: "Health" });
     await userEvent.setup().tab();
     const skip = screen.getByRole("link", { name: "Skip to content" });
     expect(skip).toHaveFocus();
@@ -149,10 +149,10 @@ describe("keyboard", () => {
     await screen.findByRole("heading", { level: 1, name: "Proposals" });
     expect(document.getElementById("main")).toHaveFocus();
     expect(document.title).toBe("Proposals · trica");
-    await user.click(within(nav).getByRole("link", { name: "Collection health" }));
-    await screen.findByRole("heading", { level: 1, name: "Collection health" });
+    await user.click(within(nav).getByRole("link", { name: "Health" }));
+    await screen.findByRole("heading", { level: 1, name: "Health" });
     expect(document.getElementById("main")).toHaveFocus();
-    expect(document.title).toBe("Collection health · trica");
+    expect(document.title).toBe("Health · trica");
   });
 
   it("marks the current section in the navigation", async () => {
@@ -168,7 +168,7 @@ describe("language and theme", () => {
     mockApi(defaultRoutes());
     renderApp({ at: `/objects/${ID.swA1}`, locale: "fr" });
     expect(await screen.findByRole("heading", { level: 1, name: "sw-a1" })).toBeInTheDocument();
-    expect(await screen.findByText("Version de l'OS")).toBeInTheDocument();
+    expect((await screen.findAllByText("Version de l'OS")).length).toBeGreaterThan(0);
     expect((await screen.findAllByText("Équipement")).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: "Écarts" })).toBeInTheDocument();
     expect(document.documentElement.lang).toBe("fr");
@@ -226,7 +226,7 @@ describe("deep links", () => {
     ["/discrepancies", "Discrepancies"],
     ["/proposals", "Proposals"],
     ["/proposals/12", "Proposal 12"],
-    ["/health", "Collection health"],
+    ["/health", "Health"],
   ])("%s opens %s directly", async (at, heading) => {
     mockApi(defaultRoutes());
     renderApp({ at });
@@ -243,8 +243,8 @@ describe("deep links", () => {
   it("the home page offers search examples that are deep links", async () => {
     mockApi(defaultRoutes());
     renderApp();
-    const link = await screen.findByRole("link", { name: "sw-a1" });
-    expect(link.getAttribute("href")).toMatch(/^\/search\?q=/);
+    const link = await screen.findByRole("link", { name: "type:device role:switch" });
+    expect(link.getAttribute("href")).toBe("/search?q=type%3Adevice%20role%3Aswitch");
     await waitFor(() => expect(screen.getByRole("link", { name: "status:absent" })).toBeInTheDocument());
   });
 });

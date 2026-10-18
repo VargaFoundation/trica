@@ -20,13 +20,19 @@ describe("accessibility audit (axe-core, WCAG 2.2 A and AA rules)", () => {
     ["home", {}, "Inventory"],
     ["search results, grouped by type", { at: "/search?q=sw" }, "sw-a1"],
     ["a type view", { at: "/search?q=sw&type=device" }, "sw-a1"],
-    ["object page", { at: `/objects/${ID.swA1}` }, /Attributes of sw-a1/],
+    ["object page, overview", { at: `/objects/${ID.swA1}` }, "Management address"],
+    ["object page, provenance", { at: `/objects/${ID.swA1}?tab=provenance` }, /Attributes of sw-a1/],
+    ["object page, components", { at: `/objects/${ID.srv01}?tab=components` }, /Power supply of srv-01/],
+    ["object page, relations", { at: `/objects/${ID.swA1}?tab=relations` }, "lldp:core"],
+    ["object page, history", { at: `/objects/${ID.swA1}?tab=history` }, /OS version changed/],
     ["discrepancies", { at: "/discrepancies" }, "value_mismatch"],
     ["proposals", { at: "/proposals" }, "#12"],
     ["proposal", { at: "/proposals/12" }, "rack_unit"],
-    ["collection health", { at: "/health" }, "2 sources, 1 failing"],
+    ["health", { at: "/health" }, "2 sources, 1 failing"],
     ["not found", { at: "/nowhere" }, "Page not found"],
-    ["French", { at: `/objects/${ID.swA1}`, locale: "fr" }, /Attributs de sw-a1/],
+    ["French", { at: `/objects/${ID.swA1}?tab=provenance`, locale: "fr" }, /Attributs de sw-a1/],
+    ["French overview", { at: "/", locale: "fr" }, "Équipements"],
+    ["dark overview", { at: "/", theme: "dark" }, "Equipment"],
     ["dark theme", { at: "/proposals", theme: "dark" }, "#12"],
   ];
 
@@ -73,7 +79,7 @@ describe("accessibility audit (axe-core, WCAG 2.2 A and AA rules)", () => {
 
   it("an object page with its other claims open has no violation", async () => {
     mockApi(defaultRoutes());
-    renderApp({ at: `/objects/${ID.swA1}` });
+    renderApp({ at: `/objects/${ID.swA1}?tab=provenance` });
     const table = await screen.findByRole("table", { name: /Attributes of sw-a1/ });
     await userEvent.setup().click(within(table).getByText("1 other claim"));
     await settle();

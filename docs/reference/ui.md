@@ -1,19 +1,19 @@
 # Web UI
 
 A single-page application in `web/` (React 19, TypeScript strict, Vite, react-router 7, TanStack
-Query 5), served by `internal/web`. Structural choices: ADR 0018, ADR 0019 and ADR 0024. This page is what a user, a
+Query 5), served by `internal/web`. Structural choices: ADR 0018, ADR 0019, ADR 0024 and ADR 0040 (the look). This page is what a user, a
 developer and an operator need; when it and the code disagree, the code wins.
 
 ## What it shows
 
 | Address | Screen |
 |---|---|
-| `/` | Search examples and the other sections |
+| `/` | The physical estate at a glance: one tile per device (kind icon, health, power draw, inlet and outlet temperatures, critical log events), grouped by rack (top of the rack first) or by kind, with counts per health and the total power; a large group folds its healthy devices. Then search examples and the other sections |
 | `/search?q=<query>` | Results grouped by type, largest group first, with the count per type. A group that is only partly shown links to `/search?q=<query>&type=<type>` (the whole type, paged, `offset=`) |
-| `/objects/<id>` | The object: facts, **attributes with their provenance** (source, confidence, first and last seen; other sources' claims behind a disclosure; a value with no provenance says so), relations and dependencies seen from this object (names and inverse names from the schema), timeline of changes in words (older changes on demand) |
+| `/objects/<id>` | A header with the object's kind (icon and word from `type` and the device `role`), health, status and key facts (vendor, model, serial, addresses, uptime, power, rack and U), then tabs kept in the address (`?tab=`): **Overview** (attributes grouped by what the schema says they are, units formatted), **Components** (what sits inside, `parent:"<id>"`, one table per type with its health, worst first), **Relations**, **History**, **Provenance**. Provenance is the table of **attributes with their provenance** (source, confidence, first and last seen; other sources' claims behind a disclosure; a value with no provenance says so), relations and dependencies seen from this object (names and inverse names from the schema), timeline of changes in words (older changes on demand) |
 | `/discrepancies?status=&kind=&offset=` | Declared against observed; open by default |
 | `/proposals?status=&offset=` | Proposals waiting for a decision (pending by default); `/proposals/<id>` shows the preview of what it would change |
-| `/health` | Last run of each source, failing sources first |
+| `/health` | The equipment tiles grouped by kind, then the last run of each source, failing sources first |
 | `/rooms`, `/rooms/<id>` | Every room; the floor plan of one room (SVG, racks on a grid of the room's tiles, 600 mm unless the room sets `tile_mm`; north is up, the bar on a rack is its front) with a table of its racks. Racks stand in the room directly or through a row |
 | `/topology?site=&rack=&vlan=&classes=` | The layer-2 links: a layered graph (Cytoscape + ELK) of the devices that have a link, a legend, filters, and the same links as a table. See "Topology" below |
 | `/racks/<id>` | Front and rear elevations of one rack (SVG, U 1 at the bottom) with free units, a table of what is mounted, and the devices mounted without a position. Opened from the floor plan, from a rack's object page, or from the room page |
@@ -55,6 +55,8 @@ The schema has no `connected_to` or `link` relation; the page reads what it has 
 | `neighbor_of` (LLDP adjacency) | a link | the relation's own confidence |
 | `mounted_in`, `member_of` (interface to VLAN) | not drawn: they feed the rack and VLAN filters | |
 
+- **The canvas follows the theme** (the `--trica-graph-*` tokens); the exports stay on white
+  paper with a fixed palette.
 - **Three classes, never told apart by colour alone.** Declared: solid, thick, dark. Observed:
   dotted, blue. Deduced: dashed, amber, and its label says the level ("deduced, high"). The legend
   and the table say the same in words. An unknown confidence counts as deduced.
@@ -143,7 +145,9 @@ for a caller who holds `propose` (`GET /me`); the API checks every write again.
 - Tables keep their semantics (captions, `scope`); below 40 rem each row becomes a card with the
   column title before each value.
 - Light, dark and system themes (the selector sets `data-theme` on `<html>`; "system" follows
-  `prefers-color-scheme`). Reduced motion is respected.
+  `prefers-color-scheme`, and dark is the default when nothing says otherwise). Reduced motion is
+  respected. The sidebar folds into a rail of icons; the names stay for a screen reader and as
+  tooltips. Tabs follow the ARIA pattern (arrows, Home, End).
 - Language: English or French, chosen by the selector, remembered in `localStorage`, otherwise
   from the browser. Object and attribute labels come from the schema (`label.fr`).
 - Checked in the tests: axe-core (WCAG 2.0, 2.1, 2.2 A and AA rules and best practices) on every

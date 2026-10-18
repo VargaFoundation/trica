@@ -28,3 +28,8 @@ trica embeds, unchanged, device model files from:
     files: internal/devicetypes/library/<Vendor>/ (every directory but "trica")
 
 The models in internal/devicetypes/library/trica/ are written by this project.
+
+The colour tokens of the web UI (web/src/styles/tokens.css) are steps of:
+
+  Radix Colors   Copyright (c) 2022 WorkOS   MIT licence
+    https://github.com/radix-ui/colors

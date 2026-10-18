@@ -252,7 +252,7 @@ describe("the sign-in page", () => {
     const base = api.spy.getMockImplementation()!;
     const idp = fakeIdpOver(base);
     renderApp({ signedIn: false, at: `/oidc/callback?code=the-code&state=${url.searchParams.get("state")}` });
-    await screen.findByRole("heading", { name: /collection health/i, level: 1 });
+    await screen.findByRole("heading", { name: /^health$/i, level: 1 });
     expect(getToken()).toBe("at-1");
     expect(idp.tokenCalls).toHaveLength(1);
     expect(api.calls.find((c) => c.path === "/me")?.headers.get("Authorization")).toBe("Bearer at-1");

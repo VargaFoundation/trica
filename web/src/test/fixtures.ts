@@ -11,6 +11,7 @@ import type {
   Page,
   Proposal,
   Provenance,
+  RelationLink,
   RelationView,
   SchemaDoc,
   SearchPage,
@@ -63,7 +64,19 @@ export const srv01: ObjectView = {
   type: "device",
   display: "srv-01",
   status: "active",
-  attributes: { hostname: "srv-01", vendor: "dell", mgmt_ip: "198.51.100.21" },
+  attributes: {
+    hostname: "srv-01",
+    vendor: "dell",
+    mgmt_ip: "198.51.100.21",
+    role: "server",
+    health: "warning",
+    power_w: 412.5,
+    inlet_temp_c: 23,
+    outlet_temp_c: 38.5,
+    uptime_s: 1_303_200,
+    memory_bytes: 274_877_906_944,
+    log_critical_count: 2,
+  },
   created_at: "2026-03-02T08:00:00Z",
   last_seen: "2026-10-12T06:31:00Z",
   observed: true,
@@ -106,6 +119,45 @@ export const schema: SchemaDoc = {
         { name: "os_version", kind: "string", label: { en: "OS version", fr: "Version de l'OS" }, description: "", search: true, required: false, custom: false },
         { name: "mgmt_ip", kind: "ip", label: { en: "Management address", fr: "Adresse de gestion" }, description: "", search: true, required: false, custom: false },
         { name: "power_w", kind: "number", label: { en: "Power draw", fr: "Consommation" }, description: "", unit: "W", search: false, required: false, custom: false },
+        { name: "role", kind: "enum", label: { en: "Role", fr: "Rôle" }, description: "", search: false, required: false, custom: false, values: ["server", "switch", "router", "firewall", "storage", "nas", "pdu", "ups", "patch_panel", "sensor", "kvm", "other"] },
+        { name: "health", kind: "enum", label: { en: "Health", fr: "Santé" }, description: "", search: false, required: false, custom: false, values: ["ok", "warning", "critical", "unknown"] },
+        { name: "inlet_temp_c", kind: "float", label: { en: "Inlet temperature", fr: "Température d'entrée" }, description: "", search: false, required: false, custom: false, unit: "°C" },
+        { name: "outlet_temp_c", kind: "float", label: { en: "Outlet temperature", fr: "Température de sortie" }, description: "", search: false, required: false, custom: false, unit: "°C" },
+        { name: "uptime_s", kind: "int", label: { en: "Uptime", fr: "Durée de fonctionnement" }, description: "", search: false, required: false, custom: false, unit: "s" },
+        { name: "memory_bytes", kind: "int", label: { en: "Memory", fr: "Mémoire" }, description: "", search: false, required: false, custom: false, unit: "B" },
+        { name: "log_critical_count", kind: "int", label: { en: "Critical events", fr: "Événements critiques" }, description: "", search: false, required: false, custom: false },
+      ],
+    },
+    {
+      name: "psu",
+      layer: "physical",
+      label: { en: "Power supply", fr: "Alimentation" },
+      description: "",
+      display: "name",
+      parents: ["device"],
+      custom: false,
+      identity: { strong: [], weak: ["name"] },
+      attributes: [
+        { name: "name", kind: "string", label: { en: "Name", fr: "Nom" }, description: "", search: false, required: false, custom: false, identity: "weak" },
+        { name: "capacity_w", kind: "int", label: { en: "Capacity", fr: "Capacité" }, description: "", search: false, required: false, custom: false, unit: "W" },
+        { name: "input_w", kind: "float", label: { en: "Input power", fr: "Puissance d'entrée" }, description: "", search: false, required: false, custom: false, unit: "W" },
+        { name: "health", kind: "enum", label: { en: "Health", fr: "Santé" }, description: "", search: false, required: false, custom: false, values: ["ok", "warning", "critical", "unknown", "absent"] },
+      ],
+    },
+    {
+      name: "disk",
+      layer: "physical",
+      label: { en: "Disk", fr: "Disque" },
+      description: "",
+      display: "name",
+      parents: ["device"],
+      custom: false,
+      identity: { strong: [], weak: ["name"] },
+      attributes: [
+        { name: "name", kind: "string", label: { en: "Name", fr: "Nom" }, description: "", search: false, required: false, custom: false, identity: "weak" },
+        { name: "capacity_bytes", kind: "int", label: { en: "Capacity", fr: "Capacité" }, description: "", search: false, required: false, custom: false, unit: "B" },
+        { name: "temperature_c", kind: "float", label: { en: "Temperature", fr: "Température" }, description: "", search: false, required: false, custom: false, unit: "°C" },
+        { name: "health", kind: "enum", label: { en: "Health", fr: "Santé" }, description: "", search: false, required: false, custom: false, values: ["ok", "warning", "critical", "unknown", "absent"] },
       ],
     },
     {
@@ -216,6 +268,52 @@ export const searchSw: SearchPage = {
   offset: 0,
   items: [swA1, { ...swA1, id: "0a000000-0000-4000-8000-0000000000a2", display: "sw-a2" }, rackR12],
 };
+
+const component = (n: number, type: string, display: string, attributes: Record<string, unknown>): ObjectView => ({
+  id: `0a000000-0000-4000-8000-0000000c${n.toString(16).padStart(4, "0")}`,
+  type,
+  display,
+  parent_id: ID.srv01,
+  status: "active",
+  attributes: { name: display, ...attributes },
+  created_at: "2026-03-02T08:00:00Z",
+  observed: true,
+});
+
+/** What srv-01 contains: two power supplies (one has failed) and a disk. */
+export const componentsSrv01: ObjectView[] = [
+  component(1, "psu", "PSU 1", { capacity_w: 800, input_w: 210.4, health: "ok" }),
+  component(2, "psu", "PSU 2", { capacity_w: 800, input_w: 0, health: "critical" }),
+  component(3, "disk", "nvme0n1", { capacity_bytes: 960_197_124_096, temperature_c: 31, health: "ok" }),
+];
+
+/** Where the devices are mounted (GET /relations?type=mounted_in). */
+export const mountsLinks: Page<RelationLink> = page([
+  {
+    id: 1,
+    type: "mounted_in",
+    from_id: ID.swA1,
+    to_id: ID.rack,
+    from: { id: ID.swA1, type: "device", display: "sw-a1" },
+    to: { id: ID.rack, type: "rack", display: "r12" },
+    source: "declared:lab-file",
+    confidence: "declared",
+    valid_from: "2026-03-01T08:00:00Z",
+    attributes: { position: 40, face: "front" },
+  },
+  {
+    id: 2,
+    type: "mounted_in",
+    from_id: ID.srv01,
+    to_id: ID.rack,
+    from: { id: ID.srv01, type: "device", display: "srv-01" },
+    to: { id: ID.rack, type: "rack", display: "r12" },
+    source: "declared:lab-file",
+    confidence: "declared",
+    valid_from: "2026-03-01T08:00:00Z",
+    attributes: { position: 10, face: "front" },
+  },
+]);
 
 export const proposalPending: Proposal = {
   id: 12,

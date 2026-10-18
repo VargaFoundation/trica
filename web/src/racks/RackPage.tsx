@@ -11,6 +11,7 @@ import { rackRaster } from "../export/rackCanvas";
 import { ObjectLink } from "../components/ObjectLink";
 import { useI18n, type MessageKey } from "../i18n";
 import { NotFoundPage } from "../pages/NotFoundPage";
+import { useCrumbs } from "../components/crumbs";
 import { usePageTitle } from "../usePageTitle";
 import { DEFAULT_RACK_U, freeUnits, formatRange, layoutRack, type Issue, type Slot } from "./layout";
 import { RackElevation } from "./RackElevation";
@@ -42,6 +43,7 @@ function Rack({ rack }: { rack: ObjectView }) {
   const { t, number } = useI18n();
   const contents = useRackContents(rack.id);
   usePageTitle(t("rack.pageTitle", { rack: rack.display }));
+  useCrumbs([{ label: t("nav.rooms"), to: "/rooms" }, { label: rack.display, to: `/objects/${encodeURIComponent(rack.id)}` }, { label: t("rack.elevation") }]);
   const declared = rack.attributes?.u_height;
   const uHeight = typeof declared === "number" && declared > 0 ? Math.floor(declared) : DEFAULT_RACK_U;
   const can = useCanDeclare();
