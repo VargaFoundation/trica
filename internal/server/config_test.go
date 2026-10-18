@@ -89,6 +89,31 @@ func TestCollectTargetsFile(t *testing.T) {
 	}
 }
 
+// The operator's device-type directory: from the file or the environment,
+// and a start refused when it is not a directory, rather than a library
+// that silently lacks the operator's models.
+func TestDeviceTypesExtraDir(t *testing.T) {
+	t.Setenv("TRICA_HTTP_ADDR", "")
+	t.Setenv("TRICA_LOG_LEVEL", "")
+	t.Setenv("TRICA_DEVICETYPES_EXTRA_DIR", "")
+	dir := t.TempDir()
+	c, err := LoadConfig(writeFile(t, "c.yaml", "devicetypes: {extra_dir: "+dir+"}\n"))
+	if err != nil || c.DeviceTypes.ExtraDir != dir {
+		t.Fatalf("%+v %v", c.DeviceTypes, err)
+	}
+	other := t.TempDir()
+	t.Setenv("TRICA_DEVICETYPES_EXTRA_DIR", other)
+	if c, err = LoadConfig(""); err != nil || c.DeviceTypes.ExtraDir != other {
+		t.Fatalf("environment: %+v %v", c.DeviceTypes, err)
+	}
+	t.Setenv("TRICA_DEVICETYPES_EXTRA_DIR", "")
+	for _, bad := range []string{filepath.Join(dir, "missing"), writeFile(t, "file", "x")} {
+		if _, err := LoadConfig(writeFile(t, "d.yaml", "devicetypes: {extra_dir: "+bad+"}\n")); err == nil || !strings.Contains(err.Error(), "extra_dir") {
+			t.Errorf("%s: %v, want a refusal", bad, err)
+		}
+	}
+}
+
 func TestDatabaseURL(t *testing.T) {
 	t.Setenv(EnvDatabaseURL, "")
 	c := &Config{}

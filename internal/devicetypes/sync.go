@@ -59,6 +59,14 @@ func (ix *Index) Batch(devices []Device, observedAt time.Time) (*sdk.Batch, []Li
 			if len(m.Model.Ports) > 0 {
 				o.Set("ports", m.Model.Ports)
 			}
+			// Where the face illustrations are, when there are any; the
+			// bytes are served by GET /api/v1/device-types/{slug}/{face}.
+			if img := m.Model.FrontImage; img != nil {
+				o.Set("front_image", img.Path)
+			}
+			if img := m.Model.RearImage; img != nil {
+				o.Set("rear_image", img.Path)
+			}
 		}
 		b.RelateEndpoints("instance_of", sdk.ByID("device", d.ID), sdk.Ref(ref))
 	}

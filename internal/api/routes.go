@@ -57,6 +57,8 @@ type response struct {
 	Desc   string
 	// Body is a zero value of the body type; nil means no body.
 	Body any
+	// Binary lists the media types of a body that is not JSON (an image).
+	Binary []string
 }
 
 // enumTypes marks a schema whose enum is the registry's object types.
@@ -165,6 +167,17 @@ func (s *Server) routeTable() []route {
 			Summary:   "The devices mounted in a rack, with position, face, model, height and depth: one call for an elevation. A device is listed only if the caller may read it, its model only if the caller may read the model. Ordered by position, unknown positions last.",
 			Params:    list(pathUUID("id", "Rack id.")),
 			Responses: ok(Page[RackItem]{}), Errors: []int{http.StatusBadRequest, http.StatusNotFound}, H: s.hRackContents},
+		{Method: "GET", Path: "/device-types/{slug}/{face}", ID: "getDeviceTypeImage", Tag: tInv, Action: ActionRead,
+			Summary: "The image of one face of a device model, from the device-type library or the operator's directory (devicetypes.extra_dir). Library content, not inventory data: any caller who may read gets it. Cached privately for an hour, then revalidated with the ETag. The rack contents name the images that exist.",
+			Params: []param{
+				{Name: "slug", In: "path", Desc: "Model slug (the device_type's slug).", Required: true, Schema: map[string]any{"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"}},
+				{Name: "face", In: "path", Desc: "Face of the device.", Required: true, Schema: map[string]any{"type": "string", "enum": []any{"front", "rear"}}},
+			},
+			Responses: []response{
+				{Status: http.StatusOK, Desc: "The image.", Binary: []string{"image/png", "image/jpeg", "image/webp"}},
+				{Status: http.StatusNotModified, Desc: "The copy the caller holds (If-None-Match) is current."},
+			},
+			Errors: []int{http.StatusBadRequest, http.StatusNotFound}, H: s.hDeviceTypeImage},
 		{Method: "GET", Path: "/objects/{id}/timeline", ID: "getObjectTimeline", Tag: tInv, Action: ActionRead,
 			Summary:   "The changes that touched the object.",
 			Params:    list(pathUUID("id", "Object id."), qTime("from", "Start (default: the beginning).", false), qTime("to", "End (default: now).", false)),

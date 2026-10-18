@@ -454,6 +454,48 @@ func (s *Store) CurrentRelationsFrom(ctx context.Context, typ string, fromIDs []
 	return scanRelations(rows)
 }
 
+// DescendantValue is one current attribute value of an object below a root:
+// a component of a device (a power supply, a fan, a disk) and its own parts.
+type DescendantValue struct {
+	// Root is the id of the ancestor the walk started from.
+	Root   string
+	ID     string
+	Type   string
+	Status string
+	// Value is the attribute as text; empty when the object does not have it.
+	Value string
+}
+
+// DescendantValues returns, for every object at most depth levels below one
+// of roots (through parent_id), its type, status and the current value of
+// one attribute: the health of the parts of a rack's devices in one query
+// instead of one per device.
+func (s *Store) DescendantValues(ctx context.Context, roots []string, key string, depth int) ([]DescendantValue, error) {
+	if len(roots) == 0 || depth <= 0 {
+		return nil, nil
+	}
+	rows, err := s.Pool.Query(ctx, `
+WITH RECURSIVE d AS (
+  SELECT o.parent_id AS root, o.id, 1 AS lvl FROM objects o WHERE o.parent_id = ANY($1::uuid[])
+  UNION ALL
+  SELECT d.root, o.id, d.lvl + 1 FROM objects o JOIN d ON o.parent_id = d.id WHERE d.lvl < $3
+)
+SELECT d.root, o.id, o.type, o.status, COALESCE(o.attrs->>$2, '') FROM d JOIN objects o ON o.id = d.id ORDER BY d.root, o.id`, roots, key, depth)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []DescendantValue
+	for rows.Next() {
+		var v DescendantValue
+		if err := rows.Scan(&v.Root, &v.ID, &v.Type, &v.Status, &v.Value); err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
 // RelationHistory returns every relation that ever touched an object, newest first.
 func (s *Store) RelationHistory(ctx context.Context, id string, limit int) ([]Relation, error) {
 	if limit <= 0 {

@@ -1,3 +1,5 @@
+import type { Health as SharedHealth } from "../inventory/health";
+
 // Rack elevation arithmetic, kept free of React and of the DOM so that it is
 // tested on its own. Conventions come from the schema (internal/schema/
 // builtin.yaml): U 1 is the bottom of the rack; a device is mounted with
@@ -19,6 +21,38 @@ export interface Mounted {
   heightU?: number;
   fullDepth?: boolean;
   typeName?: string;
+  /** The device's role (server, switch...): what a face without an image is drawn as. */
+  role?: string;
+  /** The device's own health. */
+  health?: string;
+  /** The worst health of its parts (power supplies, fans, disks) the caller may read. */
+  partsHealth?: string;
+  /** API paths of the model's face images, when the device-type library has them. */
+  frontImage?: string;
+  rearImage?: string;
+}
+
+/** The health a rack face shows: the shared scale without "absent" (a mounted device is there). */
+export type Health = Exclude<SharedHealth, "absent">;
+
+const HEALTH_RANK: Record<string, number> = { ok: 1, warning: 2, critical: 3 };
+
+/**
+ * What a device's face says about its health: the worst of its own and its
+ * parts'. "unknown" when neither says ok, warning or critical: a device nobody
+ * reports on is not shown as healthy.
+ */
+export function overallHealth(m: Pick<Mounted, "health" | "partsHealth">): Health {
+  let worst: Health = "unknown";
+  for (const h of [m.health, m.partsHealth]) {
+    if (h && (HEALTH_RANK[h] ?? 0) > (HEALTH_RANK[worst] ?? 0)) worst = h as Health;
+  }
+  return worst;
+}
+
+/** The image of the face a slot is drawn on, if the model has one. */
+export function slotImage(s: Pick<Slot, "item" | "face">): string | undefined {
+  return s.face === "front" ? s.item.frontImage : s.item.rearImage;
 }
 
 export type Issue = "overlap" | "outOfRange" | "assumedHeight" | "assumedFace";

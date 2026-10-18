@@ -11,7 +11,8 @@ For every inventory device whose `vendor` and `model` (or `part_number`) match a
 reconciliation engine:
 
 - a `device_type` object (identity: `slug`) with `vendor`, `model`, `part_number`,
-  `u_height`, `full_depth`, `airflow`, `weight_kg`, `psu_count`, `ports`;
+  `u_height`, `full_depth`, `airflow`, `weight_kg`, `psu_count`, `ports`, and `front_image` /
+  `rear_image` (the library path of the image, when there is one, see below);
 - an `instance_of` relation from the device to that `device_type`.
 
 The rack height of a device is therefore `instance_of` then `u_height`. Port templates are a
@@ -34,17 +35,72 @@ is closed (history keeps it) and a new one opened.
 | Ambiguous name | matches nothing |
 | No vendor | matches nothing |
 
-## Adding a model
+## Adding a model to the embedded library
 
-Drop a file under `internal/devicetypes/library/<Vendor>/<model>.yaml` (upstream files as
+To run with your own models without a rebuild, see "Your own models and images" below. To add
+one to trica itself, drop a file under `internal/devicetypes/library/<Vendor>/<model>.yaml` (upstream files as
 they are; models written here go in `library/trica/`). Required: `manufacturer`, `model`,
 `slug` (lowercase, digits, `.`, `-`), `u_height` > 0. `weight_unit` is one of `kg`, `g`,
 `lb`, `oz`. `airflow` is one of `front-to-rear`, `rear-to-front`, `left-to-right`,
 `right-to-left`, `side-to-rear`, `passive`, `mixed`. `go test ./internal/devicetypes/` loads
 and validates every file; an invalid one fails the load.
 
+## Face images
+
+A model may have an image of each face. Decision: [ADR 0042](../adr/0042-device-type-images.md).
+
+- **Where.** `elevation-images/<manufacturer>/<slug>.<face>.<ext>`, the upstream convention:
+  `<manufacturer>` and `<slug>` exactly as in the model file, `<face>` `front` or `rear`, `<ext>`
+  `png`, `jpg`, `jpeg` or `webp` (in that order of preference when there are several). SVG is
+  refused: served from the application's origin it could carry script. At most 2 MiB a file; the
+  content must be what the extension says.
+- **The `front_image` / `rear_image` keys** of a model file are booleans upstream ("upstream has
+  an image"). They must be booleans; they are not trusted: the file is looked up whatever they
+  say, so an upstream file that says `true` for an image we do not vendor simply has none, and a
+  photograph added without editing the model file is used.
+- **Served by** `GET /api/v1/device-types/{slug}/{front|rear}` (read right, bearer token like
+  every API call; `Cache-Control: private, max-age=3600` and a strong `ETag`, `304` on
+  `If-None-Match`). `GET /racks/{id}/contents` names the paths that exist (`front_image`,
+  `rear_image`) beside the device's `role`, `health` and `parts_health`.
+- **Shown** on the rack elevation scaled to the device's U box; a device whose model has no image
+  of that face gets a generic face drawn for its role ([UI reference](ui.md#racks-and-rooms-what-the-drawing-relies-on)).
+- **Airflow families.** The base model synthesised from `-F` / `-R` variants shows the images of
+  its first variant (`-F`).
+
+Embedded images and their licences are listed in `internal/devicetypes/library/README.md`.
+
+## Your own models and images
+
+Set `devicetypes.extra_dir` (or `TRICA_DEVICETYPES_EXTRA_DIR`) to a directory laid out like the
+library; the server reads it at start, after the embedded library, and its files win:
+
+```
+/etc/trica/devicetypes/
+├── acme/Shelf-2U.yaml                              # a model the library does not have
+├── HPE/ProLiant-DL380-Gen9.yaml                    # replaces the embedded model with this slug
+└── elevation-images/
+    ├── HPE/hpe-proliant-dl380-gen9.front.jpg       # a photograph where the library has none
+    └── Arista/arista-dcs-7050sx-64-r.front.png     # replaces the embedded drawing
+```
+
+| What you add | Effect |
+|---|---|
+| A model file (any directory but `elevation-images`) | Added to the library, origin `operator`; one with the slug of an embedded model replaces it and keeps that model's embedded images unless you give your own |
+| An image for an existing slug and face | Replaces the embedded image of that face, or gives one to a model that had none |
+| An image no model has (wrong manufacturer, slug or face, an unsupported type) | Ignored and logged at start (`device type library: operator directory`), the server starts |
+| An invalid model file, a duplicate slug inside the directory, an image over 2 MiB or whose content is not its type | The library is not loaded (logged); the API and the rest of the server still run, without the library |
+| A path that is not a directory | The server refuses to start (configuration error) |
+
+Hidden entries (names starting with `.`) are skipped, so a Kubernetes volume, which holds its
+files twice under `..<timestamp>/`, works as is. The directory is read once: restart to apply a
+change. With the Helm chart, put the files on a PersistentVolumeClaim and set
+`deviceTypes.existingClaim` (and `subPath`); it is mounted read-only at `/etc/trica/devicetypes`.
+A photograph: shoot the face square on, crop to the chassis (ears included), 1000 pixels wide is
+plenty; it is stretched to the U box, so a crop with the chassis' own proportions looks right.
+
 ## Not covered
 
 The server runs `Sync` at start, after the migrations, then every `deduce.interval`
-([configuration](configuration.md)). Images and module bays are ignored; no model is picked by
-hand in the UI.
+([configuration](configuration.md)). Module bays are ignored; no model is picked by hand in the
+UI. Images are not reloaded without a restart, and the export PDF holds the images as part of its
+picture, not as separate objects.

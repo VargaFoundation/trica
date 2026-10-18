@@ -518,7 +518,11 @@ func (s *Server) hRackContents(c *call) error {
 			ids = append(ids, r.ToID)
 		}
 	}
-	objs, _, err := c.visibleObjects(ids)
+	objs, sites, err := c.visibleObjects(ids)
+	if err != nil {
+		return err
+	}
+	parts, err := c.partsHealth(devices, objs, sites)
 	if err != nil {
 		return err
 	}
@@ -537,7 +541,14 @@ func (s *Server) hRackContents(c *call) error {
 			it.Model = &ObjectRef{ID: t.ID, Type: t.Type, Display: t.Display}
 			it.UHeight = number(attrs["u_height"])
 			it.FullDepth = attrs["full_depth"] == true
+			it.ModelName, _ = attrs["model"].(string)
+			slug, _ := attrs["slug"].(string)
+			it.FrontImage, it.RearImage = s.faceImage(slug, "front"), s.faceImage(slug, "rear")
 		}
+		da := redactMap(d.Attrs)
+		it.Role, _ = da["role"].(string)
+		it.Health, _ = da["health"].(string)
+		it.PartsHealth = parts[d.ID]
 		// A device nobody knows the model of (a PDU, a shelf) can carry its
 		// own height; the model's wins when it has one.
 		if it.UHeight == nil {
@@ -556,6 +567,39 @@ func (s *Server) hRackContents(c *call) error {
 		return items[i].Device.Display < items[j].Device.Display
 	})
 	return c.json(200, pageOf(items, pp, false))
+}
+
+// partDepth is how deep parts are looked for below a device: a module, its
+// fans, and a fan's own sensor.
+const partDepth = 3
+
+// healthRank orders the health values a part rolls up; others do not count
+// (unknown says nothing, absent is an empty slot).
+var healthRank = map[string]int{"ok": 1, "warning": 2, "critical": 3}
+
+// partsHealth is the worst health of the parts of each device, among the
+// parts the caller may read. A part is in its device's site.
+func (c *call) partsHealth(devices []string, objs map[string]*store.Object, sites map[string]string) (map[string]string, error) {
+	var readable []string
+	for _, id := range devices {
+		if _, ok := objs[id]; ok {
+			readable = append(readable, id)
+		}
+	}
+	vals, err := c.s.st.DescendantValues(c.ctx(), readable, "health", partDepth)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]string{}
+	for _, v := range vals {
+		if v.Status == "absent" || healthRank[v.Value] == 0 || !c.s.auth.Allow(c.p, ActionRead, v.Type, sites[v.Root]) {
+			continue
+		}
+		if healthRank[v.Value] > healthRank[out[v.Root]] {
+			out[v.Root] = v.Value
+		}
+	}
+	return out, nil
 }
 
 // number reads a JSON number attribute; anything else is unknown.

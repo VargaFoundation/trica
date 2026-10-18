@@ -4,12 +4,64 @@ import (
 	"context"
 	"time"
 
+	"github.com/VargaFoundation/trica/internal/api"
 	"github.com/VargaFoundation/trica/internal/devicetypes"
 	"github.com/VargaFoundation/trica/internal/server"
 )
 
-// runDeviceTypes matches the inventory's devices against the embedded device
-// type library at start, after the migrations, then every deduce.interval, so
+// library loads the device type library once: the embedded models and images
+// with the operator's devicetypes.extra_dir over them (ADR 0020, 0042). The
+// API serves its images and runDeviceTypes matches its models, so both see
+// the same files. A library that does not load is logged once and leaves
+// both without it: the library enriches the inventory, it must not keep the
+// API down.
+func (w *Wiring) library(d server.Deps) *devicetypes.Index {
+	w.libOnce.Do(func() {
+		lib, err := devicetypes.Open(w.cfg.DeviceTypes.ExtraDir)
+		if err != nil {
+			d.Log.Error("device type library: not loaded", "error", err.Error())
+			return
+		}
+		for _, warn := range lib.Warnings {
+			d.Log.Warn("device type library: operator directory", "detail", warn)
+		}
+		images := 0
+		for _, m := range lib.Models {
+			if m.FrontImage != nil {
+				images++
+			}
+			if m.RearImage != nil {
+				images++
+			}
+		}
+		d.Log.Info("device type library loaded", "models", len(lib.Models), "images", images,
+			"extra_dir", w.cfg.DeviceTypes.ExtraDir)
+		w.lib = devicetypes.NewIndex(lib.Models)
+	})
+	return w.lib
+}
+
+// Images serves the face images of a device type library index to the API.
+type Images struct{ Index *devicetypes.Index }
+
+// DeviceTypeImage implements api.DeviceTypeImages.
+func (i Images) DeviceTypeImage(slug, face string) (api.DeviceImage, bool) {
+	if i.Index == nil {
+		return api.DeviceImage{}, false
+	}
+	m := i.Index.BySlug(slug)
+	if m == nil {
+		return api.DeviceImage{}, false
+	}
+	img := m.Image(face)
+	if img == nil {
+		return api.DeviceImage{}, false
+	}
+	return api.DeviceImage{ContentType: img.ContentType, ETag: img.ETag, Data: img.Data}, true
+}
+
+// runDeviceTypes matches the inventory's devices against the device type
+// library at start, after the migrations, then every deduce.interval, so
 // that a device discovered after the start gets its device type without a
 // restart (ADR 0020, 0025, #55). A failed pass is not fatal: the library
 // enriches the inventory, and a failure here (a conflicting schema overlay, a
@@ -17,16 +69,15 @@ import (
 // retries. Every replica runs it: the batch is the same full declaration
 // whoever submits it.
 func (w *Wiring) runDeviceTypes(ctx context.Context, d server.Deps) error {
-	models, err := devicetypes.Default()
-	if err != nil {
-		d.Log.Error("device type library: not loaded", "error", err.Error())
+	ix := w.library(d)
+	if ix == nil {
 		return nil
 	}
-	ix := devicetypes.NewIndex(models)
+	models := len(ix.Models())
 	t := time.NewTicker(w.cfg.Deduce.Interval)
 	defer t.Stop()
 	for {
-		syncDeviceTypes(ctx, d, ix, len(models))
+		syncDeviceTypes(ctx, d, ix, models)
 		select {
 		case <-ctx.Done():
 			return nil

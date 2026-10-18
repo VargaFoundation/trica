@@ -1,0 +1,39 @@
+suite: device types
+templates:
+  - templates/deployment.yaml
+  - templates/configmap.yaml
+set:
+  database.existingSecret: trica-db
+tests:
+  - it: mounts no operator directory by default
+    template: templates/deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: devicetypes, mountPath: /etc/trica/devicetypes, readOnly: true}
+  - it: does not configure an operator directory by default
+    template: templates/configmap.yaml
+    asserts:
+      - notMatchRegex: {path: 'data["trica.yaml"]', pattern: "extra_dir"}
+  - it: mounts the claim read-only and points the configuration at it
+    template: templates/deployment.yaml
+    set: {deviceTypes.existingClaim: trica-devicetypes, deviceTypes.subPath: models}
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: devicetypes
+            persistentVolumeClaim: {claimName: trica-devicetypes, readOnly: true}
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: devicetypes, mountPath: /etc/trica/devicetypes, readOnly: true, subPath: models}
+  - it: writes devicetypes.extra_dir
+    template: templates/configmap.yaml
+    set: {deviceTypes.existingClaim: trica-devicetypes}
+    asserts:
+      - matchRegex: {path: 'data["trica.yaml"]', pattern: 'extra_dir: /etc/trica/devicetypes'}
+  - it: refuses an unknown key under deviceTypes
+    template: templates/deployment.yaml
+    set: {deviceTypes.extraDir: /x}
+    asserts:
+      - failedTemplate: {}

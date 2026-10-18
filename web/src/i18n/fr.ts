@@ -78,6 +78,7 @@ export const fr: Record<MessageKey, string> = {
   "rack.issue.outOfRange": "Hors de la baie",
   "rack.issue.assumedHeight": "Hauteur inconnue, dessiné sur 1 U",
   "rack.issue.assumedFace": "Face inconnue, dessiné à l'avant",
+  "rack.facesLegend": "Un équipement montre l'image de son modèle quand la bibliothèque de modèles en a une, sinon une face dessinée selon son rôle. La bande sur son bord gauche est sa santé, la pire de la sienne et de celle de ses composants : vert correcte, ambre dégradée, rouge critique, gris inconnue.",
   "rooms.title": "Salles",
   "rooms.intro": "Toutes les salles, avec le plan de leurs baies.",
   "rooms.empty": "Aucune salle n'est encore enregistrée.",

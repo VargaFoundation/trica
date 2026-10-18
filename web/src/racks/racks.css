@@ -1,0 +1,116 @@
+/* Device faces and health in the rack elevation (RackElevation.tsx). The base
+   look of a slot (.rack-slot, .rack-shadow, .rack-problem) is in app.css; this
+   file adds what a face draws over it, with the theme's --trica-* tokens only (the same hues as HealthPill: ok, warn,
+   danger, neutral). The
+   selectors are one class more specific than app.css's "a.rack-slot:hover rect"
+   so that the face is not restyled on hover. */
+
+.rack-slot .rack-outline {
+  fill: none;
+  stroke: var(--trica-info-ink);
+  stroke-width: 1;
+}
+a.rack-slot:hover .rack-outline,
+a.rack-slot:focus-visible .rack-outline {
+  stroke-width: 3;
+}
+.rack-slot.rack-health-warning .rack-outline {
+  stroke: var(--trica-warn-solid);
+  stroke-width: 2;
+}
+.rack-slot.rack-health-critical .rack-outline {
+  stroke: var(--trica-danger-solid);
+  stroke-width: 2;
+}
+.rack-slot.rack-problem .rack-outline {
+  stroke: var(--trica-danger-solid);
+  stroke-width: 2;
+}
+.rack-slot.rack-shadow .rack-outline {
+  stroke: var(--trica-neutral-solid);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+/* Health: a strip on the left edge. Its colour repeats what the tooltip and
+   the accessible name say in words. */
+.rack-slot .rack-health-strip {
+  fill: var(--trica-neutral-solid);
+  stroke: none;
+}
+.rack-slot.rack-health-ok .rack-health-strip {
+  fill: var(--trica-ok-solid);
+}
+.rack-slot.rack-health-warning .rack-health-strip {
+  fill: var(--trica-warn-solid);
+}
+.rack-slot.rack-health-critical .rack-health-strip {
+  fill: var(--trica-danger-solid);
+}
+
+/* The label over a face. */
+.rack-slot .rack-label-bg {
+  fill: var(--trica-surface);
+  stroke: none;
+  opacity: 0.88;
+}
+.rack-slot.rack-has-face text {
+  fill: var(--trica-ink);
+}
+.rack-slot.rack-problem.rack-has-face text {
+  fill: var(--trica-danger-solid);
+}
+
+/* A model's image, painted on a canvas inside the SVG. */
+.rack-face-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.rack-slot.rack-shadow .rack-face-image {
+  opacity: 0.55;
+}
+
+/* Generic faces, one look per role. */
+.rack-slot .rack-face .rf-plate {
+  fill: var(--trica-surface-muted);
+  stroke: var(--trica-line-strong);
+  stroke-width: 0.75;
+  stroke-dasharray: none;
+}
+.rack-slot .rack-face .rf-bay {
+  fill: var(--trica-neutral-soft);
+  stroke: var(--trica-neutral-solid);
+  stroke-width: 0.5;
+  stroke-dasharray: none;
+}
+.rack-slot .rack-face .rf-port {
+  fill: var(--trica-neutral-solid);
+  stroke: none;
+}
+.rack-slot .rack-face .rf-led {
+  fill: var(--trica-ok-solid);
+  stroke: none;
+}
+.rack-slot .rack-face .rf-vent {
+  stroke: var(--trica-line);
+  stroke-width: 1;
+}
+.rack-slot .rack-face .rf-accent {
+  fill: var(--trica-info-soft);
+  stroke: var(--trica-info-ink);
+  stroke-width: 0.5;
+  stroke-dasharray: none;
+}
+.rack-slot .rack-face-firewall .rf-accent {
+  fill: var(--trica-danger-soft);
+  stroke: var(--trica-danger-solid);
+}
+.rack-slot .rack-face-pdu .rf-accent,
+.rack-slot .rack-face-ups .rf-accent {
+  fill: var(--trica-warn-soft);
+  stroke: var(--trica-warn-solid);
+}
+.rack-slot .rack-face-storage .rf-bay {
+  fill: var(--trica-info-soft);
+}

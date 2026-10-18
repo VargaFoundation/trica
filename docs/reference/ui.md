@@ -39,6 +39,22 @@ set; ADR 0030).
   note), no device height means 1 U, no face means front, no position lists the device apart.
 - A device that overlaps another on the same face, or sticks out of the rack, has a red outline, a
   `!` and a note in the table; two racks on one tile, or racks outside the room's size, are flagged.
+- **Faces** (ADR 0042). A device shows its model's image of that face when the device-type
+  library (or the operator's `devicetypes.extra_dir`) has one, stretched to its U box; else a
+  generic face drawn for its `role`: drive bays for a server, rows of ports for a switch or a
+  router, a few ports and a red band for a firewall, drive carriers for storage and NAS, outlets
+  for a PDU, a display and a grille for a UPS, keystone jacks for a patch panel, a blank plate with
+  grilles when the role is unknown. The other face of a full-depth device is its rear image,
+  faded, when there is one, else the plain dashed block.
+- **Health**: a strip on the left edge of each device, green ok, amber warning, red critical,
+  grey unknown, with an amber or red outline for the last two. It is the worst of the device's
+  `health` and of its parts' (`parts_health`: power supplies, fans, disks, modules the reader may
+  read). Colour is never the only sign: the tooltip says name, range, model and health, the
+  link's accessible name ends with the health when it is known, and the table has a Health column.
+- Images are fetched with the session's token (`GET /api/v1/device-types/{slug}/{face}`, only
+  that path is ever fetched with it), decoded with `createImageBitmap` and painted on a canvas
+  inside the SVG: no `blob:` or `data:` URL, so `img-src 'self'` stands. A browser without
+  `createImageBitmap`, or an image that does not load, gets the generic face.
 - The elevation reads the rack's contents in one call (`GET /racks/{id}/contents`), whatever the
   number of devices.
 - Known limits: at most 1000 devices per rack and 1000 racks per room are read (the page says when
@@ -84,7 +100,9 @@ is sent anywhere, no change to the content security policy (the file is a `blob:
 the page's own script).
 
 - The rack sheet is drawn on a canvas, on white, with a fixed palette whatever the theme: both
-  faces side by side, the title, and "Exported from trica on <date>". The topology is Cytoscape's
+  faces side by side, the title, and "Exported from trica on <date>". It carries the same model
+  images (the bitmaps the page already fetched, so same origin and nothing new under the CSP),
+  generic faces and health strips as the screen. The topology is Cytoscape's
   own image of the whole graph, on white, up to 16 million pixels (the ratio drops for a very large
   graph). The size does not depend on the screen: a Retina display gets the same file as any other
   (ADR 0038).

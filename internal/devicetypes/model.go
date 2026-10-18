@@ -25,6 +25,9 @@ const (
 	OriginUpstream = "netbox-devicetype-library"
 	// OriginLocal: a model written by the trica project.
 	OriginLocal = "trica"
+	// OriginOperator: a model or an image from the operator's directory
+	// (devicetypes.extra_dir), read at start, not embedded.
+	OriginOperator = "operator"
 )
 
 // Model is one validated device model.
@@ -42,6 +45,29 @@ type Model struct {
 	// Origin and Path say where the model comes from.
 	Origin string `json:"origin"`
 	Path   string `json:"path"`
+	// FrontImage and RearImage are the face illustrations, when the library
+	// or the operator's directory has one (see Open).
+	FrontImage *Image `json:"front_image,omitempty"`
+	RearImage  *Image `json:"rear_image,omitempty"`
+}
+
+func (m *Model) setImage(face string, img *Image) {
+	if face == Front {
+		m.FrontImage = img
+	} else {
+		m.RearImage = img
+	}
+}
+
+// Image returns the illustration of a face (Front or Rear), or nil.
+func (m *Model) Image(face string) *Image {
+	switch face {
+	case Front:
+		return m.FrontImage
+	case Rear:
+		return m.RearImage
+	}
+	return nil
 }
 
 // Port is one port template. Group is interface, console, console_server,
@@ -81,6 +107,12 @@ type rawModel struct {
 	PowerOutlets       []rawPort `yaml:"power-outlets"`
 	FrontPorts         []rawPort `yaml:"front-ports"`
 	RearPorts          []rawPort `yaml:"rear-ports"`
+	// FrontImage and RearImage are booleans upstream: the image exists at
+	// elevation-images/<manufacturer>/<slug>.<face>.<ext>. They are decoded so
+	// that a malformed value fails, and otherwise not trusted: Open looks for
+	// the file whatever they say.
+	FrontImage any `yaml:"front_image"`
+	RearImage  any `yaml:"rear_image"`
 }
 
 var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
@@ -105,7 +137,7 @@ var toKg = map[string]float64{
 }
 
 // Parse decodes and validates one model file. Keys the library does not use
-// (comments, images, module bays...) are ignored, so upstream files parse
+// (comments, module bays...) are ignored, so upstream files parse
 // unchanged; the keys it does use are strictly checked.
 func Parse(data []byte, origin, path string) (*Model, error) {
 	var r rawModel
@@ -130,6 +162,11 @@ func Parse(data []byte, origin, path string) (*Model, error) {
 	}
 	if r.UHeight == nil || *r.UHeight <= 0 || *r.UHeight > 100 || math.IsNaN(*r.UHeight) {
 		return fail("u_height is required and must be in (0, 100]")
+	}
+	for k, v := range map[string]any{"front_image": r.FrontImage, "rear_image": r.RearImage} {
+		if _, ok := v.(bool); v != nil && !ok {
+			return fail("%s must be true or false (the file is found by its name, see the library README)", k)
+		}
 	}
 	m.UHeight = *r.UHeight
 	m.FullDepth = r.IsFullDepth != nil && *r.IsFullDepth

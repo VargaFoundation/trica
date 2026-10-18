@@ -55,6 +55,17 @@ type Config struct {
 	// Audit configures what the audit log records of refusals, and the
 	// anchoring of its head (ADR 0013, 0034).
 	Audit AuditConfig `yaml:"audit"`
+	// DeviceTypes configures the device-type library (ADR 0020, 0042).
+	DeviceTypes DeviceTypesConfig `yaml:"devicetypes"`
+}
+
+// DeviceTypesConfig is the "devicetypes" section.
+type DeviceTypesConfig struct {
+	// ExtraDir is a directory of the operator's own models and face images,
+	// in the layout of the embedded library, read at start and laid over it:
+	// a model or an image found there wins over the embedded one
+	// (docs/reference/devicetypes.md). Empty: the embedded library only.
+	ExtraDir string `yaml:"extra_dir"`
 }
 
 // AuditConfig is the "audit" section.
@@ -214,6 +225,9 @@ func LoadConfig(path string) (*Config, error) {
 	if v := os.Getenv("TRICA_TRANSPORT_ADDR"); v != "" {
 		c.Transport.Addr = v
 	}
+	if v := os.Getenv("TRICA_DEVICETYPES_EXTRA_DIR"); v != "" {
+		c.DeviceTypes.ExtraDir = v
+	}
 	if v := os.Getenv("TRICA_OIDC_ISSUER"); v != "" {
 		if c.Auth.OIDC == nil {
 			c.Auth.OIDC = &OIDCConfig{}
@@ -278,6 +292,11 @@ func (c *Config) validate() error {
 	}
 	if t := c.Transport; t.Addr != "" && (t.CADir == "" || len(t.Hosts) == 0) {
 		return errors.New("config: transport.addr needs transport.ca_dir and transport.hosts")
+	}
+	if d := c.DeviceTypes.ExtraDir; d != "" {
+		if st, err := os.Stat(d); err != nil || !st.IsDir() {
+			return fmt.Errorf("config: devicetypes.extra_dir %q is not a readable directory", d)
+		}
 	}
 	if w := c.Web.OIDC; w != nil && (w.Issuer == "" || w.ClientID == "") {
 		return errors.New("config: web.oidc needs a client_id and an issuer (or auth.oidc.issuer)")

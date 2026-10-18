@@ -1329,7 +1329,7 @@
             }
           },
           "front_image": {
-            "description": "Path of the front illustration in the library.",
+            "description": "Library path of the front illustration, when the library or the operator's directory has one. The image is served by GET /api/v1/device-types/{slug}/front.",
             "title": "Front image",
             "type": "string",
             "x-trica-kind": "string",
@@ -1410,7 +1410,7 @@
             }
           },
           "rear_image": {
-            "description": "Path of the rear illustration in the library.",
+            "description": "Library path of the rear illustration, when the library or the operator's directory has one. The image is served by GET /api/v1/device-types/{slug}/rear.",
             "title": "Rear image",
             "type": "string",
             "x-trica-kind": "string",
@@ -6559,14 +6559,32 @@
           "face": {
             "type": "string"
           },
+          "front_image": {
+            "type": "string"
+          },
           "full_depth": {
             "type": "boolean"
+          },
+          "health": {
+            "type": "string"
           },
           "model": {
             "$ref": "#/components/schemas/ObjectRef"
           },
+          "model_name": {
+            "type": "string"
+          },
+          "parts_health": {
+            "type": "string"
+          },
           "position": {
             "type": "number"
+          },
+          "rear_image": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
           },
           "u_height": {
             "type": "number"
@@ -7330,6 +7348,85 @@
           }
         },
         "summary": "The change feed between two times.",
+        "tags": [
+          "inventory"
+        ],
+        "x-trica-action": "read"
+      }
+    },
+    "/device-types/{slug}/{face}": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "getDeviceTypeImage",
+        "parameters": [
+          {
+            "description": "Model slug (the device_type's slug).",
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Face of the device.",
+            "in": "path",
+            "name": "face",
+            "required": true,
+            "schema": {
+              "enum": [
+                "front",
+                "rear"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The image."
+          },
+          "304": {
+            "description": "The copy the caller holds (If-None-Match) is current."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "The image of one face of a device model, from the device-type library or the operator's directory (devicetypes.extra_dir). Library content, not inventory data: any caller who may read gets it. Cached privately for an hour, then revalidated with the ETag. The rack contents name the images that exist.",
         "tags": [
           "inventory"
         ],

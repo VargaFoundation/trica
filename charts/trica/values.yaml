@@ -41,6 +41,15 @@ schemaOverlays: {}
 #        attributes:
 #          cost_center: {kind: string, search: true}
 
+# The operator's own device models and face images (devicetypes.extra_dir,
+# docs/reference/devicetypes.md), read at start over the embedded library: a
+# photograph of your own equipment replaces the vendor drawing, without a
+# rebuild. A claim, not a ConfigMap: images weigh more than a ConfigMap holds,
+# and the layout has subdirectories. Mounted read-only; restart to reload.
+deviceTypes:
+  existingClaim: ""
+  subPath: ""
+
 service:
   type: ClusterIP
   port: 8080

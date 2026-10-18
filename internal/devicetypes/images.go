@@ -1,0 +1,131 @@
+package devicetypes
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"io/fs"
+	"path"
+	"sort"
+	"strings"
+)
+
+// Faces of a device that can carry an image.
+const (
+	Front = "front"
+	Rear  = "rear"
+)
+
+// ImageDir is the directory of elevation images, beside the vendor
+// directories of models, as in the upstream repository:
+// elevation-images/<manufacturer>/<slug>.<face>.<ext>.
+const ImageDir = "elevation-images"
+
+// MaxImageBytes bounds one image file. A front panel drawn 280 pixels wide
+// needs a few tens of kilobytes; a larger file is a mistake (an uncompressed
+// photograph) and fails the load rather than slowing every rack page.
+const MaxImageBytes = 2 << 20
+
+// imageTypes are the accepted extensions and the media type each is served
+// with. SVG is not accepted: served from the application's origin, an SVG can
+// carry script.
+var imageTypes = map[string]string{
+	".png":  "image/png",
+	".jpg":  "image/jpeg",
+	".jpeg": "image/jpeg",
+	".webp": "image/webp",
+}
+
+// imageExts is the lookup order when a model has several files for a face.
+var imageExts = []string{".png", ".jpg", ".jpeg", ".webp"}
+
+// Image is one face illustration, held in memory.
+type Image struct {
+	// Path is the file inside its source (elevation-images/HPE/x.front.png).
+	Path string `json:"path"`
+	// Origin is OriginUpstream or OriginLocal for the embedded library,
+	// OriginOperator for the operator's directory.
+	Origin      string `json:"origin"`
+	ContentType string `json:"content_type"`
+	// ETag is a strong validator: the hash of the bytes, quoted.
+	ETag string `json:"-"`
+	Data []byte `json:"-"`
+}
+
+// imagePath is where the image of a face of m is looked for, without the
+// extension. The upstream convention: the front_image and rear_image keys of
+// a model are booleans saying the file elevation-images/<manufacturer>/<slug>.<face>.<ext>
+// exists. trica looks the file up whatever the key says, so that an operator
+// can add a photograph without editing the model file.
+func imagePath(m *Model, face string) string {
+	return path.Join(ImageDir, m.Vendor, m.Slug+"."+face)
+}
+
+// sniff checks that the bytes are what the extension says. A file named .png
+// that holds something else is refused: the server announces its type and
+// browsers must not guess (nosniff).
+func sniff(data []byte, contentType string) bool {
+	switch contentType {
+	case "image/png":
+		return bytes.HasPrefix(data, []byte("\x89PNG\r\n\x1a\n"))
+	case "image/jpeg":
+		return bytes.HasPrefix(data, []byte{0xff, 0xd8, 0xff})
+	case "image/webp":
+		return len(data) >= 12 && string(data[0:4]) == "RIFF" && string(data[8:12]) == "WEBP"
+	}
+	return false
+}
+
+// readImage reads the image of one face from fsys under root, if any.
+func readImage(fsys fs.FS, root string, m *Model, face, origin string) (*Image, error) {
+	if fsys == nil {
+		return nil, nil
+	}
+	base := path.Join(root, imagePath(m, face))
+	for _, ext := range imageExts {
+		p := base + ext
+		data, err := fs.ReadFile(fsys, p)
+		if err != nil {
+			continue
+		}
+		rel := strings.TrimPrefix(p, root+"/")
+		if len(data) > MaxImageBytes {
+			return nil, fmt.Errorf("%s: %d bytes, more than the %d an image may weigh", rel, len(data), MaxImageBytes)
+		}
+		ct := imageTypes[ext]
+		if !sniff(data, ct) {
+			return nil, fmt.Errorf("%s: the content is not %s", rel, ct)
+		}
+		sum := sha256.Sum256(data)
+		return &Image{Path: rel, Origin: origin, ContentType: ct, ETag: `"` + hex.EncodeToString(sum[:16]) + `"`, Data: data}, nil
+	}
+	return nil, nil
+}
+
+// imageFiles lists the image files under root/ImageDir of fsys.
+func imageFiles(fsys fs.FS, root string) ([]string, error) {
+	var out []string
+	dir := path.Join(root, ImageDir)
+	if _, err := fs.Stat(fsys, dir); err != nil {
+		return nil, nil
+	}
+	err := fs.WalkDir(fsys, dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if p != dir && strings.HasPrefix(d.Name(), ".") {
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() || strings.EqualFold(d.Name(), "README.md") {
+			return nil
+		}
+		out = append(out, strings.TrimPrefix(p, root+"/"))
+		return nil
+	})
+	sort.Strings(out)
+	return out, err
+}

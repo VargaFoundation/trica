@@ -46,6 +46,9 @@ type Config struct {
 	Version string
 	// Now is the clock for default time ranges; tests replace it.
 	Now func() time.Time
+	// Images serves the face images of the device-type library. Nil: no
+	// model has an image.
+	Images DeviceTypeImages
 }
 
 // Server is the REST API.
@@ -58,6 +61,7 @@ type Server struct {
 	log      *slog.Logger
 	version  string
 	now      func() time.Time
+	images   DeviceTypeImages
 	routes   []route
 }
 
@@ -75,6 +79,7 @@ func New(cfg Config) (*Server, error) {
 	s := &Server{
 		eng: cfg.Engine, st: cfg.Engine.Store, searcher: &search.Searcher{Store: cfg.Engine.Store},
 		auth: cfg.Authorizer, audit: cfg.Auditor, log: cfg.Logger, version: cfg.Version, now: cfg.Now,
+		images: cfg.Images,
 	}
 	if s.log == nil {
 		s.log = slog.Default()

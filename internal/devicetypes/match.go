@@ -63,13 +63,15 @@ type Index struct {
 	// variants are the airflow-less base models synthesised from -F / -R
 	// families whose members agree on everything but the airflow.
 	variants map[string]*Model
+	// bySlug holds every model and synthesised base model by slug.
+	bySlug map[string]*Model
 }
 
 func key(vendor, k string) string { return vendorKey(vendor) + "|" + k }
 
 // NewIndex indexes models by vendor and by model name, part number and slug.
 func NewIndex(models []*Model) *Index {
-	ix := &Index{byKey: map[string][]*Model{}, variants: map[string]*Model{}}
+	ix := &Index{byKey: map[string][]*Model{}, variants: map[string]*Model{}, bySlug: map[string]*Model{}}
 	add := func(k string, m *Model) {
 		for _, e := range ix.byKey[k] {
 			if e == m {
@@ -80,6 +82,7 @@ func NewIndex(models []*Model) *Index {
 	}
 	families := map[string][]*Model{}
 	for _, m := range models {
+		ix.bySlug[m.Slug] = m
 		add(key(m.Vendor, modelKey(m.Vendor, m.Model)), m)
 		add(key(m.Vendor, norm(m.Slug)), m)
 		add(key(m.Vendor, modelKey(m.Vendor, m.Slug)), m)
@@ -101,10 +104,19 @@ func NewIndex(models []*Model) *Index {
 		v.Model = variantSuffix.ReplaceAllString(first.Model, "")
 		v.Slug = variantSuffix.ReplaceAllString(first.Slug, "")
 		v.PartNumber, v.Airflow = "", ""
+		// The base model shows the images of its first variant: the faces
+		// of an airflow family look the same, only the handles differ.
 		ix.variants[base] = &v
+		if _, taken := ix.bySlug[v.Slug]; !taken {
+			ix.bySlug[v.Slug] = &v
+		}
 	}
 	return ix
 }
+
+// BySlug returns the model with this slug, a synthesised base model
+// included, or nil.
+func (ix *Index) BySlug(slug string) *Model { return ix.bySlug[slug] }
 
 // agree reports whether the models of a family differ only by airflow: same
 // rack height, depth, weight and ports.

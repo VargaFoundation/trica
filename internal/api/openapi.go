@@ -139,6 +139,13 @@ func (s *Server) operation(g *schemaGen, rt route, types []string) (map[string]a
 		if r.Body != nil {
 			resp["content"] = map[string]any{"application/json": map[string]any{"schema": g.ref(reflect.TypeOf(r.Body))}}
 		}
+		if len(r.Binary) > 0 {
+			content := map[string]any{}
+			for _, ct := range r.Binary {
+				content[ct] = map[string]any{"schema": map[string]any{"type": "string", "format": "binary"}}
+			}
+			resp["content"] = content
+		}
 		responses[strconv.Itoa(r.Status)] = resp
 	}
 	errs := append([]int(nil), rt.Errors...)

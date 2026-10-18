@@ -89,8 +89,8 @@ types:
       power_nominal_w: {kind: int, unit: W, label: {en: Nominal power, fr: Puissance nominale}, description: "Typical draw."}
       power_max_w: {kind: int, unit: W, label: {en: Maximum power, fr: Puissance maximale}, description: "Maximum draw."}
       psu_count: {kind: int, label: {en: PSU slots, fr: Emplacements d'alimentation}, description: "Number of power supply slots."}
-      front_image: {kind: string, label: {en: Front image, fr: Image avant}, description: "Path of the front illustration in the library."}
-      rear_image: {kind: string, label: {en: Rear image, fr: Image arrière}, description: "Path of the rear illustration in the library."}
+      front_image: {kind: string, label: {en: Front image, fr: Image avant}, description: "Library path of the front illustration, when the library or the operator's directory has one. The image is served by GET /api/v1/device-types/{slug}/front."}
+      rear_image: {kind: string, label: {en: Rear image, fr: Image arrière}, description: "Library path of the rear illustration, when the library or the operator's directory has one. The image is served by GET /api/v1/device-types/{slug}/rear."}
       ports: {kind: json, label: {en: Port layout, fr: Disposition des ports}, description: "Port templates (name, kind, face, x, y) used to draw the faces."}
       end_of_sale: {kind: time, label: {en: End of sale, fr: Fin de commercialisation}, description: "Manufacturer end-of-sale date."}
       end_of_support: {kind: time, label: {en: End of support, fr: Fin de support}, description: "Manufacturer end-of-support date."}

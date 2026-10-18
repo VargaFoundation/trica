@@ -78,6 +78,7 @@ export const en = {
   "rack.issue.outOfRange": "Outside the rack",
   "rack.issue.assumedHeight": "Height unknown, drawn as 1 U",
   "rack.issue.assumedFace": "Face unknown, drawn on the front",
+  "rack.facesLegend": "A device shows its model's picture when the device-type library has one, else a face drawn for its role. The strip on its left edge is its health, the worst of its own and its parts': green ok, amber warning, red critical, grey unknown.",
   "rooms.title": "Rooms",
   "rooms.intro": "Every room, with the floor plan of its racks.",
   "rooms.empty": "No room is recorded yet.",

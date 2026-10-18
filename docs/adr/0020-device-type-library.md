@@ -62,4 +62,4 @@ of models in a simple YAML format.
 - The `device` type has no height attribute: the height is read through `instance_of`.
 - Our own models and upstream ones share a slug namespace; a clash fails the load.
 - Not decided here: a scheduler or CLI command that runs `Sync`, a UI to pick a model by hand
-  (a declared `instance_of` from a user would coexist with the library's), model images.
+  (a declared `instance_of` from a user would coexist with the library's). Model images: ADR 0042.

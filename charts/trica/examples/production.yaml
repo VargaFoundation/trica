@@ -86,3 +86,8 @@ transport:
   # Agents outside the cluster: the source of their traffic.
   ingressFrom:
     - ipBlock: {cidr: 198.51.100.0/24}
+
+# Your own device models and photographs of your equipment, laid over the
+# embedded device-type library (docs/reference/devicetypes.md).
+deviceTypes:
+  existingClaim: trica-devicetypes
