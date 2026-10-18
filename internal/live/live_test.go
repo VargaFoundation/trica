@@ -599,3 +599,17 @@ func TestACancelledCallerDoesNotSpoilTheRefresh(t *testing.T) {
 		t.Fatalf("stale %v, %d links", s.Stale, len(s.Links))
 	}
 }
+
+func TestPromClientDoesNotKeepConnectionsAcrossRefreshes(t *testing.T) {
+	c, err := newPromClient(&Config{URL: "http://192.0.2.1", Timeout: DefaultTimeout})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr, ok := c.hc.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("transport is %T, want *http.Transport", c.hc.Transport)
+	}
+	if !tr.DisableKeepAlives {
+		t.Error("keep-alives enabled: an idle connection dropped by a middlebox between two refreshes stalls the next one")
+	}
+}

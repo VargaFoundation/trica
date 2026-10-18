@@ -48,6 +48,14 @@ func newPromClient(c *Config) (*promClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	// One burst of queries per refresh, then silence until the next one: a
+	// connection kept alive across that silence is exactly what a firewall or
+	// NAT on the way drops without a reset, and the next burst then waits for
+	// the whole timeout on a dead socket (observed: every other refresh stale).
+	// A handshake per burst costs milliseconds; a dead keep-alive costs a refresh.
+	if tr, ok := hc.Transport.(*http.Transport); ok {
+		tr.DisableKeepAlives = true
+	}
 	return &promClient{endpoint: strings.TrimRight(c.URL, "/") + "/api/v1/query", hc: hc, user: c.Username, password: c.Password, bearer: c.BearerToken}, nil
 }
 
