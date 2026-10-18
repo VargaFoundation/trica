@@ -1,0 +1,54 @@
+suite: live topology overlay
+set:
+  database.existingSecret: trica-db
+tests:
+  - it: renders no live block by default
+    template: templates/configmap.yaml
+    asserts:
+      - notMatchRegex: {path: 'data["trica.yaml"]', pattern: 'live:'}
+  - it: mounts nothing for it by default
+    template: templates/deployment.yaml
+    asserts:
+      - lengthEqual: {path: spec.template.spec.volumes, count: 3}
+
+  - it: renders live.config as the server's live block
+    template: templates/configmap.yaml
+    set:
+      live.enabled: true
+      live.config:
+        url: https://metrics.example.net/prometheus
+        username: trica-reader
+        password: file:/var/run/secrets/live/metrics-credentials/password
+        sources: [{kind: node}, {kind: arista, matchers: {job: arista-exporter}}]
+    asserts:
+      - matchRegex: {path: 'data["trica.yaml"]', pattern: 'live:\n  password: file:/var/run/secrets/live/metrics-credentials/password'}
+      - matchRegex: {path: 'data["trica.yaml"]', pattern: 'url: https://metrics.example.net/prometheus'}
+      - matchRegex: {path: 'data["trica.yaml"]', pattern: 'job: arista-exporter'}
+  - it: mounts the credential Secrets read-only
+    template: templates/deployment.yaml
+    set:
+      live.enabled: true
+      live.config: {url: "https://metrics.example.net", sources: [{kind: node}]}
+      live.secrets: [{name: metrics-credentials}]
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: live-secret-metrics-credentials, mountPath: /var/run/secrets/live/metrics-credentials, readOnly: true}
+      - contains:
+          path: spec.template.spec.volumes
+          content: {name: live-secret-metrics-credentials, secret: {secretName: metrics-credentials, defaultMode: 288}}
+  - it: refuses live.enabled without a url or sources
+    template: templates/deployment.yaml
+    set:
+      live.enabled: true
+      live.config: {url: "https://metrics.example.net"}
+    asserts:
+      - failedTemplate: {errorMessage: "live.enabled needs live.config.url and live.config.sources: where to read the measurements and what"}
+  - it: refuses the block given twice
+    template: templates/deployment.yaml
+    set:
+      live.enabled: true
+      live.config: {url: "https://metrics.example.net", sources: [{kind: node}]}
+      config.live: {url: "https://other.example.net"}
+    asserts:
+      - failedTemplate: {errorMessage: "set the live block in live.config, not config.live"}

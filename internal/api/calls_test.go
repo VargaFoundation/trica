@@ -62,6 +62,7 @@ func (e *env) calls(t testing.TB, proposalID, discrepancyID int64) map[string]ca
 		"getSchemaType":       {"GET", "/api/v1/schema/types/device", ""},
 		"listObjects":         {"GET", "/api/v1/objects?type=device", ""},
 		"listRelations":       {"GET", "/api/v1/relations?type=cabled_to", ""},
+		"getLiveTopology":     {"GET", "/api/v1/topology/live", ""},
 		"getObject":           {"GET", "/api/v1/objects/" + sw, ""},
 		"getObjectProvenance": {"GET", "/api/v1/objects/" + sw + "/provenance", ""},
 		"getObjectHistory":    {"GET", "/api/v1/objects/" + sw + "/history?key=os_version", ""},

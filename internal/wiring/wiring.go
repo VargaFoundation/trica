@@ -170,8 +170,12 @@ func (w *Wiring) mountAPI(mux *http.ServeMux, d server.Deps) error {
 	if err != nil {
 		return err
 	}
+	ls, err := w.liveSource(d)
+	if err != nil {
+		return err
+	}
 	srv, err := api.New(api.Config{Engine: d.Engine, Authorizer: c.authz, Auditor: c.auditor, Logger: d.Log, Version: w.version,
-		Images: Images{Index: w.library(d)}})
+		Images: Images{Index: w.library(d)}, Live: ls})
 	if err != nil {
 		return err
 	}

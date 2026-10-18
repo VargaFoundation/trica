@@ -1,6 +1,7 @@
 # A fuller install, every value generic: an Ingress with TLS, OIDC sign-in,
 # a restricted NetworkPolicy, Prometheus scraping, two replicas, server-side
-# collectors and the mutual-TLS endpoint for agents. Adapt the names, then
+# collectors, the live topology overlay and the mutual-TLS endpoint for
+# agents. Adapt the names, then
 #   helm install trica ./charts/trica -n trica -f charts/trica/examples/production.yaml
 image:
   repository: registry.example.com/trica
@@ -56,8 +57,8 @@ networkPolicy:
             matchLabels: {kubernetes.io/metadata.name: databases}
       ports:
         - {port: 5432, protocol: TCP}
-    # The identity provider (discovery and keys) and the devices collected,
-    # here a management network.
+    # The identity provider (discovery and keys), the devices collected and
+    # the metrics endpoint of live.config, here a management network.
     - to:
         - ipBlock: {cidr: 192.0.2.0/24}
         - ipBlock: {cidr: 198.51.100.0/24}
@@ -78,6 +79,21 @@ collect:
       username: monitor
       password: file:/var/run/secrets/collect/arista-credentials/password
       interval: 5m
+
+# Live link state on the topology, from the metrics store the exporters feed
+# (Prometheus or any compatible endpoint). The password is a mounted Secret.
+live:
+  enabled: true
+  secrets:
+    - name: metrics-credentials
+  config:
+    url: https://metrics.example.com/prometheus
+    username: trica-reader
+    password: file:/var/run/secrets/live/metrics-credentials/password
+    sources:
+      - kind: node
+      - kind: arista
+        matchers: {job: arista-exporter}
 
 transport:
   enabled: true

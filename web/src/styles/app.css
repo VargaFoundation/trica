@@ -1466,6 +1466,91 @@ a.floor-rack:focus-visible {
 .legend-line-deduced {
   stroke: var(--trica-graph-deduced);
 }
+/* The live overlay (ADR 0041): its legend, its age, the side panel. */
+.legend-live-normal {
+  stroke: var(--trica-graph-util-normal);
+}
+.legend-live-warn {
+  stroke: var(--trica-graph-util-warn);
+}
+.legend-live-crit {
+  stroke: var(--trica-graph-util-crit);
+}
+.legend-live-down {
+  stroke: var(--trica-graph-down);
+}
+.legend-live-unknown {
+  stroke: var(--trica-graph-util-unknown);
+}
+.live-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1.5rem;
+  margin: 0.25rem 0 0.5rem;
+}
+.live-status .hint {
+  margin: 0;
+}
+.live-age {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--trica-ink-muted);
+}
+.live-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--trica-ok-solid);
+}
+.live-age-stale {
+  color: var(--trica-warn-ink);
+}
+.live-age-stale .live-dot {
+  background: var(--trica-warn-solid);
+}
+.topology-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.topology-stage.with-panel {
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+}
+@media (max-width: 900px) {
+  .topology-stage.with-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.topology-figure {
+  min-width: 0;
+}
+.topology-panel {
+  max-height: min(70vh, 640px);
+  overflow: auto;
+}
+.topology-panel h3 {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 1rem;
+}
+.topology-panel-links {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+}
+.topology-panel-links li {
+  border-top: 1px solid var(--trica-line);
+  padding: 0.5rem 0;
+}
+.topology-panel-links li p {
+  margin: 0 0 0.35rem;
+}
+.topology-figures {
+  margin: 0.25rem 0;
+}
 /* The rule cytoscape would inject as an inline style, which the page's policy refuses (see claimCytoscapeStyle). */
 .__________cytoscape_container {
   position: relative;

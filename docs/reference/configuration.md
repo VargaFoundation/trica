@@ -58,6 +58,83 @@ migrations, then every `deduce.interval` (also when the deducer is disabled), so
 discovered later gets its device type without a restart; a failed pass is logged, retried at the
 next tick, and does not stop the server.
 
+### Live topology overlay
+
+Optional, and off unless the file has a `live` block. With it, the server reads link throughput
+and state from a Prometheus-compatible query endpoint (Prometheus, VictoriaMetrics, Thanos,
+Mimir: anything serving `/api/v1/query`) and serves them, joined to the inventory's interfaces, at
+`GET /api/v1/topology/live` ([API](api.md), [ADR 0041](../adr/0041-live-topology-overlay.md)).
+Without the block, that endpoint answers `enabled: false` and the UI draws the inventory only.
+The browser never contacts the endpoint; the queries are built by the server from the names
+below and nothing else, and no measurement is written to the inventory.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `live.url` | none, required | Base URL of the Prometheus HTTP API, `http` or `https`; the server queries `<url>/api/v1/query`. A path prefix is kept (`https://metrics.example.net/select/0/prometheus` for a VictoriaMetrics cluster, a reverse-proxy prefix). No credentials, query or fragment in it. |
+| `live.username` / `live.password` | none (no authentication) | HTTP basic authentication. The password is a reference, `file:/path` or `env:NAME`, read at each query; a plain value stops the start. |
+| `live.bearer_token` | none | A reference to a bearer token, for an endpoint behind a token-checking proxy. Not combined with basic authentication. |
+| `live.refresh` | `30s` | How long one measurement set is served to every caller before the endpoint is queried again (at least `5s`). A failing endpoint is also retried at most once per period. |
+| `live.timeout` | `5s` | Bound of one query. |
+| `live.rate_window` | `2m` | Range of `rate()` over the counters, whole seconds, at least `30s`; it should cover at least two scrape intervals. |
+| `live.tls.ca_file` / `insecure` / `min_version` | system roots, verified, TLS 1.2 | Verification of the endpoint, as for a collector target. |
+| `live.sources` | none, at least one | The exporters to read. Order matters: when two sources measure one interface, the first one wins. |
+| `live.sources[].kind` | none, required | `arista`, `mikrotik`, `pfsense`, `node` (defaults below) or `generic` (no defaults: metrics and labels required). |
+| `live.sources[].name` | the kind | Name shown in the answer and in the metrics; unique; letters, digits, `_`, `-`. |
+| `live.sources[].metrics.rx` / `tx` | the kind's | Counters of received and sent bytes (or bits, see `unit`). The server asks `rate(<metric>{<matchers>}[<rate_window>])`. `-` disables one. |
+| `live.sources[].metrics.oper` | the kind's | Gauge, `1` when the link is up, `0` when it is down. The server asks `<metric>{<matchers>}`. `-` disables it. |
+| `live.sources[].labels.device` | the kind's | Labels naming the device, tried in order. A value is matched against the device's `mgmt_ip`, `bmc_ip`, `primary_ip` and `name`: an address with or without a port (`192.0.2.11:9100`, `[2001:db8::1]:9100`, a URL), or a name, case-insensitive, fully qualified or not (`SRV-01.example.net` meets `srv-01`). A key two devices share is ignored. |
+| `live.sources[].labels.interface` | the kind's | Label naming the interface; compared case-insensitively, with the EOS abbreviations expanded (`Et1` meets `Ethernet1`, `Po10` meets `Port-Channel10`). |
+| `live.sources[].matchers` | none | Label equalities added to every query of the source (`{job: arista-exporter}`); values are quoted by the server. |
+| `live.sources[].exclude_interfaces` | the kind's | Regular expression (Go syntax); series whose interface matches it are ignored. `-` excludes nothing. |
+| `live.sources[].unit` | `bytes` | `bytes` (multiplied by 8) or `bits`. |
+
+The defaults of each kind are the exporters' own names; they assume nothing about how the metrics
+are scraped, relabelled or stored:
+
+| Kind | rx / tx | oper | Device labels | Interface label | Excluded |
+|---|---|---|---|---|---|
+| `arista` | `arista_port_inOctets` / `arista_port_outOctets` | `arista_l2_up` | `device`, `instance` | `exported_device` | |
+| `mikrotik` (mktxp) | `mktxp_interface_rx_byte_total` / `mktxp_interface_tx_byte_total` | `mktxp_interface_running` | `routerboard_address`, `routerboard_name` | `name` | |
+| `pfsense` | `pfsense_interface_in_bytes` / `pfsense_interface_out_bytes` | `pfsense_interface_up` | `host`, `instance` | `hwif` | |
+| `node` (node-exporter) | `node_network_receive_bytes_total` / `node_network_transmit_bytes_total` | `node_network_up` | `node`, `instance` | `device` | `^(lo\|veth.*\|lxc.*\|cilium.*)$` |
+
+An example with placeholder values (none of them is a default):
+
+```yaml
+live:
+  url: https://metrics.example.net/prometheus
+  username: trica-reader
+  password: file:/run/secrets/live/password
+  refresh: 30s
+  timeout: 5s
+  rate_window: 2m
+  tls: {ca_file: /etc/trica/metrics-ca.pem}
+  sources:
+    - kind: arista
+      matchers: {job: arista-exporter}
+    - kind: mikrotik
+    - kind: pfsense
+      labels: {device: [instance]}
+    - kind: node
+      exclude_interfaces: '^(lo|veth.*|docker.*|br-.*)$'
+    # Any other exporter, here SNMP interface counters, by explicit names.
+    - kind: generic
+      name: snmp
+      metrics: {rx: ifHCInOctets, tx: ifHCOutOctets, oper: "-"}
+      labels: {device: [instance], interface: ifName}
+      matchers: {job: snmp}
+```
+
+The server publishes `trica_live_upstream_queries_total{source,outcome}`,
+`trica_live_upstream_query_duration_seconds`, `trica_live_refreshes_total{outcome}` and
+`trica_live_series{source,state="matched|unmatched"}` on `/metrics`: a source whose series are all
+`unmatched` names devices or ports the inventory does not know under those labels. The answer's
+`sources` gives the same counts to a caller who reads every interface.
+
+With the Helm chart, the block is `live.config` (checked by the chart's values schema), enabled by
+`live.enabled`, its credentials mounted from the Secrets listed in `live.secrets` at
+`/var/run/secrets/live/<secret>/<key>` ([chart README](../../charts/trica/README.md#live-topology)).
+
 ## Endpoints
 
 | Path | Purpose |

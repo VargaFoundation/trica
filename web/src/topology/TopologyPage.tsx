@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import type { LiveTopology } from "../api/types";
+import { useSearchParams } from "react-router";
 import { Async } from "../components/Async";
 import { ObjectLink } from "../components/ObjectLink";
 import { ExportButtons } from "../export/ExportButtons";
 import { useI18n, type MessageKey } from "../i18n";
 import { usePageTitle } from "../usePageTitle";
-import { draw, EDGE_STYLE, graphEnv, type Drawing } from "./graph";
+import { draw, EDGE_STYLE, graphEnv, UTIL_CLASSES, type Drawing, type LiveStyle } from "./graph";
+import { edgeLive, formatBps, formatUtil, lagLabel, liveLabel, rowLive, utilClass, widthOf } from "./live";
+import { DetailsPanel, LiveStatus, type Selection } from "./LivePanel";
+import { useLiveTopology, LIVE_OFF } from "./useLiveTopology";
 import {
   ALL_CLASSES,
   filterRows,
@@ -82,13 +86,58 @@ function useFilters(t: Topology) {
 }
 
 function Topo({ data }: { data: TopologyData }) {
-  const { t, tp, number } = useI18n();
+  const { t, tp, number, locale } = useI18n();
   const { topology } = data;
   const f = useFilters(topology);
+  const liveQuery = useLiveTopology();
+  const live: LiveTopology = liveQuery.data ?? LIVE_OFF;
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [flow, setFlow] = useState(false);
   const rows = useMemo(() => filterRows(topology, f.filters), [topology, f.filters]);
-  const graph = useMemo(() => toGraph(topology, rows), [topology, rows]);
+  const graph = useMemo(() => toGraph(topology, rows, { expanded }), [topology, rows, expanded]);
   const drawingRef = useRef<Drawing | null>(null);
   const narrowed = f.filters.site !== undefined || f.filters.rack !== undefined || f.filters.vlan !== undefined || f.filters.classes.size < LINK_CLASSES.length;
+  // What the overlay sets on each line; recomputed when the measurements or the lines change, never redrawn.
+  const liveStyles = useMemo(() => {
+    if (!live.enabled) return null;
+    const out = new Map<string, LiveStyle>();
+    for (const e of graph.edges) {
+      const l = edgeLive(e, live.links);
+      out.set(e.id, {
+        util: utilClass(l),
+        width: widthOf(Math.max(l.out ?? 0, l.back ?? 0) || undefined),
+        label: liveLabel(l, locale),
+        title: e.lag?.folded ? lagLabel(e.lag.name, e.rows ?? [], live.links, locale) : undefined,
+        flowing: (l.out ?? 0) + (l.back ?? 0) > 0,
+      });
+    }
+    return out;
+  }, [graph, live, locale]);
+  const toggleLag = (group: string) => {
+    // The details stay open on the aggregate: on its first member once unfolded, on its line once folded.
+    setSelection((prev) => (prev && prev.kind === "edge" ? { ...prev, group } : prev));
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      return next;
+    });
+  };
+  // A selection the drawing no longer has (filtered out, folded) is let go.
+  const selected =
+    selection === null
+      ? null
+      : selection.kind === "node"
+        ? topology.nodes.has(selection.id) && graph.nodes.some((n) => n.id === selection.id)
+          ? selection
+          : null
+        : graph.edges.some((e) => e.id === selection.id)
+          ? selection
+          : (() => {
+              const e = selection.group ? graph.edges.find((x) => x.lag?.group === selection.group) : undefined;
+              return e ? { ...selection, id: e.id } : null;
+            })();
 
   return (
     <>
@@ -101,6 +150,7 @@ function Topo({ data }: { data: TopologyData }) {
       <p role="status" className="summary">
         {tp("topology.links", rows.length)} · {tp("topology.devices", graph.nodes.length)}
       </p>
+      {live.enabled ? <LiveStatus live={live} flow={flow} setFlow={setFlow} /> : null}
       <Notices topology={topology} graph={graph} />
       {topology.rows.length === 0 ? (
         <p>{t("topology.empty")}</p>
@@ -108,8 +158,32 @@ function Topo({ data }: { data: TopologyData }) {
         <p>{narrowed ? t("topology.emptyFiltered") : t("topology.empty")}</p>
       ) : (
         <>
-          <Legend />
-          <GraphView graph={graph} drawingRef={drawingRef} />
+          <Legend live={live.enabled} />
+          <div className={selected ? "topology-stage with-panel" : "topology-stage"}>
+            <GraphView
+              graph={graph}
+              drawingRef={drawingRef}
+              liveStyles={liveStyles}
+              flow={flow}
+              selected={selected?.id ?? null}
+              onSelect={setSelection}
+              onToggleLag={(id) => {
+                const g = graph.edges.find((e) => e.id === id)?.lag?.group;
+                if (g) toggleLag(g);
+              }}
+            />
+            {selected ? (
+              <DetailsPanel
+                selection={selected}
+                graph={graph}
+                topology={topology}
+                live={live}
+                onClose={() => setSelection(null)}
+                onToggleLag={toggleLag}
+                expanded={expanded}
+              />
+            ) : null}
+          </div>
           <ExportButtons
             basename={`trica-topology-${new Date().toISOString().slice(0, 10)}`}
             title={t("topology.title")}
@@ -125,7 +199,7 @@ function Topo({ data }: { data: TopologyData }) {
             }}
           />
           <p className="hint">{t("topology.keyboard", { count: number(rows.length) })}</p>
-          <LinksTable rows={rows} topology={topology} />
+          <LinksTable rows={rows} topology={topology} live={live} graph={graph} onSelect={setSelection} />
         </>
       )}
     </>
@@ -192,25 +266,63 @@ function Filters({ f }: { f: ReturnType<typeof useFilters> }) {
 
 const LEGEND_DASH: Record<LinkClass, string | undefined> = { declared: undefined, observed: "2 4", deduced: "8 4" };
 
-function Legend() {
+function Legend({ live }: { live: boolean }) {
   const { t } = useI18n();
   return (
-    <ul className="topology-legend" aria-label={t("topology.legend")}>
-      {LINK_CLASSES.map((c) => (
-        <li key={c}>
-          <svg width="44" height="10" aria-hidden="true" focusable="false">
-            <line className={`legend-line-${c}`} x1="1" y1="5" x2="43" y2="5" stroke={EDGE_STYLE[c].color} strokeWidth={EDGE_STYLE[c].width} strokeDasharray={LEGEND_DASH[c]} />
-          </svg>
-          <span>{t(`topology.legend.${c}`)}</span>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="topology-legend" aria-label={t("topology.legend")}>
+        {LINK_CLASSES.map((c) => (
+          <li key={c}>
+            <svg width="44" height="10" aria-hidden="true" focusable="false">
+              <line className={`legend-line-${c}`} x1="1" y1="5" x2="43" y2="5" strokeWidth={EDGE_STYLE[c].width} strokeDasharray={LEGEND_DASH[c]} />
+            </svg>
+            <span>{t(`topology.legend.${c}`)}</span>
+          </li>
+        ))}
+      </ul>
+      {live ? (
+        <ul className="topology-legend" aria-label={t("topology.live.legend")}>
+          {UTIL_CLASSES.map((c) => (
+            <li key={c}>
+              <svg width="44" height="10" aria-hidden="true" focusable="false">
+                <line className={`legend-live-${c}`} x1={c === "down" ? 3 : 1} y1="5" x2={c === "down" ? 41 : 43} y2="5" strokeWidth="3" />
+                {c === "down" ? (
+                  <>
+                    <line className="legend-live-down" x1="2" y1="0" x2="2" y2="10" strokeWidth="2" />
+                    <line className="legend-live-down" x1="42" y1="0" x2="42" y2="10" strokeWidth="2" />
+                  </>
+                ) : null}
+              </svg>
+              <span>{t(`topology.live.util.${c}`)}</span>
+            </li>
+          ))}
+          <li>
+            <span>{t("topology.live.width")}</span>
+          </li>
+        </ul>
+      ) : null}
+    </>
   );
 }
 
-function GraphView({ graph, drawingRef }: { graph: Graph; drawingRef: MutableRefObject<Drawing | null> }) {
+function GraphView({
+  graph,
+  drawingRef,
+  liveStyles,
+  flow,
+  selected,
+  onSelect,
+  onToggleLag,
+}: {
+  graph: Graph;
+  drawingRef: MutableRefObject<Drawing | null>;
+  liveStyles: ReadonlyMap<string, LiveStyle> | null;
+  flow: boolean;
+  selected: string | null;
+  onSelect: (s: Selection | null) => void;
+  onToggleLag: (edgeId: string) => void;
+}) {
   const { t, tp } = useI18n();
-  const navigate = useNavigate();
   const box = useRef<HTMLDivElement>(null);
   // The outcome belongs to the graph it was computed for: another graph is "laying out" until its own outcome arrives.
   const [outcome, setOutcome] = useState<{ of: Graph; kind: "ready" | "failed"; ms?: number; detail?: string } | null>(null);
@@ -218,11 +330,38 @@ function GraphView({ graph, drawingRef }: { graph: Graph; drawingRef: MutableRef
   // The labels are read when the drawing is made; a language change redraws.
   const levelText = (l: string) => t(`topology.level.${l}` as MessageKey);
   const deducedText = t("topology.level.unknown");
+  // The handlers change with every render; the drawing calls the latest ones.
+  const handlers = useRef({ onSelect, onToggleLag });
+  const latest = useRef({ liveStyles, flow, selected });
+  // Declared before the drawing's effect, so that a new drawing reads the values of this render.
+  useEffect(() => {
+    handlers.current = { onSelect, onToggleLag };
+    latest.current = { liveStyles, flow, selected };
+  });
 
   useEffect(() => {
     const started = performance.now();
-    const d = draw(box.current, graph, { deduced: deducedText, level: levelText }, (id) => void navigate(`/objects/${encodeURIComponent(id)}`));
+    const d = draw(
+      box.current,
+      graph,
+      {
+        deduced: deducedText,
+        level: levelText,
+        lag: (e) => `${e.lag?.name ?? ""} (${e.count}×)`,
+        group: (domain) => t("topology.group", { domain }),
+      },
+      (id) => handlers.current.onSelect({ kind: "node", id }),
+      {
+        onEdge: (id) => handlers.current.onSelect({ kind: "edge", id }),
+        onEdgeToggle: (id) => handlers.current.onToggleLag(id),
+        onClear: () => handlers.current.onSelect(null),
+      },
+    );
     drawingRef.current = d;
+    // A new drawing starts from the overlay and the selection of the moment.
+    d.live(latest.current.liveStyles);
+    d.flow(latest.current.flow);
+    d.select(latest.current.selected);
     let live = true;
     d.ready.then(
       () => live && setOutcome({ of: graph, kind: "ready", ms: Math.round(performance.now() - started) }),
@@ -233,12 +372,16 @@ function GraphView({ graph, drawingRef }: { graph: Graph; drawingRef: MutableRef
       if (drawingRef.current === d) drawingRef.current = null;
       d.destroy();
     };
-    // levelText only reads `t`, which changes with the language.
+    // levelText and t only change with the language, which deducedText follows.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graph, deducedText]);
 
+  useEffect(() => drawingRef.current?.live(liveStyles), [liveStyles, drawingRef]);
+  useEffect(() => drawingRef.current?.flow(flow), [flow, drawingRef]);
+  useEffect(() => drawingRef.current?.select(selected), [selected, drawingRef]);
+
   return (
-    <>
+    <div className="topology-figure">
       {state.kind === "layout" ? (
         <p role="status" className="loading">
           {t("topology.layouting")}
@@ -258,9 +401,10 @@ function GraphView({ graph, drawingRef }: { graph: Graph; drawingRef: MutableRef
         data-layout-ms={state.ms}
         data-nodes={graph.nodes.length}
         data-edges={graph.edges.length}
+        data-live={liveStyles ? "on" : undefined}
         data-headless={graphEnv.headless ? "true" : undefined}
       />
-    </>
+    </div>
   );
 }
 
@@ -274,8 +418,38 @@ function detailOf(r: LinkRow, t: ReturnType<typeof useI18n>["t"]): string {
   return parts.length === 0 ? "—" : parts.join(" · ");
 }
 
-function LinksTable({ rows, topology }: { rows: readonly LinkRow[]; topology: Topology }) {
-  const { t } = useI18n();
+/** A link's live figures in words, for the table: "↑ 3.2 Gb/s ↓ 1.1 Gb/s · 32 %", or its state. */
+export function liveCell(r: LinkRow, live: LiveTopology, locale: string, t: ReturnType<typeof useI18n>["t"]): string {
+  const m = rowLive(r, live.links);
+  if (!m) return "—";
+  if (m.oper === "down") return t("topology.state.down");
+  const parts: string[] = [];
+  const flows = [m.out !== undefined ? `↑ ${formatBps(m.out, locale)}` : "", m.back !== undefined ? `↓ ${formatBps(m.back, locale)}` : ""].filter(Boolean);
+  if (flows.length) parts.push(flows.join(" "));
+  if (m.util !== undefined) parts.push(formatUtil(m.util, locale));
+  return parts.length ? parts.join(" · ") : m.oper ? t(`topology.state.${m.oper}`) : "—";
+}
+
+function LinksTable({
+  rows,
+  topology,
+  live,
+  graph,
+  onSelect,
+}: {
+  rows: readonly LinkRow[];
+  topology: Topology;
+  live: LiveTopology;
+  graph: Graph;
+  onSelect: (s: Selection) => void;
+}) {
+  const { t, locale } = useI18n();
+  // The line each link is drawn on: the keyboard way to the same details as a click in the drawing.
+  const edgeOf = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of graph.edges) for (const r of e.rows ?? []) m.set(r.key, e.id);
+    return m;
+  }, [graph]);
   const nameOf = (id: string) => topology.nodes.get(id)?.name ?? id;
   const sorted = useMemo(
     () => [...rows].sort((a, b) => a.a.name.localeCompare(b.a.name) || a.b.name.localeCompare(b.b.name) || a.key.localeCompare(b.key)),
@@ -294,6 +468,8 @@ function LinksTable({ rows, topology }: { rows: readonly LinkRow[]; topology: To
             <th scope="col">{t("topology.col.detail")}</th>
             <th scope="col">{t("topology.col.kind")}</th>
             <th scope="col">{t("topology.col.source")}</th>
+            {live.enabled ? <th scope="col">{t("topology.live.col")}</th> : null}
+            <th scope="col">{t("topology.col.details")}</th>
           </tr>
         </thead>
         <tbody>
@@ -317,6 +493,25 @@ function LinksTable({ rows, topology }: { rows: readonly LinkRow[]; topology: To
                 ) : null}
               </td>
               <td data-label={t("topology.col.source")}>{r.source || "—"}</td>
+              {live.enabled ? (
+                <td data-label={t("topology.live.col")} className="num">
+                  {liveCell(r, live, locale, t)}
+                </td>
+              ) : null}
+              <td data-label={t("topology.col.details")}>
+                {edgeOf.has(r.key) ? (
+                  <button
+                    type="button"
+                    className="button"
+                    aria-label={t("topology.panel.showLabel", { from: nameOf(r.a.deviceId), fromPort: r.a.name, to: nameOf(r.b.deviceId), toPort: r.b.name })}
+                    onClick={() => onSelect({ kind: "edge", id: edgeOf.get(r.key) as string })}
+                  >
+                    {t("topology.panel.show")}
+                  </button>
+                ) : (
+                  "—"
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

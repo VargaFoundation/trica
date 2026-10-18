@@ -74,7 +74,8 @@
     {
       "attributes": {
         "evidence": "lldp",
-        "level": "high"
+        "level": "high",
+        "reason": "LLDP: each port sees the other as its only neighbour"
       },
       "confidence": "deduced",
       "from": {
@@ -101,7 +102,8 @@
     {
       "attributes": {
         "evidence": "lldp_one_sided",
-        "level": "medium"
+        "level": "medium",
+        "reason": "LLDP seen from one end only; neither port has another neighbour"
       },
       "confidence": "deduced",
       "from": {
@@ -128,7 +130,8 @@
     {
       "attributes": {
         "evidence": "mac_table",
-        "level": "low"
+        "level": "low",
+        "reason": "forwarding table: the only known address learned on this edge port, 02:00:5e:00:53:21, is the MAC of this host port"
       },
       "confidence": "deduced",
       "from": {

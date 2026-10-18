@@ -566,6 +566,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/topology/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Live state of the links: throughput, link state and utilisation per interface id, read by the server from the configured metrics endpoint and cached (refresh_seconds). enabled is false when the server has no live block; stale is true when the last refresh failed and the values are the last good ones. Only interfaces the caller may read are listed. Nothing here is stored in the inventory.
+         * @description Requires the "read" action.
+         */
+        get: operations["getLiveTopology"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/whohad": {
         parameters: {
             query?: never;
@@ -2777,6 +2797,36 @@ export interface components {
             en: string;
             fr: string;
         };
+        LiveLink: {
+            aggregated?: boolean;
+            members?: number;
+            oper?: string;
+            rx_bps?: number;
+            source: string;
+            speed_mbps?: number;
+            tx_bps?: number;
+            util?: number;
+        };
+        LiveSourceStatus: {
+            kind: string;
+            /** Format: date-time */
+            last_success?: string;
+            matched: number;
+            name: string;
+            series: number;
+            stale: boolean;
+        };
+        LiveTopology: {
+            enabled: boolean;
+            /** Format: date-time */
+            generated_at?: string;
+            links: {
+                [key: string]: components["schemas"]["LiveLink"];
+            };
+            refresh_seconds: number;
+            sources: components["schemas"]["LiveSourceStatus"][];
+            stale: boolean;
+        };
         Me: {
             actions: string[];
             kind: string;
@@ -4666,6 +4716,29 @@ export interface operations {
                 };
             };
             400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getLiveTopology: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveTopology"];
+                };
+            };
             401: components["responses"]["Problem401"];
             403: components["responses"]["Problem403"];
             500: components["responses"]["Problem500"];

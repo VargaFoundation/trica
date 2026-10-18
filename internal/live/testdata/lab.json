@@ -1,0 +1,33 @@
+{
+  "series": [
+    {"metric": "arista_port_inOctets",  "labels": {"job": "arista", "device": "192.0.2.11", "exported_device": "Ethernet1"}, "rate": 125000000},
+    {"metric": "arista_port_outOctets", "labels": {"job": "arista", "device": "192.0.2.11", "exported_device": "Ethernet1"}, "rate": 62500000},
+    {"metric": "arista_l2_up",          "labels": {"job": "arista", "device": "192.0.2.11", "exported_device": "Ethernet1"}, "value": 1},
+    {"metric": "arista_port_inOctets",  "labels": {"job": "arista", "device": "192.0.2.11", "exported_device": "Et2"}, "rate": 1000},
+    {"metric": "arista_l2_up",          "labels": {"job": "arista", "device": "192.0.2.11", "exported_device": "Et2"}, "value": 0},
+    {"metric": "arista_port_inOctets",  "labels": {"job": "arista", "device": "192.0.2.11", "exported_device": "Ethernet3"}, "rate": 1250000},
+    {"metric": "arista_port_outOctets", "labels": {"job": "arista", "device": "192.0.2.11", "exported_device": "Ethernet3"}, "rate": 2500000},
+    {"metric": "arista_l2_up",          "labels": {"job": "arista", "device": "192.0.2.11", "exported_device": "Ethernet3"}, "value": 1},
+    {"metric": "arista_port_inOctets",  "labels": {"job": "arista", "device": "192.0.2.11", "exported_device": "Ethernet4"}, "rate": 1250000},
+    {"metric": "arista_port_outOctets", "labels": {"job": "arista", "device": "192.0.2.11", "exported_device": "Ethernet4"}, "rate": 2500000},
+    {"metric": "arista_l2_up",          "labels": {"job": "arista", "device": "192.0.2.11", "exported_device": "Ethernet4"}, "value": 0},
+    {"metric": "arista_port_inOctets",  "labels": {"job": "arista", "device": "192.0.2.11", "exported_device": "Ethernet48"}, "rate": 10},
+    {"metric": "arista_port_inOctets",  "labels": {"job": "arista", "device": "192.0.2.99", "exported_device": "Ethernet1"}, "rate": 10},
+    {"metric": "arista_port_inOctets",  "labels": {"job": "other",  "device": "192.0.2.11", "exported_device": "Ethernet1"}, "rate": 999999999},
+
+    {"metric": "mktxp_interface_rx_byte_total", "labels": {"routerboard_address": "192.0.2.21", "routerboard_name": "rtr-01", "name": "ether1"}, "rate": 12500},
+    {"metric": "mktxp_interface_tx_byte_total", "labels": {"routerboard_address": "192.0.2.21", "routerboard_name": "rtr-01", "name": "ether1"}, "rate": 25000},
+    {"metric": "mktxp_interface_running",       "labels": {"routerboard_address": "192.0.2.21", "routerboard_name": "rtr-01", "name": "ether1"}, "value": 1},
+
+    {"metric": "pfsense_interface_in_bytes",  "labels": {"host": "fw-01.example.net", "hwif": "igb0"}, "rate": 500},
+    {"metric": "pfsense_interface_out_bytes", "labels": {"host": "fw-01.example.net", "hwif": "igb0"}, "rate": 700},
+    {"metric": "pfsense_interface_up",        "labels": {"host": "fw-01.example.net", "hwif": "igb0"}, "value": 1},
+
+    {"metric": "node_network_receive_bytes_total",  "labels": {"node": "SRV-01", "instance": "192.0.2.31:9100", "device": "eno1"}, "rate": 100000},
+    {"metric": "node_network_transmit_bytes_total", "labels": {"node": "SRV-01", "instance": "192.0.2.31:9100", "device": "eno1"}, "rate": 200000},
+    {"metric": "node_network_up",                   "labels": {"node": "SRV-01", "instance": "192.0.2.31:9100", "device": "eno1"}, "value": 1},
+    {"metric": "node_network_transmit_bytes_total", "labels": {"node": "srv-01.example.net", "instance": "192.0.2.31:9101", "device": "eno1"}, "rate": 150000},
+    {"metric": "node_network_receive_bytes_total",  "labels": {"node": "SRV-01", "instance": "192.0.2.31:9100", "device": "lo"}, "rate": 5},
+    {"metric": "node_network_receive_bytes_total",  "labels": {"node": "SRV-01", "instance": "192.0.2.31:9100", "device": "veth0a1b2c"}, "rate": 5}
+  ]
+}

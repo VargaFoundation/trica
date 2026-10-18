@@ -21,6 +21,7 @@ import type {
   QueryOf,
   RackItem,
   RelationLink,
+  LiveTopology,
   RelationView,
   SchemaDoc,
   SearchPage,
@@ -45,6 +46,8 @@ export const api = {
   /** The current relations of some types across the inventory, both ends named (comma-separated types). */
   relationLinks: (q: QueryOf<"/relations">, signal?: AbortSignal) =>
     request<Page<RelationLink>>("/relations", { query: q, signal }),
+  /** The live overlay of the topology: throughput and link state per interface id (ADR 0041). */
+  liveTopology: (signal?: AbortSignal) => request<LiveTopology>("/topology/live", { signal }),
   /** The devices mounted in a rack, with position, face, model, height and depth. */
   rackContents: (id: string, q: Paging = {}, signal?: AbortSignal) =>
     request<Page<RackItem>>(`/racks/${encodeURIComponent(id)}/contents`, { query: q, signal }),

@@ -517,6 +517,30 @@ func (s *Store) CurrentRelations(ctx context.Context) ([]Relation, error) {
 	return scanRelations(rows)
 }
 
+// ObjectsOfTypes returns the objects of these types that are not absent: the
+// read behind the live overlay's join, which needs the interfaces and their
+// owners only.
+func (s *Store) ObjectsOfTypes(ctx context.Context, types []string) ([]*Object, error) {
+	rows, err := s.Pool.Query(ctx, `SELECT `+objectCols+` FROM objects WHERE type = ANY($1::text[]) AND status <> 'absent'`, types)
+	if err != nil {
+		return nil, err
+	}
+	return collectObjects(rows)
+}
+
+// CurrentRelationsBetween returns the current relations of one type whose
+// ends have these object types (member_of from an interface to an
+// interface: the aggregates).
+func (s *Store) CurrentRelationsBetween(ctx context.Context, typ, fromType, toType string) ([]Relation, error) {
+	rows, err := s.Pool.Query(ctx, `SELECT r.id, r.type, r.from_id, r.to_id, r.attrs, r.source, r.confidence, lower(r.valid), upper(r.valid) FROM relations r
+		JOIN objects f ON f.id = r.from_id JOIN objects t ON t.id = r.to_id
+		WHERE r.type = $1 AND upper_inf(r.valid) AND f.type = $2 AND t.type = $3`, typ, fromType, toType)
+	if err != nil {
+		return nil, err
+	}
+	return scanRelations(rows)
+}
+
 // AllObjects returns every object; used to build the graph cache.
 func (s *Store) AllObjects(ctx context.Context) ([]*Object, error) {
 	rows, err := s.Pool.Query(ctx, `SELECT `+objectCols+` FROM objects`)

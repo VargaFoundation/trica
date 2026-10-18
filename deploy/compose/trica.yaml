@@ -16,3 +16,9 @@ policy:
 #     ca_dir: /var/lib/trica/ca   # a volume: losing the CA un-enrols every agent
 #     hosts: [trica.example.test]
 # and the compose file must then publish 8443 and mount that volume.
+# The live topology overlay is off until it has a Prometheus-compatible
+# endpoint to read (docs/reference/configuration.md#live-topology-overlay):
+#   live:
+#     url: http://prometheus.example.test:9090
+#     sources:
+#       - kind: node

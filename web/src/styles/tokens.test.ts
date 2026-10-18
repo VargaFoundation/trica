@@ -70,6 +70,14 @@ const PAIRS: [string, string, number][] = [
   ["trica-graph-declared", "trica-graph-paper", 3],
   ["trica-graph-observed", "trica-graph-paper", 3],
   ["trica-graph-deduced", "trica-graph-paper", 3],
+  // The live overlay: lines and device borders on the paper, the MLAG box's name on its ground.
+  ...(["util-normal", "util-warn", "util-crit", "down", "util-unknown", "health-ok", "health-warn", "health-crit", "group-line"] as const).map(
+    (k): [string, string, number] => [`trica-graph-${k}`, "trica-graph-paper", 3],
+  ),
+  ["trica-graph-ink", "trica-graph-group", 4.5],
+  ["trica-graph-health-ok", "trica-graph-node", 3],
+  ["trica-graph-health-warn", "trica-graph-node", 3],
+  ["trica-graph-health-crit", "trica-graph-node", 3],
 ];
 
 describe.each([

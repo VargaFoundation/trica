@@ -13,6 +13,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
+	"github.com/VargaFoundation/trica/internal/live"
 	"github.com/VargaFoundation/trica/internal/reconcile"
 )
 
@@ -55,6 +56,10 @@ type Config struct {
 	// Audit configures what the audit log records of refusals, and the
 	// anchoring of its head (ADR 0013, 0034).
 	Audit AuditConfig `yaml:"audit"`
+	// Live overlays live link measurements, read from a Prometheus-compatible
+	// endpoint, on the topology (ADR 0041). Nil (no live block) disables it:
+	// GET /api/v1/topology/live then answers enabled: false.
+	Live *live.Config `yaml:"live"`
 	// DeviceTypes configures the device-type library (ADR 0020, 0042).
 	DeviceTypes DeviceTypesConfig `yaml:"devicetypes"`
 }
@@ -300,6 +305,11 @@ func (c *Config) validate() error {
 	}
 	if w := c.Web.OIDC; w != nil && (w.Issuer == "" || w.ClientID == "") {
 		return errors.New("config: web.oidc needs a client_id and an issuer (or auth.oidc.issuer)")
+	}
+	if c.Live != nil {
+		if err := c.Live.Validate(); err != nil {
+			return fmt.Errorf("config: %w", err)
+		}
 	}
 	return nil
 }

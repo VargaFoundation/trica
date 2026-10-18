@@ -115,6 +115,28 @@ collect:
     rbac:
       enabled: false
 
+# Live topology overlay (docs/reference/configuration.md#live-topology-overlay,
+# ADR 0041): link throughput and state read by the server from a
+# Prometheus-compatible endpoint (Prometheus, VictoriaMetrics, Thanos, Mimir).
+# Off by default; the browser never reaches the endpoint. With a restricted
+# NetworkPolicy (networkPolicy.egressTo), allow the endpoint there.
+live:
+  enabled: false
+  # The server's live block, rendered as is: url and sources are required.
+  # Credentials are file: references to the Secrets below, never values.
+  config: {}
+  #  url: https://metrics.example.net/prometheus
+  #  username: trica-reader
+  #  password: file:/var/run/secrets/live/metrics-credentials/password
+  #  sources:
+  #    - kind: node
+  #    - kind: arista
+  #      matchers: {job: arista-exporter}
+  # Existing Secrets to mount, each at /var/run/secrets/live/<name>/ (one file
+  # per key): a password, a bearer token, a CA certificate.
+  secrets: []
+  #  - name: metrics-credentials
+
 serviceAccount:
   create: true
   name: ""

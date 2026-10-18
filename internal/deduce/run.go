@@ -71,6 +71,9 @@ func (d *Deducer) Run(ctx context.Context) (*Report, error) {
 		r := b.RelateEndpoints(relCabled, sdk.ByID(typeInterface, c.A), sdk.ByID(typeInterface, c.B))
 		r.Attributes["evidence"] = c.Evidence
 		r.Attributes["level"] = c.Level
+		if c.Reason != "" {
+			r.Attributes["reason"] = c.Reason
+		}
 	}
 	res, err := d.Engine.Submit(ctx, b, "", "cables deduced from LLDP and forwarding tables")
 	if err != nil {

@@ -8,12 +8,15 @@
 //    (high | medium | low); another source may write it observed or declared;
 //  - `neighbor_of` is an LLDP/CDP adjacency seen from one port;
 //  - a port is an `interface` whose parent is a device (or a module of one);
-//  - `member_of` puts an interface in a VLAN; `mounted_in` puts a device in a rack.
+//  - `member_of` puts an interface in a VLAN, or a port in an aggregate (LAG:
+//    member_of from an interface to an interface); `mounted_in` puts a device in a rack;
+//  - two switches of one MLAG pair share `mlag_domain`.
 //
 // Every link keeps the confidence it was stored with: the picture must not
 // make a deduced cable look like a documented one.
 
 import type { RelationEnd, RelationLink } from "../api/types";
+import { SEVERITY, type Health } from "../inventory/health";
 
 export const LINK_TYPES = ["cabled_to", "connects", "neighbor_of"] as const;
 export const CONTEXT_TYPES = ["mounted_in", "member_of"] as const;
@@ -53,6 +56,12 @@ export interface DeviceInfo {
   name: string;
   siteId?: string;
   role?: string;
+  /** The device's own `health`. */
+  health?: Health;
+  /** `mlag_domain`: two switches sharing it are one MLAG pair. */
+  mlagDomain?: string;
+  /** `log_critical_count`: critical entries of the hardware event log. */
+  critical?: number;
 }
 
 /** Everything the page loaded, as the API gave it. */
@@ -65,6 +74,8 @@ export interface TopologyInput {
   /** Ports hosted by a module: module id -> the id of its device. */
   moduleDevice: ReadonlyMap<string, string>;
   sites: ReadonlyMap<string, string>;
+  /** The health of the parts of each device (modules, power supplies, fans), when the page read them. */
+  partsHealth?: ReadonlyMap<string, readonly Health[]>;
 }
 
 export interface Node {
@@ -73,8 +84,22 @@ export interface Node {
   siteId?: string;
   rackId?: string;
   role?: string;
+  /** The worst of the device's health and its parts' (unknown when nothing says). */
+  health?: Health;
+  mlagDomain?: string;
+  critical?: number;
   /** The id is not a device the page knows: it was named only by a port's parent. */
   unresolved: boolean;
+}
+
+/** The worst of some healths: critical before warning before unknown; unknown when there is none. */
+export function worstHealth(hs: readonly (Health | undefined)[]): Health {
+  let worst: Health | undefined;
+  for (const h of hs) {
+    if (h === undefined || h === "absent") continue;
+    if (worst === undefined || SEVERITY[h] < SEVERITY[worst]) worst = h;
+  }
+  return worst ?? "unknown";
 }
 
 export interface Topology {
@@ -85,6 +110,10 @@ export interface Topology {
   sites: Map<string, string>;
   /** Interface id -> ids of the VLANs it is a member of. */
   vlanOf: Map<string, Set<string>>;
+  /** A member port -> the aggregate (LAG) interface it is a member of. */
+  lagOf: Map<string, string>;
+  /** An aggregate interface -> its name. */
+  lagName: Map<string, string>;
   /** Cables with other than two usable ends, and links between ports other than interfaces: not drawn. */
   skipped: { cables: number; ends: number };
 }
@@ -171,10 +200,15 @@ export function buildTopology(input: TopologyInput): Topology {
   const vlans = new Map<string, string>();
   const vlanOf = new Map<string, Set<string>>();
   const siteOf = new Map<string, string>();
+  const lagOf = new Map<string, string>();
+  const lagName = new Map<string, string>();
   for (const l of input.context) {
     if (l.type === "mounted_in" && l.from.type === "device" && l.to.type === "rack") {
       rackOf.set(l.from_id, l.to_id);
       racks.set(l.to_id, l.to.display);
+    } else if (l.type === "member_of" && l.from.type === "interface" && l.to.type === "interface" && l.from_id !== l.to_id) {
+      lagOf.set(l.from_id, l.to_id);
+      lagName.set(l.to_id, l.to.display);
     } else if (l.type === "member_of" && l.from.type === "interface" && l.to.type === "vlan") {
       vlans.set(l.to_id, l.to.display);
       const set = vlanOf.get(l.from_id) ?? new Set<string>();
@@ -199,11 +233,14 @@ export function buildTopology(input: TopologyInput): Topology {
         siteId: d?.siteId ?? siteOf.get(p.deviceId),
         rackId: rackOf.get(p.deviceId),
         role: d?.role,
+        health: worstHealth([d?.health, ...(input.partsHealth?.get(p.deviceId) ?? [])]),
+        mlagDomain: d?.mlagDomain,
+        critical: d?.critical,
         unresolved: d === undefined,
       });
     }
   }
-  return { rows, nodes, racks, vlans, sites: new Map(input.sites), vlanOf, skipped };
+  return { rows, nodes, racks, vlans, sites: new Map(input.sites), vlanOf, lagOf, lagName, skipped };
 }
 
 export interface Filters {
@@ -240,6 +277,20 @@ export interface Edge {
   level?: Level;
   /** Distinct port pairs it stands for. */
   count: number;
+  /** The links it stands for (always set by toGraph). */
+  rows?: LinkRow[];
+  /**
+   * The aggregate (LAG) the line belongs to: folded, one line for all its
+   * members between the two devices; unfolded, one line per member.
+   */
+  lag?: { group: string; name: string; folded: boolean };
+}
+
+/** Two switches of one MLAG pair, drawn inside one box. */
+export interface Group {
+  id: string;
+  domain: string;
+  members: string[];
 }
 
 export interface Graph {
@@ -247,15 +298,24 @@ export interface Graph {
   edges: Edge[];
   /** Links whose two ends are on the same device: in the table, not drawn. */
   loops: number;
+  /** MLAG pairs among the nodes (a domain shared by at least two of them). */
+  groups?: Group[];
+}
+
+export interface GraphOptions {
+  /** Aggregate groups (Edge.lag.group) drawn member by member instead of as one line. */
+  expanded?: ReadonlySet<string>;
 }
 
 /**
  * The graph of some rows: a node per device that has a link, a line per
  * (device pair, class, level). A deduced line keeps its level because
  * "deduced from both ends" and "deduced from a forwarding table" are not the
- * same claim; parallel lines of different classes are kept apart.
+ * same claim; parallel lines of different classes are kept apart. The member
+ * ports of one aggregate between the same two devices are one line (the
+ * aggregate's), unless the reader expanded it.
  */
-export function toGraph(t: Topology, rows: readonly LinkRow[]): Graph {
+export function toGraph(t: Topology, rows: readonly LinkRow[], opts: GraphOptions = {}): Graph {
   const edges = new Map<string, Edge>();
   const pairsOf = new Map<string, Set<string>>();
   const used = new Set<string>();
@@ -268,14 +328,37 @@ export function toGraph(t: Topology, rows: readonly LinkRow[]): Graph {
       continue;
     }
     const lvl = r.klass === "deduced" ? (r.level ?? undefined) : undefined;
-    const id = `${s}|${d}|${r.klass}|${lvl ?? ""}`;
-    const e = edges.get(id) ?? { id, source: s, target: d, klass: r.klass, level: lvl, count: 0 };
+    // The aggregate of each end, the source's side first: a LAG is named as its first device calls it.
+    const [ps, pd] = r.a.deviceId === s ? [r.a, r.b] : [r.b, r.a];
+    const lagS = t.lagOf.get(ps.id);
+    const lagD = t.lagOf.get(pd.id);
+    let lag: Edge["lag"];
+    if (lagS !== undefined || lagD !== undefined) {
+      const group = `${s}|${d}|lag:${lagS ?? ""}|${lagD ?? ""}`;
+      const name = t.lagName.get((lagS ?? lagD) as string) ?? "";
+      if (opts.expanded?.has(group)) {
+        // Unfolded: each member is its own line, still keyed by its group so that it can be folded again.
+        const id = `${s}|${d}|${r.klass}|${lvl ?? ""}|row:${r.key}`;
+        edges.set(id, { id, source: s, target: d, klass: r.klass, level: lvl, count: 1, rows: [r], lag: { group, name, folded: false } });
+        continue;
+      }
+      lag = { group, name, folded: true };
+    }
+    const id = `${s}|${d}|${r.klass}|${lvl ?? ""}${lag ? `|${lag.group}` : ""}`;
+    const e = edges.get(id) ?? { id, source: s, target: d, klass: r.klass, level: lvl, count: 0, rows: [], lag };
     const pairs = pairsOf.get(id) ?? new Set<string>();
     pairs.add([r.a.id, r.b.id].sort().join("|"));
     pairsOf.set(id, pairs);
     e.count = pairs.size;
+    (e.rows ??= []).push(r);
     edges.set(id, e);
   }
   const nodes = [...used].map((id) => t.nodes.get(id)).filter((n): n is Node => n !== undefined);
-  return { nodes, edges: [...edges.values()], loops };
+  const byDomain = new Map<string, string[]>();
+  for (const n of nodes) if (n.mlagDomain) byDomain.set(n.mlagDomain, [...(byDomain.get(n.mlagDomain) ?? []), n.id]);
+  const groups = [...byDomain]
+    .filter(([, members]) => members.length >= 2)
+    .map(([domain, members]) => ({ id: `mlag:${domain}`, domain, members: members.sort() }))
+    .sort((a, b) => a.id.localeCompare(b.id));
+  return { nodes, edges: [...edges.values()], loops, groups };
 }

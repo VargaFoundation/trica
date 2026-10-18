@@ -70,6 +70,7 @@ The schema has no `connected_to` or `link` relation; the page reads what it has 
 | `connects` (cable to interface, `end` a or b) | one link per cable that has exactly two interface ends | the weakest of its two ends |
 | `neighbor_of` (LLDP adjacency) | a link | the relation's own confidence |
 | `mounted_in`, `member_of` (interface to VLAN) | not drawn: they feed the rack and VLAN filters | |
+| `member_of` (interface to interface: a port in an aggregate) | the members of one LAG between the same two devices are one line, "Po11 (2×10G)" | each member's own |
 
 - **The canvas follows the theme** (the `--trica-graph-*` tokens); the exports stay on white
   paper with a fixed palette.
@@ -87,7 +88,30 @@ The schema has no `connected_to` or `link` relation; the page reads what it has 
   matches; the last class cannot be unticked; a value in the address that matches nothing is
   ignored.
 - **Keyboard**: the canvas takes no focus; the table below it lists every link with links to both
-  devices, both ports and the cable. Clicking a node opens its object page.
+  devices, both ports and the cable, and a "Show" button that opens the same details as a click on
+  the line (focus moves to them).
+- **Details beside the drawing.** A click on a line opens its two ends, its speed, its traffic each
+  way, its utilisation, the source and whether the data is stale; on an aggregate, a button (or a
+  double click on the line) shows its member links one by one, and folds them back. A click on a
+  device opens its health (the worst of its own `health` and its modules', power supplies' and
+  fans'), its critical events (`log_critical_count`), its MLAG domain and a link to its page.
+- **Devices** carry the icon of their role (served as files under `/topology-icons/<theme>/`,
+  since `img-src 'self'` refuses `data:` URLs; `icons.test.ts` writes and checks them), a border
+  by their worst health (green, amber, red; grey when unknown) and "⚠ n" for critical events. Two
+  switches sharing `mlag_domain` are drawn inside one dashed box.
+- **Live overlay (ADR 0041)**, when the server has a `live` block: `GET /api/v1/topology/live`
+  every 30 s, in its own query (`useLiveTopology`); without it (`enabled: false`, or an older
+  server answering 404) nothing changes and nothing more is asked. A line's width is its
+  throughput on a logarithmic scale (1 px at 1 kb/s, 8 px at 100 Gb/s); its colour is its
+  utilisation (neutral under 50 %, amber to 80 % or when partly down, red beyond, red with a bar at
+  each end when down, grey when not measured), in the `--trica-graph-util-*` tokens; its line style
+  still says its confidence. "↑ 3.2 Gb/s ↓ 1.1 Gb/s" shows under the pointer and on every line past
+  a zoom of 1.8; ↑ is from the first device of the line's title. An aggregate without series of its
+  own is the sum of its members. "Live data 12 s ago" above the drawing turns into "stale" when the
+  server says so or after three refresh periods. "Animate the traffic" pulses the lines that carry
+  traffic; it is off by default and cannot be turned on under `prefers-reduced-motion`. The table
+  gains a "Live" column with the same figures in words. The exports draw what is on the screen,
+  on white paper.
 - **Size**: links are read 1000 per call, at most 10 000 per kind; the page says when it stopped.
   The ELK layout runs in the page: about 1.5 s for 200 devices and 520 links in Chromium.
 - The page and its two libraries are a separate file (1.9 MB, 590 KB compressed), fetched when the

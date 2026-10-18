@@ -16,7 +16,10 @@ import cytoscape, {
 import elk from "cytoscape-elk";
 import type { Raster } from "../export/download";
 import { textWidth, type Figure, type Shape } from "../export/vectorPdf";
+import { kindOf } from "../inventory/kind";
+import { TOPOLOGY_ICONS, iconUrl, type IconTheme } from "./icons";
 import type { Graph, LinkClass } from "./model";
+import type { UtilClass } from "./live";
 
 let registered = false;
 function register() {
@@ -44,6 +47,19 @@ export interface Palette {
   declared: string;
   observed: string;
   deduced: string;
+  /** Live lines (ADR 0041): by utilisation, down, not measured. */
+  utilNormal: string;
+  utilWarn: string;
+  utilCrit: string;
+  down: string;
+  utilUnknown: string;
+  /** A device's border by its worst health. */
+  healthOk: string;
+  healthWarn: string;
+  healthCrit: string;
+  /** The box around an MLAG pair. */
+  group: string;
+  groupLine: string;
 }
 
 /** The exports' palette, and the screen's when the page's tokens cannot be read. */
@@ -57,6 +73,16 @@ export const PAPER_PALETTE: Palette = {
   declared: "#1f2328",
   observed: "#0550ae",
   deduced: "#9a5b00",
+  utilNormal: "#60646c",
+  utilWarn: "#8f560a",
+  utilCrit: "#ce2c31",
+  down: "#ce2c31",
+  utilUnknown: "#8b8d98",
+  healthOk: "#1f6d4b",
+  healthWarn: "#8f560a",
+  healthCrit: "#ce2c31",
+  group: "#f9f9fb",
+  groupLine: "#8b8d98",
 };
 
 const TOKENS: Record<keyof Palette, string> = {
@@ -69,7 +95,23 @@ const TOKENS: Record<keyof Palette, string> = {
   declared: "--trica-graph-declared",
   observed: "--trica-graph-observed",
   deduced: "--trica-graph-deduced",
+  utilNormal: "--trica-graph-util-normal",
+  utilWarn: "--trica-graph-util-warn",
+  utilCrit: "--trica-graph-util-crit",
+  down: "--trica-graph-down",
+  utilUnknown: "--trica-graph-util-unknown",
+  healthOk: "--trica-graph-health-ok",
+  healthWarn: "--trica-graph-health-warn",
+  healthCrit: "--trica-graph-health-crit",
+  group: "--trica-graph-group",
+  groupLine: "--trica-graph-group-line",
 };
+
+/** The icon set of the screen: the one drawn for the theme's colour scheme (styles/tokens.css sets color-scheme). */
+export function screenIconTheme(doc: Document = document): IconTheme {
+  const scheme = doc.defaultView?.getComputedStyle(doc.documentElement).colorScheme ?? "";
+  return scheme.includes("light") ? "light" : "dark";
+}
 
 /** The screen's palette: the page's --trica-graph-* tokens as the theme resolves them now. */
 export function screenPalette(doc: Document = document): Palette {
@@ -108,14 +150,45 @@ export interface EdgeText {
   /** Label of a deduced link whose level is unknown. */
   deduced: string;
   level: (l: string) => string;
+  /** Label of an aggregate's line ("Po11 (2×10G)"). */
+  lag?: (e: Graph["edges"][number]) => string;
+  /** Label of the box around an MLAG pair. */
+  group?: (domain: string) => string;
 }
 
+/** The label of a device: its name, and "⚠ n" when its event log holds critical entries. */
+export function nodeLabel(n: { name: string; critical?: number }): string {
+  return n.critical && n.critical > 0 ? `${n.name}  ⚠ ${n.critical}` : n.name;
+}
+
+const NODE_ICON = 16;
+
 export function toElements(g: Graph, text: EdgeText): ElementDefinition[] {
+  const parentOf = new Map<string, string>();
+  for (const grp of g.groups ?? []) for (const m of grp.members) parentOf.set(m, grp.id);
   return [
-    ...g.nodes.map((n) => ({
+    ...(g.groups ?? []).map((grp) => ({
       group: "nodes" as const,
-      data: { id: n.id, label: n.name, unresolved: n.unresolved },
+      data: { id: grp.id, label: text.group ? text.group(grp.domain) : grp.domain, compound: true },
     })),
+    ...g.nodes.map((n) => {
+      const label = nodeLabel(n);
+      const icon = kindOf({ type: "device", attributes: { role: n.role } }).icon;
+      return {
+        group: "nodes" as const,
+        data: {
+          id: n.id,
+          label,
+          name: n.name,
+          unresolved: n.unresolved,
+          parent: parentOf.get(n.id),
+          icon: (TOPOLOGY_ICONS as readonly string[]).includes(icon) ? icon : "device",
+          health: n.health ?? "unknown",
+          // Room for the icon on the left of the name: cytoscape's "label" width does not count it.
+          w: Math.ceil(textWidth(label, NODE_FONT) + 2 * NODE_PAD + NODE_ICON + 6),
+        },
+      };
+    }),
     ...g.edges.map((e) => ({
       group: "edges" as const,
       data: {
@@ -125,14 +198,25 @@ export function toElements(g: Graph, text: EdgeText): ElementDefinition[] {
         klass: e.klass,
         level: e.level ?? "",
         count: e.count,
-        label: edgeLabel(e, text),
+        label: e.lag?.folded ? (text.lag?.(e) ?? e.lag.name) : edgeLabel(e, text),
+        lag: e.lag?.group ?? "",
       },
     })),
   ];
 }
 
-/** The cytoscape style of a palette. */
-export function stylesheetFor(p: Palette): StylesheetJson {
+/** The live classes of a line (applyLive), each with its colour. */
+export const UTIL_CLASSES: readonly UtilClass[] = ["normal", "warn", "crit", "down", "unknown"];
+
+/** The cytoscape style of a palette; device icons from the set of a theme. */
+export function stylesheetFor(p: Palette, icons: IconTheme = "light"): StylesheetJson {
+  const utilColor: Record<UtilClass, string> = {
+    normal: p.utilNormal,
+    warn: p.utilWarn,
+    crit: p.utilCrit,
+    down: p.down,
+    unknown: p.utilUnknown,
+  };
   return [
   {
     selector: "node",
@@ -150,6 +234,44 @@ export function stylesheetFor(p: Palette): StylesheetJson {
       "background-color": p.node,
       "border-width": 1.5,
       "border-color": p.nodeLine,
+    },
+  },
+  {
+    selector: "node[w]",
+    style: {
+      width: "data(w)",
+      padding: "0px",
+      "text-margin-x": (NODE_ICON + 6) / 2,
+      "background-width": NODE_ICON,
+      "background-height": NODE_ICON,
+      "background-position-x": NODE_PAD,
+      "background-position-y": "50%",
+      "background-clip": "none",
+      "background-fit": "none",
+    },
+  },
+  ...TOPOLOGY_ICONS.map((icon) => ({
+    selector: `node[icon = "${icon}"]`,
+    style: { "background-image": iconUrl(icons, icon) },
+  })),
+  { selector: 'node[health = "ok"]', style: { "border-color": p.healthOk } },
+  { selector: 'node[health = "warning"]', style: { "border-color": p.healthWarn, "border-width": 2.5 } },
+  { selector: 'node[health = "critical"]', style: { "border-color": p.healthCrit, "border-width": 3 } },
+  {
+    selector: "node[?compound]",
+    style: {
+      shape: "round-rectangle",
+      "background-color": p.group,
+      "background-opacity": 1,
+      "border-color": p.groupLine,
+      "border-style": "dashed",
+      "border-width": 1,
+      "text-valign": "top",
+      "text-halign": "center",
+      "font-size": 10,
+      padding: "10px",
+      width: "auto",
+      height: "auto",
     },
   },
   {
@@ -183,10 +305,31 @@ export function stylesheetFor(p: Palette): StylesheetJson {
       width: EDGE_STYLE[k].width,
     },
   })),
+  // The live overlay: the width says the throughput, the colour the utilisation; the line style still says the confidence.
+  { selector: "edge.live", style: { width: "data(lw)" } },
+  ...UTIL_CLASSES.map((c) => ({ selector: `edge.live-${c}`, style: { "line-color": utilColor[c] } })),
+  // Down is not told by the colour alone: a bar across each end.
+  {
+    selector: "edge.live-down",
+    style: { "source-arrow-shape": "tee", "target-arrow-shape": "tee", "source-arrow-color": p.down, "target-arrow-color": p.down },
+  },
+  { selector: "edge.has-live.show-live", style: { label: "data(liveLabel)" } },
+  { selector: "edge:selected", style: { "underlay-color": p.nodeLine, "underlay-opacity": 0.25, "underlay-padding": 4 } },
+  {
+    selector: "edge.flowing",
+    style: {
+      "underlay-color": p.observed,
+      "underlay-padding": 3,
+      "underlay-opacity": 0,
+      "transition-property": "underlay-opacity",
+      "transition-duration": 900,
+    },
+  },
+  { selector: "edge.flowing.pulse", style: { "underlay-opacity": 0.35 } },
 ];
 }
 
-export function elkOptions(nodes: number) {
+export function elkOptions(nodes: number, groups = 0) {
   return {
     name: "elk",
     fit: true,
@@ -200,6 +343,8 @@ export function elkOptions(nodes: number) {
       "elk.spacing.nodeNode": 28,
       // The default (7) is for small graphs; past a hundred nodes the time is better spent elsewhere.
       "elk.layered.thoroughness": nodes > 100 ? 2 : 7,
+      // MLAG boxes: one layout across the levels, so that a line leaving a box is routed with the others, and room inside it.
+      ...(groups > 0 ? { "elk.hierarchyHandling": "INCLUDE_CHILDREN", "elk.padding": "[top=24,left=16,bottom=16,right=16]", "elk.spacing.nodeNode": 56 } : {}),
     },
   };
 }
@@ -224,6 +369,65 @@ export interface Drawing {
   raster(format: "png" | "jpeg"): Promise<Raster>;
   /** The whole graph as lines, boxes and text, for a vector PDF. */
   vector(): Promise<Figure>;
+  /** Lays the live state over the lines, without moving anything; null takes it away. */
+  live(update: ReadonlyMap<string, LiveStyle> | null): void;
+  /** Turns the flow pulse on or off (never on when the reader asked for reduced motion). */
+  flow(on: boolean): void;
+  /** Selects one element (a node or a line), or nothing. */
+  select(id: string | null): void;
+}
+
+/** What the live overlay sets on one line. */
+export interface LiveStyle {
+  util: UtilClass;
+  /** Width, px (widthOf). */
+  width: number;
+  /** "↑ 3.2 Gb/s ↓ 1.1 Gb/s"; empty when nothing is measured. */
+  label: string;
+  /** A new label for the line itself (an aggregate's "Po11 (2×10G)"). */
+  title?: string;
+  /** Some traffic: the pulse may show it. */
+  flowing: boolean;
+}
+
+/** What the drawing reports besides a click on a device. */
+export interface DrawHandlers {
+  /** A line was clicked. */
+  onEdge?: (id: string) => void;
+  /** A line was double-clicked (an aggregate unfolds or folds). */
+  onEdgeToggle?: (id: string) => void;
+  /** The background was clicked: nothing is selected any more. */
+  onClear?: () => void;
+}
+
+/** A small graph is not blown up to fill the canvas: fitted, it stays at most this large. */
+export const MAX_FIT_ZOOM = 1.6;
+
+/** Past this zoom, every measured line shows its throughput, not only the one under the pointer. */
+export const LABEL_ZOOM = 1.8;
+
+/** True when the reader asked the system for less motion. */
+export function prefersReducedMotion(win: Window | null | undefined = typeof window === "undefined" ? undefined : window): boolean {
+  return win?.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
+/** Applies a live update to a graph's lines; exported for the headless tests. */
+export function applyLive(cy: Core, update: ReadonlyMap<string, LiveStyle> | null): void {
+  cy.batch(() => {
+    cy.edges().forEach((e) => {
+      e.removeClass(["live", "has-live", "flowing", "pulse", ...UTIL_CLASSES.map((c) => `live-${c}`)]);
+      const base = e.data("baseLabel") as string | undefined;
+      if (base !== undefined) e.data("label", base);
+      const l = update?.get(e.id());
+      if (!l) return;
+      if (base === undefined) e.data("baseLabel", e.data("label"));
+      if (l.title !== undefined) e.data("label", l.title);
+      e.data({ lw: l.width, liveLabel: l.label });
+      e.addClass(["live", `live-${l.util}`]);
+      if (l.label) e.addClass("has-live");
+      if (l.flowing) e.addClass("flowing");
+    });
+  });
 }
 
 /** The largest image exported: beyond it browsers refuse a canvas. */
@@ -280,8 +484,10 @@ const MARGIN = 20;
  * the same figure.
  */
 export function figureOf(cy: Core): Figure {
-  const nodes = cy.nodes().map((n) => {
-    const label = String(n.data("label") ?? "");
+  const nodes = cy.nodes().filter((n) => !n.data("compound")).toArray().map((el) => {
+    const n = el as cytoscape.NodeSingular;
+    // The name, without the event badge: the PDF's Helvetica has no warning sign.
+    const label = String(n.data("name") ?? n.data("label") ?? "");
     const { x, y } = n.position();
     const w = textWidth(label, NODE_FONT) + 2 * NODE_PAD;
     return { id: n.id(), label, x, y, w, h: NODE_HEIGHT, unresolved: Boolean(n.data("unresolved")) };
@@ -368,6 +574,7 @@ export function draw(
   g: Graph,
   text: EdgeText,
   onOpen: (id: string) => void,
+  handlers: DrawHandlers = {},
 ): Drawing {
   register();
   if (!graphEnv.headless && container)
@@ -378,7 +585,7 @@ export function draw(
     // A headless graph computes no style unless asked; the tests read it.
     styleEnabled: true,
     elements: toElements(g, text),
-    style: stylesheetFor(screenPalette(container?.ownerDocument)),
+    style: stylesheetFor(screenPalette(container?.ownerDocument), container ? screenIconTheme(container.ownerDocument) : "light"),
     layout: { name: "preset" },
     // The page has its own keyboard alternative (the table): the canvas takes no focus and no scroll.
     userZoomingEnabled: true,
@@ -388,10 +595,52 @@ export function draw(
     minZoom: 0.05,
     maxZoom: 3,
   });
-  cy.on("tap", "node", (e) => onOpen(e.target.id() as string));
+  // A device opens; the box of an MLAG pair is not a device.
+  cy.on("tap", "node", (e) => {
+    if (!e.target.data("compound")) onOpen(e.target.id() as string);
+  });
+  cy.on("tap", "edge", (e) => handlers.onEdge?.(e.target.id() as string));
+  cy.on("dbltap", "edge", (e) => handlers.onEdgeToggle?.(e.target.id() as string));
+  cy.on("tap", (e) => {
+    if (e.target === cy) handlers.onClear?.();
+  });
+  // A line's throughput shows under the pointer, and on every line once zoomed in.
+  cy.on("mouseover", "edge", (e) => void e.target.addClass("show-live"));
+  cy.on("mouseout", "edge", (e) => {
+    if (cy.zoom() < LABEL_ZOOM) e.target.removeClass("show-live");
+  });
+  cy.on("zoom", () => {
+    if (cy.zoom() >= LABEL_ZOOM) cy.edges().addClass("show-live");
+    else cy.edges().removeClass("show-live");
+  });
   // Follow the theme: the reader's choice (data-theme) or the system's.
   const doc = container?.ownerDocument;
-  const restyle = () => void cy.style(stylesheetFor(screenPalette(doc)));
+  const restyle = () => void cy.style(stylesheetFor(screenPalette(doc), doc ? screenIconTheme(doc) : "light"));
+  // The canvas narrows when the details open beside it: the picture is fitted to its new size.
+  const fitCapped = () => {
+    cy.resize();
+    cy.fit(undefined, 24);
+    if (cy.zoom() > MAX_FIT_ZOOM) {
+      cy.zoom(MAX_FIT_ZOOM);
+      cy.center();
+    }
+  };
+  let lastWidth = container?.clientWidth ?? 0;
+  const resizer =
+    !graphEnv.headless && container && typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => {
+          if (container.clientWidth === lastWidth) return;
+          lastWidth = container.clientWidth;
+          fitCapped();
+        })
+      : undefined;
+  if (container) resizer?.observe(container);
+  let pulse: ReturnType<typeof setInterval> | undefined;
+  const stopFlow = () => {
+    if (pulse !== undefined) clearInterval(pulse);
+    pulse = undefined;
+    cy.edges().removeClass("pulse");
+  };
   const observer = doc && typeof MutationObserver !== "undefined" ? new MutationObserver(restyle) : undefined;
   if (doc) observer?.observe(doc.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   const media = doc?.defaultView?.matchMedia?.("(prefers-color-scheme: light)");
@@ -404,9 +653,15 @@ export function draw(
   } else {
     ready = new Promise<void>((resolve, reject) => {
       const layout = cy.layout(
-        elkOptions(g.nodes.length) as cytoscape.LayoutOptions,
+        elkOptions(g.nodes.length, g.groups?.length ?? 0) as cytoscape.LayoutOptions,
       );
-      layout.one("layoutstop", () => resolve());
+      layout.one("layoutstop", () => {
+        if (cy.zoom() > MAX_FIT_ZOOM) {
+          cy.zoom(MAX_FIT_ZOOM);
+          cy.center();
+        }
+        resolve();
+      });
       try {
         layout.run();
       } catch (err) {
@@ -417,7 +672,19 @@ export function draw(
   return {
     cy,
     ready,
+    live: (update) => applyLive(cy, update),
+    flow: (on) => {
+      stopFlow();
+      if (!on || prefersReducedMotion(doc?.defaultView)) return;
+      pulse = setInterval(() => void cy.edges(".flowing").toggleClass("pulse"), 900);
+    },
+    select: (id) => {
+      cy.elements().unselect();
+      if (id) cy.getElementById(id).select();
+    },
     destroy: () => {
+      stopFlow();
+      resizer?.disconnect();
       observer?.disconnect();
       media?.removeEventListener?.("change", restyle);
       cy.destroy();
@@ -438,7 +705,7 @@ export function draw(
         output: "blob-promise" as const,
       };
       // The picture is on paper whatever the theme: draw it with the paper palette, then put the screen's back.
-      cy.style(stylesheetFor(PAPER_PALETTE));
+      cy.style(stylesheetFor(PAPER_PALETTE, "light"));
       let blob: Blob;
       try {
         blob =
