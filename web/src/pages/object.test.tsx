@@ -6,6 +6,7 @@ import { defaultRoutes, mockApi, problem, renderApp } from "../test/support";
 const at = `/objects/${ID.swA1}`;
 
 async function attributeRow(name: RegExp): Promise<HTMLElement> {
+  // The provenance table is under its tab: the tests that use this helper open the page there.
   const table = await screen.findByRole("table", { name: /Attributes of sw-a1/ });
   return within(table).getByRole("row", { name });
 }
@@ -29,6 +30,7 @@ describe("object page header", () => {
 });
 
 describe("object page attributes", () => {
+  const at = `/objects/${ID.swA1}?tab=provenance`;
   it("shows the provenance of every attribute: source, confidence, first and last seen", async () => {
     mockApi(defaultRoutes());
     renderApp({ at });
@@ -112,6 +114,7 @@ describe("object page attributes", () => {
 });
 
 describe("object page relations", () => {
+  const at = `/objects/${ID.swA1}?tab=relations`;
   it("groups relations by name, seen from this object, with the other end as a link", async () => {
     mockApi(defaultRoutes());
     renderApp({ at });
@@ -134,6 +137,7 @@ describe("object page relations", () => {
 });
 
 describe("object page timeline", () => {
+  const at = `/objects/${ID.swA1}?tab=history`;
   it("shows the changes, newest first, in words", async () => {
     mockApi(defaultRoutes());
     renderApp({ at });

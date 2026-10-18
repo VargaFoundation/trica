@@ -1,105 +1,208 @@
 /*
- * Colour tokens, light and dark. Three blocks carry the same dark values:
- * the explicit choice (data-theme="dark"), and the system preference when no
- * choice was made. src/styles/tokens.test.ts computes the WCAG contrast of every
- * foreground/background pair below (4.5:1 for text, 3:1 for interface parts) in
- * both themes and checks the two dark blocks are identical: change a colour here
- * and the test says whether it still passes.
+ * Design tokens (ADR 0040): the look of an operations console in the manner of
+ * Temporal's UI, transposed from the Choregos console. Dark is the default: it
+ * holds without JavaScript and it is an operations console's choice. Light is
+ * data-theme="light" on <html>, or the system preference when the reader left
+ * the theme on "System".
+ *
+ * Every colour is a step of a Radix Colors scale (Copyright (c) 2022 WorkOS,
+ * MIT licence, see NOTICE), or a mix of two steps resolved here to a literal:
+ * src/styles/tokens.test.ts reads the literals, computes the WCAG contrast of
+ * every foreground/background pair (4.5:1 for text, 3:1 for interface parts)
+ * in both themes, and checks the light and system-light blocks are identical.
+ *
+ * No web font (ADR 0018): the system sans to read, the system monospace for
+ * what is compared (identifiers, addresses, numbers, timestamps).
  */
+
+/* ─────────────────────────────── dark (default) ─────────────────────────────── */
 :root {
-  color-scheme: light;
-  --bg: #ffffff;
-  --surface: #f6f8fa;
-  --text: #1f2328;
-  --muted: #57606a;
-  --border: #d0d7de;
-  --input-border: #6e7781;
-  --link: #0550ae;
-  --focus: #0969da;
-  --primary-bg: #1d4ed8;
-  --primary-fg: #ffffff;
-  --danger-bg: #b42318;
-  --danger-fg: #ffffff;
-  --button-bg: #f6f8fa;
-  --button-fg: #1f2328;
-  --notice-bg: #fff8c5;
-  --notice-fg: #4d2d00;
-  --error-bg: #ffebe9;
-  --error-fg: #82071e;
-  --green-bg: #dafbe1;
-  --green-fg: #116329;
-  --red-bg: #ffebe9;
-  --red-fg: #a40e26;
-  --amber-bg: #fff8c5;
-  --amber-fg: #7d4e00;
-  --blue-bg: #ddf4ff;
-  --blue-fg: #0550ae;
-  --gray-bg: #eaeef2;
-  --gray-fg: #424a53;
-}
-
-:root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0d1117;
-  --surface: #161b22;
-  --text: #e6edf3;
-  --muted: #9198a1;
-  --border: #30363d;
-  --input-border: #8b949e;
-  --link: #58a6ff;
-  --focus: #79c0ff;
-  --primary-bg: #1f6feb;
-  --primary-fg: #ffffff;
-  --danger-bg: #da3633;
-  --danger-fg: #ffffff;
-  --button-bg: #21262d;
-  --button-fg: #e6edf3;
-  --notice-bg: #3b2e00;
-  --notice-fg: #f2cc60;
-  --error-bg: #4c1215;
-  --error-fg: #ffa198;
-  --green-bg: #0f3d1f;
-  --green-fg: #7ee787;
-  --red-bg: #4c1215;
-  --red-fg: #ffa198;
-  --amber-bg: #4a3300;
-  --amber-fg: #f2cc60;
-  --blue-bg: #0c2d57;
-  --blue-fg: #79c0ff;
-  --gray-bg: #30363d;
-  --gray-fg: #c9d1d9;
+
+  /* Surfaces: the page, what rises above it (cards, menus), the darker sidebar. */
+  --trica-surface: #111113;
+  --trica-raised: #18191b;
+  --trica-sidebar: #0d0d0e;
+  --trica-surface-muted: #212225;
+
+  /* Lines: a hairline, and a control border that carries 3:1 (WCAG 1.4.11). */
+  --trica-line: #363a3f;
+  --trica-line-strong: #696e77;
+
+  /* Text. */
+  --trica-ink: #edeef0;
+  --trica-ink-muted: #b0b4ba;
+  --trica-link: #b1a9ff;
+
+  /* One accent: iris. */
+  --trica-accent: #5b5bd6;
+  --trica-accent-hover: #4d4db6;
+  --trica-accent-ink: #ffffff;
+  --trica-accent-soft: #202248;
+  --trica-accent-line: #3d3e82;
+  --trica-focus: #6e6ade;
+
+  /* Status pills: a tinted ground, a line of its hue, its text; and a solid dot. */
+  --trica-ok-soft: #132d21;
+  --trica-ok-line: #20573e;
+  --trica-ok-ink: #3dd68c;
+  --trica-ok-solid: #30a46c;
+  --trica-warn-soft: #302008;
+  --trica-warn-line: #5c3d05;
+  --trica-warn-ink: #ffca16;
+  --trica-warn-solid: #ffc53d;
+  --trica-danger-soft: #3b1219;
+  --trica-danger-line: #72232d;
+  --trica-danger-ink: #ff9592;
+  --trica-danger-solid: #e5484d;
+  --trica-info-soft: #0d2847;
+  --trica-info-line: #104d87;
+  --trica-info-ink: #70b8ff;
+  --trica-info-solid: #0090ff;
+  --trica-declared-soft: #351a35;
+  --trica-declared-line: #5e3061;
+  --trica-declared-ink: #e796f3;
+  --trica-declared-solid: #ab4aba;
+  --trica-neutral-soft: #212225;
+  --trica-neutral-line: #363a3f;
+  --trica-neutral-ink: #b0b4ba;
+  --trica-neutral-solid: #696e77;
+
+  /* The topology canvas follows the theme (src/topology/graph.ts reads these). */
+  --trica-graph-paper: #18191b;
+  --trica-graph-ink: #edeef0;
+  --trica-graph-node: #0d2847;
+  --trica-graph-node-line: #70b8ff;
+  --trica-graph-unresolved: #212225;
+  --trica-graph-unresolved-line: #b0b4ba;
+  --trica-graph-declared: #edeef0;
+  --trica-graph-observed: #70b8ff;
+  --trica-graph-deduced: #ffca16;
 }
 
-@media (prefers-color-scheme: dark) {
+/* Not colours: one place for the type, the radii and the rhythm. */
+:root {
+  --trica-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --trica-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --trica-radius-control: 4px;
+  --trica-radius-surface: 6px;
+  --trica-topbar: 48px;
+  --trica-sidebar-width: 15rem;
+  --trica-rail-width: 3.25rem;
+  --trica-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --trica-shadow-raised: none;
+}
+
+/* ─────────────────────────────── light ─────────────────────────────── */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --trica-surface: #fcfcfd;
+  --trica-raised: #ffffff;
+  --trica-sidebar: #f9f9fb;
+  --trica-surface-muted: #f0f0f3;
+  --trica-line: #d9d9e0;
+  --trica-line-strong: #8b8d98;
+  --trica-ink: #1c2024;
+  --trica-ink-muted: #60646c;
+  --trica-link: #5753c6;
+  --trica-accent: #5b5bd6;
+  --trica-accent-hover: #5151cd;
+  --trica-accent-ink: #ffffff;
+  --trica-accent-soft: #f0f1fe;
+  --trica-accent-line: #cbcdff;
+  --trica-focus: #5b5bd6;
+  --trica-ok-soft: #e6f6eb;
+  --trica-ok-line: #adddc0;
+  --trica-ok-ink: #1f6d4b;
+  --trica-ok-solid: #30a46c;
+  --trica-warn-soft: #fff7c2;
+  --trica-warn-line: #f3d673;
+  --trica-warn-ink: #8f560a;
+  --trica-warn-solid: #ffc53d;
+  --trica-danger-soft: #feebec;
+  --trica-danger-line: #fdbdbe;
+  --trica-danger-ink: #ae262d;
+  --trica-danger-solid: #e5484d;
+  --trica-info-soft: #e6f4fe;
+  --trica-info-line: #acd8fc;
+  --trica-info-ink: #0e60ae;
+  --trica-info-solid: #0090ff;
+  --trica-declared-soft: #fbebfb;
+  --trica-declared-line: #e9c2ec;
+  --trica-declared-ink: #81338e;
+  --trica-declared-solid: #ab4aba;
+  --trica-neutral-soft: #f0f0f3;
+  --trica-neutral-line: #d9d9e0;
+  --trica-neutral-ink: #60646c;
+  --trica-neutral-solid: #8b8d98;
+  --trica-graph-paper: #ffffff;
+  --trica-graph-ink: #1c2024;
+  --trica-graph-node: #e6f4fe;
+  --trica-graph-node-line: #0e60ae;
+  --trica-graph-unresolved: #f0f0f3;
+  --trica-graph-unresolved-line: #60646c;
+  --trica-graph-declared: #1c2024;
+  --trica-graph-observed: #0e60ae;
+  --trica-graph-deduced: #8f560a;
+}
+:root[data-theme="light"] {
+  --trica-shadow-raised: 0 1px 2px rgb(28 32 36 / 6%);
+}
+
+/* "System" (no data-theme): a reader whose system prefers light gets the light block. */
+@media (prefers-color-scheme: light) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
-    color-scheme: dark;
-    --bg: #0d1117;
-    --surface: #161b22;
-    --text: #e6edf3;
-    --muted: #9198a1;
-    --border: #30363d;
-    --input-border: #8b949e;
-    --link: #58a6ff;
-    --focus: #79c0ff;
-    --primary-bg: #1f6feb;
-    --primary-fg: #ffffff;
-    --danger-bg: #da3633;
-    --danger-fg: #ffffff;
-    --button-bg: #21262d;
-    --button-fg: #e6edf3;
-    --notice-bg: #3b2e00;
-    --notice-fg: #f2cc60;
-    --error-bg: #4c1215;
-    --error-fg: #ffa198;
-    --green-bg: #0f3d1f;
-    --green-fg: #7ee787;
-    --red-bg: #4c1215;
-    --red-fg: #ffa198;
-    --amber-bg: #4a3300;
-    --amber-fg: #f2cc60;
-    --blue-bg: #0c2d57;
-    --blue-fg: #79c0ff;
-    --gray-bg: #30363d;
-    --gray-fg: #c9d1d9;
+    color-scheme: light;
+    --trica-surface: #fcfcfd;
+    --trica-raised: #ffffff;
+    --trica-sidebar: #f9f9fb;
+    --trica-surface-muted: #f0f0f3;
+    --trica-line: #d9d9e0;
+    --trica-line-strong: #8b8d98;
+    --trica-ink: #1c2024;
+    --trica-ink-muted: #60646c;
+    --trica-link: #5753c6;
+    --trica-accent: #5b5bd6;
+    --trica-accent-hover: #5151cd;
+    --trica-accent-ink: #ffffff;
+    --trica-accent-soft: #f0f1fe;
+    --trica-accent-line: #cbcdff;
+    --trica-focus: #5b5bd6;
+    --trica-ok-soft: #e6f6eb;
+    --trica-ok-line: #adddc0;
+    --trica-ok-ink: #1f6d4b;
+    --trica-ok-solid: #30a46c;
+    --trica-warn-soft: #fff7c2;
+    --trica-warn-line: #f3d673;
+    --trica-warn-ink: #8f560a;
+    --trica-warn-solid: #ffc53d;
+    --trica-danger-soft: #feebec;
+    --trica-danger-line: #fdbdbe;
+    --trica-danger-ink: #ae262d;
+    --trica-danger-solid: #e5484d;
+    --trica-info-soft: #e6f4fe;
+    --trica-info-line: #acd8fc;
+    --trica-info-ink: #0e60ae;
+    --trica-info-solid: #0090ff;
+    --trica-declared-soft: #fbebfb;
+    --trica-declared-line: #e9c2ec;
+    --trica-declared-ink: #81338e;
+    --trica-declared-solid: #ab4aba;
+    --trica-neutral-soft: #f0f0f3;
+    --trica-neutral-line: #d9d9e0;
+    --trica-neutral-ink: #60646c;
+    --trica-neutral-solid: #8b8d98;
+    --trica-graph-paper: #ffffff;
+    --trica-graph-ink: #1c2024;
+    --trica-graph-node: #e6f4fe;
+    --trica-graph-node-line: #0e60ae;
+    --trica-graph-unresolved: #f0f0f3;
+    --trica-graph-unresolved-line: #60646c;
+    --trica-graph-declared: #1c2024;
+    --trica-graph-observed: #0e60ae;
+    --trica-graph-deduced: #8f560a;
+  }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --trica-shadow-raised: 0 1px 2px rgb(28 32 36 / 6%);
   }
 }

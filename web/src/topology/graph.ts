@@ -1,10 +1,12 @@
 // The drawing of the topology: cytoscape for the canvas and the interaction,
 // ELK (layered) for the layout. This file is the only one that touches them.
 //
-// The graph sits on its own white "paper" with a fixed light palette, whatever
-// the theme: an exported picture is then the screen's, and nothing here reads
-// the page's CSS variables. What tells the three kinds of link apart is the
-// line (solid, dotted, dashed) and the label, never the colour alone.
+// On the screen the graph follows the theme: its colours are the page's
+// --trica-graph-* tokens (styles/tokens.css), read when it is drawn and again
+// when the theme changes. An exported picture or PDF is always on white paper
+// with the fixed light palette below, whatever the theme. What tells the three
+// kinds of link apart is the line (solid, dotted, dashed) and the label, never
+// the colour alone.
 
 import cytoscape, {
   type Core,
@@ -31,13 +33,63 @@ export const graphEnv: { headless: boolean; layout: "elk" | "preset" } = {
 
 export const PAPER = "#ffffff";
 
+/** The colours of a drawing. */
+export interface Palette {
+  paper: string;
+  ink: string;
+  node: string;
+  nodeLine: string;
+  unresolved: string;
+  unresolvedLine: string;
+  declared: string;
+  observed: string;
+  deduced: string;
+}
+
+/** The exports' palette, and the screen's when the page's tokens cannot be read. */
+export const PAPER_PALETTE: Palette = {
+  paper: PAPER,
+  ink: "#1f2328",
+  node: "#ddf4ff",
+  nodeLine: "#0550ae",
+  unresolved: "#eaeef2",
+  unresolvedLine: "#424a53",
+  declared: "#1f2328",
+  observed: "#0550ae",
+  deduced: "#9a5b00",
+};
+
+const TOKENS: Record<keyof Palette, string> = {
+  paper: "--trica-graph-paper",
+  ink: "--trica-graph-ink",
+  node: "--trica-graph-node",
+  nodeLine: "--trica-graph-node-line",
+  unresolved: "--trica-graph-unresolved",
+  unresolvedLine: "--trica-graph-unresolved-line",
+  declared: "--trica-graph-declared",
+  observed: "--trica-graph-observed",
+  deduced: "--trica-graph-deduced",
+};
+
+/** The screen's palette: the page's --trica-graph-* tokens as the theme resolves them now. */
+export function screenPalette(doc: Document = document): Palette {
+  const css = doc.defaultView?.getComputedStyle(doc.documentElement);
+  const out = { ...PAPER_PALETTE };
+  for (const k of Object.keys(TOKENS) as (keyof Palette)[]) {
+    const v = css?.getPropertyValue(TOKENS[k]).trim();
+    if (v) out[k] = v;
+  }
+  return out;
+}
+
+/** How each class of link is drawn in the exports (and the line style everywhere). */
 export const EDGE_STYLE: Record<
   LinkClass,
   { color: string; style: "solid" | "dotted" | "dashed"; width: number }
 > = {
-  declared: { color: "#1f2328", style: "solid", width: 3 },
-  observed: { color: "#0550ae", style: "dotted", width: 2.5 },
-  deduced: { color: "#9a5b00", style: "dashed", width: 2 },
+  declared: { color: PAPER_PALETTE.declared, style: "solid", width: 3 },
+  observed: { color: PAPER_PALETTE.observed, style: "dotted", width: 2.5 },
+  deduced: { color: PAPER_PALETTE.deduced, style: "dashed", width: 2 },
 };
 
 /** Text of an edge: the level of a deduced link, the number of links when there are several. */
@@ -79,31 +131,33 @@ export function toElements(g: Graph, text: EdgeText): ElementDefinition[] {
   ];
 }
 
-const stylesheet: StylesheetJson = [
+/** The cytoscape style of a palette. */
+export function stylesheetFor(p: Palette): StylesheetJson {
+  return [
   {
     selector: "node",
     style: {
       label: "data(label)",
       "font-family": "system-ui, sans-serif",
       "font-size": 12,
-      color: "#1f2328",
+      color: p.ink,
       "text-valign": "center",
       "text-halign": "center",
       shape: "round-rectangle",
       width: "label",
       height: 26,
       padding: "8px",
-      "background-color": "#ddf4ff",
+      "background-color": p.node,
       "border-width": 1.5,
-      "border-color": "#0550ae",
+      "border-color": p.nodeLine,
     },
   },
   {
     selector: "node[?unresolved]",
     style: {
       "border-style": "dashed",
-      "background-color": "#eaeef2",
-      "border-color": "#424a53",
+      "background-color": p.unresolved,
+      "border-color": p.unresolvedLine,
     },
   },
   { selector: "node:selected", style: { "border-width": 3 } },
@@ -113,8 +167,8 @@ const stylesheet: StylesheetJson = [
       label: "data(label)",
       "font-family": "system-ui, sans-serif",
       "font-size": 10,
-      color: "#1f2328",
-      "text-background-color": PAPER,
+      color: p.ink,
+      "text-background-color": p.paper,
       "text-background-opacity": 1,
       "text-background-padding": "2px",
       "curve-style": "bezier",
@@ -124,12 +178,13 @@ const stylesheet: StylesheetJson = [
   ...(Object.keys(EDGE_STYLE) as LinkClass[]).map((k) => ({
     selector: `edge[klass = "${k}"]`,
     style: {
-      "line-color": EDGE_STYLE[k].color,
+      "line-color": p[k],
       "line-style": EDGE_STYLE[k].style,
       width: EDGE_STYLE[k].width,
     },
   })),
 ];
+}
 
 export function elkOptions(nodes: number) {
   return {
@@ -267,7 +322,7 @@ export function figureOf(cy: Core): Figure {
       if (via) bounds.push(via);
       const label = String(e.data("label") ?? "");
       if (label) {
-        labels.push({ kind: "text", at: mid, text: label, size: EDGE_FONT, color: "#1f2328", background: PAPER });
+        labels.push({ kind: "text", at: mid, text: label, size: EDGE_FONT, color: PAPER_PALETTE.ink, background: PAPER });
         const half = textWidth(label, EDGE_FONT) / 2 + 2;
         bounds.push({ x: mid.x - half, y: mid.y - EDGE_FONT }, { x: mid.x + half, y: mid.y + EDGE_FONT });
       }
@@ -282,10 +337,10 @@ export function figureOf(cy: Core): Figure {
       w: n.w,
       h: n.h,
       radius: 6,
-      fill: n.unresolved ? "#eaeef2" : "#ddf4ff",
-      stroke: { color: n.unresolved ? "#424a53" : "#0550ae", width: 1.5, dash: n.unresolved ? DASH.dashed : undefined },
+      fill: n.unresolved ? PAPER_PALETTE.unresolved : PAPER_PALETTE.node,
+      stroke: { color: n.unresolved ? PAPER_PALETTE.unresolvedLine : PAPER_PALETTE.nodeLine, width: 1.5, dash: n.unresolved ? DASH.dashed : undefined },
     },
-    { kind: "text", at: { x: n.x, y: n.y }, text: n.label, size: NODE_FONT, color: "#1f2328" },
+    { kind: "text", at: { x: n.x, y: n.y }, text: n.label, size: NODE_FONT, color: PAPER_PALETTE.ink },
   ]);
 
   // The page starts a margin away from the leftmost and topmost ink.
@@ -323,7 +378,7 @@ export function draw(
     // A headless graph computes no style unless asked; the tests read it.
     styleEnabled: true,
     elements: toElements(g, text),
-    style: stylesheet,
+    style: stylesheetFor(screenPalette(container?.ownerDocument)),
     layout: { name: "preset" },
     // The page has its own keyboard alternative (the table): the canvas takes no focus and no scroll.
     userZoomingEnabled: true,
@@ -334,6 +389,13 @@ export function draw(
     maxZoom: 3,
   });
   cy.on("tap", "node", (e) => onOpen(e.target.id() as string));
+  // Follow the theme: the reader's choice (data-theme) or the system's.
+  const doc = container?.ownerDocument;
+  const restyle = () => void cy.style(stylesheetFor(screenPalette(doc)));
+  const observer = doc && typeof MutationObserver !== "undefined" ? new MutationObserver(restyle) : undefined;
+  if (doc) observer?.observe(doc.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  const media = doc?.defaultView?.matchMedia?.("(prefers-color-scheme: light)");
+  media?.addEventListener?.("change", restyle);
   let ready: Promise<void>;
   if (graphEnv.layout === "preset" || g.nodes.length === 0) {
     const pos = gridPositions(g);
@@ -355,7 +417,11 @@ export function draw(
   return {
     cy,
     ready,
-    destroy: () => cy.destroy(),
+    destroy: () => {
+      observer?.disconnect();
+      media?.removeEventListener?.("change", restyle);
+      cy.destroy();
+    },
     raster: async (format) => {
       await ready;
       const bb = cy.elements().boundingBox();
@@ -371,10 +437,17 @@ export function draw(
         maxHeight: Math.ceil(bb.h * ratio),
         output: "blob-promise" as const,
       };
-      const blob =
-        format === "png"
-          ? await cy.png(opts)
-          : await cy.jpg({ ...opts, quality: 0.92 });
+      // The picture is on paper whatever the theme: draw it with the paper palette, then put the screen's back.
+      cy.style(stylesheetFor(PAPER_PALETTE));
+      let blob: Blob;
+      try {
+        blob =
+          format === "png"
+            ? await cy.png(opts)
+            : await cy.jpg({ ...opts, quality: 0.92 });
+      } finally {
+        restyle();
+      }
       return {
         blob,
         width: Math.ceil(bb.w * ratio),

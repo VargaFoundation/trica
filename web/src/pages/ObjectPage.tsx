@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { api } from "../api/endpoints";
 import type { Change, ObjectView, Provenance, ProvenanceEntry, RelationView } from "../api/types";
 import { Async, ErrorBox } from "../components/Async";
@@ -8,6 +8,11 @@ import { Confidence, Status } from "../components/Badge";
 import { ObjectLink } from "../components/ObjectLink";
 import { Time } from "../components/Time";
 import { formatValue, Value } from "../components/Value";
+import { useCrumbs } from "../components/crumbs";
+import { Quantity } from "../components/Quantity";
+import { ButtonLink, Card, HealthPill, Icon, KindIcon, Table, TabPanel, Tabs, useKindLabel, useTabParam, type TabDef } from "../components/ui";
+import { healthOf } from "../inventory/health";
+import { ComponentsSection, OverviewSection, useChildren } from "./ObjectOverview";
 import { useSchemaLookup, type SchemaLookup } from "../hooks";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../usePageTitle";
@@ -30,86 +35,186 @@ export function ObjectPage() {
   return <Async query={query}>{(o) => <ObjectDetail obj={o} />}</Async>;
 }
 
+/** Attributes put forward in the header when the object has them (names of the schema's device type). */
+const KEY_FACTS = ["vendor", "model", "serial", "mgmt_ip", "primary_ip", "uptime_s", "power_w", "inlet_temp_c"] as const;
+
+const TABS = ["overview", "components", "relations", "history", "provenance"] as const;
+
 function ObjectDetail({ obj }: { obj: ObjectView }) {
-  const { t } = useI18n();
+  const { t, number } = useI18n();
   const lookup = useSchemaLookup();
+  const kindLabel = useKindLabel();
   usePageTitle(obj.display);
+  const { kind, label, typeLabel } = kindLabel(obj);
+  const [tab, setTab] = useTabParam(TABS, "overview");
+  const relations = useRelations(obj.id);
+  const children = useChildren(obj.id);
+  const site = useObjectName(obj.site_id);
+  const parent = useObjectName(obj.parent_id !== obj.site_id ? obj.parent_id : undefined);
+  const mount = relations.data?.items.find((r) => r.type === "mounted_in" && r.direction === "out");
+  const hasHealth = "health" in obj.attributes || lookup.attribute(obj.type, "health") !== undefined;
+
+  useCrumbs([
+    { label: t("nav.overview"), to: "/" },
+    ...(obj.site_id && obj.site_id !== obj.id ? [{ label: site ?? "…", to: `/objects/${encodeURIComponent(obj.site_id)}` }] : []),
+    ...(obj.parent_id && obj.parent_id !== obj.site_id ? [{ label: parent ?? "…", to: `/objects/${encodeURIComponent(obj.parent_id)}` }] : []),
+    { label: obj.display },
+  ]);
+
+  const tabs: TabDef[] = [
+    { id: "overview", label: t("tab.overview") },
+    { id: "components", label: t("tab.components"), count: children.data?.items.length },
+    { id: "relations", label: t("tab.relations"), count: relations.data?.total },
+    { id: "history", label: t("tab.history") },
+    { id: "provenance", label: t("tab.provenance") },
+  ];
+  const a = obj.attributes;
+  const os = [a.os_name, a.os_version].filter((v) => typeof v === "string" && v !== "").join(" ");
+
   return (
     <>
-      <h1>{obj.display}</h1>
-      {obj.type === "rack" ? (
-        <p>
-          <Link to={`/racks/${encodeURIComponent(obj.id)}`}>{t("object.openElevation")}</Link>
-        </p>
-      ) : null}
-      {obj.type === "room" ? (
-        <p>
-          <Link to={`/rooms/${encodeURIComponent(obj.id)}`}>{t("object.openFloorPlan")}</Link>
-        </p>
-      ) : null}
-      <dl className="facts">
-        <div>
-          <dt>{t("object.type")}</dt>
-          <dd>{lookup.typeLabel(obj.type)}</dd>
+      <Card as="div" className="object-card">
+        <div className="object-head">
+          <KindIcon kind={kind} size="lg" />
+          <div className="object-head-text">
+            <h1>{obj.display}</h1>
+            <div className="object-head-pills">
+              <span className="kind-label" data-kind={kind.key}>
+                {label}
+                {label !== typeLabel ? <span className="muted"> · {typeLabel}</span> : null}
+              </span>
+              {hasHealth ? <HealthPill value={healthOf(obj)} /> : null}
+              <Status value={obj.status} />
+            </div>
+          </div>
+          <div className="object-head-actions">
+            {obj.type === "rack" ? (
+              <ButtonLink to={`/racks/${encodeURIComponent(obj.id)}`}>
+                <Icon name="rack" />
+                {t("object.openElevation")}
+              </ButtonLink>
+            ) : null}
+            {obj.type === "room" ? (
+              <ButtonLink to={`/rooms/${encodeURIComponent(obj.id)}`}>
+                <Icon name="room" />
+                {t("object.openFloorPlan")}
+              </ButtonLink>
+            ) : null}
+          </div>
         </div>
-        <div>
-          <dt>{t("object.status")}</dt>
-          <dd>
-            <Status value={obj.status} />
-          </dd>
-        </div>
-        <div>
-          <dt>{t("object.id")}</dt>
-          <dd>
-            <code>{obj.id}</code>
-          </dd>
-        </div>
-        {obj.site_id ? (
+        <dl className="facts" aria-label={t("object.facts")}>
+          {KEY_FACTS.filter((k) => a[k] !== undefined && a[k] !== null && a[k] !== "").map((k) => (
+            <div key={k} data-fact={k}>
+              <dt>{lookup.attributeLabel(obj.type, k)}</dt>
+              <dd className={k === "serial" || k.endsWith("_ip") ? "mono" : undefined}>
+                <Quantity value={a[k]} unit={lookup.attribute(obj.type, k)?.unit} />
+              </dd>
+            </div>
+          ))}
+          {os ? (
+            <div data-fact="os">
+              <dt>{lookup.attributeLabel(obj.type, a.os_name ? "os_name" : "os_version")}</dt>
+              <dd>{os}</dd>
+            </div>
+          ) : null}
+          {mount ? (
+            <div data-fact="location">
+              <dt>{t("object.location")}</dt>
+              <dd>
+                <ObjectLink id={mount.other.id} display={mount.other.display} />
+                {typeof mount.attributes?.position === "number" ? (
+                  <span className="muted">
+                    {" "}
+                    {t("object.position", {
+                      position: number(mount.attributes.position),
+                      face: mount.attributes.face === "rear" ? t("face.rear") : mount.attributes.face === "front" ? t("face.front") : String(mount.attributes.face ?? "").trim() || "–",
+                    })}
+                  </span>
+                ) : null}
+              </dd>
+            </div>
+          ) : null}
           <div>
-            <dt>{t("object.site")}</dt>
+            <dt>{t("object.type")}</dt>
+            <dd>{typeLabel}</dd>
+          </div>
+          {obj.site_id && obj.site_id !== obj.id ? (
+            <div>
+              <dt>{t("object.site")}</dt>
+              <dd>
+                <ObjectLink id={obj.site_id} />
+              </dd>
+            </div>
+          ) : null}
+          {obj.parent_id && obj.parent_id !== mount?.other.id ? (
+            <div>
+              <dt>{t("object.parent")}</dt>
+              <dd>
+                <ObjectLink id={obj.parent_id} />
+              </dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>{t("object.lastSeen")}</dt>
             <dd>
-              <ObjectLink id={obj.site_id} />
+              <Time iso={obj.last_seen} />
             </dd>
           </div>
-        ) : null}
-        {obj.parent_id ? (
           <div>
-            <dt>{t("object.parent")}</dt>
+            <dt>{t("object.firstSeen")}</dt>
             <dd>
-              <ObjectLink id={obj.parent_id} />
+              <Time iso={obj.first_seen} />
             </dd>
           </div>
-        ) : null}
-        <div>
-          <dt>{t("object.firstSeen")}</dt>
-          <dd>
-            <Time iso={obj.first_seen} />
-          </dd>
-        </div>
-        <div>
-          <dt>{t("object.lastSeen")}</dt>
-          <dd>
-            <Time iso={obj.last_seen} />
-          </dd>
-        </div>
-        <div>
-          <dt>{t("object.createdAt")}</dt>
-          <dd>
-            <Time iso={obj.created_at} />
-          </dd>
-        </div>
-        <div>
-          <dt>{t("object.observed")}</dt>
-          <dd>{obj.observed ? t("app.yes") : t("object.notObserved")}</dd>
-        </div>
-      </dl>
-      {CONTAINER_TYPES.includes(obj.type) ? <EditContainer obj={obj} /> : null}
-      {obj.type === "device" ? <DevicePlacement device={obj} /> : null}
-      <AttributesSection obj={obj} lookup={lookup} />
-      <RelationsSection id={obj.id} lookup={lookup} />
-      <TimelineSection id={obj.id} lookup={lookup} />
+          <div>
+            <dt>{t("object.observed")}</dt>
+            <dd>{obj.observed ? t("app.yes") : t("object.notObserved")}</dd>
+          </div>
+          <div>
+            <dt>{t("object.id")}</dt>
+            <dd>
+              <code>{obj.id}</code>
+            </dd>
+          </div>
+        </dl>
+      </Card>
+      <Tabs tabs={tabs} active={tab} onSelect={setTab} label={t("object.sections", { name: obj.display })} idPrefix="object" />
+      <TabPanel idPrefix="object" id={tab}>
+        {tab === "overview" ? (
+          <>
+            {CONTAINER_TYPES.includes(obj.type) ? <EditContainer obj={obj} /> : null}
+            <OverviewSection obj={obj} lookup={lookup} onProvenance={() => setTab("provenance")} />
+            {obj.type === "device" ? <DevicePlacement device={obj} /> : null}
+          </>
+        ) : tab === "components" ? (
+          <ComponentsSection obj={obj} lookup={lookup} />
+        ) : tab === "relations" ? (
+          <RelationsSection id={obj.id} lookup={lookup} />
+        ) : tab === "history" ? (
+          <TimelineSection id={obj.id} lookup={lookup} />
+        ) : (
+          <AttributesSection obj={obj} lookup={lookup} />
+        )}
+      </TabPanel>
     </>
   );
+}
+
+function useRelations(id: string) {
+  return useQuery({
+    queryKey: ["relations", id],
+    queryFn: ({ signal }) => api.relations(id, { limit: 200 }, signal),
+  });
+}
+
+function useObjectName(id: string | undefined): string | undefined {
+  const q = useQuery({
+    queryKey: ["object", id],
+    queryFn: ({ signal }) => api.object(id as string, signal),
+    enabled: !!id,
+    staleTime: 5 * 60_000,
+  });
+  return q.data?.display;
 }
 
 /** "Edit" on a site, building, room, row or rack: rename it, set a rack's height or floor tile. */
@@ -161,7 +266,7 @@ function AttributesSection({ obj, lookup }: { obj: ObjectView; lookup: SchemaLoo
           if (keys.length === 0) return <p>{t("attrs.empty")}</p>;
           const byKey = new Map(prov.attributes.map((e) => [e.key, e]));
           return (
-            <table className="attributes">
+            <Table className="attributes">
               <caption className="sr-only">{t("attrs.caption", { name: obj.display })}</caption>
               <thead>
                 <tr>
@@ -178,7 +283,7 @@ function AttributesSection({ obj, lookup }: { obj: ObjectView; lookup: SchemaLoo
                   <AttributeRow key={k} name={k} obj={obj} entry={byKey.get(k)} lookup={lookup} />
                 ))}
               </tbody>
-            </table>
+            </Table>
           );
         }}
       </Async>
@@ -199,7 +304,7 @@ function AttributeRow({ name, obj, entry, lookup }: { name: string; obj: ObjectV
         {label !== name ? <code className="key">{name}</code> : null}
       </th>
       <td data-label={t("attrs.value")}>
-        <Value value={value} unit={doc?.unit} />
+        <Quantity value={value} unit={doc?.unit} />
         {others.length > 0 ? (
           <details className="claims">
             <summary>{tp("attrs.otherClaims", others.length)}</summary>
@@ -245,10 +350,7 @@ function AttributeRow({ name, obj, entry, lookup }: { name: string; obj: ObjectV
 
 function RelationsSection({ id, lookup }: { id: string; lookup: SchemaLookup }) {
   const { t } = useI18n();
-  const query = useQuery({
-    queryKey: ["relations", id],
-    queryFn: ({ signal }) => api.relations(id, { limit: 200 }, signal),
-  });
+  const query = useRelations(id);
   return (
     <section aria-labelledby="rel-h">
       <h2 id="rel-h">{t("relations.title")}</h2>
@@ -269,7 +371,7 @@ function RelationsSection({ id, lookup }: { id: string; lookup: SchemaLookup }) 
                 return (
                   <div key={k} className="relation-group" data-relation={first.type} data-direction={first.direction}>
                     <h3>{heading}</h3>
-                    <table>
+                    <Table>
                       <caption className="sr-only">{heading}</caption>
                       <thead>
                         <tr>
@@ -297,7 +399,7 @@ function RelationsSection({ id, lookup }: { id: string; lookup: SchemaLookup }) 
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                    </Table>
                   </div>
                 );
               })}

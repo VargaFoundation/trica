@@ -293,7 +293,7 @@ describe("rooms", () => {
   it("is in the main navigation", async () => {
     mockApi(roomRoutes([]));
     renderApp({ at: "/" });
-    expect(await screen.findByRole("link", { name: "Rooms" })).toHaveAttribute("href", "/rooms");
+    expect(await screen.findByRole("link", { name: "Rooms and racks" })).toHaveAttribute("href", "/rooms");
   });
 
   it("says when there is no room", async () => {

@@ -121,19 +121,23 @@ func buildInventory() *inventory {
 	inv.add(object(idT2U, "device_type", "ex-2u", 0, 0, obj{"name": "ex-2u", "u_height": 2}))
 	inv.add(object(idTFull, "device_type", "ex-server", 0, 0, obj{"name": "ex-server", "u_height": 2, "full_depth": true}))
 
-	inv.add(object(idSwA1, "device", "sw-a1", idRack, idSite, obj{"hostname": "sw-a1", "vendor": "arista", "os_version": "4.28.3M", "mgmt_ip": "192.0.2.10", "power_w": 120}))
-	inv.add(object(idSwA2, "device", "sw-a2", idRack, idSite, obj{"hostname": "sw-a2", "vendor": "arista", "os_version": "4.28.3M", "mgmt_ip": "192.0.2.11"}))
-	inv.add(object(idSrv01, "device", "srv-01", idRack, idSite, obj{"hostname": "srv-01", "vendor": "dell", "mgmt_ip": "198.51.100.21"}))
-	inv.add(object(idPDU, "device", "pdu-a", idRack, idSite, obj{"hostname": "pdu-a", "vendor": "example"}))
+	inv.add(object(idSwA1, "device", "sw-a1", idRack, idSite, obj{"hostname": "sw-a1", "vendor": "arista", "os_version": "4.28.3M", "mgmt_ip": "192.0.2.10", "power_w": 120,
+		"role": "switch", "health": "ok", "model": "ex-switch-48", "serial": "EXSW0001", "os_name": "ex-os", "uptime_s": 4060800, "inlet_temp_c": 24.5, "outlet_temp_c": 31}))
+	inv.add(object(idSwA2, "device", "sw-a2", idRack, idSite, obj{"hostname": "sw-a2", "vendor": "arista", "os_version": "4.28.3M", "mgmt_ip": "192.0.2.11",
+		"role": "switch", "health": "warning", "power_w": 135, "inlet_temp_c": 26, "outlet_temp_c": 41.5}))
+	inv.add(object(idSrv01, "device", "srv-01", idRack, idSite, obj{"hostname": "srv-01", "vendor": "dell", "mgmt_ip": "198.51.100.21",
+		"role": "server", "health": "critical", "model": "ex-server", "serial": "EXSV0001", "os_name": "linux", "os_version": "6.8", "power_w": 412.5,
+		"inlet_temp_c": 23, "outlet_temp_c": 38.5, "uptime_s": 1303200, "memory_bytes": 274877906944, "cpu_count": 2, "log_critical_count": 2}))
+	inv.add(object(idPDU, "device", "pdu-a", idRack, idSite, obj{"hostname": "pdu-a", "vendor": "example", "role": "pdu", "health": "ok", "power_w": 1840}))
 	inv.mount(idSwA1, idRack, 40, "front", idT1U)
 	inv.mount(idSwA2, idRack, 39, "front", idT1U)
 	inv.mount(idSrv01, idRack, 10, "front", idTFull)
 	inv.mount(idPDU, idRack, 2, "rear", idT2U)
 
 	// r13: two devices overlap, one is mounted without a position.
-	inv.add(object(0x120, "device", "srv-02", idRack2, idSite, obj{"hostname": "srv-02"}))
-	inv.add(object(0x121, "device", "srv-03", idRack2, idSite, obj{"hostname": "srv-03"}))
-	inv.add(object(0x122, "device", "srv-04", idRack2, idSite, obj{"hostname": "srv-04"}))
+	inv.add(object(0x120, "device", "srv-02", idRack2, idSite, obj{"hostname": "srv-02", "role": "server", "health": "ok", "power_w": 288}))
+	inv.add(object(0x121, "device", "srv-03", idRack2, idSite, obj{"hostname": "srv-03", "role": "nas", "health": "warning", "power_w": 96.5}))
+	inv.add(object(0x122, "device", "srv-04", idRack2, idSite, obj{"hostname": "srv-04", "role": "firewall"}))
 	inv.mount(0x120, idRack2, 5, "front", idT2U)
 	inv.mount(0x121, idRack2, 6, "front", idT1U)
 	inv.relations = append(inv.relations,
@@ -145,12 +149,43 @@ func buildInventory() *inventory {
 		for i, face := range []string{"front", "rear"} {
 			n := firstR3 + u*2 + i
 			name := fmt.Sprintf("srv-%s%02d", face[:1], u)
-			inv.add(object(n, "device", name, idRack3, idSite, obj{"hostname": name}))
+			inv.add(object(n, "device", name, idRack3, idSite, obj{"hostname": name, "role": "server", "health": []string{"ok", "ok", "ok", "ok", "ok", "ok", "warning"}[n%7], "power_w": 180 + n%40}))
 			inv.mount(n, idRack3, float64(u), face, idT1U)
 		}
 	}
 	buildNetwork(inv)
+	buildComponents(inv)
 	return inv
+}
+
+// buildComponents gives srv-01 and sw-a1 what a BMC or a switch reports
+// inside them: power supplies (one of srv-01's has failed), fans, disks,
+// memory and processors.
+func buildComponents(inv *inventory) {
+	n := 0x3000
+	part := func(parent int, typ, name string, attrs obj) {
+		attrs["name"] = name
+		inv.add(object(n, typ, name, parent, idSite, attrs))
+		n++
+	}
+	part(idSrv01, "psu", "PSU 1", obj{"capacity_w": 800, "input_w": 210.4, "health": "ok", "feed": "A", "model": "ex-psu-800"})
+	part(idSrv01, "psu", "PSU 2", obj{"capacity_w": 800, "input_w": 0, "health": "critical", "feed": "B", "model": "ex-psu-800"})
+	for i := 1; i <= 4; i++ {
+		part(idSrv01, "fan", fmt.Sprintf("Fan %d", i), obj{"speed_rpm": 7800 + 120*i, "speed_pct": 38.5, "health": "ok"})
+	}
+	part(idSrv01, "disk", "nvme0n1", obj{"media": "nvme", "capacity_bytes": 960197124096, "wear_pct": 4, "temperature_c": 31, "health": "ok", "model": "ex-nvme-960"})
+	part(idSrv01, "disk", "nvme1n1", obj{"media": "nvme", "capacity_bytes": 960197124096, "wear_pct": 72, "temperature_c": 44, "health": "warning", "model": "ex-nvme-960"})
+	for i := 0; i < 4; i++ {
+		part(idSrv01, "memory", fmt.Sprintf("DIMM A%d", i+1), obj{"size_bytes": 68719476736, "speed_mhz": 4800, "health": "ok", "corrected_errors": []int{0, 0, 12, 0}[i]})
+	}
+	for i := 0; i < 2; i++ {
+		part(idSrv01, "cpu", fmt.Sprintf("CPU %d", i+1), obj{"model": "ex-cpu-32c", "cores": 32, "threads": 64, "health": "ok"})
+	}
+	part(idSwA1, "psu", "PSU 1", obj{"capacity_w": 500, "input_w": 61, "health": "ok", "feed": "A"})
+	part(idSwA1, "psu", "PSU 2", obj{"capacity_w": 500, "input_w": 59, "health": "ok", "feed": "B"})
+	for i := 1; i <= 3; i++ {
+		part(idSwA1, "fan", fmt.Sprintf("Fan %d", i), obj{"speed_pct": 42.5, "health": "ok"})
+	}
 }
 
 // ports hands out interfaces, numbered per device.
@@ -233,7 +268,8 @@ func buildNetwork(inv *inventory) {
 	mk := func(name string) int {
 		id := n
 		n++
-		inv.add(object(id, "device", name, 0, idSite, obj{"hostname": name, "role": strings.TrimRight(name[:strings.IndexByte(name, '-')], "0123456789")}))
+		role := map[string]string{"spine": "switch", "leaf": "switch", "srv": "server"}[name[:strings.IndexByte(name, '-')]]
+		inv.add(object(id, "device", name, 0, idSite, obj{"hostname": name, "role": role, "health": []string{"ok", "ok", "ok", "ok", "ok", "unknown", "ok", "ok", "ok", "ok", "ok", "warning"}[id%12]}))
 		return id
 	}
 	for i := range sp {
@@ -411,7 +447,23 @@ func (a *api) list(typ string) obj {
 }
 
 func (a *api) search(w http.ResponseWriter, q string) {
+	query := q
 	var items []obj
+	// parent:"<id>": what sits inside an object (the object page's components).
+	if parent, ok := strings.CutPrefix(q, "parent:"); ok {
+		parent = strings.Trim(parent, `"`)
+		for _, o := range a.inv.objects {
+			if o["parent_id"] == parent && o["type"] != "interface" {
+				items = append(items, o)
+			}
+		}
+		for _, o := range a.inv.objects {
+			if o["parent_id"] == parent && o["type"] == "interface" {
+				items = append(items, o)
+			}
+		}
+		q = "" // the loop below adds nothing
+	}
 	for _, o := range a.inv.objects {
 		if q != "" && strings.Contains(strings.ToLower(o["display"].(string)), strings.ToLower(q)) && o["type"] != "device_type" {
 			items = append(items, o)
@@ -425,7 +477,7 @@ func (a *api) search(w http.ResponseWriter, q string) {
 		byType[o["type"].(string)]++
 	}
 	writeJSON(w, http.StatusOK, obj{
-		"summary": obj{"query": q, "total": len(items), "by_type": byType, "fuzzy": false, "took_ms": 1},
+		"summary": obj{"query": query, "total": len(items), "by_type": byType, "fuzzy": false, "took_ms": 1},
 		"total":   len(items), "limit": 100, "offset": 0, "items": items,
 	})
 }
@@ -592,8 +644,55 @@ func schemaDoc() obj {
 				attr("mgmt_ip", "ip", "Management address", "Adresse de gestion", obj{"search": true}),
 				attr("power_w", "number", "Power draw", "Consommation", obj{"unit": "W"}),
 				attr("name", "string", "Name", "Nom", obj{"identity": "weak"}),
-				attr("role", "enum", "Role", "Rôle", obj{"values": []string{"server", "switch", "pdu", "ups", "patch_panel", "other"}}),
+				attr("role", "enum", "Role", "Rôle", obj{"values": []string{"server", "switch", "router", "firewall", "storage", "pdu", "ups", "patch_panel", "sensor", "nas", "kvm", "other"}}),
 				attr("u_height", "float", "Height", "Hauteur", obj{"unit": "U"}),
+				attr("model", "string", "Model", "Modèle", nil),
+				attr("serial", "string", "Serial number", "Numéro de série", obj{"identity": "strong"}),
+				attr("os_name", "string", "OS", "Système", nil),
+				attr("health", "enum", "Health", "Santé", obj{"values": []string{"ok", "warning", "critical", "unknown"}}),
+				attr("inlet_temp_c", "float", "Inlet temperature", "Température d'entrée", obj{"unit": "°C"}),
+				attr("outlet_temp_c", "float", "Outlet temperature", "Température de sortie", obj{"unit": "°C"}),
+				attr("uptime_s", "int", "Uptime", "Durée de fonctionnement", obj{"unit": "s"}),
+				attr("memory_bytes", "int", "Memory", "Mémoire", obj{"unit": "B"}),
+				attr("cpu_count", "int", "CPUs", "Sockets CPU", nil),
+				attr("log_critical_count", "int", "Critical events", "Événements critiques", nil),
+			}),
+			typeDoc("psu", "Power supply", "Alimentation", []string{"device"}, []obj{
+				attr("name", "string", "Name", "Nom", obj{"identity": "weak"}),
+				attr("model", "string", "Model", "Modèle", nil),
+				attr("capacity_w", "int", "Capacity", "Capacité", obj{"unit": "W"}),
+				attr("input_w", "float", "Input power", "Puissance d'entrée", obj{"unit": "W"}),
+				attr("health", "enum", "Health", "Santé", obj{"values": []string{"ok", "warning", "critical", "unknown", "absent"}}),
+				attr("feed", "string", "Feed", "Voie", nil),
+			}),
+			typeDoc("fan", "Fan", "Ventilateur", []string{"device"}, []obj{
+				attr("name", "string", "Name", "Nom", obj{"identity": "weak"}),
+				attr("speed_rpm", "int", "Speed", "Vitesse", obj{"unit": "rpm"}),
+				attr("speed_pct", "float", "Speed", "Vitesse", obj{"unit": "%"}),
+				attr("health", "enum", "Health", "Santé", obj{"values": []string{"ok", "warning", "critical", "unknown", "absent"}}),
+			}),
+			typeDoc("disk", "Disk", "Disque", []string{"device"}, []obj{
+				attr("name", "string", "Name", "Nom", obj{"identity": "weak"}),
+				attr("model", "string", "Model", "Modèle", nil),
+				attr("media", "enum", "Media", "Technologie", obj{"values": []string{"ssd", "nvme", "hdd", "unknown"}}),
+				attr("capacity_bytes", "int", "Capacity", "Capacité", obj{"unit": "B"}),
+				attr("wear_pct", "float", "Wear", "Usure", obj{"unit": "%"}),
+				attr("temperature_c", "float", "Temperature", "Température", obj{"unit": "°C"}),
+				attr("health", "enum", "Health", "Santé", obj{"values": []string{"ok", "warning", "critical", "unknown", "absent"}}),
+			}),
+			typeDoc("memory", "Memory module", "Barrette mémoire", []string{"device"}, []obj{
+				attr("name", "string", "Slot", "Emplacement", obj{"identity": "weak"}),
+				attr("size_bytes", "int", "Size", "Taille", obj{"unit": "B"}),
+				attr("speed_mhz", "int", "Speed", "Fréquence", obj{"unit": "MHz"}),
+				attr("health", "enum", "Health", "Santé", obj{"values": []string{"ok", "warning", "critical", "unknown", "absent"}}),
+				attr("corrected_errors", "int", "Corrected errors", "Erreurs corrigées", nil),
+			}),
+			typeDoc("cpu", "Processor", "Processeur", []string{"device"}, []obj{
+				attr("name", "string", "Socket", "Socket", obj{"identity": "weak"}),
+				attr("model", "string", "Model", "Modèle", nil),
+				attr("cores", "int", "Cores", "Cœurs", nil),
+				attr("threads", "int", "Threads", "Threads", nil),
+				attr("health", "enum", "Health", "Santé", obj{"values": []string{"ok", "warning", "critical", "unknown", "absent"}}),
 			}),
 			typeDoc("rack", "Rack", "Baie", []string{"room", "row", "site"}, []obj{
 				attr("name", "string", "Name", "Nom", obj{"required": true, "identity": "weak"}),

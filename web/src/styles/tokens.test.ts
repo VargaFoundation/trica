@@ -14,8 +14,9 @@ function block(selector: string): Record<string, string> {
   return out;
 }
 
-const light = block(":root {");
-const dark = block(':root[data-theme="dark"]');
+// Dark is the default (the bare :root block); light is explicit, or the system preference.
+const dark = block(":root {");
+const light = block(':root[data-theme="light"]');
 const system = block(':root:not([data-theme="light"])');
 
 function luminance(hex: string): number {
@@ -31,29 +32,44 @@ export function contrast(a: string, b: string): number {
 // [foreground, background, minimum ratio]: 4.5 for text (WCAG 1.4.3), 3 for
 // interface components and focus indicators (WCAG 1.4.11).
 const PAIRS: [string, string, number][] = [
-  ["text", "bg", 4.5],
-  ["text", "surface", 4.5],
-  ["muted", "bg", 4.5],
-  ["muted", "surface", 4.5],
-  ["link", "bg", 4.5],
-  ["link", "surface", 4.5],
-  ["primary-fg", "primary-bg", 4.5],
-  ["danger-fg", "danger-bg", 4.5],
-  ["button-fg", "button-bg", 4.5],
-  ["notice-fg", "notice-bg", 4.5],
-  ["error-fg", "error-bg", 4.5],
-  ["green-fg", "green-bg", 4.5],
-  ["red-fg", "red-bg", 4.5],
-  ["amber-fg", "amber-bg", 4.5],
-  ["blue-fg", "blue-bg", 4.5],
-  ["gray-fg", "gray-bg", 4.5],
-  ["input-border", "bg", 3],
-  ["focus", "bg", 3],
-  ["focus", "surface", 3],
+  ["trica-ink", "trica-surface", 4.5],
+  ["trica-ink", "trica-raised", 4.5],
+  ["trica-ink", "trica-sidebar", 4.5],
+  ["trica-ink", "trica-surface-muted", 4.5],
+  ["trica-ink-muted", "trica-surface", 4.5],
+  ["trica-ink-muted", "trica-raised", 4.5],
+  ["trica-ink-muted", "trica-sidebar", 4.5],
+  ["trica-ink-muted", "trica-surface-muted", 4.5],
+  ["trica-link", "trica-surface", 4.5],
+  ["trica-link", "trica-raised", 4.5],
+  ["trica-link", "trica-surface-muted", 4.5],
+  ["trica-accent-ink", "trica-accent", 4.5],
+  ["trica-accent-ink", "trica-accent-hover", 4.5],
+  ["trica-link", "trica-accent-soft", 4.5],
+  ["trica-ink", "trica-accent-soft", 4.5],
+  // A pill's text on its own tinted ground.
+  ...(["ok", "warn", "danger", "info", "declared", "neutral"] as const).map((t): [string, string, number] => [`trica-${t}-ink`, `trica-${t}-soft`, 4.5]),
+  // Status text without a ground, on a card.
+  ...(["ok", "warn", "danger", "info", "declared", "neutral"] as const).map((t): [string, string, number] => [`trica-${t}-ink`, `trica-raised`, 4.5]),
+  // Interface parts: a control's border, the focus ring, a status dot.
+  ["trica-line-strong", "trica-surface", 3],
+  ["trica-line-strong", "trica-raised", 3],
+  ["trica-focus", "trica-surface", 3],
+  ["trica-focus", "trica-raised", 3],
+  ["trica-focus", "trica-sidebar", 3],
   // The red row of a failing source carries ordinary text.
-  ["text", "red-bg", 4.5],
-  ["muted", "red-bg", 4.5],
-  ["link", "red-bg", 4.5],
+  ["trica-ink", "trica-danger-soft", 4.5],
+  ["trica-ink-muted", "trica-danger-soft", 4.5],
+  ["trica-link", "trica-danger-soft", 4.5],
+  // The topology canvas: labels on nodes and on the paper, lines on the paper.
+  ["trica-graph-ink", "trica-graph-node", 4.5],
+  ["trica-graph-ink", "trica-graph-unresolved", 4.5],
+  ["trica-graph-ink", "trica-graph-paper", 4.5],
+  ["trica-graph-node-line", "trica-graph-paper", 3],
+  ["trica-graph-unresolved-line", "trica-graph-paper", 3],
+  ["trica-graph-declared", "trica-graph-paper", 3],
+  ["trica-graph-observed", "trica-graph-paper", 3],
+  ["trica-graph-deduced", "trica-graph-paper", 3],
 ];
 
 describe.each([
@@ -73,10 +89,36 @@ describe("theme blocks", () => {
   it("define the same tokens in light and dark", () => {
     expect(Object.keys(dark).sort()).toEqual(Object.keys(light).sort());
   });
-  it("the system-preference block is the explicit dark block", () => {
-    expect(system).toEqual(dark);
+  it("the system-preference block is the explicit light block", () => {
+    expect(system).toEqual(light);
+  });
+  it("dark is the default: the bare :root block is dark", () => {
+    expect(css.slice(0, css.indexOf("}"))).toMatch(/color-scheme:\s*dark/);
+  });
+  it("names every colour token --trica-*", () => {
+    expect(Object.keys(dark).every((k) => k.startsWith("trica-"))).toBe(true);
+    expect(Object.keys(dark).length).toBeGreaterThan(40);
   });
   it("the contrast function is right (white on black is 21:1)", () => {
     expect(contrast("#ffffff", "#000000")).toBeCloseTo(21, 5);
+  });
+});
+
+describe("the stylesheets", () => {
+  const app = readFileSync(resolve(import.meta.dirname, "app.css"), "utf8");
+  const declared = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]));
+
+  it("read only tokens that tokens.css declares", () => {
+    const used = new Set([...app.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]));
+    expect([...used].filter((v) => !declared.has(v))).toEqual([]);
+  });
+
+  it("app.css holds no literal colour: every colour is a token", () => {
+    const withoutComments = app.replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(withoutComments.match(/#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/g)).toBeNull();
+  });
+
+  it("loads no font: the system stacks only (ADR 0018)", () => {
+    expect(`${css}\n${app}`).not.toMatch(/@font-face|@import|url\(/);
   });
 });

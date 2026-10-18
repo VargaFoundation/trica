@@ -199,7 +199,7 @@ function Legend() {
       {LINK_CLASSES.map((c) => (
         <li key={c}>
           <svg width="44" height="10" aria-hidden="true" focusable="false">
-            <line x1="1" y1="5" x2="43" y2="5" stroke={EDGE_STYLE[c].color} strokeWidth={EDGE_STYLE[c].width} strokeDasharray={LEGEND_DASH[c]} />
+            <line className={`legend-line-${c}`} x1="1" y1="5" x2="43" y2="5" stroke={EDGE_STYLE[c].color} strokeWidth={EDGE_STYLE[c].width} strokeDasharray={LEGEND_DASH[c]} />
           </svg>
           <span>{t(`topology.legend.${c}`)}</span>
         </li>

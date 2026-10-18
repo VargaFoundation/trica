@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { useI18n } from "../i18n";
+import { Icon } from "./ui/icons";
 
 /** True when typing in this element must not be taken for a shortcut. */
 export function isEditable(target: EventTarget | null): boolean {
@@ -67,7 +68,10 @@ function SearchForm({ initial }: { initial: string }) {
         autoComplete="off"
         spellCheck={false}
       />
-      <button type="submit">{t("search.submit")}</button>
+      <button type="submit" className="search-submit" title={t("search.submit")}>
+        <Icon name="search" />
+        <span className="sr-only">{t("search.submit")}</span>
+      </button>
       <kbd className="kbd-hint" aria-hidden="true">
         /
       </kbd>

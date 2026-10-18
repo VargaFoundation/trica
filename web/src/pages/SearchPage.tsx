@@ -9,6 +9,7 @@ import { Status } from "../components/Badge";
 import { Empty, Time } from "../components/Time";
 import { useSchemaLookup, type SchemaLookup } from "../hooks";
 import { useI18n } from "../i18n";
+import { SearchExamples } from "./HomePage";
 import { usePageTitle } from "../usePageTitle";
 
 /** How many results the grouped view asks for; the rest of a type is one click away. */
@@ -126,7 +127,8 @@ export function SearchPage() {
   const q = params.get("q")?.trim() ?? "";
   const type = params.get("type") ?? "";
   const lookup = useSchemaLookup();
-  usePageTitle(t("search.title", { q }));
+  const title = q === "" ? t("search.titleEmpty") : t("search.title", { q });
+  usePageTitle(title);
 
   const grouped = useQuery({
     queryKey: ["search", q],
@@ -136,9 +138,14 @@ export function SearchPage() {
 
   return (
     <>
-      <h1>{t("search.title", { q })}</h1>
+      <h1>{title}</h1>
       {q === "" ? (
-        <p>{t("search.hint")}</p>
+        <>
+          <p className="lead">
+            {t("home.searchIntro")} {t("search.hint")}
+          </p>
+          <SearchExamples />
+        </>
       ) : type !== "" ? (
         <OneType q={q} type={type} lookup={lookup} />
       ) : grouped.isPending ? (

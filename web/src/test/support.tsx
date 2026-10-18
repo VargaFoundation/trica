@@ -7,10 +7,12 @@ import type { ThemePreference } from "../theme";
 import { setToken } from "../api/token";
 import {
   APPROVER,
+  componentsSrv01,
   discrepancyMismatch,
   healthFailing,
   healthOk,
   ID,
+  mountsLinks,
   page,
   proposalApplied,
   proposalPending,
@@ -115,8 +117,18 @@ export function defaultRoutes(me: Handler = APPROVER): Record<string, Handler> {
   const routes: Record<string, Handler> = {
     "GET /me": me,
     "GET /schema": schema,
-    "GET /search": searchSw,
+    // A device's components are found with parent:"<id>"; every other query answers searchSw.
+    "GET /search": (c) => {
+      const m = /^parent:"?([^"]+)"?$/.exec(c.query.get("q") ?? "");
+      if (!m) return searchSw;
+      const items = m[1] === ID.srv01 ? componentsSrv01 : [];
+      return { ...searchSw, summary: { ...searchSw.summary, query: c.query.get("q") ?? "", total: items.length, by_type: {} }, total: items.length, items };
+    },
     "GET /objects": { ...searchSw, items: [swA1], total: 2, limit: 50 },
+    "GET /relations": (c) => (c.query.get("type") === "mounted_in" ? mountsLinks : page([])),
+    [`GET /objects/${ID.srv01}/relations`]: page([]),
+    [`GET /objects/${ID.srv01}/timeline`]: page([]),
+    [`GET /objects/${ID.srv01}/provenance`]: { object_id: ID.srv01, attributes: [] },
     [`GET /objects/${ID.swA1}/provenance`]: provenanceSwA1,
     [`GET /objects/${ID.swA1}/relations`]: relationsSwA1,
     [`GET /objects/${ID.swA1}/timeline`]: timelineSwA1,
