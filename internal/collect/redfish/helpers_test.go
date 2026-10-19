@@ -335,3 +335,39 @@ func TestClientOnlyReads(t *testing.T) {
 		t.Error("an invalid request URL must be an error")
 	}
 }
+
+func TestReleaseDate(t *testing.T) {
+	for _, tc := range []struct{ reported, version, want string }{
+		{"2021-03-05T00:00:00Z", "2.10.5", "2021-03-05"},
+		{"2021-03-05", "2.10.5", "2021-03-05"},
+		// The reported date wins over the one in the version.
+		{"2022-01-02T10:00:00+01:00", "P89 v2.60 (05/21/2018)", "2022-01-02"},
+		// Dell's placeholder and nonsense fall back to the version.
+		{"00:00:00Z", "2.83.83.83", ""},
+		{"1970-01-01T00:00:00Z", "P89 v2.60 (05/21/2018)", "2018-05-21"},
+		{"", "U30 v2.72 (07/09/2021)", "2021-07-09"},
+		{"", "2.78 Dec 08 2020", "2020-12-08"},
+		{"", "2.72 Aug 4 2022", "2022-08-04"},
+		// Not a date: month 13, a version that only looks dotted.
+		{"", "P89 v2.60 (13/21/2018)", ""},
+		{"", "25.5.5.0005", ""},
+		{"", "", ""},
+	} {
+		if got := releaseDate(tc.reported, tc.version); got != tc.want {
+			t.Errorf("releaseDate(%q, %q) = %q, want %q", tc.reported, tc.version, got, tc.want)
+		}
+	}
+}
+
+func TestFirmwareShapes(t *testing.T) {
+	for raw, want := range map[string]string{`" Slot 0 "`: "Slot 0", `{"Info": "Slot 0"}`: "", `[]`: "", ``: ""} {
+		if got := fwLocation(json.RawMessage(raw)); got != want {
+			t.Errorf("fwLocation(%s) = %q, want %q", raw, got, want)
+		}
+	}
+	for name, want := range map[string]bool{"Backup System ROM": true, "Redundant System ROM": true, "System ROM": false, "iLO 5": false} {
+		if standbyImage(name) != want {
+			t.Errorf("standbyImage(%q) != %v", name, want)
+		}
+	}
+}

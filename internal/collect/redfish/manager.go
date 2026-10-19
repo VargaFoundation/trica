@@ -100,7 +100,10 @@ func (r *run) manager(root serviceRoot, s system) *manager {
 	return &m
 }
 
-// firmware lists the firmware components as name=version strings. HPE iLO
+// firmware lists the firmware components twice: as name=version strings
+// (firmware_inventory, for search) and as one record per component with its
+// release date when the BMC or the version string gives one (firmware, for
+// the table on the device's page and the age of each component). HPE iLO
 // publishes the inventory under the system (iLO 4: one document keyed by
 // category; iLO 5: the standard collection); Dell and the standard model put
 // it under UpdateService.
@@ -125,15 +128,36 @@ func (r *run) firmware(root serviceRoot, s system) {
 		return
 	}
 	set := map[string]bool{}
+	records := map[string]map[string]any{}
 	add := func(e fwEntry) {
 		// Dell keeps the rollback image next to the running one.
 		if strings.HasPrefix(strings.ToLower(e.ID), "previous-") || strings.EqualFold(e.Status.State, "StandbyOffline") {
 			return
 		}
 		name, ver := strings.TrimSpace(e.Name), first(e.Version, e.VersionString)
-		if name != "" && ver != "" {
-			set[name+"="+ver] = true
+		if name == "" || ver == "" {
+			return
 		}
+		set[name+"="+ver] = true
+		// A backup ROM is searchable, but it does not run: its age says
+		// nothing about the server.
+		if standbyImage(name) {
+			return
+		}
+		rec := map[string]any{"name": name, "version": ver}
+		if d := releaseDate(e.ReleaseDate, ver); d != "" {
+			rec["released"] = d
+		}
+		if id := strings.TrimSpace(e.SoftwareID); id != "" {
+			rec["software_id"] = id
+		}
+		if loc := first(fwLocation(e.Location), e.Oem.Hpe.DeviceContext); loc != "" {
+			rec["location"] = loc
+		}
+		if e.Updateable != nil {
+			rec["updateable"] = *e.Updateable
+		}
+		records[name+"="+ver] = rec
 	}
 	members := inv.Members
 	if len(members) > maxFirmware {
@@ -165,6 +189,16 @@ func (r *run) firmware(root serviceRoot, s system) {
 	}
 	sort.Strings(list)
 	r.dev.Set("firmware_inventory", list)
+	if len(records) == 0 {
+		return
+	}
+	table := make([]map[string]any, 0, len(records))
+	for _, k := range list {
+		if rec, ok := records[k]; ok {
+			table = append(table, rec)
+		}
+	}
+	r.dev.Set("firmware", table)
 }
 
 // logIDs are the hardware event logs: the iLO Integrated Management Log and

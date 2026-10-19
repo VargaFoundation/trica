@@ -73,9 +73,9 @@
   "/redfish/v1/UpdateService/FirmwareInventory": {"Members": [
     {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/1/"}, {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/2/"},
     {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/3/"}, {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/4/"}], "Members@odata.count": 4},
-  "/redfish/v1/UpdateService/FirmwareInventory/1": {"Id": "1", "Name": "iLO 5", "Version": "2.72 Aug 24 2022", "Updateable": true, "Status": {"Health": "OK", "State": "Enabled"}},
-  "/redfish/v1/UpdateService/FirmwareInventory/2": {"Id": "2", "Name": "System ROM", "Version": "U30 v2.72 (07/09/2021)", "Updateable": true, "Status": {"Health": "OK", "State": "Enabled"}},
-  "/redfish/v1/UpdateService/FirmwareInventory/3": {"Id": "3", "Name": "Smart Array P408i-a SR Gen10", "Version": "2.62", "Updateable": true, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/UpdateService/FirmwareInventory/1": {"Id": "1", "Name": "iLO 5", "Version": "2.72 Aug 24 2022", "Updateable": true, "Oem": {"Hpe": {"DeviceContext": "System Board"}}, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/UpdateService/FirmwareInventory/2": {"Id": "2", "Name": "System ROM", "Version": "U30 v2.72 (07/09/2021)", "Updateable": true, "Oem": {"Hpe": {"DeviceContext": "System Board"}}, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/UpdateService/FirmwareInventory/3": {"Id": "3", "Name": "Smart Array P408i-a SR Gen10", "Version": "2.62", "Updateable": true, "Oem": {"Hpe": {"DeviceContext": "Slot 0"}}, "Status": {"Health": "OK", "State": "Enabled"}},
   "/redfish/v1/UpdateService/FirmwareInventory/4": {"Id": "4", "Name": "Unversioned component", "Version": "", "Updateable": false},
 
   "/redfish/v1/Systems/1/LogServices": {"Members": [{"@odata.id": "/redfish/v1/Systems/1/LogServices/IML/"}], "Members@odata.count": 1},

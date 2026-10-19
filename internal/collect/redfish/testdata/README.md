@@ -29,8 +29,8 @@ window.
 | File | Device | What it exercises |
 |------|--------|-------------------|
 | `ilo4-dl360g9.json` | HPE ProLiant DL360 Gen9, iLO 4 firmware 2.7x | `Oem.Hp` spelling; no standard `Storage`, disks under `Oem.Hp.Links.SmartStorage` (ArrayControllers, PhysicalDrives, `Location` as a string, `SSDEnduranceUtilizationPercentage` at top level, padded serial); firmware inventory under the system as one document keyed by category (`Current`); `TotalSystemMemoryGB`; DIMM `SizeMB`, one `NotPresent`; fans with `FanName`/`CurrentReading`/`Units`, one absent; two supplies with the same name; `AverageConsumedWatts` only; IML in two pages (`?page=2`) with a critical outside the window and one entry without a date; manager with a disabled second NIC (0.0.0.0); an IEL service that must never be read. |
-| `ilo5-dl380g10.json` | HPE ProLiant DL380 Gen10, iLO 5 firmware 2.x | `Oem.Hpe` spelling; standard `Memory` and `Storage` (with the OEM SmartStorage link also present: it must **not** be requested); `Drives` with `Location` as a list and `Oem.Hpe.SSDEnduranceUtilizationPercentage`; an absent bay; fans in percent and rpm; `UpdateService/FirmwareInventory` fetched member by member, one without a version; IML single page; manager with a second enabled NIC without an address. |
-| `idrac8-r330.json` | Dell PowerEdge R330, iDRAC 8 firmware 2.8x | Paths without trailing slash and ids with dots and colons (`System.Embedded.1`, `Disk.Bay.0:Enclosure.Internal.0-1:RAID.Integrated.1-1`); `PredictedMediaLifeLeftPercent`; drives identified by NAA; temperature sensors **without** `PhysicalContext` (placement from the name); an absent power supply and DIMM; firmware `Installed-*` and a `Previous-*` (`StandbyOffline`) entry that must be ignored; SEL with `Members@odata.nextLink` using `?$skip=` and a timestamp with a UTC offset; a Lifecycle log that must never be read. |
+| `ilo5-dl380g10.json` | HPE ProLiant DL380 Gen10, iLO 5 firmware 2.x | `Oem.Hpe` spelling; standard `Memory` and `Storage` (with the OEM SmartStorage link also present: it must **not** be requested); `Drives` with `Location` as a list and `Oem.Hpe.SSDEnduranceUtilizationPercentage`; an absent bay; fans in percent and rpm; `UpdateService/FirmwareInventory` fetched member by member, one without a version, the others with `Oem.Hpe.DeviceContext`; IML single page; manager with a second enabled NIC without an address. |
+| `idrac8-r330.json` | Dell PowerEdge R330, iDRAC 8 firmware 2.8x | Paths without trailing slash and ids with dots and colons (`System.Embedded.1`, `Disk.Bay.0:Enclosure.Internal.0-1:RAID.Integrated.1-1`); `PredictedMediaLifeLeftPercent`; drives identified by NAA; temperature sensors **without** `PhysicalContext` (placement from the name); an absent power supply and DIMM; firmware `Installed-*` with `SoftwareId` and `ReleaseDate` (the iDRAC one the placeholder `00:00:00Z`) and a `Previous-*` (`StandbyOffline`) entry that must be ignored; SEL with `Members@odata.nextLink` using `?$skip=` and a timestamp with a UTC offset; a Lifecycle log that must never be read. |
 
 The fake (`../fake.go`) additionally simulates, per test: refused credentials,
 one failing sub-request (`FailPath`), a malformed body (`MalformPath`), a slow
@@ -60,6 +60,8 @@ a real BMC. Compare each against the web interface of one canary host.
 6. **Dell `Installed-`/`Previous-` firmware entries.** The `Previous-` entries
    are dropped by id prefix or `StandbyOffline` state; confirm which of the two
    your firmware uses.
+   Whether `ReleaseDate` holds a date or the placeholder `00:00:00Z` also
+   depends on the firmware: without a date, a Dell component has no age.
 7. **Serial/UUID byte order.** Some BMCs and the OS (`dmidecode`) present the
    system UUID with different byte order. The collector stores what the BMC
    says; if the same host is also discovered by another source with another

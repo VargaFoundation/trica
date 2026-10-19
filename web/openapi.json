@@ -800,6 +800,15 @@
               "fr": "Description"
             }
           },
+          "firmware": {
+            "description": "The running firmware components reported by the BMC, one record each, sorted by name: name, version, released (YYYY-MM-DD, from the inventory or the version string, absent when unknown), software_id, location, updateable. Backup images are left out.",
+            "title": "Firmware",
+            "x-trica-kind": "json",
+            "x-trica-label": {
+              "en": "Firmware",
+              "fr": "Firmwares"
+            }
+          },
           "firmware_inventory": {
             "description": "Firmware components reported by the BMC, as name=version strings (BIOS, BMC, RAID controller, NIC, PSU).",
             "items": {
