@@ -230,3 +230,24 @@ func TestDrawingsMatchTheirImagesAndModels(t *testing.T) {
 		}
 	}
 }
+
+// RouterOS reports the board name, which lacks the "RM" (rack-mount) of the
+// product code the library uses: the rack-mount edition is found anyway, and
+// only for the vendor that does this.
+func TestMountingSuffixFindsTheRackMountEdition(t *testing.T) {
+	ix := defaultIndex(t)
+	m := ix.Find("MikroTik", "CRS354-48G-4S+2Q+", "")
+	if m == nil || m.Model.Model != "CRS354-48G-4S+2Q+RM" || m.How != devicetypes.ByMounting {
+		t.Fatalf("CRS354-48G-4S+2Q+ = %+v, want the +RM model by mounting", m)
+	}
+	if m := ix.Find("RouterBOARD", "CRS354-48G-4S+2Q+", ""); m == nil || m.How != devicetypes.ByMounting {
+		t.Errorf("vendor alias RouterBOARD: %+v", m)
+	}
+	// The exact name still wins, and another vendor gets no suffix.
+	if m := ix.Find("MikroTik", "CRS354-48G-4S+2Q+RM", ""); m == nil || m.How != devicetypes.ByModel {
+		t.Errorf("exact name: %+v", m)
+	}
+	if m := ix.Find("Arista", "CRS354-48G-4S+2Q+", ""); m != nil {
+		t.Errorf("another vendor matched %s", m.Model.Slug)
+	}
+}

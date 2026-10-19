@@ -15,6 +15,9 @@ const (
 	ByModel      = "model"
 	ByPartNumber = "part_number"
 	ByVariant    = "variant"
+	// ByMounting: the device reports the model without the rack-mount suffix
+	// its vendor appends to the product code (MikroTik "...+RM").
+	ByMounting = "mounting"
 )
 
 // Match is the model chosen for a device and why.
@@ -55,6 +58,11 @@ func modelKey(vendor, model string) string {
 	}
 	return k
 }
+
+// mountingSuffix is, per vendor, the normalised suffix of the product code
+// of a rack-mount edition that the device itself does not report: RouterOS
+// names its board "CRS354-48G-4S+2Q+" when the product is "...+2Q+RM".
+var mountingSuffix = map[string]string{"mikrotik": "rm"}
 
 // variantSuffix is the airflow suffix some vendors append to a model name
 // (Arista DCS-7050SX3-48YC8-F front-to-rear, -R rear-to-front).
@@ -157,6 +165,13 @@ func (ix *Index) Find(vendor, model, partNumber string) *Match {
 	if model != "" {
 		if m := unique(ix.byKey[key(vendor, modelKey(vendor, model))]); m != nil {
 			return &Match{m, ByModel}
+		}
+	}
+	if model != "" {
+		if sfx := mountingSuffix[vendorKey(vendor)]; sfx != "" {
+			if m := unique(ix.byKey[key(vendor, modelKey(vendor, model)+sfx)]); m != nil {
+				return &Match{m, ByMounting}
+			}
 		}
 	}
 	if partNumber != "" {
