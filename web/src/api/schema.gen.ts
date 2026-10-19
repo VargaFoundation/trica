@@ -221,6 +221,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/objects/{id}/device-type-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How sure the inventory is of a device's model, and the models it may be (ADR 0048). certain and reason say what decided the model (declared, sku, model, mounting, part_number) or why it is not certain (base: the name matched a model with chassis variants; airflow; ambiguous: several models fit and none matched; none). candidates are the models of the family the library finds by name and variant_of, with their height and the API paths of their face images. A person chooses one by sending a partial batch that relates the device to the model (instance_of, POST /batches): a declaration wins over the library's match by name and survives later collections; a part number that names another chassis is reported as sku_conflict, not applied. can_choose says whether the caller may send that batch.
+         * @description Requires the "read" action.
+         */
+        get: operations["getDeviceTypeCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/objects/{id}/faces": {
         parameters: {
             query?: never;
@@ -2830,6 +2850,52 @@ export interface components {
             parts: components["schemas"]["FacePart"][];
             truncated: boolean;
         };
+        DeviceTypeCandidate: {
+            airflow?: string;
+            current: boolean;
+            front_image?: string;
+            full_depth: boolean;
+            how: string;
+            library_match: boolean;
+            model: string;
+            rear_image?: string;
+            slug: string;
+            u_height: number;
+            vendor: string;
+        };
+        DeviceTypeChoice: {
+            can_choose: boolean;
+            candidates: components["schemas"]["DeviceTypeCandidate"][];
+            certain: boolean;
+            current?: components["schemas"]["DeviceTypeCurrent"];
+            declarations: components["schemas"]["DeviceTypeDeclaration"][];
+            declared_by?: string;
+            device: components["schemas"]["ObjectRef"];
+            library_match?: components["schemas"]["DeviceTypeOption"];
+            model?: string;
+            part_number?: string;
+            reason: string;
+            sku_conflict?: components["schemas"]["DeviceTypeOption"];
+            vendor?: string;
+        };
+        DeviceTypeCurrent: {
+            model: components["schemas"]["ObjectRef"];
+            model_name?: string;
+            slug?: string;
+            source: string;
+        };
+        DeviceTypeDeclaration: {
+            /** Format: date-time */
+            last_seen: string;
+            model: components["schemas"]["ObjectRef"];
+            slug?: string;
+            source: string;
+        };
+        DeviceTypeOption: {
+            how?: string;
+            model: string;
+            slug: string;
+        };
         Discrepancy: {
             /** Format: date-time */
             closed_at?: string;
@@ -3654,6 +3720,8 @@ export interface components {
             rear_image?: string;
             role?: string;
             u_height?: number;
+            variant_uncertain?: boolean;
+            variants?: number;
         };
         RelationDoc: {
             attributes: components["schemas"]["AttributeDoc"][];
@@ -4252,6 +4320,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Object"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getDeviceTypeCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Device id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceTypeChoice"];
                 };
             };
             400: components["responses"]["Problem400"];

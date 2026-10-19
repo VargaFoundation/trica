@@ -30,6 +30,8 @@ export interface Mounted {
   /** API paths of the model's face images, when the device-type library has them. */
   frontImage?: string;
   rearImage?: string;
+  /** The library is not sure which chassis the device is and nobody chose: the object page offers the choice (ADR 0048). */
+  variantUncertain?: boolean;
 }
 
 /** The health a rack face shows: the shared scale without "absent" (a mounted device is there). */

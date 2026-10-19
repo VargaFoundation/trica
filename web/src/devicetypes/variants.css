@@ -1,0 +1,110 @@
+/* The device model section and its chassis chooser (ModelChoice.tsx), on the
+   theme's --trica-* tokens. The selected option is said by its radio button,
+   its frame only repeats it. */
+
+.variant-decided {
+  margin: 0;
+}
+.variant-pill-link {
+  text-decoration: none;
+}
+.variant-chooser fieldset {
+  border: 0;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  min-width: 0;
+}
+.variant-chooser legend {
+  font-weight: 600;
+  padding: 0;
+}
+.variant-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.variant-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "radio thumb"
+    "radio name"
+    "radio facts"
+    "radio tags";
+  column-gap: 0.5rem;
+  row-gap: 0.25rem;
+  align-items: start;
+  padding: 0.6rem;
+  border: 1px solid var(--trica-line);
+  border-radius: var(--trica-radius-control);
+  background: var(--trica-surface);
+  cursor: pointer;
+}
+.variant-option:hover {
+  border-color: var(--trica-line-strong);
+}
+.variant-option input {
+  grid-area: radio;
+  margin-top: 0.2rem;
+}
+.variant-option:focus-within {
+  outline: 2px solid var(--trica-focus);
+  outline-offset: 2px;
+}
+.variant-option-selected {
+  border-color: var(--trica-accent);
+  box-shadow: inset 0 0 0 1px var(--trica-accent);
+  background: var(--trica-accent-soft);
+}
+.variant-option .variant-thumb {
+  grid-area: thumb;
+}
+.variant-option-name {
+  grid-area: name;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.variant-option-facts {
+  grid-area: facts;
+  color: var(--trica-ink-muted);
+  font-size: 0.85rem;
+}
+.variant-option-tags {
+  grid-area: tags;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.variant-thumb {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 2px;
+  background: var(--trica-surface-muted);
+}
+.variant-thumb-none {
+  aspect-ratio: 1000 / 90;
+  border: 1px dashed var(--trica-line-strong);
+  color: var(--trica-ink-muted);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.variant-preview {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0 0.5rem;
+}
+.variant-preview figure {
+  margin: 0;
+}
+.variant-preview figcaption {
+  font-size: 0.8rem;
+  color: var(--trica-ink-muted);
+  margin-bottom: 0.25rem;
+}
+.variant-thumb-large {
+  max-width: 48rem;
+}

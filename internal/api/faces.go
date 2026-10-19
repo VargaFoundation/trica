@@ -84,14 +84,15 @@ func (s *Server) hObjectFaces(c *call) error {
 	if err != nil {
 		return err
 	}
-	if len(rels) == 0 || s.images == nil {
+	rel, has := modelRelations(rels)[dev.ID]
+	if !has || s.images == nil {
 		return c.json(200, out)
 	}
-	models, _, err := c.visibleObjects([]string{rels[0].ToID})
+	models, _, err := c.visibleObjects([]string{rel.ToID})
 	if err != nil {
 		return err
 	}
-	m, ok := models[rels[0].ToID]
+	m, ok := models[rel.ToID]
 	if !ok {
 		return c.json(200, out)
 	}
@@ -99,6 +100,9 @@ func (s *Server) hObjectFaces(c *call) error {
 	out.Model = &ObjectRef{ID: m.ID, Type: m.Type, Display: m.Display}
 	out.ModelName, _ = attrs["model"].(string)
 	slug, _ := attrs["slug"].(string)
+	if lm := s.libraryModel(slug); lm != nil && out.ModelName == "" {
+		out.ModelName = lm.Model // a model just chosen, not described yet
+	}
 	for _, face := range []string{"front", "rear"} {
 		img, ok := s.images.DeviceTypeImage(slug, face)
 		if slug == "" || !ok {

@@ -30,6 +30,7 @@ export async function loadRackContents(rackId: string, signal?: AbortSignal): Pr
         partsHealth: it.parts_health,
         frontImage: it.front_image,
         rearImage: it.rear_image,
+        variantUncertain: it.variant_uncertain === true,
       }),
     ),
     truncated: p.total > p.items.length,

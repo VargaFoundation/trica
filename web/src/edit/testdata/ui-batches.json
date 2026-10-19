@@ -327,5 +327,80 @@
         }
       }
     ]
+  },
+  "chooseVariant": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [
+      {
+        "ref": "model",
+        "type": "device_type",
+        "identity": {
+          "slug": "acme-srv2-8sff"
+        }
+      }
+    ],
+    "relations": [
+      {
+        "type": "instance_of",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@srv-v"
+          }
+        },
+        "to": {
+          "ref": "model"
+        }
+      }
+    ]
+  },
+  "changeVariant": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [
+      {
+        "ref": "model",
+        "type": "device_type",
+        "identity": {
+          "slug": "acme-srv2-12lff"
+        }
+      }
+    ],
+    "relations": [
+      {
+        "type": "instance_of",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@srv-v"
+          }
+        },
+        "to": {
+          "ref": "model"
+        }
+      }
+    ],
+    "unrelations": [
+      {
+        "type": "instance_of",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@srv-v"
+          }
+        },
+        "to": {
+          "type": "device_type",
+          "identity": {
+            "id": "@model-8sff"
+          }
+        }
+      }
+    ]
   }
 }

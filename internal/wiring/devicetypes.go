@@ -69,6 +69,22 @@ func (i Images) DeviceTypeImage(slug, face string) (api.DeviceImage, bool) {
 	return out, true
 }
 
+// DeviceTypeChoices implements api.DeviceTypeLibrary.
+func (i Images) DeviceTypeChoices(vendor, model, partNumber string) devicetypes.Choice {
+	if i.Index == nil {
+		return devicetypes.Choice{Reason: devicetypes.UncertainNone}
+	}
+	return i.Index.Choices(vendor, model, partNumber)
+}
+
+// DeviceTypeModel implements api.DeviceTypeLibrary.
+func (i Images) DeviceTypeModel(slug string) *devicetypes.Model {
+	if i.Index == nil {
+		return nil
+	}
+	return i.Index.BySlug(slug)
+}
+
 // runDeviceTypes matches the inventory's devices against the device type
 // library at start, after the migrations, then every deduce.interval, so
 // that a device discovered after the start gets its device type without a

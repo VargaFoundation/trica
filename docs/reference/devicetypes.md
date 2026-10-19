@@ -35,6 +35,28 @@ is closed (history keeps it) and a new one opened.
 | Airflow variants | `DCS-7050SX3-48YC8` matches the `-F` model only if all variants agree on everything but airflow; airflow and part number are then left out |
 | Ambiguous name, or a SKU listed by two models | matches nothing (the SKU then leaves the decision to the name) |
 | No vendor | matches nothing |
+| Another source declared the device's model (a person who chose the chassis, a declaration file) | the library claims no `instance_of` for that device and withdraws its own; it still describes the declared model ([ADR 0048](../adr/0048-choosing-the-chassis-variant.md)) |
+
+## How sure a match is, and the variants a person can choose
+
+`Index.Choices` (behind `GET /api/v1/objects/{id}/device-type-candidates`) says whether the model
+is the exact chassis and lists the candidates ([ADR 0048](../adr/0048-choosing-the-chassis-variant.md)).
+
+| `reason` | Certain | When | Example |
+|---|---|---|---|
+| `declared` | yes | another source declared the model (it wins over the name) | a person chose `dell-poweredge-r330-8sff` |
+| `sku` | yes | a part number listed by one model | `ProLiant DL380 Gen9` + `767032-B21` |
+| `model`, `mounting`, `part_number` | yes | the matched model has no other candidate, or is itself a variant | `PowerEdge R640`; `PowerEdge R330 8 x 2.5in hot-plug` |
+| `base` | no | the name matched a model that has variants | `PowerEdge R330` (the generic model, three chassis); `ProLiant DL380 Gen9` with an unlisted SKU |
+| `airflow` | no | the name matched an airflow family's base | `DCS-7050SX3-48YC8` |
+| `ambiguous` | no | nothing matched, models fit the name | `ProLiant DL180 Gen9` (three chassis, no generic model) |
+| `none` | no | nothing matched or fits | |
+
+The **candidates** are the models of the vendor whose name starts, word for word, with the name
+the device reports, the match itself, and the models `variant_of` links to any of them; a name
+that fits more than 12 models offers none. `variant_of: <slug>` (a trica extension, optional)
+names the generic model a file is a chassis variant of, for a variant whose name does not extend
+the generic one's; its value must be a slug other than the file's own.
 
 ## Adding a model to the embedded library
 
@@ -57,7 +79,7 @@ vendor's tables only, and cite them in the file. A SKU must be listed by one mod
 | `hpe-proliant-dl360-gen9-8sff` | 755258-B21 |
 | `hpe-proliant-dl380-gen9-8sff` / `-24sff` | 719064-B21 / 767032-B21 |
 | `hpe-proliant-dl180-gen9-8sff` / `-8lff` / `-12lff` | 754523-B21, 833973-B21 / 754524-B21, 833971-B21, 833972-B21 / 775506-B21, 833974-B21 |
-| `dell-poweredge-r330-8sff` / `-4lff-hot-plug` / `-4lff-cabled` | none: Dell reports no chassis part number (the Redfish `SKU` is the service tag); a device reporting `PowerEdge R330` gets the upstream model, without picture. To show your chassis, copy the PNG of your variant to `elevation-images/Dell/dell-poweredge-r330.front.png` (and `.rear.png`) in your directory, see below |
+| `dell-poweredge-r330-8sff` / `-4lff-hot-plug` / `-4lff-cabled` | none: Dell reports no chassis part number (the Redfish `SKU` is the service tag); a device reporting `PowerEdge R330` gets the upstream model, without picture, and its page says the variant is not certain and offers the three chassis to choose from ([ADR 0048](../adr/0048-choosing-the-chassis-variant.md)). For a whole fleet of one chassis, copy the PNG of your variant to `elevation-images/Dell/dell-poweredge-r330.front.png` (and `.rear.png`) in your directory instead, see below |
 
 ## Face images
 
@@ -162,8 +184,8 @@ plenty; it is stretched to the U box, so a crop with the chassis' own proportion
 ## Not covered
 
 The server runs `Sync` at start, after the migrations, then every `deduce.interval`
-([configuration](configuration.md)). Module bays are ignored; no model is picked by hand in the
-UI. Parts are not placed from HPE Redfish NIC names (`1`..`8`), a FlexibleLOM seen as `eno49`, or a
+([configuration](configuration.md)). Module bays are ignored; a model is picked by hand one
+device at a time (ADR 0048), not for many at once. Parts are not placed from HPE Redfish NIC names (`1`..`8`), a FlexibleLOM seen as `eno49`, or a
 power supply's `BayNumber`; the Dell R330 variants and the DL180 Gen9 LFF fronts have no layout
 reachable today (ADR 0047). Images are not reloaded without a restart, and the export PDF holds the images as part of its
 picture, not as separate objects.

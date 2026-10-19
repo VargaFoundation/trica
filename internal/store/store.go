@@ -327,6 +327,46 @@ func (s *Store) Claims(ctx context.Context, id string) ([]Claim, error) {
 	return out, rows.Err()
 }
 
+// RelationClaim is what one source currently says about one relation.
+type RelationClaim struct {
+	Type       string    `json:"type"`
+	FromID     string    `json:"from_id"`
+	ToID       string    `json:"to_id"`
+	Source     string    `json:"source"`
+	Confidence string    `json:"confidence"`
+	FirstSeen  time.Time `json:"first_seen"`
+	LastSeen   time.Time `json:"last_seen"`
+}
+
+// RelationClaims returns every source's current claims on relations of one
+// type, from the objects fromIDs, or from any object when fromIDs is nil.
+// Ordered by from, last seen (newest first), then source.
+func (s *Store) RelationClaims(ctx context.Context, typ string, fromIDs []string) ([]RelationClaim, error) {
+	q := `SELECT type, from_id::text, to_id::text, source, confidence, first_seen, last_seen FROM rel_claims WHERE type = $1`
+	args := []any{typ}
+	if fromIDs != nil {
+		if len(fromIDs) == 0 {
+			return nil, nil
+		}
+		q += ` AND from_id = ANY($2::uuid[])`
+		args = append(args, fromIDs)
+	}
+	rows, err := s.Pool.Query(ctx, q+` ORDER BY from_id, last_seen DESC, source`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []RelationClaim
+	for rows.Next() {
+		var c RelationClaim
+		if err := rows.Scan(&c.Type, &c.FromID, &c.ToID, &c.Source, &c.Confidence, &c.FirstSeen, &c.LastSeen); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 // History returns every value an object's attributes ever had, newest first.
 // key filters on one attribute when not empty.
 func (s *Store) History(ctx context.Context, id, key string, limit int) ([]Value, error) {

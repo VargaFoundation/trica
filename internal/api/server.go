@@ -50,6 +50,9 @@ type Config struct {
 	// Images serves the face images of the device-type library. Nil: no
 	// model has an image.
 	Images DeviceTypeImages
+	// Library answers which models a device may be (its chassis variants,
+	// ADR 0048). Nil: GET /objects/{id}/device-type-candidates lists none.
+	Library DeviceTypeLibrary
 	// Live serves the live topology overlay (ADR 0041); nil when the server
 	// has no live block, and GET /topology/live answers enabled: false.
 	Live LiveSource
@@ -71,6 +74,7 @@ type Server struct {
 	version  string
 	now      func() time.Time
 	images   DeviceTypeImages
+	lib      DeviceTypeLibrary
 	routes   []route
 	live     LiveSource
 }
@@ -89,8 +93,8 @@ func New(cfg Config) (*Server, error) {
 	s := &Server{
 		eng: cfg.Engine, st: cfg.Engine.Store, searcher: &search.Searcher{Store: cfg.Engine.Store},
 		auth: cfg.Authorizer, audit: cfg.Auditor, log: cfg.Logger, version: cfg.Version, now: cfg.Now,
-		images: cfg.Images,
-		live:   cfg.Live,
+		images: cfg.Images, lib: cfg.Library,
+		live: cfg.Live,
 	}
 	if s.log == nil {
 		s.log = slog.Default()

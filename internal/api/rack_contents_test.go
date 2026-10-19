@@ -18,8 +18,12 @@ type rackItem struct {
 	Model    *struct {
 		Display string `json:"display"`
 	} `json:"model"`
-	UHeight   *float64 `json:"u_height"`
-	FullDepth bool     `json:"full_depth"`
+	UHeight          *float64 `json:"u_height"`
+	FullDepth        bool     `json:"full_depth"`
+	ModelName        string   `json:"model_name"`
+	FrontImage       string   `json:"front_image"`
+	VariantUncertain bool     `json:"variant_uncertain"`
+	Variants         int      `json:"variants"`
 }
 
 func rackItems(t *testing.T, p page) []rackItem {

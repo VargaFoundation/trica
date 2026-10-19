@@ -200,6 +200,11 @@ type RackItem struct {
 	// when the device-type library has them (GET /device-types/{slug}/{face}).
 	FrontImage string `json:"front_image,omitempty"`
 	RearImage  string `json:"rear_image,omitempty"`
+	// VariantUncertain says the library is not sure which chassis the device
+	// is and nobody declared it; Variants is the number of models it may be
+	// (GET /objects/{id}/device-type-candidates lists them, ADR 0048).
+	VariantUncertain bool `json:"variant_uncertain,omitempty"`
+	Variants         int  `json:"variants,omitempty"`
 }
 
 // ChangeView is a change with its object's rights already checked.
