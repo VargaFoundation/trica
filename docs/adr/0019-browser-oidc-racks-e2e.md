@@ -1,7 +1,7 @@
 # ADR-0019: Browser sign-in (OIDC, public client with PKCE), rack and room views, browser tests
 
 - **Status**: accepted (2026-10); "Chromium only" amended by ADR 0038 (Firefox and WebKit on
-  demand)
+  demand); the browser renews an SSO token since ADR 0044
 - **Concerns**: `web/`, `internal/web`, `cmd/trica-e2e-server`, the `e2e` CI job. Builds on ADR 0018;
   the API still verifies bearer tokens exactly as ADR 0013 says (that ADR is on the auth branch).
 

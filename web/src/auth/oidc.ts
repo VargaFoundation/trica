@@ -7,6 +7,8 @@
 // Everything here is a plain function over fetch, sessionStorage and WebCrypto,
 // so the flow is tested without a browser.
 
+import type { Renewal } from "../api/token";
+
 /** The path the identity provider redirects back to. Register `<origin>/oidc/callback` as the client's redirect URI. */
 export const CALLBACK_PATH = "/oidc/callback";
 
@@ -196,9 +198,12 @@ export interface SignedIn {
   /** The bearer credential for the API. */
   token: string;
   returnTo: string;
+  /** How to renew the token before it expires; null when the provider gave no refresh token. */
+  renewal: Renewal | null;
 }
 
-function jwtPayload(jwt: string): Record<string, unknown> | null {
+/** The claims of a JWT, unverified (the API verifies); null when it is not one. */
+export function jwtPayload(jwt: string): Record<string, unknown> | null {
   const part = jwt.split(".")[1];
   if (!part) return null;
   try {
@@ -248,7 +253,7 @@ export async function completeSignIn(cfg: OidcClient, search: string, signal?: A
   } catch (e) {
     throw new OidcError("exchange", e instanceof Error ? e.message : String(e));
   }
-  let tokens: { access_token?: string; id_token?: string; error?: string; error_description?: string };
+  let tokens: { access_token?: string; id_token?: string; refresh_token?: string; error?: string; error_description?: string };
   try {
     tokens = (await res.json()) as typeof tokens;
   } catch {
@@ -262,7 +267,10 @@ export async function completeSignIn(cfg: OidcClient, search: string, signal?: A
   }
   const token = cfg.bearer === "id_token" ? tokens.id_token : tokens.access_token;
   if (!token) throw new OidcError("exchange", `the answer has no ${cfg.bearer}`);
-  return { token, returnTo: pending.returnTo };
+  const renewal: Renewal | null = tokens.refresh_token
+    ? { refresh_token: tokens.refresh_token, token_endpoint: endpoints.token_endpoint, client_id: cfg.client_id, bearer: cfg.bearer }
+    : null;
+  return { token, returnTo: pending.returnTo, renewal };
 }
 
 // Where to send the reader once the token is in place. The token appearing

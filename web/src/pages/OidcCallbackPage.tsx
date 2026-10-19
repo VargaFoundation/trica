@@ -35,7 +35,7 @@ export function OidcCallbackPage({ cfg }: { cfg: OidcClient | null }) {
         inflight.delete(search);
         if (!live) return;
         setLanding(done.returnTo);
-        setToken(done.token);
+        setToken(done.token, done.renewal);
       },
       (e: unknown) => {
         inflight.delete(search);

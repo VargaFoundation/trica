@@ -4,6 +4,7 @@ import { useLocation } from "react-router";
 import { CALLBACK_PATH } from "./auth/oidc";
 import { useUiConfig } from "./auth/useUiConfig";
 import { getAuthState, subscribeAuth } from "./api/token";
+import { startRenewal } from "./auth/renew";
 import { ErrorBox, Loading } from "./components/Async";
 import { useMe } from "./hooks";
 import { LoginPage } from "./pages/LoginPage";
@@ -20,6 +21,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const client = useQueryClient();
   const ui = useUiConfig();
   const { pathname } = useLocation();
+
+  // A single sign-on session renews its token before it expires.
+  useEffect(() => startRenewal(), []);
 
   // Nothing cached for one caller may be shown to the next.
   useEffect(() => {
