@@ -409,6 +409,20 @@ func TestEOS420(t *testing.T) {
 		checkAttrs(t, obj(t, b, "psu", "serial", "FAKEPSU1001"), map[string]any{"capacity_w": int64(500), "health": "ok", "input_w": 178.5})
 		// A PSU that lost its input is critical, and says so.
 		checkAttrs(t, obj(t, b, "psu", "serial", "FAKEPSU1002"), map[string]any{"health": "critical", "input_w": float64(0)})
+		// Cooling names the slots "PowerSupply1": still the same two supplies,
+		// each with its own fan under it (issue #127).
+		if got := len(collecttest.Objects([]*sdk.Batch{b}, "psu")); got != 2 {
+			t.Errorf("%d psu objects, want 2", got)
+		}
+		for i, serial := range map[string]string{"1": "FAKEPSU1001", "2": "FAKEPSU1002"} {
+			psu := obj(t, b, "psu", "serial", serial)
+			if psu.Identity["name"] != "PowerSupply"+i {
+				t.Errorf("psu %s: identity %v", serial, psu.Identity)
+			}
+			if fan := obj(t, b, "fan", "name", "PowerSupply"+i+"/1"); fan.Parent != psu.Ref {
+				t.Errorf("fan %s under %s, want %s", fan.Identity["name"], fan.Parent, psu.Ref)
+			}
+		}
 		// Trays with a fan list: one fan object per fan, rpm unit is not claimed as percent.
 		checkAttrs(t, obj(t, b, "fan", "name", "FanTray1/2"), map[string]any{"speed_pct": float64(40), "health": "ok"})
 		if got := len(collecttest.Objects([]*sdk.Batch{b}, "fan")); got != 6 {

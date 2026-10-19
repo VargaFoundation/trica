@@ -544,7 +544,12 @@ func remotePort(nb lldpNeighbor) string {
 
 // ------------------------------------------------------------------ hardware
 
+// ensurePSU returns the ref of the power supply in slot, creating it. The
+// commands do not agree on the slot: the inventory, power and temperature give
+// "1", while cooling gives "PowerSupply1" on 4.20 (and "1" on 4.14), so the
+// prefix is dropped before the slot names the object.
 func (bd *builder) ensurePSU(slot string) string {
+	slot = strings.TrimPrefix(strings.TrimSpace(slot), "PowerSupply")
 	if ref, ok := bd.psuRef[slot]; ok {
 		return ref
 	}

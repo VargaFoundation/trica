@@ -18,7 +18,7 @@
     }
   ],
   "powerSupplySlots": [
-    {"label": "1", "status": "ok", "fans": [{"name": "PowerSupply1/1", "label": "PowerSupply1/1", "status": "ok", "actualSpeed": 28, "configuredSpeed": 28}]},
-    {"label": "2", "status": "ok", "fans": [{"name": "PowerSupply2/1", "label": "PowerSupply2/1", "status": "ok", "actualSpeed": 28, "configuredSpeed": 28}]}
+    {"label": "PowerSupply1", "status": "ok", "fans": [{"name": "PowerSupply1/1", "label": "PowerSupply1/1", "status": "ok", "actualSpeed": 28, "configuredSpeed": 28}]},
+    {"label": "PowerSupply2", "status": "ok", "fans": [{"name": "PowerSupply2/1", "label": "PowerSupply2/1", "status": "ok", "actualSpeed": 28, "configuredSpeed": 28}]}
   ]
 }
