@@ -294,7 +294,9 @@ type AttributeDoc struct {
 	Identity    schema.IdentityStrength `json:"identity,omitempty"`
 	Search      bool                    `json:"search"`
 	Required    bool                    `json:"required"`
-	Custom      bool                    `json:"custom"`
+	// Series: a measurement whose history GET /objects/{id}/series draws.
+	Series bool `json:"series,omitempty"`
+	Custom bool `json:"custom"`
 }
 
 // RelationDoc describes a relation type.
@@ -318,7 +320,7 @@ func attributeDocs(attrs map[string]*schema.Attribute) []AttributeDoc {
 			continue
 		}
 		out = append(out, AttributeDoc{Name: n, Kind: a.Kind, Label: a.Label, Description: a.Description, Unit: a.Unit,
-			Values: a.Values, Identity: a.Identity, Search: a.Search, Required: a.Required, Custom: a.Custom})
+			Values: a.Values, Identity: a.Identity, Search: a.Search, Required: a.Required, Series: a.Series, Custom: a.Custom})
 	}
 	return out
 }

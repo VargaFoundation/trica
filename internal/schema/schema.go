@@ -73,7 +73,10 @@ type Attribute struct {
 	Identity    IdentityStrength `yaml:"identity,omitempty" json:"identity,omitempty"`
 	Search      bool             `yaml:"search,omitempty" json:"search,omitempty"`
 	Required    bool             `yaml:"required,omitempty" json:"required,omitempty"`
-	Custom      bool             `yaml:"-" json:"custom"`
+	// Series marks a measurement (a power draw, a temperature): a number whose
+	// history is drawn as a curve (GET /objects/{id}/series) rather than listed.
+	Series bool `yaml:"series,omitempty" json:"series,omitempty"`
+	Custom bool `yaml:"-" json:"custom"`
 }
 
 // Type describes an object type.
@@ -254,6 +257,9 @@ func validAttr(name string, a *Attribute) error {
 	}
 	if a.Kind == Enum && len(a.Values) == 0 {
 		return fmt.Errorf("attribute %s: enum without values", name)
+	}
+	if a.Series && a.Kind != Int && a.Kind != Float {
+		return fmt.Errorf("attribute %s: only an int or a float can be a series", name)
 	}
 	if a.Identity != "" && a.Identity != Strong && a.Identity != Weak {
 		return fmt.Errorf("attribute %s: identity must be strong or weak", name)

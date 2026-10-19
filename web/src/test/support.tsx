@@ -22,6 +22,7 @@ import {
   relationsSwA1,
   schema,
   searchSw,
+  seriesOf,
   siteParis,
   srv01,
   swA1,
@@ -139,5 +140,6 @@ export function defaultRoutes(me: Handler = APPROVER): Record<string, Handler> {
     "GET /health/collection": page([healthOk, healthFailing]),
   };
   for (const o of objects) routes[`GET /objects/${o.id}`] = o;
+  for (const o of [swA1, srv01]) routes[`GET /objects/${o.id}/series`] = (c: Call) => seriesOf(o.id, c.query);
   return routes;
 }

@@ -281,6 +281,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/objects/{id}/series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A measurement of the object (power, temperature) over a range, in buckets, from its history.
+         * @description Requires the "read" action.
+         */
+        get: operations["getObjectSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/objects/{id}/timeline": {
         parameters: {
             query?: never;
@@ -640,6 +660,7 @@ export interface components {
             name: string;
             required: boolean;
             search: boolean;
+            series?: boolean;
             unit?: string;
             values?: string[];
         };
@@ -3665,6 +3686,25 @@ export interface components {
             took_ms: number;
             total: number;
         };
+        Series: {
+            /** Format: date-time */
+            from: string;
+            key: string;
+            object_id: string;
+            points: components["schemas"]["SeriesPoint"][];
+            step_seconds: number;
+            /** Format: date-time */
+            to: string;
+            truncated: boolean;
+            unit?: string;
+        };
+        SeriesPoint: {
+            avg: number;
+            max: number;
+            min: number;
+            /** Format: date-time */
+            t: string;
+        };
         SourceHealth: {
             collector: string;
             duration_ms: number;
@@ -4256,6 +4296,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageRelationView"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getObjectSeries: {
+        parameters: {
+            query: {
+                /** @description The measurement: an attribute the schema marks as a series. */
+                key: string;
+                /** @description Start of the range (default: 24 hours before to). */
+                from?: string | unknown | unknown;
+                /** @description End of the range (default: now). */
+                to?: string | unknown | unknown;
+                /** @description Number of buckets, 1 to 1000 (default 120). */
+                points?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Object id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Series"];
                 };
             };
             400: components["responses"]["Problem400"];

@@ -343,6 +343,27 @@ func (s *Store) History(ctx context.Context, id, key string, limit int) ([]Value
 	return scanValues(rows)
 }
 
+// HistoryBetween returns the values of one attribute that were valid at some
+// point of [from, to), oldest first, at most limit of them; truncated says
+// whether more were left out (the newest ones).
+func (s *Store) HistoryBetween(ctx context.Context, id, key string, from, to time.Time, limit int) (vals []Value, truncated bool, err error) {
+	rows, err := s.Pool.Query(ctx, `
+		SELECT key, value, source, confidence, author, lower(valid), upper(valid), changeset_id
+		FROM attr_history WHERE object_id = $1 AND key = $2 AND valid && tstzrange($3, $4)
+		ORDER BY lower(valid) LIMIT $5`, id, key, from, to, limit+1)
+	if err != nil {
+		return nil, false, err
+	}
+	vals, err = scanValues(rows)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(vals) > limit {
+		return vals[:limit], true, nil
+	}
+	return vals, false, nil
+}
+
 func scanValues(rows pgx.Rows) ([]Value, error) {
 	defer rows.Close()
 	var out []Value

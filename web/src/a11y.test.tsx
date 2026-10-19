@@ -22,6 +22,7 @@ describe("accessibility audit (axe-core, WCAG 2.2 A and AA rules)", () => {
     ["a type view", { at: "/search?q=sw&type=device" }, "sw-a1"],
     ["object page, overview", { at: `/objects/${ID.swA1}` }, "Management address"],
     ["object page, provenance", { at: `/objects/${ID.swA1}?tab=provenance` }, /Attributes of sw-a1/],
+    ["object page, trends", { at: `/objects/${ID.srv01}` }, "Inlet temperature"],
     ["object page, components", { at: `/objects/${ID.srv01}?tab=components` }, /Power supply of srv-01/],
     ["object page, relations", { at: `/objects/${ID.swA1}?tab=relations` }, "lldp:core"],
     ["object page, history", { at: `/objects/${ID.swA1}?tab=history` }, /OS version changed/],

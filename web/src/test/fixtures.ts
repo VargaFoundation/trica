@@ -15,6 +15,7 @@ import type {
   RelationView,
   SchemaDoc,
   SearchPage,
+  Series,
   SourceHealth,
 } from "../api/types";
 
@@ -118,11 +119,11 @@ export const schema: SchemaDoc = {
         { name: "vendor", kind: "string", label: { en: "Vendor", fr: "Constructeur" }, description: "", search: true, required: false, custom: false },
         { name: "os_version", kind: "string", label: { en: "OS version", fr: "Version de l'OS" }, description: "", search: true, required: false, custom: false },
         { name: "mgmt_ip", kind: "ip", label: { en: "Management address", fr: "Adresse de gestion" }, description: "", search: true, required: false, custom: false },
-        { name: "power_w", kind: "number", label: { en: "Power draw", fr: "Consommation" }, description: "", unit: "W", search: false, required: false, custom: false },
+        { name: "power_w", kind: "number", label: { en: "Power draw", fr: "Consommation" }, description: "", unit: "W", search: false, required: false, custom: false, series: true },
         { name: "role", kind: "enum", label: { en: "Role", fr: "Rôle" }, description: "", search: false, required: false, custom: false, values: ["server", "switch", "router", "firewall", "storage", "nas", "pdu", "ups", "patch_panel", "sensor", "kvm", "other"] },
         { name: "health", kind: "enum", label: { en: "Health", fr: "Santé" }, description: "", search: false, required: false, custom: false, values: ["ok", "warning", "critical", "unknown"] },
-        { name: "inlet_temp_c", kind: "float", label: { en: "Inlet temperature", fr: "Température d'entrée" }, description: "", search: false, required: false, custom: false, unit: "°C" },
-        { name: "outlet_temp_c", kind: "float", label: { en: "Outlet temperature", fr: "Température de sortie" }, description: "", search: false, required: false, custom: false, unit: "°C" },
+        { name: "inlet_temp_c", kind: "float", label: { en: "Inlet temperature", fr: "Température d'entrée" }, description: "", search: false, required: false, custom: false, unit: "°C", series: true },
+        { name: "outlet_temp_c", kind: "float", label: { en: "Outlet temperature", fr: "Température de sortie" }, description: "", search: false, required: false, custom: false, unit: "°C", series: true },
         { name: "uptime_s", kind: "int", label: { en: "Uptime", fr: "Durée de fonctionnement" }, description: "", search: false, required: false, custom: false, unit: "s" },
         { name: "memory_bytes", kind: "int", label: { en: "Memory", fr: "Mémoire" }, description: "", search: false, required: false, custom: false, unit: "B" },
         { name: "log_critical_count", kind: "int", label: { en: "Critical events", fr: "Événements critiques" }, description: "", search: false, required: false, custom: false },
@@ -390,3 +391,29 @@ export const healthFailing: SourceHealth = {
   warnings: ["no ifAlias on 3 interfaces"],
   failures: 4,
 };
+
+/**
+ * A measurement series over the range a call asks for, in 120 buckets: three
+ * readings, a gap of two buckets, then a fourth. Power is around 400 W, the
+ * temperatures around 25 °C.
+ */
+export function seriesOf(objectId: string, query: URLSearchParams): Series {
+  const key = query.get("key") ?? "";
+  const to = query.get("to") ?? "2026-10-12T06:00:00Z";
+  const from = query.get("from") ?? new Date(Date.parse(to) - 86_400_000).toISOString();
+  const n = Number(query.get("points") ?? "120");
+  const step = Math.ceil((Date.parse(to) - Date.parse(from)) / n / 1000);
+  const base = key === "power_w" ? 400 : 25;
+  const at = (i: number) => new Date(Date.parse(from) + i * step * 1000).toISOString();
+  const pt = (i: number, d: number) => ({ t: at(i), avg: base + d, min: base + d - 10, max: base + d + 10 });
+  return {
+    object_id: objectId,
+    key,
+    unit: key === "power_w" ? "W" : "°C",
+    from,
+    to,
+    step_seconds: step,
+    points: [pt(0, 0), pt(1, 10), pt(2, 20), pt(5, 5)],
+    truncated: false,
+  };
+}
