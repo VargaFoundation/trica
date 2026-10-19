@@ -268,9 +268,12 @@ type coolingSlot struct {
 }
 
 type showCooling struct {
-	SystemStatus string        `json:"systemStatus"`
-	FanTraySlots []coolingSlot `json:"fanTraySlots"`
-	PowerSupply  []coolingSlot `json:"powerSupplySlots"`
+	SystemStatus string `json:"systemStatus"`
+	// AirflowDirection is frontToBackAirflow or backToFrontAirflow, on the
+	// releases that report it.
+	AirflowDirection string        `json:"airflowDirection"`
+	FanTraySlots     []coolingSlot `json:"fanTraySlots"`
+	PowerSupply      []coolingSlot `json:"powerSupplySlots"`
 }
 
 type showPower struct {

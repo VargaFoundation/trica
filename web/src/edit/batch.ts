@@ -66,6 +66,17 @@ export function updateObject(type: string, id: string, attributes: Attrs, withdr
   return b;
 }
 
+/** Which aisle a rack's front faces; the rear faces the other one (ADR 0049). */
+export type FrontAisle = "cold" | "hot";
+
+/**
+ * Says which aisle the rack's front faces, or, with null, withdraws what this
+ * caller said about it (a colleague's or a collector's claim stays: ADR 0004).
+ */
+export function declareFrontAisle(rackId: string, aisle: FrontAisle | null, now?: Date): Batch {
+  return aisle === null ? updateObject("rack", rackId, {}, ["front_aisle"], now) : updateObject("rack", rackId, { front_aisle: aisle }, [], now);
+}
+
 export interface Placement {
   rackId: string;
   /** Lowest U occupied, 1 at the bottom. */

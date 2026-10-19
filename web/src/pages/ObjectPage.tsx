@@ -23,6 +23,7 @@ import { FirmwareSection } from "../firmware/FirmwareCard";
 import { DeviceFacesSection } from "../faces/DeviceFaces";
 import { ModelChoiceSection, VariantPill } from "../devicetypes/ModelChoice";
 import { DevicePlacement } from "../edit/DevicePlacement";
+import { AirflowSection } from "../aisles/Airflow";
 import { EditPanel, useCanDeclare } from "../edit/EditPanel";
 import { ObjectForm } from "../edit/ObjectForm";
 import { CONTAINER_TYPES } from "../edit/rules";
@@ -194,6 +195,7 @@ function ObjectDetail({ obj }: { obj: ObjectView }) {
             <Measurements obj={obj} lookup={lookup} />
             <FirmwareSection obj={obj} lookup={lookup} />
             {obj.type === "device" ? <DevicePlacement device={obj} /> : null}
+            {obj.type === "device" ? <AirflowSection obj={obj} /> : null}
           </>
         ) : tab === "components" ? (
           <ComponentsSection obj={obj} lookup={lookup} />

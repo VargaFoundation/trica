@@ -63,6 +63,7 @@ plays a release that converts every command.
 | Transceiver DOM keys | short names (`Et1`) | long names (`Ethernet1`), plus `vendorName` |
 | DOM without optics | `"N/A"` | `"-inf"` |
 | Fan trays | one speed per tray, no `fans` list | `fans` list per tray, each with its own `name` |
+| Airflow | no `airflowDirection`; trays `FAN-7000-F`, PSUs `PWR-460AC-F`: all forward | `airflowDirection: frontToBackAirflow`, PSUs `PWR-511-AC-RED` (forward) but trays `FAN-7000-R`: **swapped trays, on purpose**, so that the collector's facts contradict each other and the airflow check (ADR 0049) says so |
 | Temperature | chassis sensors and per-PSU sensors | adds `cardSlots` sensors and sensors named inlet / exhaust |
 | Power | `outputPower` only | `outputPower` and `inputPower`; PSU 2 in `powerLoss` |
 | MLAG | `state: active`, domain, peer address | `state: disabled`, empty strings |
@@ -112,3 +113,9 @@ version and diff it against these files before trusting the collector.
 13. **PSU and fan states**: the collector maps `ok` to ok, `powerLoss` and
     `failed` to critical, `notInserted` and `absent` to absent, and anything
     else to unknown. The exact state strings per model are not known here.
+14. **Airflow**: whether `show environment cooling` has `airflowDirection` on the target
+    release, its exact spellings (only `frontToBackAirflow` and `backToFrontAirflow` are
+    mapped; another is left out with a warning), and that EOS's "front" is the port side,
+    as the `-F` (port-side intake) part numbers say. The part-number suffixes `-F` / `-RED`
+    (forward) and `-R` / `-BLUE` (reverse) are read from Arista's ordering guides, not from
+    a real switch.

@@ -161,6 +161,7 @@ func buildInventory() *inventory {
 	buildFaces(inv)
 	buildParts(inv)
 	buildVariants(inv)
+	buildAisles(inv)
 	return inv
 }
 
@@ -344,10 +345,11 @@ type api struct {
 	inv     *inventory
 	valid   func(string) bool
 	choices *choices
+	aisles  *aisleDecl
 }
 
 func newAPI(valid func(string) bool) http.Handler {
-	return &api{inv: buildInventory(), valid: valid, choices: &choices{slug: map[string]string{}, by: map[string]string{}}}
+	return &api{inv: buildInventory(), valid: valid, choices: &choices{slug: map[string]string{}, by: map[string]string{}}, aisles: &aisleDecl{front: map[string]string{}}}
 }
 
 func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -436,17 +438,16 @@ type batchRel struct {
 // that the rack shows the chosen face.
 func (a *api) batch(w http.ResponseWriter, r *http.Request, preview bool) {
 	var b struct {
-		Objects []struct {
-			Ref      string            `json:"ref"`
-			Type     string            `json:"type"`
-			Identity map[string]string `json:"identity"`
-		} `json:"objects"`
+		Objects     []batchObject           `json:"objects"`
 		Relations   []batchRel              `json:"relations"`
 		Unrelations []struct{ Type string } `json:"unrelations"`
 	}
 	raw, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	if err != nil || json.Unmarshal(raw, &b) != nil {
 		problem(w, http.StatusBadRequest, "invalid-batch", "The body is not a batch")
+		return
+	}
+	if a.declaredAisle(w, b.Objects, len(b.Relations), preview) {
 		return
 	}
 	identities := map[string]map[string]string{}
@@ -505,7 +506,7 @@ func (a *api) list(typ string) obj {
 	var items []obj
 	for _, o := range a.inv.objects {
 		if typ == "" || o["type"] == typ {
-			items = append(items, o)
+			items = append(items, a.withAisle(o))
 		}
 	}
 	sort.SliceStable(items, func(i, j int) bool { return items[i]["display"].(string) < items[j]["display"].(string) })
@@ -550,7 +551,7 @@ func (a *api) search(w http.ResponseWriter, q string) {
 
 func (a *api) one(w http.ResponseWriter, rest string) {
 	id, sub, _ := strings.Cut(rest, "/")
-	o := a.inv.byID(id)
+	o := a.withAisle(a.inv.byID(id))
 	if o == nil {
 		problem(w, http.StatusNotFound, "not-found", "No such object")
 		return
@@ -566,6 +567,8 @@ func (a *api) one(w http.ResponseWriter, rest string) {
 		a.faces(w, o)
 	case "device-type-candidates":
 		a.candidates(w, o)
+	case "airflow":
+		a.objectAirflow(w, o)
 	case "timeline":
 		writeJSON(w, http.StatusOK, page([]obj{{"at": t0, "object_id": id, "type": o["type"], "display": o["display"], "key": "hostname", "after": o["display"], "source": "declared:lab-file", "changeset_id": 1}}))
 	default:
@@ -606,6 +609,7 @@ func (a *api) rackContents(w http.ResponseWriter, id string) {
 		if u, n := a.uncertain(d); u {
 			it["variant_uncertain"], it["variants"] = true, n
 		}
+		it["airflow"] = a.rackAirflow(d)
 		items = append(items, it)
 	}
 	writeJSON(w, http.StatusOK, page(items))
@@ -769,6 +773,7 @@ func schemaDoc() obj {
 				attr("floor_x", "int", "Floor X", "Position X", nil),
 				attr("floor_y", "int", "Floor Y", "Position Y", nil),
 				attr("facing", "enum", "Front faces", "Face avant vers", obj{"values": []string{"north", "east", "south", "west"}}),
+				attr("front_aisle", "enum", "Front aisle", "Couloir côté avant", obj{"values": []string{"cold", "hot"}}),
 			}),
 			typeDoc("row", "Row", "Rangée", []string{"room"}, nil),
 			typeDoc("room", "Room", "Salle", []string{"site"}, []obj{

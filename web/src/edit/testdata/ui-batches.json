@@ -402,5 +402,62 @@
         }
       }
     ]
+  },
+  "frontAisleCold": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [
+      {
+        "ref": "obj",
+        "type": "rack",
+        "identity": {
+          "id": "@rack"
+        },
+        "attributes": {
+          "front_aisle": "cold"
+        }
+      }
+    ],
+    "relations": []
+  },
+  "frontAisleHot": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [
+      {
+        "ref": "obj",
+        "type": "rack",
+        "identity": {
+          "id": "@rack"
+        },
+        "attributes": {
+          "front_aisle": "hot"
+        }
+      }
+    ],
+    "relations": []
+  },
+  "frontAisleUnset": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [
+      {
+        "ref": "obj",
+        "type": "rack",
+        "identity": {
+          "id": "@rack"
+        },
+        "withdraw": [
+          "front_aisle"
+        ]
+      }
+    ],
+    "relations": []
   }
 }

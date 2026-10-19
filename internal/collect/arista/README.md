@@ -108,8 +108,9 @@ the refused command costs only its own data.
 | VLAN membership | `show vlan`, `show interfaces status` | `member_of` interface to vlan, `tagged` (access: false; trunk: true unless it is the native VLAN, 1 when unreported); an SVI is a member of its VLAN |
 | LAG membership | `show port-channel` | `member_of` member interface to Port-Channel (active and inactive ports; the MLAG peer's ports are skipped) |
 | LLDP neighbours | `show lldp neighbors detail` | `neighbor_of` from the local interface to `interface{name}` under `device{base_mac, name}`, `protocol=lldp` |
-| Power supplies | `show inventory`, `show environment power` | `psu` (child of the device): `serial`, `model`, `capacity_w`, `input_w`, `health` |
-| Fans | `show environment cooling` | `fan` (child of the device, or of its PSU): `speed_pct`, `health`; a tray with no fan list is one fan |
+| Power supplies | `show inventory`, `show environment power` | `psu` (child of the device): `serial`, `model`, `capacity_w`, `input_w`, `health`, `airflow` (from the part number: `-F` / `-RED` front to rear, `-R` / `-BLUE` rear to front; ADR 0049) |
+| Fans | `show environment cooling`, `show inventory` | `fan` (child of the device, or of its PSU): `speed_pct`, `health`; a tray with no fan list is one fan; a tray's fans get `airflow` from the tray's part number (`FAN-7000-F` front to rear, `-R` rear to front). A PSU's own fan gets none: the PSU says it |
+| Chassis airflow | `show environment cooling` (`airflowDirection`, on the releases that report it) | `device.airflow`: `frontToBackAirflow` is `front_to_rear`, `backToFrontAirflow` `rear_to_front` (front = the port side); another spelling is left out with a warning. The airflow check (ADR 0049) compares it with the model's |
 | Temperature sensors | `show environment temperature` | `sensor` (child of the device or PSU): `placement`, `reading`, `unit`, `warning_threshold`, `critical_threshold`, `health` |
 | Transceivers | `show inventory`, `show interfaces transceiver` | `transceiver` (child of its interface): `serial`, `vendor`, `model`, `media_type`, `temperature_c`, `voltage_v`, `tx_power_dbm`, `rx_power_dbm` |
 

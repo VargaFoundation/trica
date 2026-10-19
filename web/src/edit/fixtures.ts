@@ -49,6 +49,7 @@ export const physicalSchema: SchemaDoc = {
       attr("depth_mm", "int", "Depth", "Profondeur", { unit: "mm" }),
       attr("width_mm", "int", "Width", "Largeur", { unit: "mm" }),
       attr("facing", "enum", "Front faces", "Face avant vers", { values: ["north", "east", "south", "west"] }),
+      attr("front_aisle", "enum", "Front aisle", "Couloir côté avant", { values: ["cold", "hot"] }),
       attr("floor_x", "int", "Floor X", "Position X"),
       attr("floor_y", "int", "Floor Y", "Position Y"),
       attr("lifecycle", "enum", "Lifecycle", "Cycle de vie", { values: ["planned", "active", "decommissioned"] }),

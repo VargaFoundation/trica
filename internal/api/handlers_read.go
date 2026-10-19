@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/VargaFoundation/trica/internal/airflow"
 	"github.com/VargaFoundation/trica/internal/reconcile"
 	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/internal/search"
@@ -532,6 +533,17 @@ func (s *Server) hRackContents(c *call) error {
 	if err != nil {
 		return err
 	}
+	readable := make([]string, 0, len(devices))
+	for _, id := range devices {
+		if _, ok := objs[id]; ok {
+			readable = append(readable, id)
+		}
+	}
+	fans, err := c.partsAirflow(readable, sites)
+	if err != nil {
+		return err
+	}
+	frontAisle := strAttr(rack, "front_aisle")
 	items := []RackItem{}
 	for _, m := range mounts {
 		d, ok := objs[m.FromID]
@@ -542,7 +554,9 @@ func (s *Server) hRackContents(c *call) error {
 		if f, _ := m.Attrs["face"].(string); f == "front" || f == "rear" {
 			it.Face = f
 		}
+		in := airflow.Input{FrontAisle: frontAisle, Face: it.Face, Mounted: true, Device: strAttr(d, "airflow"), ModelDeclared: declared[d.ID], Parts: fans[d.ID]}
 		if t, ok := objs[modelOf[d.ID]]; ok {
+			in.Model = s.modelAirflow(t)
 			attrs := redactMap(t.Attrs)
 			it.Model = &ObjectRef{ID: t.ID, Type: t.Type, Display: t.Display}
 			it.UHeight = number(attrs["u_height"])
@@ -571,6 +585,8 @@ func (s *Server) hRackContents(c *call) error {
 		if it.UHeight == nil {
 			it.UHeight = number(redactMap(d.Attrs)["u_height"])
 		}
+		check := checkView(airflow.Check(in))
+		it.Airflow = &check
 		items = append(items, it)
 	}
 	sort.SliceStable(items, func(i, j int) bool {

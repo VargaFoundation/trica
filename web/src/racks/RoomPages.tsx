@@ -14,6 +14,8 @@ import { layoutFloor, tileOf, type FloorPlan, type PlacedRack } from "./floor";
 import { useRoomContents, type RoomContents } from "./useRack";
 import { EditPanel, useCanDeclare } from "../edit/EditPanel";
 import { ObjectForm } from "../edit/ObjectForm";
+import { aisleTiles, conflictingRacks, type Aisle, type AisleTile } from "../aisles/aisles";
+import "../aisles/aisles.css";
 
 /** /rooms — every room, each linking to its floor plan. */
 export function RoomsPage() {
@@ -180,6 +182,12 @@ function Plan({
   const { t, number } = useI18n();
   const plan = useMemo(() => layoutFloor(widthMm, depthMm, contents.racks, tileMm), [widthMm, depthMm, contents.racks, tileMm]);
   const uHeights = new Map(contents.racks.map((r) => [r.id, r.uHeight]));
+  const aisleOfRack = new Map<string, Aisle | undefined>(contents.racks.map((r) => [r.id, r.frontAisle]));
+  const aisles = useMemo(() => {
+    const front = new Map(contents.racks.map((r) => [r.id, r.frontAisle]));
+    return aisleTiles(plan.placed.map((r) => ({ ...r, frontAisle: front.get(r.id) })));
+  }, [plan.placed, contents.racks]);
+  const conflicts = conflictingRacks(aisles);
   return (
     <>
       {plan.sizeFromRacks ? (
@@ -201,7 +209,8 @@ function Plan({
       {plan.placed.length > 0 || (onPick && !plan.sizeFromRacks) ? (
         <figure className="floor-plan">
           <figcaption>{t("room.tile", { mm: number(tileMm) })}</figcaption>
-          <FloorSvg roomName={roomName} plan={plan} onPick={onPick} />
+          <FloorSvg roomName={roomName} plan={plan} aisles={aisles} names={new Map(contents.racks.map((r) => [r.id, r.name]))} onPick={onPick} />
+          {aisles.length > 0 ? <p className="hint">{t("aisle.floorLegend")}</p> : null}
           {onPick ? <p className="hint">{t("edit.rack.clickHint")}</p> : null}
         </figure>
       ) : null}
@@ -215,6 +224,7 @@ function Plan({
                 <th scope="col">{t("room.col.rack")}</th>
                 <th scope="col">{t("room.col.tile")}</th>
                 <th scope="col">{t("room.col.facing")}</th>
+                <th scope="col">{t("room.col.aisle")}</th>
                 <th scope="col">{t("room.col.height")}</th>
                 <th scope="col">{t("room.col.notes")}</th>
               </tr>
@@ -230,9 +240,21 @@ function Plan({
                     </th>
                     <td data-label={t("room.col.tile")}>{placed ? `${placed.x}, ${placed.y}` : "—"}</td>
                     <td data-label={t("room.col.facing")}>{r.facing ? t(`facing.${r.facing}`) : "—"}</td>
+                    <td data-label={t("room.col.aisle")} data-front-aisle={aisleOfRack.get(r.id) ?? "unset"}>
+                      {aisleOfRack.get(r.id) ? (
+                        <span className={`aisle-chip aisle-${aisleOfRack.get(r.id)}`}>{t(aisleOfRack.get(r.id) === "cold" ? "aisle.cold" : "aisle.hot")}</span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td data-label={t("room.col.height")}>{u === undefined ? "—" : t("rack.units", { units: number(u) })}</td>
                     <td data-label={t("room.col.notes")}>
-                      {placed?.clash ? t("room.clash") : !placed ? t("room.unplaced") : plan.outside.includes(r.id) ? t("room.outsideRack") : "—"}
+                      {[
+                        placed?.clash ? t("room.clash") : !placed ? t("room.unplaced") : plan.outside.includes(r.id) ? t("room.outsideRack") : "",
+                        conflicts.has(r.id) ? t("aisle.conflict") : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
                     </td>
                   </tr>
                 );
@@ -257,7 +279,19 @@ const FACING_EDGE = {
  * pointer shortcut to "add a rack here", kept out of the tab order and of the
  * accessibility tree: the page's "Add a rack" button is the keyboard path.
  */
-function FloorSvg({ roomName, plan, onPick }: { roomName: string; plan: FloorPlan; onPick?: (x: number, y: number) => void }) {
+function FloorSvg({
+  roomName,
+  plan,
+  aisles,
+  names,
+  onPick,
+}: {
+  roomName: string;
+  plan: FloorPlan;
+  aisles: readonly AisleTile[];
+  names: Map<string, string>;
+  onPick?: (x: number, y: number) => void;
+}) {
   const { t } = useI18n();
   const cols = Math.max(plan.cols, ...plan.placed.map((r) => r.x + 1));
   const rows = Math.max(plan.rows, ...plan.placed.map((r) => r.y + 1));
@@ -271,6 +305,9 @@ function FloorSvg({ roomName, plan, onPick }: { roomName: string; plan: FloorPla
       ))}
       {Array.from({ length: rows + 1 }, (_, i) => (
         <line key={`r${i}`} className="rack-grid" y1={PAD + i * TILE_PX} y2={PAD + i * TILE_PX} x1={PAD} x2={PAD + cols * TILE_PX} />
+      ))}
+      {aisles.map((a) => (
+        <AisleTileView key={`aisle-${a.x}-${a.y}`} tile={a} names={names} />
       ))}
       {onPick
         ? Array.from({ length: plan.cols * plan.rows }, (_, i) => ({ x: i % plan.cols, y: Math.floor(i / plan.cols) }))
@@ -315,5 +352,23 @@ function FloorSvg({ roomName, plan, onPick }: { roomName: string; plan: FloorPla
         );
       })}
     </svg>
+  );
+}
+
+/** An aisle tile of the floor plan: its kind in a letter and in its tooltip, its colour repeats it. */
+function AisleTileView({ tile: a, names }: { tile: AisleTile; names: Map<string, string> }) {
+  const { t } = useI18n();
+  const racks = a.racks.map((id) => names.get(id) ?? id).join(", ");
+  const text = t(a.kind === "cold" ? "aisle.floorTile.cold" : a.kind === "hot" ? "aisle.floorTile.hot" : "aisle.floorTile.conflict", { racks });
+  const x = PAD + a.x * TILE_PX;
+  const y = PAD + a.y * TILE_PX;
+  return (
+    <g className="floor-aisle-tile" data-aisle={a.kind} data-tile={`${a.x},${a.y}`}>
+      <title>{text}</title>
+      <rect className={`floor-aisle floor-aisle-${a.kind}`} x={x + 1} y={y + 1} width={TILE_PX - 2} height={TILE_PX - 2} />
+      <text className={`floor-aisle-label floor-aisle-label-${a.kind}`} x={x + TILE_PX / 2} y={y + TILE_PX / 2 + 4} textAnchor="middle">
+        {a.kind === "cold" ? t("aisle.short.cold") : a.kind === "hot" ? t("aisle.short.hot") : "!"}
+      </text>
+    </g>
   );
 }

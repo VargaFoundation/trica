@@ -56,6 +56,10 @@ export type DeviceFace = S["DeviceFace"];
 export type FaceSpot = S["FaceSpot"];
 export type DeviceTypeChoice = S["DeviceTypeChoice"];
 export type DeviceTypeCandidate = S["DeviceTypeCandidate"];
+export type AirflowCheck = S["AirflowCheck"];
+export type AirflowWarning = S["AirflowWarning"];
+export type AirflowPart = S["AirflowPart"];
+export type DeviceAirflow = S["DeviceAirflow"];
 
 export type Page<T> = { total: number; limit: number; offset: number; truncated?: boolean; items: T[] };
 

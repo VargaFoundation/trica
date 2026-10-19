@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { callerSource, chooseModel, cleanAttrs, createObject, placeDevice, unplaceDevice, updateObject } from "./batch";
+import { callerSource, chooseModel, cleanAttrs, createObject, declareFrontAisle, placeDevice, unplaceDevice, updateObject } from "./batch";
 
 const AT = new Date("2026-03-01T08:00:00Z");
 
@@ -41,6 +41,9 @@ function uiBatches() {
     badFace: placeDevice({ device: { id: "@pdu" }, placement: { rackId: "@rack", position: 5, face: "side" } }, AT),
     chooseVariant: chooseModel({ deviceId: "@srv-v", slug: "acme-srv2-8sff" }, AT),
     changeVariant: chooseModel({ deviceId: "@srv-v", slug: "acme-srv2-12lff", withdraw: ["@model-8sff"] }, AT),
+    frontAisleCold: declareFrontAisle("@rack", "cold", AT),
+    frontAisleHot: declareFrontAisle("@rack", "hot", AT),
+    frontAisleUnset: declareFrontAisle("@rack", null, AT),
   };
 }
 
@@ -66,6 +69,11 @@ describe("the batches the forms send", () => {
       { ref: "parent", type: "room", identity: { id: "@room" } },
       { ref: "new", type: "rack", identity: { name: "r14" }, attributes: { u_height: 42, floor_x: 2, floor_y: 1, facing: "south" }, parent: "parent" },
     ]);
+  });
+
+  it("says the rack's front aisle on the rack by id, and withdraws only this caller's claim for \"not set\"", () => {
+    expect(declareFrontAisle("r1", "cold", AT).objects).toEqual([{ ref: "obj", type: "rack", identity: { id: "r1" }, attributes: { front_aisle: "cold" } }]);
+    expect(declareFrontAisle("r1", null, AT).objects).toEqual([{ ref: "obj", type: "rack", identity: { id: "r1" }, withdraw: ["front_aisle"] }]);
   });
 
   it("mounts an existing device by id, with no object when nothing about the device changes", () => {
