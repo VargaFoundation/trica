@@ -1,5 +1,6 @@
 import type { Problem } from "./types";
-import { getToken, rejectToken } from "./token";
+import { renewSession } from "../auth/renew";
+import { getRenewal, getToken, rejectToken } from "./token";
 
 export const API_BASE = "/api/v1";
 
@@ -43,18 +44,42 @@ export interface RequestOptions {
 
 /**
  * One call to the API. The credential is the bearer token of the session; a 401
- * means it is missing, expired or revoked, so it is dropped and the app shows
- * the sign-in form again.
+ * means it is missing, expired or revoked. A single sign-on session is renewed
+ * once and the call replayed (a tab asleep in the background may hold a token
+ * that expired meanwhile); otherwise, or when renewal fails, the token is
+ * dropped and the app shows the sign-in form again.
  */
 export async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const headers: Record<string, string> = { Accept: "application/json, application/problem+json" };
   const token = getToken();
+  let sent = token;
+  let res = await send(path, opts, token);
+  if (res.status === 401 && token && getRenewal()) {
+    // Another call may already have renewed the session.
+    const renewed = getToken() !== token || (await renewSession());
+    const next = getToken();
+    if (renewed && next && next !== token) res = await send(path, opts, (sent = next));
+  }
+
+  if (!res.ok) {
+    let problem: Partial<Problem> = {};
+    try {
+      problem = (await res.json()) as Partial<Problem>;
+    } catch {
+      /* not JSON: keep the status only */
+    }
+    // Only the token that was refused is dropped, not one set meanwhile.
+    if (res.status === 401 && sent && getToken() === sent) rejectToken();
+    throw new ApiError(res.status, problem);
+  }
+  return (await res.json()) as T;
+}
+
+async function send(path: string, opts: RequestOptions, token: string | null): Promise<Response> {
+  const headers: Record<string, string> = { Accept: "application/json, application/problem+json" };
   if (token) headers.Authorization = `Bearer ${token}`;
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
-
-  let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}${buildQuery(opts.query)}`, {
+    return await fetch(`${API_BASE}${path}${buildQuery(opts.query)}`, {
       method: opts.method ?? "GET",
       headers,
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
@@ -65,16 +90,4 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
     if (e instanceof DOMException && e.name === "AbortError") throw e;
     throw new ApiError(0, { title: "network", detail: e instanceof Error ? e.message : "network error" });
   }
-
-  if (!res.ok) {
-    let problem: Partial<Problem> = {};
-    try {
-      problem = (await res.json()) as Partial<Problem>;
-    } catch {
-      /* not JSON: keep the status only */
-    }
-    if (res.status === 401 && token) rejectToken();
-    throw new ApiError(res.status, problem);
-  }
-  return (await res.json()) as T;
 }

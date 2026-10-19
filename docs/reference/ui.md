@@ -217,6 +217,12 @@ under *Web origins* (the page calls the discovery and token endpoints itself). `
 `access_token` (default) or `id_token`: the API checks the audience of whichever is sent, so with
 Keycloak either add an audience mapper to the access token or choose `id_token`.
 
+An SSO session renews its token (ADR 0044): the page keeps the provider's refresh token in
+`sessionStorage` and spends it a minute before each expiry, and once more when a call meets a 401
+(the call is then replayed). A refusal by the provider ends the session; a network failure does
+not. How long a reader stays signed in is therefore the provider's SSO session: with Keycloak,
+*SSO Session Idle* and *SSO Session Max* of the realm, or the client's overrides under *Advanced*.
+
 `GET /api/v1/me` returns the actions the caller holds (`read`, `propose`, `approve`, `admin`). The
 UI shows **Approve** and **Reject** only to a caller who holds `approve`, only on pending
 proposals, and asks for a confirmation. The decision is the API's: a 403 (a grant limited to a

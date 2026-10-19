@@ -1,6 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { getToken } from "../api/token";
+import { getRenewal, getToken } from "../api/token";
 import { expectNoA11yViolations } from "../test/axe";
 import { defaultRoutes, mockApi, renderApp } from "../test/support";
 import { buildAuthorizationUrl, challengeFor, completeSignIn, discover, loadUiConfig, safeReturnTo, startSignIn, type OidcClient } from "./oidc";
@@ -86,7 +86,7 @@ describe("completeSignIn", () => {
     const state = url.searchParams.get("state") ?? "";
     idp.tokenCalls.length = 0;
     const out = await completeSignIn(CFG, `?code=the-code&state=${state}`);
-    expect(out).toEqual({ token: "at-1", returnTo: "/objects/abc?tab=history" });
+    expect(out).toEqual({ token: "at-1", returnTo: "/objects/abc?tab=history", renewal: null });
     expect(idp.tokenCalls).toHaveLength(1);
     const form = idp.tokenCalls[0]!;
     expect(Object.fromEntries(form)).toEqual({
@@ -105,6 +105,13 @@ describe("completeSignIn", () => {
     fakeIdp({ token: () => ({ body: { access_token: "at-1", id_token: jwt({ nonce }) } }) });
     const out = await completeSignIn({ ...CFG, bearer: "id_token" }, `?code=c&state=${url.searchParams.get("state")}`);
     expect(out.token).toBe(jwt({ nonce }));
+  });
+
+  it("keeps the refresh token with the endpoint, client and bearer it belongs to", async () => {
+    const { url } = await begin();
+    fakeIdp({ token: () => ({ body: { access_token: "at-1", refresh_token: "rt-1" } }) });
+    const out = await completeSignIn(CFG, `?code=c&state=${url.searchParams.get("state")}`);
+    expect(out.renewal).toEqual({ refresh_token: "rt-1", token_endpoint: DISCOVERY.token_endpoint, client_id: "trica-ui", bearer: "access_token" });
   });
 
   it("rejects a callback whose state is not the one that was stored", async () => {
@@ -254,6 +261,7 @@ describe("the sign-in page", () => {
     renderApp({ signedIn: false, at: `/oidc/callback?code=the-code&state=${url.searchParams.get("state")}` });
     await screen.findByRole("heading", { name: /^health$/i, level: 1 });
     expect(getToken()).toBe("at-1");
+    expect(getRenewal()?.refresh_token).toBe("rt-1");
     expect(idp.tokenCalls).toHaveLength(1);
     expect(api.calls.find((c) => c.path === "/me")?.headers.get("Authorization")).toBe("Bearer at-1");
   });
@@ -278,7 +286,7 @@ function fakeIdpOver(api: typeof fetch): Idp {
     if (url.href === `${ISSUER}/.well-known/openid-configuration`) return json(DISCOVERY);
     if (url.href === DISCOVERY.token_endpoint) {
       idp.tokenCalls.push(new URLSearchParams(String(init?.body)));
-      return json({ access_token: "at-1" });
+      return json({ access_token: "at-1", refresh_token: "rt-1" });
     }
     return api(input, init);
   });
