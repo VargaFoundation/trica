@@ -1,0 +1,29 @@
+---
+# Written by the trica project (Apache-2.0); the face images are trica drawings
+# (CC0-1.0, sources in drawings/, generator in scripts/devicetype-faces/).
+#
+# DL180 Gen9 chassis (QuickSpecs c04346227): 8.75 x 44.55 x 60.7 cm, embedded
+# 2x1GbE (361i), dedicated iLO port optional (left out), one 550 W supply or the
+# 900 W redundant power supply with two modules (both listed).
+#
+# 12LFF hot-plug chassis: CTO 775506-B21, pre-configured 833974-B21.
+manufacturer: HPE
+model: ProLiant DL180 Gen9 12LFF
+slug: hpe-proliant-dl180-gen9-12lff
+part_numbers:
+  - 775506-B21
+  - 833974-B21
+u_height: 2
+is_full_depth: true
+airflow: front-to-rear
+comments: '[QuickSpecs](https://support.hpe.com/hpesc/public/api/document/c04346227)'
+power-ports:
+  - name: PS1
+    type: iec-60320-c14
+  - name: PS2
+    type: iec-60320-c14
+interfaces:
+  - name: NIC 1
+    type: 1000base-t
+  - name: NIC 2
+    type: 1000base-t

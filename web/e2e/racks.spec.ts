@@ -107,16 +107,16 @@ async function cspViolations(page: Page): Promise<() => Promise<string[]>> {
   return async () => [...errors, ...(await page.evaluate(() => (window as unknown as { __csp: string[] }).__csp))];
 }
 
-// r20 holds library models with images (Arista 7050SX-64-R, HPE DL380 Gen10 and DL360 Gen9),
-// library models without (7280SE-64, CRS354, the pfSense appliance, DL380 Gen9), devices with no
-// model at all, and every health. The images come from the device-type library through the API,
+// r20 holds library models with images (Arista 7050SX-64-R and 7280SE-64-F, HPE DL380 Gen10 and
+// DL360 Gen9), library models without (7050TX-48, the pfSense appliance, DL380 Gen9), devices with
+// no model at all, and every health. The images come from the device-type library through the API,
 // with the token, under img-src 'self': no blob: or data: URL.
 test("devices show their model's picture, else a face drawn for their role, and their health", async ({ page }) => {
   const csp = await cspViolations(page);
   await signInWithToken(page, `/racks/${ID.r20}`);
   const front = page.locator('svg[data-face="front"]');
   const device = (name: string) => front.locator(`a.rack-slot[aria-label^="${name},"]`);
-  for (const name of ["sw-f1", "srv-f10", "srv-f12"]) {
+  for (const name of ["sw-f1", "sw-f2", "srv-f10", "srv-f12"]) {
     await expect(device(name)).toHaveAttribute("data-face-drawn", "image");
   }
   // The picture is really painted: the canvas holds opaque pixels.
@@ -130,7 +130,6 @@ test("devices show their model's picture, else a face drawn for their role, and 
     });
   expect(painted).toBeGreaterThan(0.9);
   for (const [name, kind] of [
-    ["sw-f2", "switch"],
     ["sw-f3", "switch"],
     ["fw-f1", "firewall"],
     ["srv-f11", "server"],
@@ -143,8 +142,8 @@ test("devices show their model's picture, else a face drawn for their role, and 
     await expect(device(name).locator(`.rack-face-${kind}`)).toHaveCount(1);
   }
   await expect(page.locator('svg[data-face="rear"] a.rack-slot[aria-label^="pdu-f1,"] .rack-face-pdu')).toHaveCount(1);
-  // The rear of a full-depth server with a rear image is that image, faded.
-  await expect(page.locator('svg[data-face="rear"] .rack-shadow foreignObject')).toHaveCount(2);
+  // The rear of a full-depth device with a rear image is that image, faded (srv-f10, srv-f12, sw-f2).
+  await expect(page.locator('svg[data-face="rear"] .rack-shadow foreignObject')).toHaveCount(3);
   // Health in colour and in words: srv-f10 is healthy, its power supply is not.
   await expect(device("srv-f10")).toHaveAttribute("data-health", "critical");
   await expect(device("srv-f10")).toHaveAttribute("aria-label", "srv-f10, U14-U15, Health: Critical");
@@ -158,3 +157,36 @@ test("devices show their model's picture, else a face drawn for their role, and 
   expect(readFileSync(await d.path()).subarray(0, 4).toString("latin1")).toBe("\x89PNG");
   expect(await csp()).toEqual([]);
 });
+
+// r21 holds one device per face the project drew (internal/devicetypes/library/drawings): every
+// one is painted from its picture, front and, for the full-depth ones, rear. With
+// TRICA_E2E_SHOTS=<dir> the rack is also saved as a picture, in both themes.
+const SHOTS = process.env.TRICA_E2E_SHOTS;
+const drawn = ["sw-d1", "sw-d2", "sw-d3", "srv-d1", "srv-d2", "srv-d3", "srv-d4", "srv-d5", "srv-d6", "srv-d7", "srv-d8", "srv-d9"];
+for (const theme of ["dark", "light"] as const) {
+  test.describe(`${theme} theme`, () => {
+    test.use({ colorScheme: theme, viewport: { width: 1400, height: 1200 } });
+    test("the faces the project drew are painted, front and rear", async ({ page }) => {
+      await signInWithToken(page, `/racks/${ID.r21}`);
+      const front = page.locator('svg[data-face="front"]');
+      for (const name of drawn) {
+        const slot = front.locator(`a.rack-slot[aria-label^="${name},"]`);
+        await expect(slot).toHaveAttribute("data-face-drawn", "image");
+        const painted = await slot.locator("canvas").evaluate((c: HTMLCanvasElement) => {
+          const d = (c.getContext("2d") as CanvasRenderingContext2D).getImageData(0, 0, c.width, c.height).data;
+          let opaque = 0;
+          for (let i = 3; i < d.length; i += 4) if ((d[i] ?? 0) > 0) opaque++;
+          return opaque / (c.width * c.height);
+        });
+        expect(painted, name).toBeGreaterThan(0.9);
+      }
+      // Ten are full depth with a rear drawing; the 7050SX-64 and the CRS354 are not full depth.
+      await expect(page.locator('svg[data-face="rear"] .rack-shadow foreignObject')).toHaveCount(10);
+      if (SHOTS) {
+        await page.waitForTimeout(300);
+        await page.screenshot({ path: `${SHOTS}/rack-drawn-faces-${theme}.png`, fullPage: true });
+        await front.screenshot({ path: `${SHOTS}/rack-drawn-faces-front-${theme}.png`, scale: "device" });
+      }
+    });
+  });
+}

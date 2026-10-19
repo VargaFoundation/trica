@@ -40,7 +40,7 @@ func loadModels(fsys fs.FS, root string, originOf func(string) string) ([]*Model
 		if err != nil {
 			return err
 		}
-		if p != root && (strings.HasPrefix(d.Name(), ".") || (d.IsDir() && d.Name() == ImageDir)) {
+		if p != root && (strings.HasPrefix(d.Name(), ".") || (d.IsDir() && (d.Name() == ImageDir || d.Name() == DrawingDir))) {
 			// Hidden entries are skipped: a Kubernetes volume holds its files
 			// twice, under a hidden ..<timestamp> directory and as links.
 			if d.IsDir() {
@@ -126,7 +126,7 @@ func OpenFS(lib fs.FS, root string, extra fs.FS) (*Library, error) {
 	used := map[string]bool{}
 	for _, m := range models {
 		for _, face := range []string{Front, Rear} {
-			img, err := readImage(lib, root, m, face, imageOrigin(m))
+			img, err := readImage(lib, root, m, face, embeddedImageOrigin(lib, root, m, face))
 			if err != nil {
 				return nil, err
 			}
@@ -195,9 +195,15 @@ func OpenFS(lib fs.FS, root string, extra fs.FS) (*Library, error) {
 	return out, nil
 }
 
-// imageOrigin is the origin of an embedded image: an image of an upstream
-// model comes from upstream, an image of a project model from the project.
-func imageOrigin(m *Model) string {
+// embeddedImageOrigin is the origin of an embedded image. An image drawn by
+// the project has its source beside it, drawings/<manufacturer>/<slug>.<face>.svg,
+// and comes from the project even when its model is an upstream file (the
+// CRS354 upstream has no picture of). Otherwise an image of an upstream model
+// comes from upstream, an image of a project model from the project.
+func embeddedImageOrigin(lib fs.FS, root string, m *Model, face string) string {
+	if _, err := fs.Stat(lib, path.Join(root, drawingPath(m, face))); err == nil {
+		return OriginLocal
+	}
 	if m.Origin == OriginLocal {
 		return OriginLocal
 	}

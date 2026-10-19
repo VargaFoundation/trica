@@ -9,6 +9,9 @@ import (
 
 // Match kinds, from the most to the least precise.
 const (
+	// BySKU: the device's part number is in a model's part_numbers, the
+	// list of the SKUs of one variant of a chassis (8SFF, 24SFF...).
+	BySKU        = "sku"
 	ByModel      = "model"
 	ByPartNumber = "part_number"
 	ByVariant    = "variant"
@@ -60,6 +63,9 @@ var variantSuffix = regexp.MustCompile(`(?i)-[FR]$`)
 // Index finds the model of a device.
 type Index struct {
 	byKey map[string][]*Model // vendorKey + "|" + key
+	// bySKU indexes the part_numbers lists, apart from byKey: a variant
+	// SKU must not make a name or the upstream part_number ambiguous.
+	bySKU map[string][]*Model
 	// variants are the airflow-less base models synthesised from -F / -R
 	// families whose members agree on everything but the airflow.
 	variants map[string]*Model
@@ -71,15 +77,16 @@ func key(vendor, k string) string { return vendorKey(vendor) + "|" + k }
 
 // NewIndex indexes models by vendor and by model name, part number and slug.
 func NewIndex(models []*Model) *Index {
-	ix := &Index{byKey: map[string][]*Model{}, variants: map[string]*Model{}, bySlug: map[string]*Model{}}
-	add := func(k string, m *Model) {
-		for _, e := range ix.byKey[k] {
+	ix := &Index{byKey: map[string][]*Model{}, bySKU: map[string][]*Model{}, variants: map[string]*Model{}, bySlug: map[string]*Model{}}
+	addTo := func(idx map[string][]*Model, k string, m *Model) {
+		for _, e := range idx[k] {
 			if e == m {
 				return
 			}
 		}
-		ix.byKey[k] = append(ix.byKey[k], m)
+		idx[k] = append(idx[k], m)
 	}
+	add := func(k string, m *Model) { addTo(ix.byKey, k, m) }
 	families := map[string][]*Model{}
 	for _, m := range models {
 		ix.bySlug[m.Slug] = m
@@ -88,6 +95,9 @@ func NewIndex(models []*Model) *Index {
 		add(key(m.Vendor, modelKey(m.Vendor, m.Slug)), m)
 		if m.PartNumber != "" {
 			add(key(m.Vendor, norm(m.PartNumber)), m)
+		}
+		for _, pn := range m.PartNumbers {
+			addTo(ix.bySKU, key(m.Vendor, norm(pn)), m)
 		}
 		if variantSuffix.MatchString(m.Model) {
 			base := key(m.Vendor, modelKey(m.Vendor, variantSuffix.ReplaceAllString(m.Model, "")))
@@ -103,7 +113,7 @@ func NewIndex(models []*Model) *Index {
 		v := *first
 		v.Model = variantSuffix.ReplaceAllString(first.Model, "")
 		v.Slug = variantSuffix.ReplaceAllString(first.Slug, "")
-		v.PartNumber, v.Airflow = "", ""
+		v.PartNumber, v.PartNumbers, v.Airflow = "", nil, ""
 		// The base model shows the images of its first variant: the faces
 		// of an airflow family look the same, only the handles differ.
 		ix.variants[base] = &v
@@ -131,10 +141,19 @@ func agree(fam []*Model) bool {
 }
 
 // Find returns the model of a device from its vendor, model and part number,
-// or nil. A name that fits several different models is ambiguous and
-// matches none: a wrong U height is worse than a missing one.
+// or nil. A part number listed in one model's part_numbers wins: it names
+// the exact variant of the chassis, which the model name does not (HPE
+// reports "ProLiant DL380 Gen9" for the 8SFF and the 24SFF alike). Then the
+// name, then the upstream part_number, then the airflow family. A name or
+// SKU that fits several different models is ambiguous and matches none: a
+// wrong U height or picture is worse than a missing one.
 func (ix *Index) Find(vendor, model, partNumber string) *Match {
 	// No vendor, no match: keys are scoped by vendor and no model has none.
+	if partNumber != "" {
+		if m := unique(ix.bySKU[key(vendor, norm(partNumber))]); m != nil {
+			return &Match{m, BySKU}
+		}
+	}
 	if model != "" {
 		if m := unique(ix.byKey[key(vendor, modelKey(vendor, model))]); m != nil {
 			return &Match{m, ByModel}

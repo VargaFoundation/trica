@@ -1,0 +1,33 @@
+---
+# Written by the trica project (Apache-2.0); the face images are trica drawings
+# (CC0-1.0, sources in drawings/, generator in scripts/devicetype-faces/).
+#
+# DL180 Gen9 chassis (QuickSpecs c04346227): 8.75 x 44.55 x 60.7 cm, embedded
+# 2x1GbE (361i), dedicated iLO port optional (left out), one 550 W supply or the
+# 900 W redundant power supply with two modules (both listed).
+#
+# 8SFF hot-plug chassis: CTO 754523-B21, pre-configured 833973-B21. Fixed 8SFF
+# cage in box 3, box 2 for a second cage, media bay in box 1. Minimum weight
+# (one SFF drive, one supply, one processor) 16.59 kg.
+manufacturer: HPE
+model: ProLiant DL180 Gen9 8SFF
+slug: hpe-proliant-dl180-gen9-8sff
+part_numbers:
+  - 754523-B21
+  - 833973-B21
+u_height: 2
+is_full_depth: true
+airflow: front-to-rear
+weight: 16.59
+weight_unit: kg
+comments: '[QuickSpecs](https://support.hpe.com/hpesc/public/api/document/c04346227)'
+power-ports:
+  - name: PS1
+    type: iec-60320-c14
+  - name: PS2
+    type: iec-60320-c14
+interfaces:
+  - name: NIC 1
+    type: 1000base-t
+  - name: NIC 2
+    type: 1000base-t

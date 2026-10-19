@@ -19,26 +19,52 @@ var (
 
 func file(b []byte) *fstest.MapFile { return &fstest.MapFile{Data: b} }
 
-// The embedded library: each vendored image belongs to a model and is found
-// by the upstream naming convention; a model without a file has no image.
+// The embedded library: each image belongs to a model and is found by the
+// upstream naming convention; a model without a file has no image. An image
+// with an SVG source under drawings/ is the project's, even for an upstream
+// model; the others of an upstream model come from upstream.
 func TestEmbeddedImagesAreFoundByTheirName(t *testing.T) {
 	ix := defaultIndex(t)
+	const (
+		up    = devicetypes.OriginUpstream
+		local = devicetypes.OriginLocal
+		jpeg  = "image/jpeg"
+		pngT  = "image/png"
+	)
+	type img struct{ ct, origin string }
+	none := img{}
 	cases := []struct {
 		slug        string
-		front, rear string // content types, "" for none
+		front, rear img
 	}{
-		{"hpe-proliant-dl360-gen9", "image/jpeg", "image/jpeg"},
-		{"hpe-proliant-dl380-gen10", "image/png", "image/png"},
-		{"arista-dcs-7050sx-64-f", "image/png", ""},
-		{"arista-dcs-7050sx-64-r", "image/png", ""},
+		{"hpe-proliant-dl360-gen9", img{jpeg, up}, img{jpeg, up}},
+		{"hpe-proliant-dl380-gen10", img{pngT, up}, img{pngT, up}},
+		// Upstream fronts, trica rears.
+		{"arista-dcs-7050sx-64-f", img{pngT, up}, img{pngT, local}},
+		{"arista-dcs-7050sx-64-r", img{pngT, up}, img{pngT, local}},
 		// The base model of an airflow family shows its first variant.
-		{"arista-dcs-7050sx-64", "image/png", ""},
+		{"arista-dcs-7050sx-64", img{pngT, up}, img{pngT, local}},
+		{"arista-dcs-7280se-64", img{pngT, local}, img{pngT, local}},
+		// Upstream models trica drew.
+		{"mikrotik-crs354-48g-4s-plus-2q-plus-rm", img{pngT, local}, img{pngT, local}},
+		// trica models and their drawings.
+		{"hpe-proliant-dl360-gen9-8sff", img{pngT, local}, img{pngT, local}},
+		{"hpe-proliant-dl380-gen9-8sff", img{pngT, local}, img{pngT, local}},
+		{"hpe-proliant-dl380-gen9-24sff", img{pngT, local}, img{pngT, local}},
+		{"hpe-proliant-dl180-gen9-8sff", img{pngT, local}, img{pngT, local}},
+		{"hpe-proliant-dl180-gen9-8lff", img{pngT, local}, img{pngT, local}},
+		{"hpe-proliant-dl180-gen9-12lff", img{pngT, local}, img{pngT, local}},
+		{"dell-poweredge-r330-8sff", img{pngT, local}, img{pngT, local}},
+		{"dell-poweredge-r330-4lff-hot-plug", img{pngT, local}, img{pngT, local}},
+		{"dell-poweredge-r330-4lff-cabled", img{pngT, local}, img{pngT, local}},
+		{"arista-dcs-7280se-64-f", img{pngT, local}, img{pngT, local}},
+		{"arista-dcs-7280se-64-r", img{pngT, local}, img{pngT, local}},
 		// The upstream file says front_image: true, but the image is not vendored.
-		{"hpe-proliant-dl360-gen10", "", ""},
-		{"hpe-proliant-dl380-gen9", "", ""},
-		{"arista-dcs-7280se-64-f", "", ""},
-		{"mikrotik-crs354-48g-4s-plus-2q-plus-rm", "", ""},
-		{"generic-1u-pfsense-appliance", "", ""},
+		{"hpe-proliant-dl360-gen10", none, none},
+		// No picture: the variant is not known from the name alone.
+		{"hpe-proliant-dl380-gen9", none, none},
+		{"dell-poweredge-r330", none, none},
+		{"generic-1u-pfsense-appliance", none, none},
 	}
 	for _, c := range cases {
 		m := ix.BySlug(c.slug)
@@ -46,20 +72,17 @@ func TestEmbeddedImagesAreFoundByTheirName(t *testing.T) {
 			t.Errorf("%s: not in the library", c.slug)
 			continue
 		}
-		for face, want := range map[string]string{devicetypes.Front: c.front, devicetypes.Rear: c.rear} {
-			img := m.Image(face)
-			got := ""
-			if img != nil {
-				got = img.ContentType
-				if len(img.Data) == 0 || len(img.Data) > devicetypes.MaxImageBytes || !strings.HasPrefix(img.ETag, `"`) {
-					t.Errorf("%s %s: %d bytes, etag %s", c.slug, face, len(img.Data), img.ETag)
-				}
-				if img.Origin != devicetypes.OriginUpstream {
-					t.Errorf("%s %s: origin %s, want upstream", c.slug, face, img.Origin)
+		for face, want := range map[string]img{devicetypes.Front: c.front, devicetypes.Rear: c.rear} {
+			i := m.Image(face)
+			got := none
+			if i != nil {
+				got = img{i.ContentType, i.Origin}
+				if len(i.Data) == 0 || len(i.Data) > devicetypes.MaxImageBytes || !strings.HasPrefix(i.ETag, `"`) {
+					t.Errorf("%s %s: %d bytes, etag %s", c.slug, face, len(i.Data), i.ETag)
 				}
 			}
 			if got != want {
-				t.Errorf("%s %s image: %q, want %q", c.slug, face, got, want)
+				t.Errorf("%s %s image: %+v, want %+v", c.slug, face, got, want)
 			}
 		}
 	}
@@ -202,6 +225,7 @@ func TestBatchNamesTheImages(t *testing.T) {
 		{ID: "00000000-0000-0000-0000-000000000001", Vendor: "HPE", Model: "ProLiant DL360 Gen9"},
 		{ID: "00000000-0000-0000-0000-000000000002", Vendor: "HPE", Model: "ProLiant DL380 Gen9"},
 		{ID: "00000000-0000-0000-0000-000000000003", Vendor: "Arista", Model: "DCS-7050SX-64-R"},
+		{ID: "00000000-0000-0000-0000-000000000004", Vendor: "HPE", Model: "ProLiant DL380 Gen9", PartNumber: "767032-B21"},
 	}, time.Now())
 	got := map[string][2]any{}
 	for _, o := range b.Objects {
@@ -210,7 +234,13 @@ func TestBatchNamesTheImages(t *testing.T) {
 	want := map[string][2]any{
 		"hpe-proliant-dl360-gen9": {"elevation-images/HPE/hpe-proliant-dl360-gen9.front.jpg", "elevation-images/HPE/hpe-proliant-dl360-gen9.rear.jpg"},
 		"hpe-proliant-dl380-gen9": {nil, nil},
-		"arista-dcs-7050sx-64-r":  {"elevation-images/Arista/arista-dcs-7050sx-64-r.front.png", nil},
+		"arista-dcs-7050sx-64-r":  {"elevation-images/Arista/arista-dcs-7050sx-64-r.front.png", "elevation-images/Arista/arista-dcs-7050sx-64-r.rear.png"},
+		"hpe-proliant-dl380-gen9-24sff": {
+			"elevation-images/HPE/hpe-proliant-dl380-gen9-24sff.front.png", "elevation-images/HPE/hpe-proliant-dl380-gen9-24sff.rear.png",
+		},
+	}
+	if len(got) != len(want) {
+		t.Errorf("device types %v, want %d", got, len(want))
 	}
 	for slug, w := range want {
 		if got[slug] != w {

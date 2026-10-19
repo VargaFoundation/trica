@@ -15,6 +15,8 @@ import (
 const (
 	idRackF   = 7     // r20
 	firstFace = 0x400 // its devices, models and parts
+	idRackD   = 8     // r21, the faces trica drew
+	firstDraw = 0x480 // its devices and models
 )
 
 // library is the embedded device-type library, for the images.
@@ -61,7 +63,7 @@ func buildFaces(inv *inventory) {
 	}{
 		{"sw-f1", "switch", "ok", "arista-dcs-7050sx-64-r", "front", 22},
 		{"sw-f2", "switch", "warning", "arista-dcs-7280se-64-f", "front", 21},
-		{"sw-f3", "switch", "ok", "mikrotik-crs354-48g-4s-plus-2q-plus-rm", "front", 20},
+		{"sw-f3", "switch", "ok", "arista-dcs-7050tx-48", "front", 20},
 		{"fw-f1", "firewall", "ok", "generic-1u-pfsense-appliance", "front", 19},
 		{"srv-f10", "server", "ok", "hpe-proliant-dl380-gen10", "front", 14},
 		{"srv-f11", "server", "critical", "hpe-proliant-dl380-gen9", "front", 12},
@@ -88,6 +90,43 @@ func buildFaces(inv *inventory) {
 	} {
 		id := device(d.name, d.role, "", obj{"u_height": d.height})
 		inv.relations = append(inv.relations, relation{"mounted_in", id, idRackF, obj{"position": d.u, "face": d.face}})
+	}
+	buildDrawn(inv)
+}
+
+// The drawn rack: r21 in lyon-1, one device per face the project drew
+// (internal/devicetypes/library/drawings), every one healthy, so that a
+// screenshot shows the drawings and nothing else.
+func buildDrawn(inv *inventory) {
+	inv.add(object(idRackD, "rack", "r21", idSiteL, idSiteL, obj{"name": "r21", "u_height": 24}))
+	n := firstDraw
+	for _, d := range []struct {
+		name, role, slug string
+		u                float64
+	}{
+		{"sw-d1", "switch", "arista-dcs-7280se-64-f", 24},
+		{"sw-d2", "switch", "arista-dcs-7050sx-64-r", 23},
+		{"sw-d3", "switch", "mikrotik-crs354-48g-4s-plus-2q-plus-rm", 22},
+		{"srv-d1", "server", "hpe-proliant-dl360-gen9-8sff", 21},
+		{"srv-d2", "server", "dell-poweredge-r330-8sff", 20},
+		{"srv-d3", "server", "dell-poweredge-r330-4lff-hot-plug", 19},
+		{"srv-d4", "server", "dell-poweredge-r330-4lff-cabled", 18},
+		{"srv-d5", "server", "hpe-proliant-dl380-gen9-8sff", 16},
+		{"srv-d6", "server", "hpe-proliant-dl380-gen9-24sff", 14},
+		{"srv-d7", "server", "hpe-proliant-dl180-gen9-8sff", 12},
+		{"srv-d8", "server", "hpe-proliant-dl180-gen9-8lff", 10},
+		{"srv-d9", "server", "hpe-proliant-dl180-gen9-12lff", 8},
+	} {
+		m := library.BySlug(d.slug)
+		if m == nil || m.FrontImage == nil {
+			panic("no drawn model " + d.slug)
+		}
+		n++
+		model := n
+		inv.add(object(model, "device_type", m.Model, 0, 0, obj{"slug": m.Slug, "vendor": m.Vendor, "model": m.Model, "u_height": m.UHeight, "full_depth": m.FullDepth}))
+		n++
+		inv.add(object(n, "device", d.name, idRackD, idSiteL, obj{"hostname": d.name, "role": d.role, "health": "ok"}))
+		inv.mount(n, idRackD, d.u, "front", model)
 	}
 }
 
