@@ -13,8 +13,10 @@ import {
   c14,
   chassis,
   circle,
+  driveCage,
   dsub,
   fanModule,
+  hotplugCarrier,
   led,
   lffCarrier,
   mark,
@@ -54,11 +56,12 @@ export function dl360Gen9Front8SFF() {
   const x0 = c.x0 + 3;
   const cw = 70.2;
   const ch = 19.4;
+  s += driveCage(x0 + 1.4, 1.5, 4 * (cw + 1.2) + 0.8, 2 * ch + 2.6);
   for (let col = 0; col < 4; col++) {
     for (let row = 0; row < 2; row++) {
       const [x, y, n] = [x0 + 2.4 + col * (cw + 1.2), 2.4 + row * (ch + 0.8), col * 2 + row + 1];
       // iLO reports these bays as box 1 (1I:1:1 ... 2I:1:8).
-      s += sffCarrier(x, y, cw, ch, { num: n }) + mark("bay", `1:${n}`, x, y, cw, ch);
+      s += hotplugCarrier(x, y, cw, ch, { num: n }) + mark("bay", `1:${n}`, x, y, cw, ch);
     }
   }
   // Universal Media Bay: a blank on the CTO chassis (VGA, USB 2.0 and
@@ -111,14 +114,15 @@ export function dl360Gen9Rear() {
 
 // A 2U HPE drive box of 8 standing SFF carriers (Box 1, 2 or 3).
 // iLO names a bay by its box: Port=1I:Box=3:Bay=5, or 1I:3:5.
-function hpeSffBox(x, y, w, h, label, box) {
-  let s = rect(x - 0.6, y - 0.6, w + 1.2, h + 1.2, { fill: "#2f3236", rx: 0.8 });
+// nvme: the 8 NVMe cage of the DL380 Gen10 (826689-B21), same bays.
+function hpeSffBox(x, y, w, h, label, box, { nvme = false } = {}) {
+  let s = driveCage(x - 0.6, y - 0.6, w + 1.2, h + 1.2);
   const pitch = w / 8;
   for (let i = 0; i < 8; i++) {
-    s += sffCarrier(x + i * pitch + 0.25, y + 3.6, pitch - 0.5, h - 3.6, { horizontal: false, num: i + 1 });
-    s += mark("bay", `${box}:${i + 1}`, x + i * pitch + 0.25, y + 3.6, pitch - 0.5, h - 3.6);
+    s += hotplugCarrier(x + i * pitch + 0.3, y + 3.6, pitch - 0.6, h - 3.9, { horizontal: false, num: i + 1, nvme });
+    s += mark("bay", `${box}:${i + 1}`, x + i * pitch + 0.3, y + 3.6, pitch - 0.6, h - 3.9);
   }
-  s += text(x + w, y - 1.2, label, { size: 1.8, anchor: "end", fill: "#3b3f45" });
+  s += text(x + w, y - 1.4, label, { size: 1.8, anchor: "end", fill: "#3b3f45" });
   return s;
 }
 
@@ -193,6 +197,103 @@ export function dl380Gen9Rear() {
   s += psu(c.x1 - 2 - pw, 46, pw, 40, { label: "2" }) + mark("psu", 2, c.x1 - 2 - pw, 46, pw, 40);
   s += vent(c.x1 - 2 - 2 * pw - 1.5, 2.4, 2 * pw + 1.5, 41.5);
   return svgDoc(2, "HPE ProLiant DL380 Gen9, rear (schematic)", s);
+}
+
+// ───────────────────────── HPE ProLiant DL380 Gen10 ─────────────────────────
+//
+// QuickSpecs a00008180enw. Chassis 8.73 x 44.54 cm (H x W). Front view
+// legend (SFF): Box 1, Box 2, Box 3; the Universal Media Bay (826708-B21)
+// "can only be populated in Box 1"; the 8SFF CTO ships its "Primary 8SFF cage
+// in Box 3" (873763-B21 removes it); the 8 NVMe Express Bay kit (826689-B21)
+// "can only be populated in Box 1, Box 2 and Box 3", and the 8 NVMe primary
+// riser (867807-B21) "can be connected to an 8SFF NVMe drive cage in box 3".
+// Controls: power button and system power LED, health LED, NIC status, UID
+// button, iLO front service port, USB 3.0, serial label pull tag. Box 1 is the
+// left one, Box 3 the one beside the controls: the order of the CC0 picture of
+// the netbox devicetype-library (UMB in Box 1, drives beside the controls).
+// iLO names a bay by box and bay: 1I:3:5, Box=3:Bay=5, or 3:5 for an NVMe
+// drive; the spots are named <box>:<bay>.
+
+// The right-hand control column of the DL380 Gen10: the Gen9 controls plus
+// the iLO front service port above the USB 3.0 port.
+function dl380Gen10Controls(x) {
+  let s = hpeControls(x + 4, 10, 8.5);
+  s += rect(x + 1.6, 43, 5, 3.2, { fill: "#16181a", rx: 0.5, stroke: "#9aa0a6", "stroke-width": 0.4 });
+  s += text(x + 4.1, 49.4, "iLO", { size: 1.5, anchor: "middle", fill: "#3b3f45" });
+  s += usb(x + 1.8, 53, { usb3: true, vertical: true });
+  s += pullTab(x + 10, 8, 5, 72);
+  return s;
+}
+
+// boxes: what each of Box 1, 2 and 3 holds, "sff", "nvme" or "blank".
+function dl380Gen10Front(title, boxes) {
+  const c = chassis(2, 445.4, { earText: "ProLiant\nDL380\nGen10" });
+  let s = c.svg;
+  const bw = 125;
+  const y = 6;
+  const h = 79.5;
+  const x0 = c.x0 + 3;
+  boxes.forEach((kind, i) => {
+    const x = x0 + i * (bw + 3);
+    const box = i + 1;
+    if (kind === "blank") s += hpeBlankBox(x, y, bw, h, `Box ${box}`, box === 1 ? "media bay (option)" : undefined);
+    else s += hpeSffBox(x, y, bw, h, kind === "nvme" ? `Box ${box} \u00b7 8 NVMe` : `Box ${box}`, box, { nvme: kind === "nvme" });
+  });
+  s += dl380Gen10Controls(x0 + 3 * (bw + 3) + 3);
+  return svgDoc(2, `HPE ProLiant DL380 Gen10 ${title}, front (schematic)`, s);
+}
+// 8SFF CTO (868703-B21 and the SKUs of its model file): drives in Box 3.
+export const dl380Gen10Front8SFF = () => dl380Gen10Front("8SFF", ["blank", "blank", "sff"]);
+// The same chassis with the 8 NVMe cage in Box 3 instead (826689-B21).
+export const dl380Gen10Front8SFFNVMe = () => dl380Gen10Front("8SFF with 8 NVMe in Box 3", ["blank", "blank", "nvme"]);
+// 24SFF CTO (868704-B21): the three boxes.
+export const dl380Gen10Front24SFF = () => dl380Gen10Front("24SFF", ["sff", "sff", "sff"]);
+
+// DL380 Gen10 rear. QuickSpecs a00008180enw rear view legend: primary riser
+// (slots 1-3, top to bottom), secondary riser (slots 4-6, top to bottom),
+// optional serial port, tertiary riser (slots 7-8), "HPE Flexible Slot Power
+// Supply bay 1" and "bay 2", VGA, embedded 4 x 1GbE, dedicated iLO port, two
+// USB 3.0, unit ID LED, FlexibleLOM ports. The legend numbers them around the
+// panel: the risers along the top, then bay 1, bay 2, VGA, NIC, iLO, USB, UID,
+// FlexibleLOM from right to left; the CC0 picture of the netbox library has
+// the same order, power supply bay 1 on the far right. Six fans, hot-plug,
+// are inside the chassis: not on a face. Positions are schematic.
+export function dl380Gen10Rear() {
+  const c = rearChassis(2, 445.4);
+  let s = c.svg;
+  const x = c.x0 + 2;
+  const pw = 72;
+  const psu1 = c.x1 - 2 - pw;
+  const psu2 = psu1 - 1.5 - pw;
+  for (let i = 0; i < 3; i++) s += pcie(x, 2.4 + i * 14.6, 118, 13.6, { label: String(i + 1) }) + mark("slot", i + 1, x, 2.4 + i * 14.6, 118, 13.6);
+  for (let i = 0; i < 3; i++) s += pcie(x + 121, 2.4 + i * 14.6, 100, 13.6, { label: String(i + 4) }) + mark("slot", i + 4, x + 121, 2.4 + i * 14.6, 100, 13.6);
+  // Between the secondary riser and the power supplies: the optional serial port.
+  const mid = x + 224;
+  s += vent(mid, 2.4, psu2 - mid - 2, 42);
+  s += dsub(mid + (psu2 - mid - 2 - 31) / 2, 6, "db9");
+  s += text(mid + (psu2 - mid - 2) / 2, 23.5, "serial (option)", { size: 1.7, anchor: "middle", fill: "#2b2e32" });
+  // Tertiary riser above the power supplies.
+  for (let i = 0; i < 2; i++) s += pcie(psu2, 2.4 + i * 14.6, c.x1 - 2 - psu2, 13.6, { label: String(i + 7) }) + mark("slot", i + 7, psu2, 2.4 + i * 14.6, c.x1 - 2 - psu2, 13.6);
+  s += vent(psu2, 32, c.x1 - 2 - psu2, 11.5);
+  // I/O row along the bottom, left to right.
+  const y = 54;
+  s += recess(x - 0.6, y - 3.2, 4 * 12.6 + 1.4, 16.4, 0.8);
+  for (let i = 0; i < 4; i++) s += rj45(x + 0.4 + i * 12.6, y, { up: false }) + mark("port", `flexlom${i + 1}`, x + 0.4 + i * 12.6, y, 11.6, 9.6);
+  s += text(x, y + 17.6, "FlexibleLOM", { size: 1.7 });
+  s += usb(x + 56, y - 1.4, { usb3: true });
+  s += usb(x + 56, y + 5.6, { usb3: true });
+  s += led(x + 73, y + 5, "blue");
+  s += text(x + 73, y + 11.2, "UID", { size: 1.6, anchor: "middle" });
+  s += rj45(x + 79, y, { up: false }) + mark("port", "bmc", x + 79, y, 11.6, 9.6);
+  s += text(x + 84.8, y + 15.8, "iLO", { size: 1.7, anchor: "middle" });
+  for (let i = 0; i < 4; i++) s += rj45(x + 96 + i * 12.6, y, { up: false }) + mark("port", `nic${i + 1}`, x + 96 + i * 12.6, y, 11.6, 9.6);
+  s += text(x + 96, y + 15.8, "1", { size: 1.7 }) + text(x + 144, y + 15.8, "4", { size: 1.7, anchor: "end" });
+  s += dsub(x + 150, y - 1.4, "vga");
+  s += vent(x + 185, y - 6, psu2 - x - 187, 34);
+  // Power supply bay 2, then bay 1 on the far right.
+  s += psu(psu2, 46, pw, 40.5, { label: "2" }) + mark("psu", 2, psu2, 46, pw, 40.5);
+  s += psu(psu1, 46, pw, 40.5, { label: "1" }) + mark("psu", 1, psu1, 46, pw, 40.5);
+  return svgDoc(2, "HPE ProLiant DL380 Gen10, rear (schematic)", s);
 }
 
 // DL180 Gen9 front. QuickSpecs c04346227: 8.75 x 44.55 cm; 8SFF chassis =

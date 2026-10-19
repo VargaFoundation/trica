@@ -221,8 +221,13 @@ func (s *Server) hDeviceTypeCandidates(c *call) error {
 	if len(out.Declarations) > 0 {
 		d := out.Declarations[0]
 		out.Certain, out.Reason, out.DeclaredBy = true, devicetypes.ByDeclared, d.Source
+		// A model declared as a variant of the one the part number names
+		// (the DL380 Gen10 8SFF with its NVMe cage, of the 8SFF CTO) refines
+		// that chassis; it does not contradict it.
 		if ch.Match != nil && ch.Match.How == devicetypes.BySKU && ch.Match.Model.Slug != d.Slug {
-			out.SKUConflict = out.LibraryMatch
+			if m := s.libraryModel(d.Slug); m == nil || m.VariantOf != ch.Match.Model.Slug {
+				out.SKUConflict = out.LibraryMatch
+			}
 		}
 	} else {
 		out.Certain, out.Reason = ch.Certain, ch.Reason

@@ -146,13 +146,30 @@ device draws them with the parts the collectors report (`GET /objects/{id}/faces
 |---|---|---|
 | `disk` | `bay` `<box>:<bay>` | its `slot`, then its name: `Port=1I:Box=3:Bay=5` (iLO 5), `1I:1:3` (iLO 4), `3:5` |
 | `disk` | `bay` `<n>` | `Solid State Disk 0:1:2` (iDRAC, last number), `Disk.Bay.2` (iDRAC FQDD), `Bay 2` |
-| `psu` | `psu` `<n>` | the last number of its name, plus one when one of the device's power supplies is numbered 0 (iLO 5 counts from 0, the chassis from 1) |
+| `psu` | `psu` `<n>` | the last number of its name, plus one when one of the device's power supplies is numbered 0 (iLO 5 counts from 0, the chassis from 1: `HpeServerPowerSupply 0` and `1` are bays 1 and 2; iLO 4 writes `HpServerPowerSupply 1` and `2`) |
 | `fan` | `fan` `<n>` | the first number of its name; only fans directly under the device (a power supply's fan is not on the face) |
 | `interface` (kind empty, `physical` or `bmc`) | `port` | its own name (`Ethernet12`, `ether3`), then without a breakout lane (`Ethernet49/1` → `Ethernet49`), `bmc` for the BMC, `nic<n>` for `eno<n>`, `NIC.Embedded.<n>-…`, `NIC.Integrated.1-<n>…` |
 | `interface` | `slot` `<n>` | `ens<n>` (and `ens<n>d<m>`), `NIC.Slot.<n>-…` |
 
+**One physical part, several names.** The BMC and the operating system report the same disk and
+the same port under two names (`3:1` and `nvme0n1`; iLO's `2` and `eno1`). A disk with the serial
+number, or a port with the MAC address, of a placed part shares its spot: the spot lists both, and
+its colour is the worst state of the parts that report one (a part that says nothing of its state
+does not grey it out). When none of them is placed they are one line under the drawing, the others
+given as "also seen as" (`also` in the answer). A controller module is never a part of a face: an
+NVMe drive that iLO also reports as its own storage controller (`DA000000`) is counted once, as a
+disk.
+
 A name none of these read leaves the part **unplaced**: listed under the drawing, never put in a
-place by count. In an operator directory, a layout goes in `layouts/` like the embedded ones; an
+place by count. The answer says why (`unplaced`), and the page groups them so:
+
+| `unplaced` | Group on the page | Example |
+|---|---|---|
+| `os` | Known only to the operating system | `sda`, `nvme0n1`, `eno5`: the kernel's and systemd's names say nothing of the bay or the port; a SATA system disk on the embedded controller, which iLO does not list, stays here |
+| `no_spot` | Not on this model's drawing | a drive iLO puts in `2:1` on an 8SFF chassis whose Box 2 is blank: the chassis may be another variant, chosen under "Device model" |
+| `unread` | Names that do not say where | iLO's port `5` without a MAC address |
+
+Each line gives a disk's model and capacity, which tells a system disk from a data disk at a glance. In an operator directory, a layout goes in `layouts/` like the embedded ones; an
 operator image that replaces a face drops that face's embedded layout (its spots fit the drawing,
 not the photograph) unless the directory has a layout for it too. A layout no model and image use
 is logged at start and ignored.
@@ -224,7 +241,9 @@ rack units, NetApp DS4246/DS2246 shelves, APC Smart-UPS and AP79xx PDUs, Eaton 5
    file and the vendor's data sheet), power supplies, fans and slots. Never traced from a vendor
    photograph, render, stencil (VisioCafe included) or reseller picture. CC0-1.0. Catalogue faces
    carry **no layout**: their bay and port numbering is not taken from the vendors' text, so a
-   device's parts are listed beside them, not placed.
+   device's parts are listed beside them, not placed. Exception: the DL380 Gen10 SFF fronts (8SFF,
+   8SFF NVMe, 24SFF) and its rear, shared by its five chassis, are drawn by `faces.mjs` with their
+   layouts, from the QuickSpecs' box and rear legends (ADR 0047, addendum).
 3. **None** — the base model of a server whose chassis the name does not tell (`dell-poweredge-r730`,
    `hpe-proliant-dl380-gen9`...): its variants have the faces (next section).
 
@@ -355,6 +374,7 @@ Front and rear: **NetBox** = upstream CC0 photograph, **drawn** = schematic face
 | ↳ HPE ProLiant DL380 Gen10 24SFF | `hpe-proliant-dl380-gen10-24sff` | drawn | drawn | 868704-B21, P19719-B21 |
 | ↳ HPE ProLiant DL380 Gen10 8LFF | `hpe-proliant-dl380-gen10-8lff` | drawn | drawn | 868706-B21, P19717-B21 |
 | ↳ HPE ProLiant DL380 Gen10 8SFF | `hpe-proliant-dl380-gen10-8sff` | drawn | drawn | 868703-B21, P19720-B21, P56969-B21, P56970-B21 |
+| ↳↳ HPE ProLiant DL380 Gen10 8SFF NVMe | `hpe-proliant-dl380-gen10-8sff-nvme` | drawn | drawn | — (the 8SFF CTO with the 8 NVMe cage in Box 3; chosen on the device) |
 | HPE ProLiant DL380 Gen10 Plus | `hpe-proliant-dl380-gen10-plus` | — | — |  |
 | HPE ProLiant DL380 Gen9 | `hpe-proliant-dl380-gen9` | — | — |  |
 | ↳ HPE ProLiant DL380 Gen9 12LFF | `hpe-proliant-dl380-gen9-12lff` | drawn | drawn | 719061-B21 |

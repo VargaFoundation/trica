@@ -42,10 +42,13 @@
   stroke-width: 0.5;
 }
 
-/* A spot: a tinted frame over the image. */
+/* A spot: a thin frame of its state's colour over the image, so that the
+   drawing stays readable; a part that needs attention is tinted and framed
+   thicker, and the spot under the pointer or the focus stands out. */
 .face-spot rect {
-  fill-opacity: 0.35;
-  stroke-width: 1;
+  fill-opacity: 0;
+  stroke-width: 1.25;
+  stroke-opacity: 0.85;
   vector-effect: non-scaling-stroke;
 }
 a.face-spot {
@@ -64,13 +67,17 @@ rect.face-spot-up {
 .face-spot-warning rect,
 rect.face-spot-warning {
   fill: var(--trica-warn-soft);
+  fill-opacity: 0.45;
   stroke: var(--trica-warn-solid);
+  stroke-opacity: 1;
   stroke-width: 2;
 }
 .face-spot-critical rect,
 rect.face-spot-critical {
   fill: var(--trica-danger-soft);
+  fill-opacity: 0.45;
   stroke: var(--trica-danger-solid);
+  stroke-opacity: 1;
   stroke-width: 2;
 }
 .face-spot-down rect,
@@ -84,14 +91,21 @@ rect.face-spot-unknown {
 rect.face-spot-empty {
   fill: none;
   stroke: var(--trica-neutral-solid);
+  stroke-opacity: 0.45;
+  stroke-width: 1;
   stroke-dasharray: 3 2;
 }
 .face-spot-active rect,
 a.face-spot:hover rect,
 a.face-spot:focus-visible rect {
-  fill-opacity: 0.6;
+  fill-opacity: 0.35;
   stroke: var(--trica-focus);
+  stroke-opacity: 1;
   stroke-width: 3;
+}
+.face-spot-empty.face-spot-active rect {
+  fill: none;
+  stroke-width: 2;
 }
 
 .faces-legend {
@@ -111,6 +125,8 @@ a.face-spot:focus-visible rect {
 }
 .faces-legend rect {
   fill-opacity: 0.6;
+  stroke-opacity: 1;
+  stroke-width: 1.5;
 }
 
 .faces-details {
@@ -139,6 +155,17 @@ a.face-spot:focus-visible rect {
   font-size: 0.95rem;
   margin: 1rem 0 0.25rem;
 }
+.faces-unplaced-group {
+  margin-top: 0.6rem;
+}
+.faces-unplaced-group h4 {
+  font-size: 0.85rem;
+  margin: 0;
+}
+.faces-unplaced-group .hint {
+  margin: 0.1rem 0 0;
+  font-size: 0.8rem;
+}
 .faces-unplaced ul {
   margin: 0.25rem 0 0;
   padding-left: 1.2rem;
@@ -148,4 +175,12 @@ a.face-spot:focus-visible rect {
 }
 .faces-unplaced li .key {
   display: inline;
+}
+.faces-unplaced-fact {
+  color: var(--trica-ink-muted);
+  font-size: 0.85rem;
+}
+.faces-unplaced-also {
+  color: var(--trica-ink-muted);
+  font-size: 0.85rem;
 }

@@ -90,3 +90,11 @@ written, and what wins when the library or a collector later says something else
 - Not done here: the `sku_conflict` on the discrepancy board, bulk choice for many devices of the
   same model, and `variant_of` entries in the embedded files (none is needed by the current
   names).
+
+## Addendum (2026-10): a variant of the part number's chassis is no conflict
+
+A model may be a `variant_of` another chassis variant rather than of the generic model: the
+DL380 Gen10 8SFF with the 8 NVMe cage in Box 3 is a variant of the 8SFF CTO, whose part number
+the server keeps reporting (ADR 0047, addendum). Declaring it refines what the part number says
+instead of contradicting it, so decision 5 does not apply: `sku_conflict` is set only when the
+declared model is neither the part number's model nor a `variant_of` it.

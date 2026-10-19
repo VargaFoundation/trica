@@ -206,7 +206,14 @@ const firstPart = 0x4c0
 
 // place is where the server would put a part. The rules that read a part's
 // name are the server's, tested in internal/api; the mock gives their outcome.
-type place struct{ kind, face, spot string }
+type place struct {
+	kind, face, spot string
+	why              string // why it is not placed (os, no_spot, unread)
+	also             []int  // the other parts that are the same physical part
+}
+
+// at is a part placed in a spot.
+func at(kind, face, spot string) place { return place{kind: kind, face: face, spot: spot} }
 
 func buildParts(inv *inventory) {
 	inv.places = map[string]place{}
@@ -218,31 +225,82 @@ func buildParts(inv *inventory) {
 	dev := n
 	inv.add(object(dev, "device", "srv-p1", idSiteL, idSiteL, obj{"hostname": "srv-p1", "role": "server", "health": "ok", "model": m.Model}))
 	inv.relations = append(inv.relations, relation{"instance_of", dev, model, obj{}})
-	part := func(typ, name string, at place, attrs obj) {
+	part := func(typ, name string, where place, attrs obj) {
 		n++
 		a := obj{"name": name}
 		for k, v := range attrs {
 			a[k] = v
 		}
 		inv.add(object(n, typ, name, dev, idSiteL, a))
-		inv.places[oid(n)] = at
+		inv.places[oid(n)] = where
 	}
 	for i, h := range []string{"ok", "ok", "critical", "ok", "warning"} {
 		b := strconv.Itoa(i + 1)
-		part("disk", "Disk "+b, place{"bay", "front", "1:" + b}, obj{"slot": "1I:1:" + b, "health": h, "model": "EG0600FBVFP", "media": "HDD", "capacity_bytes": 600127266816, "temperature_c": 30 + i})
+		part("disk", "Disk "+b, at("bay", "front", "1:"+b), obj{"slot": "1I:1:" + b, "health": h, "model": "EG0600FBVFP", "media": "HDD", "capacity_bytes": 600127266816, "temperature_c": 30 + i})
 	}
-	part("disk", "sda", place{kind: "bay"}, obj{"health": "ok", "capacity_bytes": 600127266816})
-	part("psu", "PSU 1", place{"psu", "rear", "1"}, obj{"health": "ok", "capacity_w": 500, "input_w": 164})
-	part("psu", "PSU 2", place{"psu", "rear", "2"}, obj{"health": "critical", "capacity_w": 500, "input_w": 0})
-	part("interface", "iLO", place{"port", "rear", "bmc"}, obj{"kind": "bmc", "oper_status": "up", "speed_mbps": 1000, "mac": "02:00:00:00:4c:01"})
+	part("disk", "sda", place{kind: "bay", why: "os"}, obj{"health": "ok", "capacity_bytes": 600127266816})
+	part("psu", "PSU 1", at("psu", "rear", "1"), obj{"health": "ok", "capacity_w": 500, "input_w": 164})
+	part("psu", "PSU 2", at("psu", "rear", "2"), obj{"health": "critical", "capacity_w": 500, "input_w": 0})
+	part("interface", "iLO", at("port", "rear", "bmc"), obj{"kind": "bmc", "oper_status": "up", "speed_mbps": 1000, "mac": "02:00:00:00:4c:01"})
 	for i, up := range []bool{true, true, false, false} {
 		state := "down"
 		if up {
 			state = "up"
 		}
 		b := strconv.Itoa(i + 1)
-		part("interface", "eno"+b, place{"port", "rear", "nic" + b}, obj{"kind": "physical", "oper_status": state, "speed_mbps": 1000, "mac": "02:00:00:00:4c:1" + b})
+		part("interface", "eno"+b, at("port", "rear", "nic"+b), obj{"kind": "physical", "oper_status": state, "speed_mbps": 1000, "mac": "02:00:00:00:4c:1" + b})
 	}
+}
+
+// srv-p2: a DL380 Gen10 8SFF shaped like a storage node, in no rack, with
+// invented values: five NVMe drives in Box 3 as iLO 5 names them (3:1 to 3:5)
+// and as the OS names them, sharing their bays; two SATA system disks the OS
+// alone knows; two supplies iLO 5 numbers from 0; the embedded ports under
+// iLO's numbers and Linux's names, sharing their spots; a FlexibleLOM port
+// the drawing cannot place, listed once with iLO's number for it.
+const firstPart2 = 0x4e0
+
+func buildStorageNode(inv *inventory) {
+	m := library.BySlug("hpe-proliant-dl380-gen10-8sff")
+	n := firstPart2 + 1
+	model := n
+	inv.add(object(model, "device_type", m.Model, 0, 0, obj{"slug": m.Slug, "vendor": m.Vendor, "model": m.Model, "u_height": m.UHeight, "full_depth": m.FullDepth}))
+	n++
+	dev := n
+	inv.add(object(dev, "device", "srv-p2", idSiteL, idSiteL, obj{"hostname": "srv-p2", "role": "server", "health": "ok", "model": m.Model, "part_number": "868703-B21"}))
+	inv.relations = append(inv.relations, relation{"instance_of", dev, model, obj{}})
+	part := func(typ, name string, where place, attrs obj) {
+		n++
+		a := obj{"name": name}
+		for k, v := range attrs {
+			a[k] = v
+		}
+		inv.add(object(n, typ, name, dev, idSiteL, a))
+		inv.places[oid(n)] = where
+	}
+	for i := 1; i <= 5; i++ {
+		b := strconv.Itoa(i)
+		bay := at("bay", "front", "3:"+b)
+		nvme := obj{"model": "SYNTH-NVME-1920", "media": "nvme", "capacity_bytes": 1920383000000, "serial": "SYNTH-NV-" + b}
+		part("disk", "3:"+b, bay, obj{"slot": "3:" + b, "health": "ok", "model": nvme["model"], "media": "nvme", "capacity_bytes": nvme["capacity_bytes"], "serial": nvme["serial"]})
+		part("disk", "nvme"+strconv.Itoa(i-1)+"n1", bay, nvme)
+	}
+	for _, d := range []string{"sda", "sdb"} {
+		part("disk", d, place{kind: "bay", why: "os"}, obj{"model": "SYNTH-SATA-480", "media": "ssd", "capacity_bytes": 480103981056})
+	}
+	part("psu", "HpeServerPowerSupply 0", at("psu", "rear", "1"), obj{"health": "ok", "capacity_w": 800, "input_w": 148})
+	part("psu", "HpeServerPowerSupply 1", at("psu", "rear", "2"), obj{"health": "ok", "capacity_w": 800, "input_w": 152})
+	part("interface", "bmc", at("port", "rear", "bmc"), obj{"kind": "bmc", "oper_status": "up", "speed_mbps": 1000})
+	for i := 1; i <= 4; i++ {
+		b := strconv.Itoa(i)
+		nic := at("port", "rear", "nic"+b)
+		part("interface", "eno"+b, nic, obj{"kind": "physical", "oper_status": "down", "mac": "02:00:00:00:4e:0" + b})
+		part("interface", b, nic, obj{"kind": "physical", "mac": "02:00:00:00:4e:0" + b})
+	}
+	n++
+	ilo5 := n
+	inv.add(object(ilo5, "interface", "5", dev, idSiteL, obj{"name": "5", "kind": "physical", "mac": "02:00:00:00:4e:05"}))
+	part("interface", "eno5", place{kind: "port", why: "os", also: []int{ilo5}}, obj{"kind": "physical", "oper_status": "up", "speed_mbps": 40000, "mac": "02:00:00:00:4e:05"})
 }
 
 // faces answers GET /objects/{id}/faces like the server: the faces of the
@@ -292,10 +350,25 @@ func (a *api) faces(w http.ResponseWriter, d obj) {
 		if at.spot != "" {
 			p["face"], p["spot"] = at.face, at.spot
 		}
+		if at.why != "" {
+			p["unplaced"] = at.why
+		}
+		for _, id := range at.also {
+			for _, other := range a.inv.objects {
+				if other["id"] == oid(id) {
+					p["also"] = append(asObjs(p["also"]), obj{"id": other["id"], "type": other["type"], "display": other["display"]})
+				}
+			}
+		}
 		parts = append(parts, p)
 	}
 	if parts != nil {
 		out["parts"] = parts
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+func asObjs(v any) []obj {
+	l, _ := v.([]obj)
+	return l
 }

@@ -173,6 +173,7 @@ be used anywhere, contributed upstream included. The model files beside them sta
 |---|---|---|
 | `hpe-proliant-dl360-gen9-8sff` | front, rear | 8SFF CTO 755258-B21; HPE QuickSpecs DL360 Gen9 (c04346229): 8 SFF bays (1-8), media bay, power, health, NIC, UID, USB 3.0, pull tab; rear PCIe 1-3, 2 Flex Slot PSUs, VGA, 4x1GbE, iLO, serial, 2 USB 3.0, UID, FlexibleLOM |
 | `hpe-proliant-dl380-gen9-8sff`, `-24sff` | front, rear | 8SFF CTO 719064-B21, 24SFF CTO 767032-B21; QuickSpecs DL380 Gen9 (c04346247): three 8SFF boxes, controls, USB 3.0; rear PCIe 1-6, rear 2 SFF option, 2 PSUs, I/O |
+| `hpe-proliant-dl380-gen10-8sff`, `-8sff-nvme`, `-24sff` (fronts), the five DL380 Gen10 chassis (rear) | front, rear | 8SFF CTO 868703-B21, 24SFF CTO 868704-B21, the 8 NVMe Express Bay kit 826689-B21 in Box 3; QuickSpecs DL380 Gen10 (a00008180enw): Box 1 (Universal Media Bay only there), Box 2, Box 3 (the 8SFF's primary cage), power, health, NIC, UID, iLO service port, USB 3.0, pull tag; rear risers 1-3 (slots 1-8), optional serial port, PSU bays 1 (far right) and 2, VGA, 4x1GbE, iLO, 2 USB 3.0, UID, FlexibleLOM. Left-to-right order of boxes and rear from the CC0 picture above |
 | `hpe-proliant-dl180-gen9-8sff`, `-8lff`, `-12lff` | front, rear | CTO 754523-B21, 754524-B21, 775506-B21 (and pre-configured SKUs); QuickSpecs DL180 Gen9 (c04346227): box 1 media bay, box 2, box 3 8SFF; 8 (+4) or 12 LFF; USB 3.0 on the LFF ears; rear PCIe 1-6, 2x1GbE, VGA, 2 USB 3.0, UID, optional iLO, PSU 1-2. LFF bay positions schematic |
 | `dell-poweredge-r330-8sff`, `-4lff-hot-plug`, `-4lff-cabled` | front, rear | Dell PowerEdge R330 Owner's Manual: the three chassis' front features (power, NMI, ID, VGA, LCD and buttons or five diagnostic LEDs, iDRAC USB, USB 2.0, information tag, slim optical), back panel (serial, vFlash, iDRAC port, 2 PCIe, PSU1-2, 2 USB 3.0, 2 NICs, ID button and connector, VGA). Positions schematic |
 | `arista-dcs-7280se-64-f`, `-r` | front, rear | Arista 7280E data sheet: 48 SFP+, 4 QSFP+, 1 management, 1 RS-232 RJ-45, 1 USB, 2 PSUs, 4 fans; handles red (front-to-rear) or blue (rear-to-front) |
@@ -187,7 +188,7 @@ be used anywhere, contributed upstream included. The model files beside them sta
 | Models | Faces | Facts from |
 |---|---|---|
 | Dell PowerEdge R230, R320, R340, R420, R430, R520, R620, R630, R640, R650, R720, R720xd, R730, R730xd, R740, R740xd chassis variants (`library/trica/Dell-PowerEdge-*`) | front, rear | Each system's Owner's Manual (`dl.dell.com/topicspdf/poweredge-<model>_owners-manual_en-us.pdf`; the R720 one covers the R720xd): drive bays per chassis, optical and LCD where listed, PCIe slots, power supplies, NICs, iDRAC, serial, VGA, USB |
-| HPE ProLiant DL360p Gen8, DL380p Gen8, DL360 Gen9 4LFF, DL380 Gen9 12LFF, DL360 Gen10, DL380 Gen10 chassis variants | front, rear | QuickSpecs c04128242, c04128241, c04346229, c04346247, a00008159enw, a00008180enw: CTO table (drive cage, SKUs), front and rear legends |
+| HPE ProLiant DL360p Gen8, DL380p Gen8, DL360 Gen9 4LFF, DL380 Gen9 12LFF, DL360 Gen10 chassis variants; DL380 Gen10 8LFF and 12LFF (fronts only) | front, rear | QuickSpecs c04128242, c04128241, c04346229, c04346247, a00008159enw, a00008180enw: CTO table (drive cage, SKUs), front and rear legends |
 | Cisco WS-C3750X-24T-S, -48P-S, WS-C3850-24T-S, -48T-S, -48P-S, C9300-24T, N3K-C3048TP-1GE, N3K-C3064PQ-10GX; Juniper EX2200-24T-4G, EX3300-48T, EX4300-48T; MikroTik CRS326-24S+2Q+RM, CRS312-4C+8XG-RM, CRS354-48P-4S+2Q+RM; Ubiquiti USW-24, USW-48, ES-48-LITE; Fortinet FG-200F, FG-600E | port side, power side | Port counts and groups: the model file (upstream, from the vendor's data sheet); supplies, fans and stacking ports: the vendor's data sheet or hardware guide |
 | Rears of upstream photographs that have only a front: Cisco WS-C2960X (4), Arista DCS-7050QX-32S, 7050TX-48, 7050TX-64, 7280SR-48C6-F/-R, Juniper EX2200-48T-4G, MikroTik CRS328-24P-4S+RM, Ubiquiti USW-Aggregation, Aruba 2530/2930F (4), FortiGate 100F, Synology RS1221+ | power side or rear | The same documents: fixed or modular supplies, fans |
 | Synology RS820+, RS2421+; QNAP TS-1263U-RP, TS-863U-RP; NetApp DS4246, DS2246 | front, rear | Hardware installation guides: drive bays, LAN ports, supplies; NetApp: 24 drives, 4 or 2 PSUs, two IOM6 |
@@ -201,7 +202,10 @@ above were reduced too).
 Each drawing has its **layout** in `layouts/<manufacturer>/<slug>.<face>.json`, written by the same
 generator: where its bays, power supplies, fans, ports and slots are, so that the object page puts
 the parts a collector reports in their places (ADR 0047, format in `docs/reference/devicetypes.md`).
-The DL180 Gen9 LFF fronts have no layout: their bay positions are schematic.
+The DL180 Gen9 and DL380 Gen10 LFF fronts have no layout: their bay positions are schematic.
+The HPE faces of `faces.mjs` draw their drive cages with `driveCage` and `hotplugCarrier`
+(`draw.mjs`): generic hot-plug carriers (status ring, label window, vent, lever, latch), so that a
+face reads as hardware at the size the object page draws it.
 
 To change a drawing, edit `scripts/devicetype-faces/faces.mjs` (or `draw.mjs`) and regenerate
 the SVG, the PNG and the layout; `go test ./internal/devicetypes/` checks that every drawing has its PNG

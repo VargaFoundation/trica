@@ -2976,10 +2976,12 @@ export interface components {
             status: string;
         };
         FacePart: {
+            also?: components["schemas"]["ObjectRef"][];
             face?: string;
             kind: string;
             part: components["schemas"]["Object"];
             spot?: string;
+            unplaced?: string;
         };
         FaceSpot: {
             h: number;

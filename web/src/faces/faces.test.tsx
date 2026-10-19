@@ -5,7 +5,7 @@ import { clearFaceImages } from "../racks/faceImages";
 import { ID } from "../test/fixtures";
 import { expectNoA11yViolations } from "../test/axe";
 import { defaultRoutes, mockApi, problem, renderApp, type Handler } from "../test/support";
-import { partState, placeSpots, unplaced, worst } from "./spots";
+import { groupUnplaced, partState, placeSpots, unplaced, worst } from "./spots";
 
 let n = 0;
 const part = (type: string, display: string, attributes: Record<string, unknown>): ObjectView => ({
@@ -93,6 +93,9 @@ describe("spots", () => {
     expect(worst(["up", "critical", "ok"])).toBe("critical");
     expect(worst(["up", "down"])).toBe("down");
     expect(worst([])).toBe("empty");
+    // The OS's name of a drive, without a state, does not hide the BMC's word for it.
+    expect(worst(["ok", "unknown"])).toBe("ok");
+    expect(worst(["unknown"])).toBe("unknown");
   });
 
   it("are read kind by kind, in the order a person counts", () => {
@@ -196,6 +199,40 @@ describe("the faces of a device", () => {
     const loose = within(section).getByRole("heading", { name: "1 part not placed" }).parentElement as HTMLElement;
     expect(within(loose).getByRole("link", { name: "Disk 3" })).toHaveAttribute("href", `/objects/${disk3.id}`);
     expect(loose).toHaveTextContent("trica does not guess");
+  });
+
+  it("groups the parts it could not place by why: the system's disks apart, each port once", async () => {
+    const sda = part("disk", "sda", { model: "SYNTH-SATA-480", capacity_bytes: 480_103_981_056, media: "ssd" });
+    const nvme = part("disk", "nvme0n1", { model: "SYNTH-NVME-1920", capacity_bytes: 1_920_383_000_000 });
+    const eno5 = part("interface", "eno5", { oper_status: "up" });
+    const ilo5 = part("interface", "5", {});
+    const box2 = part("disk", "2:1", { health: "ok" });
+    const loosePorts: FacePart[] = [
+      { part: eno5, kind: "port", unplaced: "os", also: [{ id: ilo5.id, type: "interface", display: "5" }] },
+      { part: sda, kind: "bay", unplaced: "os" },
+      { part: box2, kind: "bay", unplaced: "no_spot" },
+      { part: nvme, kind: "bay", unplaced: "os" },
+    ];
+    // Disks first, by name; a server that gives no reason reads as "unread".
+    expect(groupUnplaced([...faces.parts, ...loosePorts], "en").map((g) => [g.why, g.parts.map((p) => p.part.display)])).toEqual([
+      ["os", ["nvme0n1", "sda", "eno5"]],
+      ["no_spot", ["2:1"]],
+      ["unread", ["Disk 3"]],
+    ]);
+    mockApi(routes({ ...faces, parts: [...faces.parts, ...loosePorts] }));
+    renderApp({ at: `/objects/${ID.srv01}` });
+    const section = await card();
+    expect(within(section).getByRole("heading", { name: "5 parts not placed" })).toBeInTheDocument();
+    const os = within(section).getByRole("region", { name: "Known only to the operating system" });
+    expect(within(os).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      expect.stringMatching(/^nvme0n1.*Disk.*SYNTH-NVME-1920.*1\.75 TiB/),
+      expect.stringMatching(/^sda Disk SYNTH-SATA-480 447 GiB/),
+      expect.stringMatching(/^eno5 .*nterface.*Link up.*also seen as 5$/),
+    ]);
+    expect(within(os).getByRole("link", { name: "5" })).toHaveAttribute("href", `/objects/${ilo5.id}`);
+    expect(within(section).getByRole("region", { name: "Not on this model's drawing" })).toHaveTextContent("2:1");
+    expect(within(section).getByRole("region", { name: "Names that do not say where" })).toHaveTextContent("Disk 3");
+    await expectNoA11yViolations();
   });
 
   it("paints the model's image under the spots, fetched with the token", async () => {

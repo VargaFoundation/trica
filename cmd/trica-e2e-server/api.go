@@ -160,6 +160,7 @@ func buildInventory() *inventory {
 	buildComponents(inv)
 	buildFaces(inv)
 	buildParts(inv)
+	buildStorageNode(inv)
 	buildVariants(inv)
 	buildAisles(inv)
 	return inv
