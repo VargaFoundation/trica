@@ -133,6 +133,8 @@ func (c *compiler) pred(p tql.Pred) (string, error) {
 		return c.compare(p, "o.display", "to_jsonb(o.display)")
 	case p.Field == "parent":
 		return c.parent(p)
+	case p.Field == "site":
+		return c.site(p)
 	case p.Field == "has":
 		return c.has(p)
 	case p.Field == "source":
@@ -279,6 +281,39 @@ func (c *compiler) parent(p tql.Pred) (string, error) {
 		alts = append(alts, fmt.Sprintf("p.id::text = %s OR lower(p.display) LIKE %s", c.arg(v), c.arg(likePattern(v, false))))
 	}
 	return "EXISTS (SELECT 1 FROM objects p WHERE p.id = o.parent_id AND (" + strings.Join(alts, " OR ") + "))", nil
+}
+
+// site matches the objects in a site named by id, name or code: the site
+// itself, then everything below it through parents and mounted_in, the same
+// path the API follows to tell an object's site. The set is built from the
+// sites downwards, like relation.
+func (c *compiler) site(p tql.Pred) (string, error) {
+	if p.Op != tql.OpEq && p.Op != tql.OpNe {
+		return "", fmt.Errorf("search: site only takes ':' or '!='")
+	}
+	var alts []string
+	for _, v := range p.Values {
+		like := c.arg(likePattern(v, false))
+		alts = append(alts, fmt.Sprintf("s.id::text = %s OR lower(s.display) LIKE %[2]s OR lower(s.attrs->>'code') LIKE %[2]s OR lower(s.attrs->>'name') LIKE %[2]s", c.arg(v), like))
+	}
+	s := fmt.Sprintf(`o.id IN (
+		WITH RECURSIVE hit(id, depth) AS (
+			SELECT s.id, 0 FROM objects s WHERE s.type = 'site' AND (%s)
+			UNION
+			SELECT n.id, hit.depth + 1 FROM hit
+			JOIN LATERAL (
+				SELECT c.id FROM objects c WHERE c.parent_id = hit.id
+				UNION ALL
+				SELECT r.from_id FROM relations r
+				WHERE r.to_id = hit.id AND r.type = 'mounted_in' AND upper_inf(r.valid)
+			) n ON true
+			WHERE hit.depth < 32
+		)
+		SELECT id FROM hit)`, strings.Join(alts, " OR "))
+	if p.Op == tql.OpNe {
+		s = "NOT " + s
+	}
+	return s, nil
 }
 
 func (c *compiler) has(p tql.Pred) (string, error) {

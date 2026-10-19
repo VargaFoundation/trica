@@ -11,7 +11,7 @@ import (
 const (
 	descSearch = `Find objects by free text (a name, IP or MAC address in any notation, serial number, id) or by a TQL query. ` +
 		`Use it first when you do not know what an object is: "192.0.2.13" finds the device, port or service that holds that address. ` +
-		`TQL: type:device vendor:arista os_version<4.20 sort:-power_w limit:10, (a OR b), -has:serial, rel.mounted_in:"rack 2", status:absent. ` +
+		`TQL: type:device vendor:arista os_version<4.20 sort:-power_w limit:10, (a OR b), -has:serial, rel.mounted_in:"rack 2", site:paris (a site and everything in it), status:absent. ` +
 		`The answer starts with a summary (total, by_type, truncated) then a page of objects.`
 	descList = `List objects of one type (optionally narrowed by a TQL query) in a stable order, paginated. ` +
 		`Use it to enumerate ("all racks", "all firewalls"); use search for free text and filter_objects for attribute conditions.`

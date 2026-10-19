@@ -48,6 +48,7 @@ A MAC, an IPv6 address or a URL is free text even though it contains `:`.
 | `display` | Display name |
 | `first_seen`, `last_seen`, `created_at` | `2026-03-03`, RFC 3339, or relative: `-7d`, `-24h` |
 | `parent` | Id or display name of the parent: `type:disk parent:srv1` |
+| `site` | The site (id, name or code), what it contains and what is mounted there, with their parts: `type:disk site:par1` |
 | `has` | The object has the attribute: `has:serial` |
 | `source` | A source currently claims something on the object: `source:arista:*` |
 | `rel.<type>` | The object, or one of its ancestors, has a current relation of that type with an object named or identified by the value; `*` is any: `rel.mounted_in:"rack 2"` |
