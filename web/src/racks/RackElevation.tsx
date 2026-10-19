@@ -177,10 +177,14 @@ function SlotView({ slot: s, y }: { slot: Slot; y: number }) {
 }
 
 /** A face image, painted on a canvas: the CSP allows no blob: or data: image (see faceImages.ts). */
-function FaceCanvas({ bitmap, x, y, width, height }: { bitmap: ImageBitmap; x: number; y: number; width: number; height: number }) {
+/**
+ * A face image inside an SVG: a canvas in a foreignObject, painted from the
+ * bitmap (see faceImages.ts). scale is canvas pixels per SVG unit.
+ */
+export function FaceCanvas({ bitmap, x, y, width, height, scale = IMAGE_SCALE }: { bitmap: ImageBitmap; x: number; y: number; width: number; height: number; scale?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const cw = Math.round(width * IMAGE_SCALE);
-  const ch = Math.round(height * IMAGE_SCALE);
+  const cw = Math.round(width * scale);
+  const ch = Math.round(height * scale);
   useEffect(() => {
     const ctx = ref.current?.getContext("2d");
     if (!ctx) return;

@@ -79,8 +79,9 @@ type link struct {
 
 type inventory struct {
 	objects   []obj
-	relations []relation // declared in the lab file
-	links     []link     // the network: declared, observed and deduced
+	relations []relation       // declared in the lab file
+	links     []link           // the network: declared, observed and deduced
+	places    map[string]place // where a part sits on its device's faces, by part id
 }
 
 // all lists every relation with its provenance, plain ones as declared.
@@ -157,6 +158,7 @@ func buildInventory() *inventory {
 	buildNetwork(inv)
 	buildComponents(inv)
 	buildFaces(inv)
+	buildParts(inv)
 	return inv
 }
 
@@ -524,6 +526,8 @@ func (a *api) one(w http.ResponseWriter, rest string) {
 		writeJSON(w, http.StatusOK, a.relationsOf(id))
 	case "provenance":
 		writeJSON(w, http.StatusOK, obj{"object_id": id, "attributes": a.provenanceOf(o)})
+	case "faces":
+		a.faces(w, o)
 	case "timeline":
 		writeJSON(w, http.StatusOK, page([]obj{{"at": t0, "object_id": id, "type": o["type"], "display": o["display"], "key": "hostname", "after": o["display"], "source": "declared:lab-file", "changeset_id": 1}}))
 	default:

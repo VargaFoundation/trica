@@ -116,9 +116,16 @@ func readImage(fsys fs.FS, root string, m *Model, face, origin string) (*Image, 
 }
 
 // imageFiles lists the image files under root/ImageDir of fsys.
-func imageFiles(fsys fs.FS, root string) ([]string, error) {
+func imageFiles(fsys fs.FS, root string) ([]string, error) { return filesUnder(fsys, root, ImageDir) }
+
+// layoutFiles lists the layout files under root/LayoutDir of fsys.
+func layoutFiles(fsys fs.FS, root string) ([]string, error) { return filesUnder(fsys, root, LayoutDir) }
+
+// filesUnder lists the files under root/sub of fsys, hidden entries and
+// README.md aside.
+func filesUnder(fsys fs.FS, root, sub string) ([]string, error) {
 	var out []string
-	dir := path.Join(root, ImageDir)
+	dir := path.Join(root, sub)
 	if _, err := fs.Stat(fsys, dir); err != nil {
 		return nil, nil
 	}

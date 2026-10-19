@@ -54,6 +54,10 @@ type Model struct {
 	// or the operator's directory has one (see Open).
 	FrontImage *Image `json:"front_image,omitempty"`
 	RearImage  *Image `json:"rear_image,omitempty"`
+	// FrontLayout and RearLayout say where the parts sit on those images
+	// (ADR 0047), when the library or the operator's directory has it.
+	FrontLayout *Layout `json:"-"`
+	RearLayout  *Layout `json:"-"`
 }
 
 func (m *Model) setImage(face string, img *Image) {

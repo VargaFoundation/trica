@@ -24,8 +24,13 @@ func (m imageMap) DeviceTypeImage(slug, face string) (api.DeviceImage, bool) {
 	return img, ok
 }
 
-// testImages: the furnished switch model has a front image and no rear one.
-var testImages = imageMap{"acme-sw48/front": {ContentType: "image/png", ETag: `"abc123"`, Data: pngBytes}}
+// testImages: the furnished switch model has a front image and no rear one;
+// the server model has both faces with their layouts (see faces_test.go).
+var testImages = imageMap{
+	"acme-sw48/front": {ContentType: "image/png", ETag: `"abc123"`, Data: pngBytes},
+	"acme-srv/front":  {ContentType: "image/png", ETag: `"f"`, Data: pngBytes, Layout: srvFront},
+	"acme-srv/rear":   {ContentType: "image/png", ETag: `"r"`, Data: pngBytes, Layout: srvRear},
+}
 
 func (e *env) raw(method, path, token string, header map[string]string) *httptest.ResponseRecorder {
 	r := httptest.NewRequest(method, path, nil)

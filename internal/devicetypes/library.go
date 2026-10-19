@@ -40,7 +40,7 @@ func loadModels(fsys fs.FS, root string, originOf func(string) string) ([]*Model
 		if err != nil {
 			return err
 		}
-		if p != root && (strings.HasPrefix(d.Name(), ".") || (d.IsDir() && (d.Name() == ImageDir || d.Name() == DrawingDir))) {
+		if p != root && (strings.HasPrefix(d.Name(), ".") || (d.IsDir() && (d.Name() == ImageDir || d.Name() == DrawingDir || d.Name() == LayoutDir))) {
 			// Hidden entries are skipped: a Kubernetes volume holds its files
 			// twice, under a hidden ..<timestamp> directory and as links.
 			if d.IsDir() {
@@ -95,7 +95,9 @@ type Library struct {
 // Open loads the embedded library and, when extraDir is not empty, the
 // operator's directory over it (config devicetypes.extra_dir). That
 // directory has the layout of the library: model files under any directory
-// but elevation-images, images under elevation-images/<manufacturer>/<slug>.<face>.<ext>.
+// but elevation-images and layouts, images under
+// elevation-images/<manufacturer>/<slug>.<face>.<ext>, the spots of a face
+// under layouts/<manufacturer>/<slug>.<face>.json.
 // An operator model replaces the embedded model with the same slug, and an
 // operator image replaces the embedded image of the same model and face,
 // so a photograph of one's own equipment wins over a vendor drawing.
@@ -145,6 +147,32 @@ func OpenFS(lib fs.FS, root string, extra fs.FS) (*Library, error) {
 			return nil, fmt.Errorf("%s: no model has this slug and face, or its type is not one of png, jpg, jpeg, webp", f)
 		}
 	}
+	// The embedded layouts: each belongs to a model and to an image of the
+	// same face, or the load fails.
+	for _, m := range models {
+		for _, face := range []string{Front, Rear} {
+			l, err := readLayout(lib, root, m, face, OriginLocal)
+			if err != nil {
+				return nil, err
+			}
+			if l == nil {
+				continue
+			}
+			if m.Image(face) == nil {
+				return nil, fmt.Errorf("%s: %s has no %s image to lay it over", l.Path, m.Slug, face)
+			}
+			used[l.Path] = true
+			m.setLayout(face, l)
+		}
+	}
+	if files, err = layoutFiles(lib, root); err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		if !used[f] {
+			return nil, fmt.Errorf("%s: no model has this manufacturer, slug and face, or the name does not end in .json", f)
+		}
+	}
 	out := &Library{Models: models}
 	if extra == nil {
 		return out, nil
@@ -165,6 +193,7 @@ func OpenFS(lib fs.FS, root string, extra fs.FS) (*Library, error) {
 	for _, m := range own {
 		if e := embeddedBySlug[m.Slug]; e != nil {
 			m.FrontImage, m.RearImage = e.FrontImage, e.RearImage
+			m.FrontLayout, m.RearLayout = e.FrontLayout, e.RearLayout
 		}
 	}
 	out.Models = overlay(models, own)
@@ -178,6 +207,18 @@ func OpenFS(lib fs.FS, root string, extra fs.FS) (*Library, error) {
 			if img != nil {
 				used[img.Path] = true
 				m.setImage(face, img)
+				// The spots of a drawing do not fit a photograph: a
+				// replaced image loses its layout, unless the operator
+				// gives one (below).
+				m.setLayout(face, nil)
+			}
+			l, err := readLayout(extra, ".", m, face, OriginOperator)
+			if err != nil {
+				return nil, fmt.Errorf("devicetypes.extra_dir: %w", err)
+			}
+			if l != nil && m.Image(face) != nil {
+				used[l.Path] = true
+				m.setLayout(face, l)
 			}
 		}
 	}
@@ -190,6 +231,15 @@ func OpenFS(lib fs.FS, root string, extra fs.FS) (*Library, error) {
 		if !used[f] {
 			out.Warnings = append(out.Warnings, f+": not used (no model has this manufacturer, slug and face, "+
 				"or the type is not png, jpg, jpeg or webp)")
+		}
+	}
+	if files, err = layoutFiles(extra, "."); err != nil {
+		return nil, fmt.Errorf("devicetypes.extra_dir: %w", err)
+	}
+	for _, f := range files {
+		if !used[f] {
+			out.Warnings = append(out.Warnings, f+": not used (no model has this manufacturer, slug and face, "+
+				"the face has no image, or the name does not end in .json)")
 		}
 	}
 	return out, nil

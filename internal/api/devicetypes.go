@@ -12,6 +12,19 @@ type DeviceImage struct {
 	// ETag is a strong validator, quoted.
 	ETag string
 	Data []byte
+	// Layout says where the parts sit on the image, when the library has it
+	// (ADR 0047).
+	Layout *FaceLayout
+}
+
+// FaceLayout is where the parts sit on a face image, in its own units: the
+// image is Width x Height of them (millimetres for the project's drawings).
+type FaceLayout struct {
+	Width, Height float64
+	// Origin is trica for the project's drawings, operator for a layout from
+	// devicetypes.extra_dir.
+	Origin string
+	Spots  []FaceSpot
 }
 
 // DeviceTypeImages finds the face images of the device-type library

@@ -67,8 +67,13 @@ be used anywhere, contributed upstream included. The model files beside them sta
 | `arista-dcs-7050sx-64-f`, `-r` (upstream models) | rear | Arista 7050SX data sheet: 2 PSUs (1+1), 4 fans (N+1), colour-coded |
 | `mikrotik-crs354-48g-4s-plus-2q-plus-rm` (upstream model) | front, rear | MikroTik product page and user manual: 48 GbE, 4 SFP+, 2 QSFP+, RJ-45 console, 10/100 management, reset, 3 fans, 2 AC inputs, no display. Port grouping, management side and rear layout schematic |
 
+Each drawing has its **layout** in `layouts/<manufacturer>/<slug>.<face>.json`, written by the same
+generator: where its bays, power supplies, fans, ports and slots are, so that the object page puts
+the parts a collector reports in their places (ADR 0047, format in `docs/reference/devicetypes.md`).
+The DL180 Gen9 LFF fronts have no layout: their bay positions are schematic.
+
 To change a drawing, edit `scripts/devicetype-faces/faces.mjs` (or `draw.mjs`) and regenerate
-both the SVG and the PNG; `go test ./internal/devicetypes/` checks that every drawing has its PNG
+the SVG, the PNG and the layout; `go test ./internal/devicetypes/` checks that every drawing has its PNG
 with the right size and model.
 
 **Not used, on purpose:** VisioCafe stencils. Their licence forbids redistribution and any use on

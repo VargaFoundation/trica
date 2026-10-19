@@ -176,6 +176,10 @@ func (s *Server) routeTable() []route {
 			Summary:   "The devices mounted in a rack, with position, face, model, height and depth: one call for an elevation. A device is listed only if the caller may read it, its model only if the caller may read the model. Ordered by position, unknown positions last.",
 			Params:    list(pathUUID("id", "Rack id.")),
 			Responses: ok(Page[RackItem]{}), Errors: []int{http.StatusBadRequest, http.StatusNotFound}, H: s.hRackContents},
+		{Method: "GET", Path: "/objects/{id}/faces", ID: "getObjectFaces", Tag: tInv, Action: ActionRead,
+			Summary:   "The faces of a device's model with its parts in place: the images of the faces, the spots the device-type library knows on them (bays, power supplies, fans, ports, slots), and the device's parts the caller may read, each with the spot it goes in or none when its name does not say. Parts are listed only for the kinds the faces have spots for; absent parts are left out. Empty when the device has no model with images.",
+			Params:    list(pathUUID("id", "Object id.")),
+			Responses: ok(DeviceFaces{}), Errors: []int{http.StatusBadRequest, http.StatusForbidden, http.StatusNotFound}, H: s.hObjectFaces},
 		{Method: "GET", Path: "/device-types/{slug}/{face}", ID: "getDeviceTypeImage", Tag: tInv, Action: ActionRead,
 			Summary: "The image of one face of a device model, from the device-type library or the operator's directory (devicetypes.extra_dir). Library content, not inventory data: any caller who may read gets it. Cached privately for an hour, then revalidated with the ETag. The rack contents name the images that exist.",
 			Params: []param{

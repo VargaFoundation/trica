@@ -6,7 +6,8 @@
 //   node scripts/devicetype-faces/generate.mjs --inspect DIR  # 3000 px PNG in DIR, to check counts
 //
 // SVG sources go to internal/devicetypes/library/drawings/<Vendor>/<slug>.<face>.svg,
-// PNG to internal/devicetypes/library/elevation-images/<Vendor>/<slug>.<face>.png,
+// the spots marked on them (bays, power supplies, fans, ports, slots: ADR 0047)
+// to internal/devicetypes/library/layouts/<Vendor>/<slug>.<face>.json, PNG to internal/devicetypes/library/elevation-images/<Vendor>/<slug>.<face>.png,
 // 1000 pixels wide (the library refuses SVG: served from the application's
 // origin it could carry script). --png needs the web/ dependencies (it uses
 // the Playwright Chromium of the e2e suite); run it in the Playwright image
@@ -23,6 +24,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { withMarks } from "./draw.mjs";
 import * as f from "./faces.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -60,6 +62,14 @@ export const outputs = [
 
 const LIBRARY_WIDTH_PX = 1000;
 
+// The layout of a face: its size in millimetres (the SVG viewBox) and its
+// spots, one per line so that a change reads as a diff.
+function layoutJSON(svg, spots) {
+  const [, w, h] = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svg);
+  const lines = spots.map((s) => "    " + JSON.stringify(s));
+  return `{\n  "width_mm": ${w},\n  "height_mm": ${h},\n  "spots": [\n${lines.join(",\n")}\n  ]\n}\n`;
+}
+
 async function main() {
   const inspect = process.argv.indexOf("--inspect");
   const inspectDir = inspect >= 0 ? process.argv[inspect + 1] : undefined;
@@ -67,13 +77,20 @@ async function main() {
   const WIDTH_PX = inspectDir ? 3000 : LIBRARY_WIDTH_PX;
   const written = [];
   for (const [vendor, slug, face, draw] of outputs) {
-    const svg = draw();
+    const { svg, spots } = withMarks(draw);
     const file = join(lib, "drawings", vendor, `${slug}.${face}.svg`);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, svg);
+    // A face with nothing to place (the LFF fronts, whose bay numbers the
+    // vendor's text does not give) has no layout.
+    if (spots.length > 0) {
+      const layout = join(lib, "layouts", vendor, `${slug}.${face}.json`);
+      mkdirSync(dirname(layout), { recursive: true });
+      writeFileSync(layout, layoutJSON(svg, spots));
+    }
     written.push({ vendor, slug, face, file, svg });
   }
-  console.log(`${written.length} SVG written under ${join(lib, "drawings")}`);
+  console.log(`${written.length} SVG and layouts written under ${join(lib, "drawings")} and ${join(lib, "layouts")}`);
   if (!png) return;
 
   const require = createRequire(join(root, "web", "package.json"));

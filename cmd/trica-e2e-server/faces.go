@@ -197,3 +197,109 @@ func image(w http.ResponseWriter, r *http.Request, rest string) {
 	w.Header().Set("Content-Length", strconv.Itoa(len(img.Data)))
 	_, _ = w.Write(img.Data) //nolint:gosec // embedded library bytes, served with their checked image type and nosniff
 }
+
+// The placed parts: srv-p1 in lyon-1, in no rack, a DL360 Gen9 8SFF the
+// project drew, with disks, power supplies and ports in their places, one
+// part of each state and one disk whose name does not say its bay.
+const firstPart = 0x4c0
+
+// place is where the server would put a part. The rules that read a part's
+// name are the server's, tested in internal/api; the mock gives their outcome.
+type place struct{ kind, face, spot string }
+
+func buildParts(inv *inventory) {
+	inv.places = map[string]place{}
+	m := library.BySlug("hpe-proliant-dl360-gen9-8sff")
+	n := firstPart + 1
+	model := n
+	inv.add(object(model, "device_type", m.Model, 0, 0, obj{"slug": m.Slug, "vendor": m.Vendor, "model": m.Model, "u_height": m.UHeight, "full_depth": m.FullDepth}))
+	n++
+	dev := n
+	inv.add(object(dev, "device", "srv-p1", idSiteL, idSiteL, obj{"hostname": "srv-p1", "role": "server", "health": "ok", "model": m.Model}))
+	inv.relations = append(inv.relations, relation{"instance_of", dev, model, obj{}})
+	part := func(typ, name string, at place, attrs obj) {
+		n++
+		a := obj{"name": name}
+		for k, v := range attrs {
+			a[k] = v
+		}
+		inv.add(object(n, typ, name, dev, idSiteL, a))
+		inv.places[oid(n)] = at
+	}
+	for i, h := range []string{"ok", "ok", "critical", "ok", "warning"} {
+		b := strconv.Itoa(i + 1)
+		part("disk", "Disk "+b, place{"bay", "front", "1:" + b}, obj{"slot": "1I:1:" + b, "health": h, "model": "EG0600FBVFP", "media": "HDD", "capacity_bytes": 600127266816, "temperature_c": 30 + i})
+	}
+	part("disk", "sda", place{kind: "bay"}, obj{"health": "ok", "capacity_bytes": 600127266816})
+	part("psu", "PSU 1", place{"psu", "rear", "1"}, obj{"health": "ok", "capacity_w": 500, "input_w": 164})
+	part("psu", "PSU 2", place{"psu", "rear", "2"}, obj{"health": "critical", "capacity_w": 500, "input_w": 0})
+	part("interface", "iLO", place{"port", "rear", "bmc"}, obj{"kind": "bmc", "oper_status": "up", "speed_mbps": 1000, "mac": "02:00:00:00:4c:01"})
+	for i, up := range []bool{true, true, false, false} {
+		state := "down"
+		if up {
+			state = "up"
+		}
+		b := strconv.Itoa(i + 1)
+		part("interface", "eno"+b, place{"port", "rear", "nic" + b}, obj{"kind": "physical", "oper_status": state, "speed_mbps": 1000, "mac": "02:00:00:00:4c:1" + b})
+	}
+}
+
+// faces answers GET /objects/{id}/faces like the server: the faces of the
+// device's model from the embedded library, with their layouts, and the
+// device's parts in the places the inventory gives them.
+func (a *api) faces(w http.ResponseWriter, d obj) {
+	out := obj{"faces": []obj{}, "parts": []obj{}, "truncated": false}
+	var m obj
+	for _, r := range a.inv.relations {
+		if r.typ == "instance_of" && oid(r.from) == d["id"] {
+			m = a.inv.byID(oid(r.to))
+		}
+	}
+	if m == nil {
+		writeJSON(w, http.StatusOK, out)
+		return
+	}
+	ma, _ := m["attributes"].(obj)
+	slug, _ := ma["slug"].(string)
+	lm := library.BySlug(slug)
+	if lm == nil {
+		writeJSON(w, http.StatusOK, out)
+		return
+	}
+	out["model"] = obj{"id": m["id"], "type": m["type"], "display": m["display"]}
+	out["model_name"] = ma["model"]
+	var faces []obj
+	for _, face := range []string{"front", "rear"} {
+		if lm.Image(face) == nil {
+			continue
+		}
+		f := obj{"face": face, "image": "/api/v1/device-types/" + slug + "/" + face, "width": 0, "height": 0, "spots": []obj{}}
+		if l := lm.Layout(face); l != nil {
+			spots := make([]obj, 0, len(l.Spots))
+			for _, s := range l.Spots {
+				spots = append(spots, obj{"kind": s.Kind, "name": s.Name, "x": s.X, "y": s.Y, "w": s.W, "h": s.H})
+			}
+			f["width"], f["height"], f["layout_origin"], f["spots"] = l.WidthMM, l.HeightMM, l.Origin, spots
+		}
+		faces = append(faces, f)
+	}
+	if faces != nil {
+		out["faces"] = faces
+	}
+	var parts []obj
+	for _, o := range a.inv.objects {
+		at, ok := a.inv.places[o["id"].(string)]
+		if !ok || o["parent_id"] != d["id"] {
+			continue
+		}
+		p := obj{"part": o, "kind": at.kind}
+		if at.spot != "" {
+			p["face"], p["spot"] = at.face, at.spot
+		}
+		parts = append(parts, p)
+	}
+	if parts != nil {
+		out["parts"] = parts
+	}
+	writeJSON(w, http.StatusOK, out)
+}

@@ -221,6 +221,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/objects/{id}/faces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The faces of a device's model with its parts in place: the images of the faces, the spots the device-type library knows on them (bays, power supplies, fans, ports, slots), and the device's parts the caller may read, each with the spot it goes in or none when its name does not say. Parts are listed only for the kinds the faces have spots for; absent parts are left out. Empty when the device has no model with images.
+         * @description Requires the "read" action.
+         */
+        get: operations["getObjectFaces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/objects/{id}/history": {
         parameters: {
             query?: never;
@@ -2795,6 +2815,21 @@ export interface components {
             result?: components["schemas"]["ApplyResult"];
             status: string;
         };
+        DeviceFace: {
+            face: string;
+            height: number;
+            image: string;
+            layout_origin?: string;
+            spots: components["schemas"]["FaceSpot"][];
+            width: number;
+        };
+        DeviceFaces: {
+            faces: components["schemas"]["DeviceFace"][];
+            model?: components["schemas"]["ObjectRef"];
+            model_name?: string;
+            parts: components["schemas"]["FacePart"][];
+            truncated: boolean;
+        };
         Discrepancy: {
             /** Format: date-time */
             closed_at?: string;
@@ -2814,6 +2849,20 @@ export interface components {
             opened_at: string;
             related_id?: string;
             status: string;
+        };
+        FacePart: {
+            face?: string;
+            kind: string;
+            part: components["schemas"]["Object"];
+            spot?: string;
+        };
+        FaceSpot: {
+            h: number;
+            kind: string;
+            name: string;
+            w: number;
+            x: number;
+            y: number;
         };
         IdentityKeysDoc: {
             strong: string[];
@@ -4203,6 +4252,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Object"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getObjectFaces: {
+        parameters: {
+            query?: {
+                /** @description Page size, 1 to 1000 (default 50). */
+                limit?: number;
+                /** @description Items to skip (default 0). */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Object id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceFaces"];
                 };
             };
             400: components["responses"]["Problem400"];

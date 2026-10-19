@@ -50,6 +50,10 @@ export type TypeDoc = S["TypeDoc"];
 export type AttributeDoc = S["AttributeDoc"];
 export type RelationDoc = S["RelationDoc"];
 export type Label = S["Label"];
+export type FacePart = Omit<S["FacePart"], "part"> & { part: ObjectView };
+export type DeviceFaces = Omit<S["DeviceFaces"], "parts"> & { parts: FacePart[] };
+export type DeviceFace = S["DeviceFace"];
+export type FaceSpot = S["FaceSpot"];
 
 export type Page<T> = { total: number; limit: number; offset: number; truncated?: boolean; items: T[] };
 

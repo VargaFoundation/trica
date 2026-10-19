@@ -517,6 +517,34 @@ SELECT d.root, o.id, o.type, o.status, COALESCE(o.attrs->>$2, '') FROM d JOIN ob
 	return out, rows.Err()
 }
 
+// Descendants returns the objects below root, depth levels down at most (1:
+// its children), absent ones included, ordered by type then display. At
+// most limit objects are returned; the second result says whether there
+// were more.
+func (s *Store) Descendants(ctx context.Context, root string, depth, limit int) ([]*Object, bool, error) {
+	if depth <= 0 || limit <= 0 {
+		return nil, false, nil
+	}
+	rows, err := s.Pool.Query(ctx, `
+WITH RECURSIVE d AS (
+  SELECT id, 1 AS lvl FROM objects WHERE parent_id = $1
+  UNION ALL
+  SELECT o.id, d.lvl + 1 FROM objects o JOIN d ON o.parent_id = d.id WHERE d.lvl < $2
+)
+SELECT `+objectCols+` FROM objects WHERE id IN (SELECT id FROM d) ORDER BY type, display, id LIMIT $3`, root, depth, limit+1)
+	if err != nil {
+		return nil, false, err
+	}
+	out, err := collectObjects(rows)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(out) > limit {
+		return out[:limit], true, nil
+	}
+	return out, false, nil
+}
+
 // RelationHistory returns every relation that ever touched an object, newest first.
 func (s *Store) RelationHistory(ctx context.Context, id string, limit int) ([]Relation, error) {
 	if limit <= 0 {

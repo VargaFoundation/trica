@@ -17,6 +17,7 @@ import {
   fanModule,
   led,
   lffCarrier,
+  mark,
   pcie,
   pinhole,
   psu,
@@ -55,7 +56,9 @@ export function dl360Gen9Front8SFF() {
   const ch = 19.4;
   for (let col = 0; col < 4; col++) {
     for (let row = 0; row < 2; row++) {
-      s += sffCarrier(x0 + 2.4 + col * (cw + 1.2), 2.4 + row * (ch + 0.8), cw, ch, { num: col * 2 + row + 1 });
+      const [x, y, n] = [x0 + 2.4 + col * (cw + 1.2), 2.4 + row * (ch + 0.8), col * 2 + row + 1];
+      // iLO reports these bays as box 1 (1I:1:1 ... 2I:1:8).
+      s += sffCarrier(x, y, cw, ch, { num: n }) + mark("bay", `1:${n}`, x, y, cw, ch);
     }
   }
   // Universal Media Bay: a blank on the CTO chassis (VGA, USB 2.0 and
@@ -81,36 +84,40 @@ export function dl360Gen9Rear() {
   let s = c.svg;
   const x = c.x0 + 2;
   // PCIe: 1 full height, 2 and 3 low profile, above the I/O row.
-  s += pcie(x, 2.2, 108, 15.6, { label: "1" });
-  s += pcie(x + 110, 2.2, 96, 15.6, { label: "2" });
-  s += pcie(x + 208, 2.2, 96, 15.6, { label: "3" });
+  s += pcie(x, 2.2, 108, 15.6, { label: "1" }) + mark("slot", 1, x, 2.2, 108, 15.6);
+  s += pcie(x + 110, 2.2, 96, 15.6, { label: "2" }) + mark("slot", 2, x + 110, 2.2, 96, 15.6);
+  s += pcie(x + 208, 2.2, 96, 15.6, { label: "3" }) + mark("slot", 3, x + 208, 2.2, 96, 15.6);
   // I/O row
   const y = 21.5;
-  for (let i = 0; i < 4; i++) s += rj45(x + 1 + i * 12.6, y, { up: false });
+  for (let i = 0; i < 4; i++) s += rj45(x + 1 + i * 12.6, y, { up: false }) + mark("port", `flexlom${i + 1}`, x + 1 + i * 12.6, y, 11.6, 9.6);
   s += text(x + 1, y + 15.8, "FlexibleLOM", { size: 1.7 });
   s += led(x + 55, y + 5, "blue");
   s += text(x + 55, y + 11.2, "UID", { size: 1.6, anchor: "middle" });
   s += usb(x + 59, y - 1.4, { usb3: true });
   s += usb(x + 59, y + 5.6, { usb3: true });
   s += dsub(x + 74, y - 0.6, "db9");
-  s += rj45(x + 108, y, { up: false });
+  s += rj45(x + 108, y, { up: false }) + mark("port", "bmc", x + 108, y, 11.6, 9.6);
   s += text(x + 113.8, y + 15.8, "iLO", { size: 1.7, anchor: "middle" });
-  for (let i = 0; i < 4; i++) s += rj45(x + 123 + i * 12.6, y, { up: false });
+  for (let i = 0; i < 4; i++) s += rj45(x + 123 + i * 12.6, y, { up: false }) + mark("port", `nic${i + 1}`, x + 123 + i * 12.6, y, 11.6, 9.6);
   s += text(x + 123, y + 15.8, "1", { size: 1.7 }) + text(x + 171, y + 15.8, "4", { size: 1.7, anchor: "end" });
   s += dsub(x + 176, y - 0.6, "vga");
   s += vent(x + 210, y - 1.4, 94, 18);
   // two power supplies on the right
   const pw = 60;
-  s += psu(c.x1 - 2 - 2 * pw - 1.5, 2.2, pw, 39.6);
-  s += psu(c.x1 - 2 - pw, 2.2, pw, 39.6);
+  s += psu(c.x1 - 2 - 2 * pw - 1.5, 2.2, pw, 39.6) + mark("psu", 1, c.x1 - 2 - 2 * pw - 1.5, 2.2, pw, 39.6);
+  s += psu(c.x1 - 2 - pw, 2.2, pw, 39.6) + mark("psu", 2, c.x1 - 2 - pw, 2.2, pw, 39.6);
   return svgDoc(1, "HPE ProLiant DL360 Gen9, rear (schematic)", s);
 }
 
 // A 2U HPE drive box of 8 standing SFF carriers (Box 1, 2 or 3).
-function hpeSffBox(x, y, w, h, label) {
+// iLO names a bay by its box: Port=1I:Box=3:Bay=5, or 1I:3:5.
+function hpeSffBox(x, y, w, h, label, box) {
   let s = rect(x - 0.6, y - 0.6, w + 1.2, h + 1.2, { fill: "#2f3236", rx: 0.8 });
   const pitch = w / 8;
-  for (let i = 0; i < 8; i++) s += sffCarrier(x + i * pitch + 0.25, y + 3.6, pitch - 0.5, h - 3.6, { horizontal: false, num: i + 1 });
+  for (let i = 0; i < 8; i++) {
+    s += sffCarrier(x + i * pitch + 0.25, y + 3.6, pitch - 0.5, h - 3.6, { horizontal: false, num: i + 1 });
+    s += mark("bay", `${box}:${i + 1}`, x + i * pitch + 0.25, y + 3.6, pitch - 0.5, h - 3.6);
+  }
   s += text(x + w, y - 1.2, label, { size: 1.8, anchor: "end", fill: "#3b3f45" });
   return s;
 }
@@ -144,9 +151,9 @@ function dl380Gen9Front(full) {
   const h = 79.5;
   const x0 = c.x0 + 3;
   const xs = [x0, x0 + bw + 3, x0 + 2 * (bw + 3)];
-  s += full ? hpeSffBox(xs[0], y, bw, h, "Box 1") : hpeBlankBox(xs[0], y, bw, h, "Box 1", "media bay");
-  s += full ? hpeSffBox(xs[1], y, bw, h, "Box 2") : hpeBlankBox(xs[1], y, bw, h, "Box 2");
-  s += hpeSffBox(xs[2], y, bw, h, "Box 3");
+  s += full ? hpeSffBox(xs[0], y, bw, h, "Box 1", 1) : hpeBlankBox(xs[0], y, bw, h, "Box 1", "media bay");
+  s += full ? hpeSffBox(xs[1], y, bw, h, "Box 2", 2) : hpeBlankBox(xs[1], y, bw, h, "Box 2");
+  s += hpeSffBox(xs[2], y, bw, h, "Box 3", 3);
   s += hpe2uControls(xs[2] + bw + 6);
   return svgDoc(2, `HPE ProLiant DL380 Gen9 ${full ? "24SFF" : "8SFF"}, front (schematic)`, s);
 }
@@ -162,19 +169,19 @@ export function dl380Gen9Rear() {
   const c = rearChassis(2, 445.5);
   let s = c.svg;
   const x = c.x0 + 2;
-  for (let i = 0; i < 3; i++) s += pcie(x, 2.4 + i * 14.6, 118, 13.6, { label: String(i + 1) });
-  for (let i = 0; i < 3; i++) s += pcie(x + 121, 2.4 + i * 14.6, 118, 13.6, { label: String(i + 4) });
+  for (let i = 0; i < 3; i++) s += pcie(x, 2.4 + i * 14.6, 118, 13.6, { label: String(i + 1) }) + mark("slot", i + 1, x, 2.4 + i * 14.6, 118, 13.6);
+  for (let i = 0; i < 3; i++) s += pcie(x + 121, 2.4 + i * 14.6, 118, 13.6, { label: String(i + 4) }) + mark("slot", i + 4, x + 121, 2.4 + i * 14.6, 118, 13.6);
   s += blank(x + 242, 2.4, 78, 42);
   s += text(x + 281, 42, "rear 2 SFF (option)", { size: 1.8, anchor: "middle", fill: "#4a4e54" });
   // I/O row along the bottom
   const y = 52;
-  for (let i = 0; i < 4; i++) s += rj45(x + 1 + i * 12.6, y, { up: false });
+  for (let i = 0; i < 4; i++) s += rj45(x + 1 + i * 12.6, y, { up: false }) + mark("port", `flexlom${i + 1}`, x + 1 + i * 12.6, y, 11.6, 9.6);
   s += text(x + 1, y + 15.8, "FlexibleLOM", { size: 1.7 });
   s += dsub(x + 55, y - 0.6, "db9");
   s += dsub(x + 89, y - 0.6, "vga");
-  for (let i = 0; i < 4; i++) s += rj45(x + 124 + i * 12.6, y, { up: false });
+  for (let i = 0; i < 4; i++) s += rj45(x + 124 + i * 12.6, y, { up: false }) + mark("port", `nic${i + 1}`, x + 124 + i * 12.6, y, 11.6, 9.6);
   s += text(x + 124, y + 15.8, "1", { size: 1.7 }) + text(x + 172, y + 15.8, "4", { size: 1.7, anchor: "end" });
-  s += rj45(x + 178, y, { up: false });
+  s += rj45(x + 178, y, { up: false }) + mark("port", "bmc", x + 178, y, 11.6, 9.6);
   s += text(x + 183.8, y + 15.8, "iLO", { size: 1.7, anchor: "middle" });
   s += usb(x + 194, y - 1.4, { usb3: true });
   s += usb(x + 194, y + 5.6, { usb3: true });
@@ -182,8 +189,8 @@ export function dl380Gen9Rear() {
   s += text(x + 211, y + 11.2, "UID", { size: 1.6, anchor: "middle" });
   s += vent(x + 216, y - 3, 104, 32);
   const pw = 54;
-  s += psu(c.x1 - 2 - 2 * pw - 1.5, 46, pw, 40, { label: "1" });
-  s += psu(c.x1 - 2 - pw, 46, pw, 40, { label: "2" });
+  s += psu(c.x1 - 2 - 2 * pw - 1.5, 46, pw, 40, { label: "1" }) + mark("psu", 1, c.x1 - 2 - 2 * pw - 1.5, 46, pw, 40);
+  s += psu(c.x1 - 2 - pw, 46, pw, 40, { label: "2" }) + mark("psu", 2, c.x1 - 2 - pw, 46, pw, 40);
   s += vent(c.x1 - 2 - 2 * pw - 1.5, 2.4, 2 * pw + 1.5, 41.5);
   return svgDoc(2, "HPE ProLiant DL380 Gen9, rear (schematic)", s);
 }
@@ -204,7 +211,7 @@ function dl180Gen9Front(kind) {
     const x0 = c.x0 + 3;
     s += hpeBlankBox(x0, 6, bw, 79.5, "Box 1", "media bay");
     s += hpeBlankBox(x0 + bw + 3, 6, bw, 79.5, "Box 2");
-    s += hpeSffBox(x0 + 2 * (bw + 3), 6, bw, 79.5, "Box 3");
+    s += hpeSffBox(x0 + 2 * (bw + 3), 6, bw, 79.5, "Box 3", 3);
     s += hpe2uControls(x0 + 3 * (bw + 3) + 3, { usb3: false });
     return svgDoc(2, "HPE ProLiant DL180 Gen9 8SFF, front (schematic)", s);
   }
@@ -242,8 +249,8 @@ export function dl180Gen9Rear() {
   const c = rearChassis(2, 445.5);
   let s = c.svg;
   const x = c.x0 + 2;
-  for (let i = 0; i < 3; i++) s += pcie(x, 2.4 + i * 14.6, 112, 13.6, { label: String(i + 1) });
-  for (let i = 0; i < 3; i++) s += pcie(x + 115, 2.4 + i * 14.6, 112, 13.6, { label: String(i + 4) });
+  for (let i = 0; i < 3; i++) s += pcie(x, 2.4 + i * 14.6, 112, 13.6, { label: String(i + 1) }) + mark("slot", i + 1, x, 2.4 + i * 14.6, 112, 13.6);
+  for (let i = 0; i < 3; i++) s += pcie(x + 115, 2.4 + i * 14.6, 112, 13.6, { label: String(i + 4) }) + mark("slot", i + 4, x + 115, 2.4 + i * 14.6, 112, 13.6);
   s += vent(x + 230, 2.4, 90, 42);
   const y = 52;
   s += dsub(x + 1, y - 0.6, "vga");
@@ -252,13 +259,14 @@ export function dl180Gen9Rear() {
   s += led(x + 53, y + 5, "blue");
   s += text(x + 53, y + 11.2, "UID", { size: 1.6, anchor: "middle" });
   s += rj45(x + 60, y, { up: false }) + rj45(x + 72.6, y, { up: false });
+  s += mark("port", "nic1", x + 60, y, 11.6, 9.6) + mark("port", "nic2", x + 72.6, y, 11.6, 9.6);
   s += text(x + 60, y + 15.8, "1", { size: 1.7 }) + text(x + 84.2, y + 15.8, "2", { size: 1.7, anchor: "end" });
-  s += rj45(x + 92, y, { up: false });
+  s += rj45(x + 92, y, { up: false }) + mark("port", "bmc", x + 92, y, 11.6, 9.6);
   s += text(x + 97.8, y + 15.8, "iLO (option)", { size: 1.7, anchor: "middle" });
   s += vent(x + 112, y - 3, 208, 32);
   const pw = 54;
-  s += psu(c.x1 - 2 - 2 * pw - 1.5, 46, pw, 40, { label: "1" });
-  s += psu(c.x1 - 2 - pw, 46, pw, 40, { label: "2" });
+  s += psu(c.x1 - 2 - 2 * pw - 1.5, 46, pw, 40, { label: "1" }) + mark("psu", 1, c.x1 - 2 - 2 * pw - 1.5, 46, pw, 40);
+  s += psu(c.x1 - 2 - pw, 46, pw, 40, { label: "2" }) + mark("psu", 2, c.x1 - 2 - pw, 46, pw, 40);
   s += vent(c.x1 - 2 - 2 * pw - 1.5, 2.4, 2 * pw + 1.5, 41.5);
   return svgDoc(2, "HPE ProLiant DL180 Gen9, rear (schematic)", s);
 }
@@ -299,7 +307,9 @@ export function r330Front(kind) {
     const ch = 19.2;
     for (let col = 0; col < 4; col++) {
       for (let row = 0; row < 2; row++) {
-        s += sffCarrier(c.x0 + 4.4 + col * (cw + 1.4), 2.4 + row * (ch + 0.8), cw, ch, { num: col * 2 + row });
+        // iDRAC numbers the bays from 0 (Disk.Bay.0, Solid State Disk 0:1:0).
+        const [x, y, n] = [c.x0 + 4.4 + col * (cw + 1.4), 2.4 + row * (ch + 0.8), col * 2 + row];
+        s += sffCarrier(x, y, cw, ch, { num: n }) + mark("bay", n, x, y, cw, ch);
       }
     }
     const x = c.x0 + 4.4 + 4 * (cw + 1.4) + 4;
@@ -316,7 +326,7 @@ export function r330Front(kind) {
   // holds the optical drive, the LCD or the indicators, USB and video.
   const hot = kind === "4lff-hot-plug";
   const cw = 103.6;
-  for (let i = 0; i < 4; i++) s += lffCarrier(c.x0 + 3 + i * (cw + 1), 15.2, cw, 26.6, { hotplug: hot, num: i });
+  for (let i = 0; i < 4; i++) s += lffCarrier(c.x0 + 3 + i * (cw + 1), 15.2, cw, 26.6, { hotplug: hot, num: i }) + mark("bay", i, c.x0 + 3 + i * (cw + 1), 15.2, cw, 26.6);
   const y = 2.4;
   let x = c.x0 + 3;
   if (hot) {
@@ -345,20 +355,22 @@ export function r330Rear() {
   let s = c.svg;
   const x = c.x0 + 2;
   s += pcie(x, 2.2, 96, 15.6, { label: "1" }) + pcie(x + 98, 2.2, 112, 15.6, { label: "2" });
+  s += mark("slot", 1, x, 2.2, 96, 15.6) + mark("slot", 2, x + 98, 2.2, 112, 15.6);
   const y = 22;
   s += dsub(x, y - 0.6, "db9");
   s += recess(x + 34, y + 1, 12, 3) + text(x + 40, y + 8, "vFlash", { size: 1.5, anchor: "middle" });
-  s += rj45(x + 48, y, { up: false }) + text(x + 53.8, y + 15.6, "iDRAC", { size: 1.6, anchor: "middle" });
+  s += rj45(x + 48, y, { up: false }) + mark("port", "bmc", x + 48, y, 11.6, 9.6) + text(x + 53.8, y + 15.6, "iDRAC", { size: 1.6, anchor: "middle" });
   s += dsub(x + 64, y - 0.6, "vga");
   s += usb(x + 98, y - 1.2) + usb(x + 98, y + 5.6);
   s += rj45(x + 114, y, { up: false }) + rj45(x + 126.6, y, { up: false });
+  s += mark("port", "nic1", x + 114, y, 11.6, 9.6) + mark("port", "nic2", x + 126.6, y, 11.6, 9.6);
   s += text(x + 114, y + 15.6, "1", { size: 1.6 }) + text(x + 138.2, y + 15.6, "2", { size: 1.6, anchor: "end" });
   s += button(x + 146, y + 4.5, 1.7, "blue") + recess(x + 151, y + 2, 6, 4.5, 0.4);
   s += vent(x + 160, y - 1.4, 50, 18);
   const pw = 72;
   s += vent(x + 212, 2.2, c.x1 - 2 - 2 * pw - 3.5 - (x + 212), 39.6);
-  s += psu(c.x1 - 2 - 2 * pw - 1.5, 2.2, pw, 39.6, { label: "PSU1" });
-  s += psu(c.x1 - 2 - pw, 2.2, pw, 39.6, { label: "PSU2" });
+  s += psu(c.x1 - 2 - 2 * pw - 1.5, 2.2, pw, 39.6, { label: "PSU1" }) + mark("psu", 1, c.x1 - 2 - 2 * pw - 1.5, 2.2, pw, 39.6);
+  s += psu(c.x1 - 2 - pw, 2.2, pw, 39.6, { label: "PSU2" }) + mark("psu", 2, c.x1 - 2 - pw, 2.2, pw, 39.6);
   return svgDoc(1, "Dell PowerEdge R330, rear (schematic)", s);
 }
 
@@ -384,8 +396,8 @@ export function aristaPortSide(model) {
     for (let col = 0; col < 8; col++) {
       const n = grp * 16 + col * 2 + 1;
       const px = x + col * pitch;
-      s += sfp(px, yTop, { w: 13.2, h: 9.4, up: true });
-      s += sfp(px, yBot, { w: 13.2, h: 9.4, up: false });
+      s += sfp(px, yTop, { w: 13.2, h: 9.4, up: true }) + mark("port", `Ethernet${n}`, px, yTop, 13.2, 9.4);
+      s += sfp(px, yBot, { w: 13.2, h: 9.4, up: false }) + mark("port", `Ethernet${n + 1}`, px, yBot, 13.2, 9.4);
       s += text(px + 6.6, yTop - 2, String(n), { size: 1.8, anchor: "middle" });
       s += text(px + 6.6, yBot + 12.1, String(n + 1), { size: 1.8, anchor: "middle" });
     }
@@ -394,14 +406,14 @@ export function aristaPortSide(model) {
   // QSFP+ 49-52, two columns of two
   for (let col = 0; col < 2; col++) {
     const px = x + col * 20.4;
-    s += qsfp(px, yTop, { w: 18.8, h: 9.4, up: true });
-    s += qsfp(px, yBot, { w: 18.8, h: 9.4, up: false });
+    s += qsfp(px, yTop, { w: 18.8, h: 9.4, up: true }) + mark("port", `Ethernet${49 + col * 2}`, px, yTop, 18.8, 9.4);
+    s += qsfp(px, yBot, { w: 18.8, h: 9.4, up: false }) + mark("port", `Ethernet${50 + col * 2}`, px, yBot, 18.8, 9.4);
     s += text(px + 9.4, yTop - 2, String(49 + col * 2), { size: 1.8, anchor: "middle" });
     s += text(px + 9.4, yBot + 12.1, String(50 + col * 2), { size: 1.8, anchor: "middle" });
   }
   x += 2 * 20.4 + 4;
   // management over console, USB, status LEDs
-  s += rj45(x, yTop, { w: 11.4, h: 9.4, up: true });
+  s += rj45(x, yTop, { w: 11.4, h: 9.4, up: true }) + mark("port", "Management1", x, yTop, 11.4, 9.4);
   s += rj45(x, yBot, { w: 11.4, h: 9.4, up: false, leds: false });
   s += text(x + 5.7, yTop - 2, "MGMT", { size: 1.6, anchor: "middle" });
   s += text(x + 5.7, yBot + 12.1, "CONSOLE", { size: 1.4, anchor: "middle" });
@@ -428,11 +440,11 @@ export function aristaPowerSide(model, airflow) {
   const pw = 74;
   const y = 2.4;
   const h = 39.4;
-  s += psu(c.x0 + 2, y, pw, h, { handle, label: "PS1" });
-  s += psu(c.x1 - 2 - pw, y, pw, h, { handle, label: "PS2" });
+  s += psu(c.x0 + 2, y, pw, h, { handle, label: "PS1" }) + mark("psu", 1, c.x0 + 2, y, pw, h);
+  s += psu(c.x1 - 2 - pw, y, pw, h, { handle, label: "PS2" }) + mark("psu", 2, c.x1 - 2 - pw, y, pw, h);
   const fx0 = c.x0 + 2 + pw + 3;
   const fw = (c.x1 - 2 - pw - 3 - fx0 - 3 * 2) / 4;
-  for (let i = 0; i < 4; i++) s += fanModule(fx0 + i * (fw + 2), y, fw, h, { handle, label: `FAN${i + 1}` });
+  for (let i = 0; i < 4; i++) s += fanModule(fx0 + i * (fw + 2), y, fw, h, { handle, label: `FAN${i + 1}` }) + mark("fan", i + 1, fx0 + i * (fw + 2), y, fw, h);
   return svgDoc(1, `Arista ${model}, power side (schematic)`, s);
 }
 
@@ -452,7 +464,8 @@ export function crs354Front() {
   let x = c.x0 + 4;
   // console over management, reset
   s += rj45(x, yTop, { w: 11.4, h: 9.6, up: true, leds: false });
-  s += rj45(x, yBot, { w: 11.4, h: 9.6, up: false });
+  // RouterOS names the management port ether49.
+  s += rj45(x, yBot, { w: 11.4, h: 9.6, up: false }) + mark("port", "ether49", x, yBot, 11.4, 9.6);
   s += text(x + 5.7, yTop - 2, "SERIAL", { size: 1.4, anchor: "middle" });
   s += text(x + 5.7, yBot + 12.2, "MGMT", { size: 1.4, anchor: "middle" });
   s += pinhole(x + 15.6, 15) + text(x + 15.6, 19.4, "RST", { size: 1.3, anchor: "middle" });
@@ -466,8 +479,8 @@ export function crs354Front() {
     for (let col = 0; col < 4; col++) {
       const n = grp * 8 + col * 2 + 1;
       const px = x + col * pitch;
-      s += rj45(px, yTop, { w: 11.8, h: 9.6, up: true });
-      s += rj45(px, yBot, { w: 11.8, h: 9.6, up: false });
+      s += rj45(px, yTop, { w: 11.8, h: 9.6, up: true }) + mark("port", `ether${n}`, px, yTop, 11.8, 9.6);
+      s += rj45(px, yBot, { w: 11.8, h: 9.6, up: false }) + mark("port", `ether${n + 1}`, px, yBot, 11.8, 9.6);
       s += text(px + 5.9, yTop - 2, String(n), { size: 1.7, anchor: "middle" });
       s += text(px + 5.9, yBot + 12.2, String(n + 1), { size: 1.7, anchor: "middle" });
     }
@@ -478,11 +491,14 @@ export function crs354Front() {
   for (let col = 0; col < 2; col++) {
     const px = x + col * 14.4;
     s += sfp(px, yTop, { w: 13.4, h: 9.6, up: true }) + sfp(px, yBot, { w: 13.4, h: 9.6, up: false });
+    s += mark("port", `sfp-sfpplus${col * 2 + 1}`, px, yTop, 13.4, 9.6) + mark("port", `sfp-sfpplus${col * 2 + 2}`, px, yBot, 13.4, 9.6);
     s += text(px + 6.7, yTop - 2, `S${col * 2 + 1}`, { size: 1.6, anchor: "middle" });
     s += text(px + 6.7, yBot + 12.2, `S${col * 2 + 2}`, { size: 1.6, anchor: "middle" });
   }
   x += 2 * 14.4 + 2.4;
   s += qsfp(x, yTop, { w: 18.8, h: 9.6, up: true }) + qsfp(x, yBot, { w: 18.8, h: 9.6, up: false });
+  // RouterOS names the lanes of a QSFP+ qsfpplus1-1 to qsfpplus1-4.
+  s += mark("port", "qsfpplus1", x, yTop, 18.8, 9.6) + mark("port", "qsfpplus2", x, yBot, 18.8, 9.6);
   s += text(x + 9.4, yTop - 2, "Q1", { size: 1.6, anchor: "middle" }) + text(x + 9.4, yBot + 12.2, "Q2", { size: 1.6, anchor: "middle" });
   s += text(c.x1 - 3, 41.6, "CRS354-48G-4S+2Q+RM", { size: 1.9, anchor: "end" });
   return svgDoc(1, "MikroTik CRS354-48G-4S+2Q+RM, front (schematic)", s);
@@ -500,11 +516,13 @@ export function crs354Rear() {
   s += rect(c.x1 - 64, y, 60, h, { fill: "#b7bbc1", rx: 0.8, stroke: "#8a8f95", "stroke-width": 0.3 });
   s += text(c.x1 - 34, y + h - 3, "AC 2", { size: 1.8, anchor: "middle" });
   s += c14(c.x0 + 27.5, y + 13.8) + c14(c.x1 - 40.5, y + 13.8);
+  // RouterOS reports the two integrated supplies as psu1 and psu2.
+  s += mark("psu", 1, c.x0 + 4, y, 60, h) + mark("psu", 2, c.x1 - 64, y, 60, h);
   const fx0 = c.x0 + 100;
   const span = c.x1 - 100 - fx0;
   for (let i = 0; i < 3; i++) {
     const cx = fx0 + (span * (i + 0.5)) / 3;
-    s += circle(cx, y + h / 2, 17.4, { fill: "url(#hexdark)", stroke: "#4a4e54", "stroke-width": 0.6 });
+    s += circle(cx, y + h / 2, 17.4, { fill: "url(#hexdark)", stroke: "#4a4e54", "stroke-width": 0.6 }) + mark("fan", i + 1, cx - 17.4, y + h / 2 - 17.4, 34.8, 34.8);
     s += circle(cx, y + h / 2, 4.2, { fill: "#4a4f55" });
   }
   s += circle(c.x0 + 80, y + h / 2, 2.2, { fill: "#7c8188", stroke: "#4a4e54", "stroke-width": 0.4 });
