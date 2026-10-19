@@ -1,0 +1,32 @@
+---
+# Written by the trica project (Apache-2.0); the face images are trica drawings
+# (CC0-1.0, sources in drawings/, generator in scripts/devicetype-faces/catalogue.mjs).
+#
+# NetApp DS2246 disk shelf, from the NetApp installation and service guide for DS4246,
+# DS2246, DS4486 and DS4243 shelves: 2U, 24 x 2.5in drives, 2 power supplies, two IOM6
+# modules (two SAS ports and two ACP ports each). Upstream has no DS2246.
+manufacturer: NetApp
+model: DS2246
+slug: netapp-ds2246
+u_height: 2
+is_full_depth: true
+airflow: front-to-rear
+comments: 'NetApp Installation and Service Guide for DS4243, DS2246, DS4486 and DS4246 disk shelves'
+power-ports:
+  - name: PSU1
+    type: iec-60320-c14
+  - name: PSU2
+    type: iec-60320-c14
+interfaces:
+  - name: IOM A ACP 1
+    type: 100base-tx
+    mgmt_only: true
+  - name: IOM A ACP 2
+    type: 100base-tx
+    mgmt_only: true
+  - name: IOM B ACP 1
+    type: 100base-tx
+    mgmt_only: true
+  - name: IOM B ACP 2
+    type: 100base-tx
+    mgmt_only: true

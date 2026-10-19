@@ -79,9 +79,11 @@ func TestChoicesOfTheEmbeddedLibrary(t *testing.T) {
 			}
 		}
 	}
-	// A variant's own name lists no other chassis: the R330 8SFF is not a 4LFF.
-	if have := slugs(ix.Choices("Dell", "PowerEdge R330 8 x 2.5in hot-plug", "").Candidates); len(have) != 1 {
-		t.Errorf("candidates of an exact variant %v, want itself only", have)
+	// A variant's own name is certain; its file names the generic model
+	// (variant_of), so its siblings stay candidates for a change.
+	if ch := ix.Choices("Dell", "PowerEdge R330 8 x 2.5in hot-plug", ""); !ch.Certain ||
+		!slices.Equal(slugs(ch.Candidates), []string{"dell-poweredge-r330", "dell-poweredge-r330-4lff-cabled", "dell-poweredge-r330-4lff-hot-plug", "dell-poweredge-r330-8sff"}) {
+		t.Errorf("an exact variant: certain %v, candidates %v", ch.Certain, slugs(ch.Candidates))
 	}
 	// A family is the vendor's only.
 	for _, c := range ix.Choices("Dell", "PowerEdge R330", "").Candidates {
@@ -250,5 +252,35 @@ func TestDeclaredChassisSurvivesLaterCollections(t *testing.T) {
 	}
 	if rels := instanceOf(t, s, dev); len(rels) != 1 || rels[0].Source != devicetypes.Source {
 		t.Fatalf("after the withdrawal: %+v, want the library's match again", rels)
+	}
+}
+
+// The catalogue curates its families with variant_of: a server reporting
+// "ProLiant DL380 Gen10" is offered the generic model and its four chassis,
+// not the DL380 Gen10 Plus whose name only shares the words; a family nobody
+// curates (the DL180 Gen9 cages, an airflow pair) is still found by name.
+func TestChoicesOfACuratedFamily(t *testing.T) {
+	ix := defaultIndex(t)
+	for _, c := range []struct {
+		vendor, model string
+		want, not     []string
+	}{
+		{"HPE", "ProLiant DL380 Gen10", []string{"hpe-proliant-dl380-gen10", "hpe-proliant-dl380-gen10-8lff", "hpe-proliant-dl380-gen10-8sff", "hpe-proliant-dl380-gen10-12lff", "hpe-proliant-dl380-gen10-24sff"}, []string{"hpe-proliant-dl380-gen10-plus"}},
+		{"HPE", "ProLiant DL360 Gen10", []string{"hpe-proliant-dl360-gen10", "hpe-proliant-dl360-gen10-4lff", "hpe-proliant-dl360-gen10-8sff"}, []string{"hpe-proliant-dl360-gen10-plus"}},
+		{"Dell Inc.", "PowerEdge R730xd", []string{"dell-poweredge-r730xd", "dell-poweredge-r730xd-12lff", "dell-poweredge-r730xd-24sff"}, nil},
+		{"HPE", "ProLiant DL380 Gen10 Plus", []string{"hpe-proliant-dl380-gen10-plus"}, []string{"hpe-proliant-dl380-gen10"}},
+		{"HPE", "ProLiant DL180 Gen9", []string{"hpe-proliant-dl180-gen9-8sff", "hpe-proliant-dl180-gen9-12lff"}, nil},
+	} {
+		got := slugs(ix.Choices(c.vendor, c.model, "").Candidates)
+		for _, w := range c.want {
+			if !slices.Contains(got, w) {
+				t.Errorf("%s: candidates %v lack %s", c.model, got, w)
+			}
+		}
+		for _, n := range c.not {
+			if slices.Contains(got, n) {
+				t.Errorf("%s: candidates %v hold %s", c.model, got, n)
+			}
+		}
 	}
 }

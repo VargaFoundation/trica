@@ -26,15 +26,18 @@ trica embeds, unchanged, device model files from:
     https://github.com/netbox-community/devicetype-library
     licence checked 2026-10-14, master at 565a9ba8e0a68a4fa102ce4b35f30c6695a2d574
     files: internal/devicetypes/library/<Vendor>/ (every directory but "trica",
-    "elevation-images" and "drawings"); Arista/DCS-7050SX-64-F.yaml, -R.yaml and
-    Dell/PowerEdge-R330.yaml copied at master 37f5f02c27eedf60767594174598daec5b9e2bee
+    "elevation-images", "drawings" and "layouts"); Arista/DCS-7050SX-64-F.yaml, -R.yaml and
+    Dell/PowerEdge-R330.yaml copied at master 37f5f02c27eedf60767594174598daec5b9e2bee;
+    the models added by the catalogue (docs/reference/devicetypes.md, "Catalogue")
+    copied at master 9510b3cc3c9fca781ec09b61ef5ca2f3a00cdb39, licence checked 2026-10-19
 
 and device face images from the same repository, scaled down and recompressed
 (CC0 allows it; the list and the changes are in
 internal/devicetypes/library/README.md):
 
   netbox-community/devicetype-library   CC0-1.0 (public domain dedication)
-    licence checked 2026-10-17, master at 37f5f02c27eedf60767594174598daec5b9e2bee
+    licence checked 2026-10-17, master at 37f5f02c27eedf60767594174598daec5b9e2bee,
+    and 2026-10-19, master at 9510b3cc3c9fca781ec09b61ef5ca2f3a00cdb39 (the catalogue)
     files: internal/devicetypes/library/elevation-images/ (those without a source
     in internal/devicetypes/library/drawings/)
 

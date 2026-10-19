@@ -97,8 +97,10 @@ func hasWordPrefix(ws, prefix []string) bool {
 // The family of a device is the models of its vendor whose name starts, word
 // for word, with the name the device reports ("PowerEdge R330 8 x 2.5in
 // hot-plug" for "PowerEdge R330"; "DCS-7050SX-64-F" for "DCS-7050SX-64"),
-// the match itself, and the models a variant_of links to any of them. A
-// family larger than MaxCandidates is no family: the name is too vague.
+// the match itself, and the models a variant_of links to any of them; when
+// variant_of curates the family, the models found by name alone that it does
+// not link are left out. A family larger than MaxCandidates is no family: the
+// name is too vague.
 func (ix *Index) Choices(vendor, model, partNumber string) Choice {
 	ch := Choice{Match: ix.Find(vendor, model, partNumber)}
 	ch.Candidates = ix.family(vendor, model, ch.Match)
@@ -165,6 +167,24 @@ func (ix *Index) family(vendor, model string, match *Match) []Candidate {
 		}
 		if bases[m.Slug] || (m.VariantOf != "" && bases[m.VariantOf]) {
 			found[m.Slug] = CandidateVariantOf
+		}
+	}
+	// A family some file curates with variant_of is that family: a model
+	// found by its name only, which no member names and which names none, is
+	// another product that shares the words ("ProLiant DL380 Gen10 Plus" for
+	// "ProLiant DL380 Gen10").
+	targets := map[string]bool{}
+	for slug := range found {
+		if m := ix.BySlug(slug); m != nil && m.VariantOf != "" {
+			targets[m.VariantOf] = true
+		}
+	}
+	if len(targets) > 0 {
+		for slug, how := range found {
+			m := ix.BySlug(slug)
+			if how == CandidateName && m != nil && m.VariantOf == "" && !targets[slug] && (match == nil || match.Model.Slug != slug) {
+				delete(found, slug)
+			}
 		}
 	}
 	if len(found) > MaxCandidates {

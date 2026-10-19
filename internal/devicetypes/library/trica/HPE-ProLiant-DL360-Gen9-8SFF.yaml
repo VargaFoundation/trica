@@ -12,6 +12,7 @@
 manufacturer: HPE
 model: ProLiant DL360 Gen9 8SFF
 slug: hpe-proliant-dl360-gen9-8sff
+variant_of: hpe-proliant-dl360-gen9
 part_numbers:
   - 755258-B21
 u_height: 1

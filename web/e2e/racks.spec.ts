@@ -108,7 +108,7 @@ async function cspViolations(page: Page): Promise<() => Promise<string[]>> {
 }
 
 // r20 holds library models with images (Arista 7050SX-64-R and 7280SE-64-F, HPE DL380 Gen10 and
-// DL360 Gen9), library models without (7050TX-48, the pfSense appliance, DL380 Gen9), devices with
+// DL360 Gen9), library models without (CCR1036-8G-2S+, the pfSense appliance, DL380 Gen9), devices with
 // no model at all, and every health. The images come from the device-type library through the API,
 // with the token, under img-src 'self': no blob: or data: URL.
 test("devices show their model's picture, else a face drawn for their role, and their health", async ({ page }) => {
@@ -186,6 +186,38 @@ for (const theme of ["dark", "light"] as const) {
         await page.waitForTimeout(300);
         await page.screenshot({ path: `${SHOTS}/rack-drawn-faces-${theme}.png`, fullPage: true });
         await front.screenshot({ path: `${SHOTS}/rack-drawn-faces-front-${theme}.png`, scale: "device" });
+      }
+    });
+  });
+}
+
+// r23 holds a sample of the device-type catalogue (docs/reference/devicetypes.md, "Catalogue"):
+// upstream photographs and faces the project drew, servers, switches, a firewall, storage and
+// power. Every front is painted from its picture. With TRICA_E2E_SHOTS=<dir> the rack is saved
+// as a picture, in both themes.
+const catalogue = ["sw-c1", "sw-c2", "sw-c3", "sw-c4", "sw-c5", "fw-c1", "srv-c1", "srv-c2", "srv-c3", "srv-c4", "srv-c5", "srv-c6", "srv-c7", "srv-c8", "srv-c9", "nas-c1", "nas-c2", "pdu-c1", "ups-c1", "ups-c2"];
+for (const theme of ["dark", "light"] as const) {
+  test.describe(`${theme} theme`, () => {
+    test.use({ colorScheme: theme, viewport: { width: 1400, height: 1600 } });
+    test("a sample of the catalogue is painted from its faces", async ({ page }) => {
+      await signInWithToken(page, `/racks/${ID.r23}`);
+      const front = page.locator('svg[data-face="front"]');
+      for (const name of catalogue) {
+        const slot = front.locator(`a.rack-slot[aria-label^="${name},"]`);
+        await expect(slot, name).toHaveAttribute("data-face-drawn", "image");
+        const painted = await slot.locator("canvas").evaluate((c: HTMLCanvasElement) => {
+          const d = (c.getContext("2d") as CanvasRenderingContext2D).getImageData(0, 0, c.width, c.height).data;
+          let opaque = 0;
+          for (let i = 3; i < d.length; i += 4) if ((d[i] ?? 0) > 0) opaque++;
+          return opaque / (c.width * c.height);
+        });
+        expect(painted, name).toBeGreaterThan(0.8);
+      }
+      if (SHOTS) {
+        await page.waitForTimeout(300);
+        await page.screenshot({ path: `${SHOTS}/rack-catalogue-${theme}.png`, fullPage: true });
+        await front.screenshot({ path: `${SHOTS}/rack-catalogue-front-${theme}.png`, scale: "device" });
+        await page.locator('svg[data-face="rear"]').screenshot({ path: `${SHOTS}/rack-catalogue-rear-${theme}.png`, scale: "device" });
       }
     });
   });
