@@ -11,6 +11,7 @@ import type {
   BatchOutcome,
   Change,
   DecisionOutcome,
+  DeviceFaces,
   Discrepancy,
   Me,
   ObjectView,
@@ -49,6 +50,9 @@ export const api = {
     request<Page<RelationLink>>("/relations", { query: q, signal }),
   /** The live overlay of the topology: throughput and link state per interface id (ADR 0041). */
   liveTopology: (signal?: AbortSignal) => request<LiveTopology>("/topology/live", { signal }),
+  /** The faces of a device's model with its parts in place (ADR 0047). */
+  objectFaces: (id: string, signal?: AbortSignal) =>
+    request<DeviceFaces>(`/objects/${encodeURIComponent(id)}/faces`, { signal }),
   /** The devices mounted in a rack, with position, face, model, height and depth. */
   rackContents: (id: string, q: Paging = {}, signal?: AbortSignal) =>
     request<Page<RackItem>>(`/racks/${encodeURIComponent(id)}/contents`, { query: q, signal }),

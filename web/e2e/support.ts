@@ -5,7 +5,7 @@ import { expect, type Page } from "@playwright/test";
 export const API_TOKEN = "e2e-api-token";
 
 export const oid = (n: number): string => `0a000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
-export const ID = { site: oid(1), r12: oid(2), r13: oid(3), r48: oid(4), r20: oid(7), r21: oid(8), room: oid(16), swA1: oid(0xa1), srv01: oid(0xb1) };
+export const ID = { site: oid(1), r12: oid(2), r13: oid(3), r48: oid(4), r20: oid(7), r21: oid(8), room: oid(16), swA1: oid(0xa1), srv01: oid(0xb1), srvP1: oid(0x4c2) };
 
 /** Opens `path` and signs in with the pasted API token; the address is kept, so the page asked for opens. */
 export async function signInWithToken(page: Page, path = "/"): Promise<void> {

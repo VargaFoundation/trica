@@ -4723,6 +4723,70 @@
         ],
         "type": "object"
       },
+      "DeviceFace": {
+        "properties": {
+          "face": {
+            "type": "string"
+          },
+          "height": {
+            "type": "number"
+          },
+          "image": {
+            "type": "string"
+          },
+          "layout_origin": {
+            "type": "string"
+          },
+          "spots": {
+            "items": {
+              "$ref": "#/components/schemas/FaceSpot"
+            },
+            "type": "array"
+          },
+          "width": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "face",
+          "height",
+          "image",
+          "spots",
+          "width"
+        ],
+        "type": "object"
+      },
+      "DeviceFaces": {
+        "properties": {
+          "faces": {
+            "items": {
+              "$ref": "#/components/schemas/DeviceFace"
+            },
+            "type": "array"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "model_name": {
+            "type": "string"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/FacePart"
+            },
+            "type": "array"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "faces",
+          "parts",
+          "truncated"
+        ],
+        "type": "object"
+      },
       "Discrepancy": {
         "properties": {
           "closed_at": {
@@ -4775,6 +4839,58 @@
           "last_seen",
           "opened_at",
           "status"
+        ],
+        "type": "object"
+      },
+      "FacePart": {
+        "properties": {
+          "face": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "part": {
+            "$ref": "#/components/schemas/Object"
+          },
+          "spot": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "part"
+        ],
+        "type": "object"
+      },
+      "FaceSpot": {
+        "properties": {
+          "h": {
+            "type": "number"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "w": {
+            "type": "number"
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "h",
+          "kind",
+          "name",
+          "w",
+          "x",
+          "y"
         ],
         "type": "object"
       },
@@ -8088,6 +8204,79 @@
           }
         },
         "summary": "One object, now or as of a date.",
+        "tags": [
+          "inventory"
+        ],
+        "x-trica-action": "read"
+      }
+    },
+    "/objects/{id}/faces": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "getObjectFaces",
+        "parameters": [
+          {
+            "description": "Object id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size, 1 to 1000 (default 50).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items to skip (default 0).",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceFaces"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "The faces of a device's model with its parts in place: the images of the faces, the spots the device-type library knows on them (bays, power supplies, fans, ports, slots), and the device's parts the caller may read, each with the spot it goes in or none when its name does not say. Parts are listed only for the kinds the faces have spots for; absent parts are left out. Empty when the device has no model with images.",
         "tags": [
           "inventory"
         ],

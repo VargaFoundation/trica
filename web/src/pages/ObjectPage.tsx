@@ -20,6 +20,7 @@ import { NotFoundPage } from "./NotFoundPage";
 import { ApiError } from "../api/client";
 import { Measurements } from "../charts/Measurements";
 import { FirmwareSection } from "../firmware/FirmwareCard";
+import { DeviceFacesSection } from "../faces/DeviceFaces";
 import { DevicePlacement } from "../edit/DevicePlacement";
 import { EditPanel, useCanDeclare } from "../edit/EditPanel";
 import { ObjectForm } from "../edit/ObjectForm";
@@ -186,6 +187,7 @@ function ObjectDetail({ obj }: { obj: ObjectView }) {
           <>
             {CONTAINER_TYPES.includes(obj.type) ? <EditContainer obj={obj} /> : null}
             <OverviewSection obj={obj} lookup={lookup} onProvenance={() => setTab("provenance")} />
+            <DeviceFacesSection obj={obj} lookup={lookup} />
             <Measurements obj={obj} lookup={lookup} />
             <FirmwareSection obj={obj} lookup={lookup} />
             {obj.type === "device" ? <DevicePlacement device={obj} /> : null}

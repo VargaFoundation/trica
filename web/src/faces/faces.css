@@ -1,0 +1,151 @@
+/* A device's faces with its parts in place (DeviceFaces.tsx). The theme's
+   --trica-* tokens only, the hues of the health pills: a spot's colour repeats
+   what its accessible name and the panel say in words. */
+
+.faces-summary {
+  color: var(--trica-ink-muted);
+  margin: 0 0 0.75rem;
+}
+.faces-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
+  gap: 1rem;
+  align-items: start;
+}
+@media (max-width: 60rem) {
+  .faces-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.device-face {
+  margin: 0 0 0.75rem;
+}
+.device-face figcaption {
+  font-size: 0.8rem;
+  color: var(--trica-ink-muted);
+  margin-bottom: 0.25rem;
+}
+.device-face-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--trica-radius-control);
+}
+.device-face-svg .rack-face-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.device-face-plate {
+  fill: var(--trica-surface-muted);
+  stroke: var(--trica-line-strong);
+  stroke-width: 0.5;
+}
+
+/* A spot: a tinted frame over the image. */
+.face-spot rect {
+  fill-opacity: 0.35;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+a.face-spot {
+  cursor: pointer;
+}
+a.face-spot:focus {
+  outline: none;
+}
+.face-spot-ok rect,
+.face-spot-up rect,
+rect.face-spot-ok,
+rect.face-spot-up {
+  fill: var(--trica-ok-soft);
+  stroke: var(--trica-ok-solid);
+}
+.face-spot-warning rect,
+rect.face-spot-warning {
+  fill: var(--trica-warn-soft);
+  stroke: var(--trica-warn-solid);
+  stroke-width: 2;
+}
+.face-spot-critical rect,
+rect.face-spot-critical {
+  fill: var(--trica-danger-soft);
+  stroke: var(--trica-danger-solid);
+  stroke-width: 2;
+}
+.face-spot-down rect,
+.face-spot-unknown rect,
+rect.face-spot-down,
+rect.face-spot-unknown {
+  fill: var(--trica-neutral-soft);
+  stroke: var(--trica-neutral-solid);
+}
+.face-spot-empty rect,
+rect.face-spot-empty {
+  fill: none;
+  stroke: var(--trica-neutral-solid);
+  stroke-dasharray: 3 2;
+}
+.face-spot-active rect,
+a.face-spot:hover rect,
+a.face-spot:focus-visible rect {
+  fill-opacity: 0.6;
+  stroke: var(--trica-focus);
+  stroke-width: 3;
+}
+
+.faces-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--trica-ink-muted);
+}
+.faces-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.faces-legend rect {
+  fill-opacity: 0.6;
+}
+
+.faces-details {
+  border: 1px solid var(--trica-line);
+  border-radius: var(--trica-radius-surface);
+  background: var(--trica-surface-muted);
+  padding: 0.75rem 0.9rem;
+  min-height: 6rem;
+}
+.faces-details h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.4rem;
+}
+.faces-details .facts {
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  margin-top: 0.5rem;
+}
+.faces-part + .faces-part {
+  margin-top: 0.75rem;
+}
+.faces-part p {
+  margin: 0;
+}
+
+.faces-unplaced h3 {
+  font-size: 0.95rem;
+  margin: 1rem 0 0.25rem;
+}
+.faces-unplaced ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+}
+.faces-unplaced li > * {
+  margin-right: 0.5rem;
+}
+.faces-unplaced li .key {
+  display: inline;
+}

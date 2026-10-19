@@ -18,6 +18,31 @@ export const U = 44.45;
 /** Round to 0.01 mm so that the output does not depend on float noise. */
 export const r = (v) => Math.round(v * 100) / 100;
 
+// Spots: where the parts a device reports sit on a face (drive bays, power
+// supplies, fans, ports, expansion slots), in the face's millimetres. A face
+// function marks them beside what it draws (s += mark(...)); generate.mjs
+// writes them next to the drawing, under library/layouts, and the object page
+// lays the device's parts over the image with them (ADR 0047). Marking draws
+// nothing: the SVG bytes are the same with or without it.
+let marks = null;
+
+/** Marks a spot of kind bay, psu, fan, port or slot; returns "". */
+export function mark(kind, name, x, y, w, h) {
+  if (marks) marks.push({ kind, name: String(name), x: r(x), y: r(y), w: r(w), h: r(h) });
+  return "";
+}
+
+/** Runs a face function and returns its SVG with the spots it marked. */
+export function withMarks(draw) {
+  marks = [];
+  try {
+    const svg = draw();
+    return { svg, spots: marks };
+  } finally {
+    marks = null;
+  }
+}
+
 const attrs = (o) =>
   Object.entries(o)
     .filter(([, v]) => v !== undefined && v !== null && v !== false)

@@ -12,6 +12,7 @@ const pages: { name: string; path: string; heading: RegExp; also?: RegExp }[] = 
   { name: "object provenance", path: `/objects/${ID.swA1}?tab=provenance`, heading: /^sw-a1$/, also: /declared:lab-file/ },
   { name: "object relations", path: `/objects/${ID.swA1}?tab=relations`, heading: /^sw-a1$/, also: /r12/ },
   { name: "object history", path: `/objects/${ID.swA1}?tab=history`, heading: /^sw-a1$/, also: /Hostname set to sw-a1/ },
+  { name: "object with its faces", path: `/objects/${ID.srvP1}`, heading: /^srv-p1$/, also: /Front and rear/ },
   { name: "discrepancies", path: "/discrepancies", heading: /^Discrepancies$/, also: /os_version|OS version/ },
   { name: "proposals", path: "/proposals", heading: /^Proposals$/ },
   { name: "proposal", path: "/proposals/12", heading: /./, also: /Record the rack unit of sw-a1/ },

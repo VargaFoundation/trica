@@ -25,16 +25,18 @@ func (w *Wiring) library(d server.Deps) *devicetypes.Index {
 		for _, warn := range lib.Warnings {
 			d.Log.Warn("device type library: operator directory", "detail", warn)
 		}
-		images := 0
+		images, layouts := 0, 0
 		for _, m := range lib.Models {
-			if m.FrontImage != nil {
-				images++
-			}
-			if m.RearImage != nil {
-				images++
+			for _, face := range []string{devicetypes.Front, devicetypes.Rear} {
+				if m.Image(face) != nil {
+					images++
+				}
+				if m.Layout(face) != nil {
+					layouts++
+				}
 			}
 		}
-		d.Log.Info("device type library loaded", "models", len(lib.Models), "images", images,
+		d.Log.Info("device type library loaded", "models", len(lib.Models), "images", images, "layouts", layouts,
 			"extra_dir", w.cfg.DeviceTypes.ExtraDir)
 		w.lib = devicetypes.NewIndex(lib.Models)
 	})
@@ -57,7 +59,14 @@ func (i Images) DeviceTypeImage(slug, face string) (api.DeviceImage, bool) {
 	if img == nil {
 		return api.DeviceImage{}, false
 	}
-	return api.DeviceImage{ContentType: img.ContentType, ETag: img.ETag, Data: img.Data}, true
+	out := api.DeviceImage{ContentType: img.ContentType, ETag: img.ETag, Data: img.Data}
+	if l := m.Layout(face); l != nil {
+		out.Layout = &api.FaceLayout{Width: l.WidthMM, Height: l.HeightMM, Origin: l.Origin, Spots: make([]api.FaceSpot, len(l.Spots))}
+		for i, sp := range l.Spots {
+			out.Layout.Spots[i] = api.FaceSpot{Kind: sp.Kind, Name: sp.Name, X: sp.X, Y: sp.Y, W: sp.W, H: sp.H}
+		}
+	}
+	return out, true
 }
 
 // runDeviceTypes matches the inventory's devices against the device type

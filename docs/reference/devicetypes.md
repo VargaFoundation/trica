@@ -88,6 +88,46 @@ sources are in `library/drawings/`, the generator in `scripts/devicetype-faces/`
 (`node scripts/devicetype-faces/generate.mjs --png`, in the Playwright image the e2e suite
 pins); such an image reports the origin `trica` even for an upstream model.
 
+## Where the parts sit
+
+A face image may have a **layout**: `layouts/<manufacturer>/<slug>.<face>.json`, the places of the
+parts on it. Decision: [ADR 0047](../adr/0047-parts-placed-on-device-faces.md). The object page of a
+device draws them with the parts the collectors report (`GET /objects/{id}/faces`).
+
+```json
+{
+  "width_mm": 482.6, "height_mm": 44.45,
+  "spots": [
+    {"kind": "bay", "name": "1:1", "x": 29.35, "y": 2.4, "w": 70.2, "h": 19.4},
+    {"kind": "psu", "name": "1",   "x": 335.15, "y": 2.2, "w": 60, "h": 39.6}
+  ]
+}
+```
+
+- `width_mm` and `height_mm` are the size of the whole image in the units of the spots
+  (millimetres for the project's drawings; for a photograph, its pixels work as well). A spot's
+  box is from the top left of the image and must be inside it; 1 to 512 spots, at most 256 KiB,
+  no other field, no two spots of one kind with the same name.
+- `kind` is `bay`, `psu`, `fan`, `port` or `slot`; `name` is how the device numbers that place,
+  which is what the rules below read.
+- The project's layouts are generated with its drawings (`scripts/devicetype-faces`). Upstream
+  photographs have none; the object page shows them without spots.
+
+| Part | Goes in | From |
+|---|---|---|
+| `disk` | `bay` `<box>:<bay>` | its `slot`, then its name: `Port=1I:Box=3:Bay=5` (iLO 5), `1I:1:3` (iLO 4), `3:5` |
+| `disk` | `bay` `<n>` | `Solid State Disk 0:1:2` (iDRAC, last number), `Disk.Bay.2` (iDRAC FQDD), `Bay 2` |
+| `psu` | `psu` `<n>` | the last number of its name, plus one when one of the device's power supplies is numbered 0 (iLO 5 counts from 0, the chassis from 1) |
+| `fan` | `fan` `<n>` | the first number of its name; only fans directly under the device (a power supply's fan is not on the face) |
+| `interface` (kind empty, `physical` or `bmc`) | `port` | its own name (`Ethernet12`, `ether3`), then without a breakout lane (`Ethernet49/1` → `Ethernet49`), `bmc` for the BMC, `nic<n>` for `eno<n>`, `NIC.Embedded.<n>-…`, `NIC.Integrated.1-<n>…` |
+| `interface` | `slot` `<n>` | `ens<n>` (and `ens<n>d<m>`), `NIC.Slot.<n>-…` |
+
+A name none of these read leaves the part **unplaced**: listed under the drawing, never put in a
+place by count. In an operator directory, a layout goes in `layouts/` like the embedded ones; an
+operator image that replaces a face drops that face's embedded layout (its spots fit the drawing,
+not the photograph) unless the directory has a layout for it too. A layout no model and image use
+is logged at start and ignored.
+
 ## Your own models and images
 
 Set `devicetypes.extra_dir` (or `TRICA_DEVICETYPES_EXTRA_DIR`) to a directory laid out like the
@@ -100,6 +140,8 @@ library; the server reads it at start, after the embedded library, and its files
 └── elevation-images/
     ├── HPE/hpe-proliant-dl380-gen9.front.jpg       # a photograph where the library has none
     └── Arista/arista-dcs-7050sx-64-r.front.png     # replaces the embedded drawing
+└── layouts/
+    └── HPE/hpe-proliant-dl380-gen9.front.json      # where the bays are on that photograph
 ```
 
 | What you add | Effect |
@@ -121,5 +163,7 @@ plenty; it is stretched to the U box, so a crop with the chassis' own proportion
 
 The server runs `Sync` at start, after the migrations, then every `deduce.interval`
 ([configuration](configuration.md)). Module bays are ignored; no model is picked by hand in the
-UI. Images are not reloaded without a restart, and the export PDF holds the images as part of its
+UI. Parts are not placed from HPE Redfish NIC names (`1`..`8`), a FlexibleLOM seen as `eno49`, or a
+power supply's `BayNumber`; the Dell R330 variants and the DL180 Gen9 LFF fronts have no layout
+reachable today (ADR 0047). Images are not reloaded without a restart, and the export PDF holds the images as part of its
 picture, not as separate objects.
