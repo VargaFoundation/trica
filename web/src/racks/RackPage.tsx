@@ -23,6 +23,9 @@ import { ObjectForm } from "../edit/ObjectForm";
 import { PlaceDeviceForm } from "../edit/PlaceDeviceForm";
 import { useFloorContext, useRoomOf } from "../edit/useFloor";
 import type { Face } from "./layout";
+import { AisleSection } from "../aisles/AisleSection";
+import { AirflowPill } from "../aisles/Airflow";
+import { aisleOf, faceAisle } from "../aisles/aisles";
 
 type Panel = { kind: "place"; u?: number; face?: Face } | { kind: "edit" } | null;
 
@@ -88,6 +91,7 @@ function Rack({ rack }: { rack: ObjectView }) {
           {t("rack.assumedHeight", { units: number(uHeight) })}
         </p>
       ) : null}
+      <AisleSection rack={rack} items={contents.data?.items} />
       <Async query={contents}>
         {(c) => <Elevations rack={rack} uHeight={uHeight} contents={c} onPick={canMount ? (u, face) => setPanel({ kind: "place", u, face }) : undefined} />}
       </Async>
@@ -118,6 +122,7 @@ function Elevations({
 }) {
   const { t, tp, number } = useI18n();
   const layout = useMemo(() => layoutRack(uHeight, contents.items), [uHeight, contents.items]);
+  const frontAisle = aisleOf(rack.attributes?.front_aisle);
   const rows = useMemo(
     () => [...layout.front, ...layout.rear].filter((s) => !s.shadow).sort((a, b) => b.bottom - a.bottom || a.item.name.localeCompare(b.item.name)),
     [layout],
@@ -151,13 +156,17 @@ function Elevations({
       <div className="rack-faces">
         {(["front", "rear"] as const).map((face) => (
           <figure key={face} className="rack-face">
-            <figcaption>{t(face === "front" ? "rack.front" : "rack.rear")}</figcaption>
+            <figcaption>
+              {t(face === "front" ? "rack.front" : "rack.rear")}
+              <FaceAisle aisle={faceAisle(frontAisle, face)} />
+            </figcaption>
             <RackElevation rack={rack.display} uHeight={uHeight} face={face} slots={layout[face]} onPick={onPick} />
           </figure>
         ))}
       </div>
       <p className="hint">{t("rack.legend")}</p>
       <p className="hint">{t("rack.facesLegend")}</p>
+      {frontAisle ? <p className="hint">{t("aisle.legend")}</p> : null}
       {onPick ? <p className="hint">{t("edit.place.clickHint")}</p> : null}
       <ExportButtons
         basename={`trica-rack-${fileSlug(rack.display)}`}
@@ -208,6 +217,7 @@ function Elevations({
                 <th scope="col">{t("rack.col.face")}</th>
                 <th scope="col">{t("rack.col.height")}</th>
                 <th scope="col">{t("health.label")}</th>
+                <th scope="col">{t("airflow.label")}</th>
                 <th scope="col">{t("rack.col.notes")}</th>
               </tr>
             </thead>
@@ -240,6 +250,9 @@ function Row({ slot: s }: { slot: Slot }) {
       <td data-label={t("health.label")}>
         <HealthPill value={overallHealth(s.item)} />
       </td>
+      <td data-label={t("airflow.label")} data-airflow={s.item.airflow?.status ?? "unknown"}>
+        <AirflowPill check={s.item.airflow} />
+      </td>
       <td data-label={t("rack.col.notes")}>
         {s.issues.length === 0 && !s.item.variantUncertain ? "—" : s.issues.map((i) => t(ISSUE_TEXT[i])).join(" · ")}
         {s.item.variantUncertain ? (
@@ -253,5 +266,16 @@ function Row({ slot: s }: { slot: Slot }) {
         ) : null}
       </td>
     </tr>
+  );
+}
+
+/** The aisle a face of the rack is on, as a chip in the elevation's caption. */
+function FaceAisle({ aisle }: { aisle?: "cold" | "hot" }) {
+  const { t } = useI18n();
+  if (!aisle) return null;
+  return (
+    <span className={`aisle-chip aisle-${aisle}`} data-aisle={aisle}>
+      {t(aisle === "cold" ? "aisle.cold" : "aisle.hot")}
+    </span>
   );
 }

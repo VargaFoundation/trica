@@ -1,0 +1,147 @@
+/* Hot and cold aisles, and the airflow check (ADR 0049). Colours come from
+   the theme's --trica-* tokens only, so both themes hold: the cold aisle is
+   the info hue (blue), the hot aisle the danger hue (red), a device that takes
+   its air in from the hot aisle the warn hue (amber). Every colour repeats a
+   word said next to it or in the accessible name. */
+
+.aisle-chip {
+  display: inline-block;
+  padding: 0 0.5rem;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+.aisle-chip.aisle-cold {
+  background: var(--trica-info-soft);
+  border-color: var(--trica-info-line);
+  color: var(--trica-info-ink);
+}
+.aisle-chip.aisle-hot {
+  background: var(--trica-danger-soft);
+  border-color: var(--trica-danger-line);
+  color: var(--trica-danger-ink);
+}
+
+/* The elevation's caption names the aisle of its face. */
+.rack-face figcaption .aisle-chip {
+  margin-left: 0.35rem;
+}
+
+/* The side view of the rack: the two aisles and the air going through. */
+.airflow-diagram {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.5rem 0;
+}
+.airflow-diagram .aisle-zone-cold {
+  fill: var(--trica-info-soft);
+  stroke: var(--trica-info-line);
+}
+.airflow-diagram .aisle-zone-hot {
+  fill: var(--trica-danger-soft);
+  stroke: var(--trica-danger-line);
+}
+.airflow-diagram .airflow-rack {
+  fill: var(--trica-surface-muted);
+  stroke: var(--trica-line-strong);
+}
+.airflow-diagram .airflow-rack-name {
+  fill: var(--trica-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.airflow-diagram .airflow-arrow line {
+  stroke: var(--trica-ink-muted, var(--trica-ink));
+  stroke-width: 2;
+}
+.airflow-diagram .airflow-arrow polygon {
+  fill: var(--trica-ink-muted, var(--trica-ink));
+}
+.airflow-diagram .aisle-zone-label {
+  font-size: 11px;
+  font-weight: 600;
+}
+.airflow-diagram .aisle-zone-label-cold {
+  fill: var(--trica-info-ink);
+}
+.airflow-diagram .aisle-zone-label-hot {
+  fill: var(--trica-danger-ink);
+}
+.airflow-diagram .aisle-zone-note {
+  fill: var(--trica-ink);
+  font-size: 10px;
+}
+
+.aisle-form fieldset {
+  border: 1px solid var(--trica-line);
+  border-radius: var(--trica-radius-surface);
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+}
+.aisle-form .aisle-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-right: 1rem;
+  padding: 0.15rem 0;
+}
+
+.airflow-summary {
+  margin: 0.5rem 0;
+}
+.airflow-warnings {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem;
+}
+.airflow-parts {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+/* A device of the elevation that takes its air in from the hot aisle: an
+   amber outline and a strip on its right edge (the left one is its health). */
+.rack-slot .rack-airflow-strip {
+  fill: var(--trica-warn-solid);
+  stroke: none;
+}
+.rack-slot.rack-airflow-mismatch .rack-outline {
+  stroke: var(--trica-warn-solid);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 3;
+}
+
+/* The floor plan's aisles, drawn from the racks that open on them. */
+.floor-aisle {
+  stroke-width: 1;
+}
+.floor-aisle-cold {
+  fill: var(--trica-info-soft);
+  stroke: var(--trica-info-line);
+}
+.floor-aisle-hot {
+  fill: var(--trica-danger-soft);
+  stroke: var(--trica-danger-line);
+}
+.floor-aisle-conflict {
+  fill: var(--trica-warn-soft);
+  stroke: var(--trica-warn-solid);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+.floor-aisle-label {
+  font-size: 10px;
+  font-weight: 600;
+}
+.floor-aisle-label-cold {
+  fill: var(--trica-info-ink);
+}
+.floor-aisle-label-hot {
+  fill: var(--trica-danger-ink);
+}
+.floor-aisle-label-conflict {
+  fill: var(--trica-warn-ink);
+}

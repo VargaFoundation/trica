@@ -205,6 +205,9 @@ type RackItem struct {
 	// (GET /objects/{id}/device-type-candidates lists them, ADR 0048).
 	VariantUncertain bool `json:"variant_uncertain,omitempty"`
 	Variants         int  `json:"variants,omitempty"`
+	// Airflow is the device's airflow check against the rack's aisles: does
+	// it take its air in from the cold aisle (ADR 0049).
+	Airflow *AirflowCheck `json:"airflow,omitempty"`
 }
 
 // ChangeView is a change with its object's rights already checked.

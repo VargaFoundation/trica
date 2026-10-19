@@ -36,6 +36,17 @@ From the schema as it is (`internal/schema/builtin.yaml`): the `mounted_in` rela
 set; ADR 0030).
 
 - A **full-depth** device is drawn on its face and as a dashed shadow on the other; it blocks both.
+- **Aisles and airflow** (ADR 0049). The rack's `front_aisle` (`cold` or `hot`; the rear faces
+  the other one) names the aisle of each elevation (blue "Cold aisle", red "Hot aisle") and
+  draws the rack from the side with the air going from the cold aisle to the hot one. Every
+  device carries the server's airflow check (`airflow` of the rack contents): a device that takes
+  its air in from the hot aisle has an amber dashed outline and an amber strip on its right edge,
+  says "airflow: Reversed" in its tooltip and accessible name, and is listed with the reason above
+  the elevations; the mounted table has an Airflow column (Correct, Reversed, Not checked). The
+  floor plan draws the aisle tiles from the racks' `facing` and `front_aisle` (blue cold, red
+  hot) and marks with `!` a tile that one rack says is cold and another hot; the racks table has
+  a "Front aisle" column. A device's page has an "Airflow" card: rack, mounted face, the aisle of
+  that face, the model's, the device's and its parts' airflow, the one used, and the check.
 - A device whose chassis the library is not sure of (`variant_uncertain`, ADR 0048) says
   "variant not certain" in its tooltip, and its row in the mounted table links to the choice on
   its page; a model someone declared wins over the library's match by name.
@@ -181,6 +192,14 @@ for a caller who holds `propose` (`GET /me`); the API checks every write again.
 - Keyboard: free units and free tiles are pointer shortcuts only; the **Place a device** and **Add
   a rack** buttons open the same forms. A form opens in the page, focus moves to its title, and
   the preview and the outcome take the focus when they arrive.
+
+### Which aisle a rack faces
+
+The rack page's "Aisles and airflow" card offers, to a caller who may propose and when the
+registry has `rack.front_aisle`, one choice: "The front of this rack faces: the cold aisle | the
+hot aisle | not set". It builds a partial batch on the rack by id (`declareFrontAisle`), previewed
+then submitted like the other declarations. "Not set" withdraws only the caller's own claim; when
+the value was said by someone else the page says so and has nothing to send.
 
 ## Keyboard and accessibility
 

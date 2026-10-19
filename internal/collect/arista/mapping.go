@@ -580,6 +580,12 @@ func (bd *builder) power() {
 			if o.Attributes["model"] == nil {
 				o.Set("model", strings.TrimSpace(p.ModelName))
 			}
+		}
+		if m, _ := o.Attributes["model"].(string); partAirflow(m) != "" {
+			o.Set("airflow", partAirflow(m))
+		}
+		if pw != nil {
+			p := pw.PowerSupplies[slot]
 			o.Set("health", psuHealth(p.State))
 			if p.Capacity.OK && p.Capacity.V > 0 {
 				o.Set("capacity_w", int64(p.Capacity.V))
@@ -597,10 +603,45 @@ func (bd *builder) power() {
 	}
 }
 
+// Airflow directions as EOS spells them in "show environment cooling"
+// (airflowDirection), relative to the port side, which is the front of an
+// Arista switch.
+var eosAirflow = map[string]string{
+	"frontToBackAirflow": "front_to_rear",
+	"backToFrontAirflow": "rear_to_front",
+}
+
+// partAirflow reads the airflow of an Arista fan tray, power supply or
+// chassis from its part number: "-F" (forward) or "-RED" (red handle) is
+// front to rear, port-side intake; "-R" (reverse) or "-BLUE" is rear to
+// front. Anything else says nothing.
+func partAirflow(model string) string {
+	m := strings.ToUpper(strings.TrimSpace(model))
+	switch {
+	case strings.HasSuffix(m, "-F"), strings.HasSuffix(m, "-RED"):
+		return "front_to_rear"
+	case strings.HasSuffix(m, "-R"), strings.HasSuffix(m, "-BLUE"):
+		return "rear_to_front"
+	}
+	return ""
+}
+
 func (bd *builder) cooling() {
 	c := decode[showCooling](bd.d, cmdCooling)
 	if c == nil {
 		return
+	}
+	if a := eosAirflow[strings.TrimSpace(c.AirflowDirection)]; a != "" {
+		bd.b.Object("dev", "device").Set("airflow", a)
+	} else if c.AirflowDirection != "" {
+		bd.warnings = append(bd.warnings, fmt.Sprintf("cooling: airflow direction %q not understood, left out", c.AirflowDirection))
+	}
+	// The fan trays' part numbers, by slot, say which way they blow.
+	trayAirflow := map[string]string{}
+	if inv := decode[showInventory](bd.d, cmdInventory); inv != nil {
+		for slot, it := range inv.FanTraySlots {
+			trayAirflow[slot] = partAirflow(it.Name)
+		}
 	}
 	for _, tray := range c.FanTraySlots {
 		if len(tray.Fans) == 0 {
@@ -609,6 +650,9 @@ func (bd *builder) cooling() {
 				Set("health", fanHealth(tray.Status))
 			if tray.Speed.OK {
 				o.Set("speed_pct", tray.Speed.V)
+			}
+			if a := trayAirflow[tray.Label]; a != "" {
+				o.Set("airflow", a)
 			}
 			continue
 		}
@@ -626,6 +670,9 @@ func (bd *builder) cooling() {
 			o := bd.b.Object("fan/"+name, "fan").Identify("name", name).In("dev").Set("health", fanHealth(f.Status))
 			if f.ActualSpeed.OK {
 				o.Set("speed_pct", f.ActualSpeed.V)
+			}
+			if a := trayAirflow[tray.Label]; a != "" {
+				o.Set("airflow", a)
 			}
 		}
 	}

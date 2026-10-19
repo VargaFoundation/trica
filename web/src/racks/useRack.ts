@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/endpoints";
+import { aisleOf, type Aisle } from "../aisles/aisles";
 import { FACINGS, type Facing, type FloorRack } from "./floor";
 import type { Mounted } from "./layout";
 
@@ -31,6 +32,7 @@ export async function loadRackContents(rackId: string, signal?: AbortSignal): Pr
         frontImage: it.front_image,
         rearImage: it.rear_image,
         variantUncertain: it.variant_uncertain === true,
+        airflow: it.airflow,
       }),
     ),
     truncated: p.total > p.items.length,
@@ -47,7 +49,7 @@ export function useRackContents(rackId: string) {
 }
 
 export interface RoomContents {
-  racks: (FloorRack & { uHeight?: number })[];
+  racks: (FloorRack & { uHeight?: number; frontAisle?: Aisle })[];
   truncated: boolean;
 }
 
@@ -67,6 +69,7 @@ export async function loadRoomContents(roomId: string, signal?: AbortSignal): Pr
       y: num(r.attributes?.floor_y),
       facing: facingOf(r.attributes?.facing),
       uHeight: num(r.attributes?.u_height),
+      frontAisle: aisleOf(r.attributes?.front_aisle),
     })),
     truncated: racks.total > racks.items.length || rows.total > rows.items.length,
   };

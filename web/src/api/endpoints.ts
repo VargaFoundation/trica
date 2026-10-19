@@ -8,6 +8,7 @@
 import { request } from "./client";
 import type {
   Batch,
+  DeviceAirflow,
   BatchOutcome,
   Change,
   DecisionOutcome,
@@ -57,6 +58,9 @@ export const api = {
   /** How sure the inventory is of a device's model, and the models (chassis variants) it may be (ADR 0048). */
   deviceTypeCandidates: (id: string, signal?: AbortSignal) =>
     request<DeviceTypeChoice>(`/objects/${encodeURIComponent(id)}/device-type-candidates`, { signal }),
+  /** The airflow check of a device against its rack's aisles (ADR 0049). */
+  objectAirflow: (id: string, signal?: AbortSignal) =>
+    request<DeviceAirflow>(`/objects/${encodeURIComponent(id)}/airflow`, { signal }),
   /** The devices mounted in a rack, with position, face, model, height and depth. */
   rackContents: (id: string, q: Paging = {}, signal?: AbortSignal) =>
     request<Page<RackItem>>(`/racks/${encodeURIComponent(id)}/contents`, { query: q, signal }),

@@ -221,6 +221,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/objects/{id}/airflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The airflow check of a device (ADR 0049): the rack it is mounted in and the face its front is on, which aisle the rack's front faces (front_aisle), what its model, the device itself (airflow, configured or observed) and its fans and power supplies say about its airflow, and the result: ok (it takes its air in from the cold aisle), mismatch (from the hot aisle: hot air recirculated, the reason says how) or unknown (the reason says which fact is missing). Warnings say when the device or its parts contradict its model (the wrong variant, a fan tray or a power supply turned the other way). The rack contents carry the same check per device.
+         * @description Requires the "read" action.
+         */
+        get: operations["getObjectAirflow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/objects/{id}/device-type-candidates": {
         parameters: {
             query?: never;
@@ -469,7 +489,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The devices mounted in a rack, with position, face, model, height and depth: one call for an elevation. A device is listed only if the caller may read it, its model only if the caller may read the model. Ordered by position, unknown positions last.
+         * The devices mounted in a rack, with position, face, model, height and depth, and each device's airflow check against the rack's front_aisle (ADR 0049): one call for an elevation. A device is listed only if the caller may read it, its model only if the caller may read the model. Ordered by position, unknown positions last.
          * @description Requires the "read" action.
          */
         get: operations["getRackContents"];
@@ -676,6 +696,27 @@ export interface components {
         AcceptOutcome: {
             id: number;
             status: string;
+        };
+        AirflowCheck: {
+            airflow?: string;
+            airflow_from?: string;
+            cold_face?: string;
+            intake?: string;
+            reason: string;
+            status: string;
+            warnings?: components["schemas"]["AirflowWarning"][];
+        };
+        AirflowPart: {
+            airflow: string;
+            part: components["schemas"]["ObjectRef"];
+        };
+        AirflowWarning: {
+            airflow?: string;
+            code: string;
+            from?: string;
+            model?: string;
+            model_declared?: boolean;
+            parts?: components["schemas"]["AirflowPart"][];
         };
         ApplyResult: {
             changes?: components["schemas"]["PlannedChange"][];
@@ -2214,6 +2255,12 @@ export interface components {
              */
             floor_y?: number;
             /**
+             * Front aisle
+             * @description Which aisle the rack's front faces: cold (the devices should take their air in at the front) or hot. The rear faces the other one. Said by a person on the rack page; drives the airflow check of the devices mounted in it and the aisles of the floor plan (ADR 0049).
+             * @enum {string}
+             */
+            front_aisle?: "cold" | "hot";
+            /**
              * Lifecycle
              * @description Declared lifecycle state.
              * @enum {string}
@@ -2834,6 +2881,18 @@ export interface components {
             proposal_id: number;
             result?: components["schemas"]["ApplyResult"];
             status: string;
+        };
+        DeviceAirflow: {
+            check: components["schemas"]["AirflowCheck"];
+            device: components["schemas"]["ObjectRef"];
+            device_airflow?: string;
+            face?: string;
+            front_aisle?: string;
+            model?: components["schemas"]["ObjectRef"];
+            model_airflow?: string;
+            model_declared?: boolean;
+            parts: components["schemas"]["AirflowPart"][];
+            rack?: components["schemas"]["ObjectRef"];
         };
         DeviceFace: {
             face: string;
@@ -3708,6 +3767,7 @@ export interface components {
             value: unknown;
         };
         RackItem: {
+            airflow?: components["schemas"]["AirflowCheck"];
             device: components["schemas"]["ObjectRef"];
             face?: string;
             front_image?: string;
@@ -4320,6 +4380,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Object"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getObjectAirflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Device id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceAirflow"];
                 };
             };
             400: components["responses"]["Problem400"];

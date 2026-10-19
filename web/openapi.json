@@ -116,6 +116,83 @@
         ],
         "type": "object"
       },
+      "AirflowCheck": {
+        "properties": {
+          "airflow": {
+            "type": "string"
+          },
+          "airflow_from": {
+            "type": "string"
+          },
+          "cold_face": {
+            "type": "string"
+          },
+          "intake": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/AirflowWarning"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "reason",
+          "status"
+        ],
+        "type": "object"
+      },
+      "AirflowPart": {
+        "properties": {
+          "airflow": {
+            "type": "string"
+          },
+          "part": {
+            "$ref": "#/components/schemas/ObjectRef"
+          }
+        },
+        "required": [
+          "airflow",
+          "part"
+        ],
+        "type": "object"
+      },
+      "AirflowWarning": {
+        "properties": {
+          "airflow": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "model_declared": {
+            "type": "boolean"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/AirflowPart"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
       "ApplyResult": {
         "properties": {
           "changes": {
@@ -3350,6 +3427,20 @@
               "fr": "Position Y"
             }
           },
+          "front_aisle": {
+            "description": "Which aisle the rack's front faces: cold (the devices should take their air in at the front) or hot. The rear faces the other one. Said by a person on the rack page; drives the airflow check of the devices mounted in it and the aisles of the floor plan (ADR 0049).",
+            "enum": [
+              "cold",
+              "hot"
+            ],
+            "title": "Front aisle",
+            "type": "string",
+            "x-trica-kind": "enum",
+            "x-trica-label": {
+              "en": "Front aisle",
+              "fr": "Couloir côté avant"
+            }
+          },
           "lifecycle": {
             "description": "Declared lifecycle state.",
             "enum": [
@@ -4720,6 +4811,49 @@
         "required": [
           "proposal_id",
           "status"
+        ],
+        "type": "object"
+      },
+      "DeviceAirflow": {
+        "properties": {
+          "check": {
+            "$ref": "#/components/schemas/AirflowCheck"
+          },
+          "device": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "device_airflow": {
+            "type": "string"
+          },
+          "face": {
+            "type": "string"
+          },
+          "front_aisle": {
+            "type": "string"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "model_airflow": {
+            "type": "string"
+          },
+          "model_declared": {
+            "type": "boolean"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/AirflowPart"
+            },
+            "type": "array"
+          },
+          "rack": {
+            "$ref": "#/components/schemas/ObjectRef"
+          }
+        },
+        "required": [
+          "check",
+          "device",
+          "parts"
         ],
         "type": "object"
       },
@@ -6949,6 +7083,9 @@
       },
       "RackItem": {
         "properties": {
+          "airflow": {
+            "$ref": "#/components/schemas/AirflowCheck"
+          },
           "device": {
             "$ref": "#/components/schemas/ObjectRef"
           },
@@ -8384,6 +8521,56 @@
         "x-trica-action": "read"
       }
     },
+    "/objects/{id}/airflow": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "getObjectAirflow",
+        "parameters": [
+          {
+            "description": "Device id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceAirflow"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "The airflow check of a device (ADR 0049): the rack it is mounted in and the face its front is on, which aisle the rack's front faces (front_aisle), what its model, the device itself (airflow, configured or observed) and its fans and power supplies say about its airflow, and the result: ok (it takes its air in from the cold aisle), mismatch (from the hot aisle: hot air recirculated, the reason says how) or unknown (the reason says which fact is missing). Warnings say when the device or its parts contradict its model (the wrong variant, a fan tray or a power supply turned the other way). The rack contents carry the same check per device.",
+        "tags": [
+          "inventory"
+        ],
+        "x-trica-action": "read"
+      }
+    },
     "/objects/{id}/device-type-candidates": {
       "get": {
         "description": "Requires the \"read\" action.",
@@ -9278,7 +9465,7 @@
             "$ref": "#/components/responses/Problem500"
           }
         },
-        "summary": "The devices mounted in a rack, with position, face, model, height and depth: one call for an elevation. A device is listed only if the caller may read it, its model only if the caller may read the model. Ordered by position, unknown positions last.",
+        "summary": "The devices mounted in a rack, with position, face, model, height and depth, and each device's airflow check against the rack's front_aisle (ADR 0049): one call for an elevation. A device is listed only if the caller may read it, its model only if the caller may read the model. Ordered by position, unknown positions last.",
         "tags": [
           "inventory"
         ],

@@ -47,7 +47,7 @@ types:
   aisle:
     layer: location
     label: {en: Aisle, fr: Allée}
-    description: A hot or cold aisle between rows.
+    description: A hot or cold aisle between rows. The racks say which aisle they face with their front_aisle; the floor plan draws the aisles from it.
     parents: [room]
     attributes:
       name: {kind: string, identity: weak, search: true, required: true, label: {en: Name, fr: Nom}, description: "Aisle name."}
@@ -65,6 +65,7 @@ types:
       depth_mm: {kind: int, unit: mm, label: {en: Depth, fr: Profondeur}, description: "Inner mounting depth."}
       width_mm: {kind: int, unit: mm, label: {en: Width, fr: Largeur}, description: "Outer width."}
       facing: {kind: enum, values: [north, east, south, west], label: {en: Front faces, fr: Face avant vers}, description: "Direction the front door faces on the floor plan."}
+      front_aisle: {kind: enum, values: [cold, hot], label: {en: Front aisle, fr: Couloir côté avant}, description: "Which aisle the rack's front faces: cold (the devices should take their air in at the front) or hot. The rear faces the other one. Said by a person on the rack page; drives the airflow check of the devices mounted in it and the aisles of the floor plan (ADR 0049)."}
       floor_x: {kind: int, label: {en: Floor X, fr: Position X}, description: "Floor plan column: tiles east of the room's north-west corner (tile size: the room's tile_mm)."}
       floor_y: {kind: int, label: {en: Floor Y, fr: Position Y}, description: "Floor plan row: tiles south of the room's north-west corner (tile size: the room's tile_mm)."}
       power_capacity_w: {kind: int, unit: W, label: {en: Power capacity, fr: Puissance disponible}, description: "Usable power budget of the rack."}

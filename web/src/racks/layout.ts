@@ -1,3 +1,4 @@
+import type { AirflowCheck } from "../api/types";
 import type { Health as SharedHealth } from "../inventory/health";
 
 // Rack elevation arithmetic, kept free of React and of the DOM so that it is
@@ -32,6 +33,8 @@ export interface Mounted {
   rearImage?: string;
   /** The library is not sure which chassis the device is and nobody chose: the object page offers the choice (ADR 0048). */
   variantUncertain?: boolean;
+  /** The airflow check against the rack's aisles, as the server computed it (ADR 0049). */
+  airflow?: AirflowCheck;
 }
 
 /** The health a rack face shows: the shared scale without "absent" (a mounted device is there). */

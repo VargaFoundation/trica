@@ -691,3 +691,57 @@ func TestCommandsAreAllShow(t *testing.T) {
 		}
 	}
 }
+
+// What a switch says about its airflow (ADR 0049): the direction EOS reports
+// for the chassis, and the part numbers of its fan trays and power supplies.
+// The 4.20 fixture has its fan trays swapped (-R) against its power supplies
+// (-RED) and its chassis direction: each fact is reported as it is, the
+// airflow check is what says they disagree.
+func TestAirflowFacts(t *testing.T) {
+	t.Run("4.14: no chassis direction, forward parts", func(t *testing.T) {
+		b, _ := collectFrom(t, EOS414, nil)
+		if a, ok := collecttest.Objects([]*sdk.Batch{b}, "device")[0].Attributes["airflow"]; ok {
+			t.Errorf("device airflow %v on a release that reports none", a)
+		}
+		checkAttrs(t, obj(t, b, "fan", "name", "FanTray1"), map[string]any{"airflow": "front_to_rear"})
+		checkAttrs(t, obj(t, b, "psu", "serial", "FAKEPSU0001"), map[string]any{"airflow": "front_to_rear"})
+	})
+	t.Run("4.20: chassis direction, fan trays turned the other way", func(t *testing.T) {
+		b, _ := collectFrom(t, EOS420, nil)
+		dev := collecttest.Objects([]*sdk.Batch{b}, "device")
+		if len(dev) != 1 || dev[0].Attributes["airflow"] != "front_to_rear" {
+			t.Fatalf("device airflow: %+v", dev)
+		}
+		checkAttrs(t, obj(t, b, "fan", "name", "FanTray1/1"), map[string]any{"airflow": "rear_to_front"})
+		checkAttrs(t, obj(t, b, "fan", "name", "FanTray2/2"), map[string]any{"airflow": "rear_to_front"})
+		checkAttrs(t, obj(t, b, "psu", "serial", "FAKEPSU1001"), map[string]any{"airflow": "front_to_rear"})
+		if a, ok := obj(t, b, "fan", "name", "PowerSupply1/1").Attributes["airflow"]; ok {
+			t.Errorf("a PSU's own fan got airflow %v: only the PSU's part number says it", a)
+		}
+	})
+}
+
+func TestPartAirflow(t *testing.T) {
+	for in, want := range map[string]string{
+		"FAN-7000-F": "front_to_rear", "fan-7000-r": "rear_to_front", "PWR-511-AC-RED": "front_to_rear", "PWR-511-AC-BLUE": "rear_to_front",
+		"PWR-460AC-F": "front_to_rear", "DCS-7280SE-64": "", "": "", "FAN-7000": "",
+	} {
+		if got := partAirflow(in); got != want {
+			t.Errorf("partAirflow(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// A direction EOS spells in a way not known here is left out, and said.
+func TestAirflowDirectionNotUnderstood(t *testing.T) {
+	d := &data{raw: map[string]json.RawMessage{cmdCooling: json.RawMessage(`{"systemStatus":"coolingOk","airflowDirection":"sidewaysAirflow","fanTraySlots":[]}`)}, failed: map[string]error{}}
+	bd := &builder{b: sdk.NewBatch("t", sdk.ScopeFull), d: d, psuRef: map[string]string{}}
+	bd.b.Object("dev", "device")
+	bd.cooling()
+	if a, ok := bd.b.Object("dev", "device").Attributes["airflow"]; ok {
+		t.Errorf("device airflow %v from an unknown spelling", a)
+	}
+	if len(bd.warnings) != 1 || !strings.Contains(bd.warnings[0], "sidewaysAirflow") {
+		t.Errorf("warnings %q, want the unknown direction said", bd.warnings)
+	}
+}
