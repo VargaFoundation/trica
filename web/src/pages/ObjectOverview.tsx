@@ -16,6 +16,7 @@ import { useSchema, type SchemaLookup } from "../hooks";
 import { useI18n, type MessageKey } from "../i18n";
 import { HEALTHS, healthOf, SEVERITY } from "../inventory/health";
 import { kindOf } from "../inventory/kind";
+import { isNameVersionList, versionRecords } from "../firmware/versions";
 
 export const COMPONENTS_LIMIT = 1000;
 
@@ -73,8 +74,12 @@ function AttrValue({ type, name, value, lookup }: { type: string; name: string; 
 export function OverviewSection({ obj, lookup, onProvenance }: { obj: ObjectView; lookup: SchemaLookup; onProvenance: () => void }) {
   const { t } = useI18n();
   const order = new Map((lookup.typeDoc(obj.type)?.attributes ?? []).map((a, i) => [a.name, i]));
+  // Version records have their own table (FirmwareSection), and the
+  // "name=version" list that makes them searchable says the same thing.
+  const tabled = Object.values(obj.attributes).some((v) => versionRecords(v) !== undefined);
   const keys = Object.keys(obj.attributes)
     .filter((k) => !k.startsWith("_"))
+    .filter((k) => !tabled || (versionRecords(obj.attributes[k]) === undefined && !isNameVersionList(obj.attributes[k])))
     .sort((a, b) => (order.get(a) ?? 1e6) - (order.get(b) ?? 1e6) || a.localeCompare(b));
   const groups = new Map<AttrGroup, string[]>();
   for (const k of keys) {

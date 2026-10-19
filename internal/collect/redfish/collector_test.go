@@ -161,6 +161,13 @@ var profileCases = []profileCase{
 					"Backup System ROM=P89 v2.40 (02/17/2017)", "HP Smart Array P440ar Controller=6.06",
 					"Power Management Controller Firmware=1.0.4", "System ROM=P89 v2.60 (05/21/2018)", "iLO 4=2.78 Dec 08 2020",
 				},
+				// The backup ROM is searchable but does not run: not in the table.
+				"firmware": []map[string]any{
+					{"name": "HP Smart Array P440ar Controller", "version": "6.06", "location": "Slot 0"},
+					{"name": "Power Management Controller Firmware", "version": "1.0.4", "location": "System Board"},
+					{"name": "System ROM", "version": "P89 v2.60 (05/21/2018)", "released": "2018-05-21", "location": "System Board"},
+					{"name": "iLO 4", "version": "2.78 Dec 08 2020", "released": "2020-12-08", "location": "System Board"},
+				},
 				"log_window_days": 30, "log_critical_count": 2, "log_warning_count": 2,
 				"log_last_critical": "Power Supply 2 failure (Bay 2).", "log_last_critical_at": "2026-10-13T12:00:00Z",
 			}},
@@ -218,6 +225,11 @@ var profileCases = []profileCase{
 				"bmc_version": "iLO 5 v2.72", "bmc_ip": "198.51.100.21", "health": "warning", "location_led": "on",
 				"cpu_count": 2, "memory_bytes": int64(64) << 30, "power_w": 214, "inlet_temp_c": 24,
 				"firmware_inventory": []string{"Smart Array P408i-a SR Gen10=2.62", "System ROM=U30 v2.72 (07/09/2021)", "iLO 5=2.72 Aug 24 2022"},
+				"firmware": []map[string]any{
+					{"name": "Smart Array P408i-a SR Gen10", "version": "2.62", "location": "Slot 0", "updateable": true},
+					{"name": "System ROM", "version": "U30 v2.72 (07/09/2021)", "released": "2021-07-09", "location": "System Board", "updateable": true},
+					{"name": "iLO 5", "version": "2.72 Aug 24 2022", "released": "2022-08-24", "location": "System Board", "updateable": true},
+				},
 				"log_critical_count": 1, "log_warning_count": 1, "log_last_critical": "Drive Failure (Bay 2).", "log_last_critical_at": "2026-10-10T12:00:00Z",
 			}},
 			{ref: "dimm:PROC 1 DIMM 3", typ: "memory", parent: "dev", id: map[string]string{"name": "PROC 1 DIMM 3", "serial": "SYNTH-DIMM-0001"},
@@ -266,6 +278,11 @@ var profileCases = []profileCase{
 				"cpu_count": 1, "memory_bytes": int64(16) << 30, "power_w": 98, "inlet_temp_c": 22, "outlet_temp_c": 31,
 				// The rollback image (Previous-*) is not what runs.
 				"firmware_inventory": []string{"BIOS=2.10.5", "Integrated Dell Remote Access Controller=2.83.83.83"},
+				// "00:00:00Z" is Dell's placeholder, not a date.
+				"firmware": []map[string]any{
+					{"name": "BIOS", "version": "2.10.5", "released": "2021-03-05", "software_id": "159", "updateable": true},
+					{"name": "Integrated Dell Remote Access Controller", "version": "2.83.83.83", "software_id": "25227", "updateable": true},
+				},
 				"log_critical_count": 1, "log_warning_count": 1, "log_last_critical": "Fan 2 has failed.", "log_last_critical_at": "2026-10-14T00:00:00Z",
 			}},
 			{ref: "cpu:CPU.Socket.1", typ: "cpu", parent: "dev", attrs: map[string]any{"cores": 4, "threads": 8}},
@@ -549,6 +566,10 @@ func TestPartialFailures(t *testing.T) {
 			func(t *testing.T, b *sdk.Batch) {
 				checkObject(t, b, wantObj{ref: "dev", typ: "device", attrs: map[string]any{
 					"firmware_inventory": []string{"Smart Array P408i-a SR Gen10=2.62", "iLO 5=2.72 Aug 24 2022"},
+					"firmware": []map[string]any{
+						{"name": "Smart Array P408i-a SR Gen10", "version": "2.62", "location": "Slot 0", "updateable": true},
+						{"name": "iLO 5", "version": "2.72 Aug 24 2022", "released": "2022-08-24", "location": "System Board", "updateable": true},
+					},
 				}})
 			}},
 		{"manager unavailable", IDRAC8, func(f *FakeRedfish) { f.FailPath("/redfish/v1/Managers/iDRAC.Embedded.1", 500) }, "manager",
@@ -597,7 +618,7 @@ func TestPartialFailures(t *testing.T) {
 				}
 			}},
 		{"update service fails", IDRAC8, func(f *FakeRedfish) { f.FailPath("/redfish/v1/UpdateService", 500) }, "update service",
-			func(t *testing.T, b *sdk.Batch) { checkAbsent(t, b, "dev", "firmware_inventory") }},
+			func(t *testing.T, b *sdk.Batch) { checkAbsent(t, b, "dev", "firmware_inventory", "firmware") }},
 		{"chassis fails", IDRAC8, func(f *FakeRedfish) { f.FailPath("/redfish/v1/Chassis/System.Embedded.1", 500) }, "chassis",
 			func(t *testing.T, b *sdk.Batch) {
 				if countType(b, "psu")+countType(b, "sensor")+countType(b, "fan") != 0 {

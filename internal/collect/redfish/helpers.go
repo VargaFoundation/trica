@@ -1,11 +1,14 @@
 package redfish
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"net"
 	"net/netip"
+	"regexp"
 	"strings"
+	"time"
 )
 
 // first returns the first non-empty value, trimmed.
@@ -136,4 +139,59 @@ func mediaOf(mediaType, protocol string) string {
 		return "ssd"
 	}
 	return "unknown"
+}
+
+// standbyImage says whether a firmware component is a copy kept for recovery
+// (HPE's backup or redundant system ROM) rather than the one that runs.
+func standbyImage(name string) bool {
+	n := strings.ToLower(name)
+	return strings.HasPrefix(n, "backup ") || strings.HasPrefix(n, "redundant ")
+}
+
+var (
+	// HPE writes the build date into the version: "P89 v2.60 (05/21/2018)"
+	// for a system ROM, "2.78 Dec 08 2020" for an iLO.
+	slashDate = regexp.MustCompile(`\b(\d{2}/\d{2}/\d{4})\b`)
+	wordDate  = regexp.MustCompile(`\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2} \d{4})\b`)
+	// Before this, a date is a placeholder (Dell reports "00:00:00Z").
+	firstRelease = time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC)
+)
+
+// releaseDate is the day a firmware was released, as YYYY-MM-DD: the
+// inventory's ReleaseDate when it holds a real date, else a date written in
+// the version, else "".
+func releaseDate(reported, version string) string {
+	valid := func(t time.Time, err error) string {
+		if err != nil || t.Before(firstRelease) {
+			return ""
+		}
+		return t.Format(time.DateOnly)
+	}
+	if r := strings.TrimSpace(reported); r != "" {
+		if d := valid(time.Parse(time.RFC3339, r)); d != "" {
+			return d
+		}
+		if d := valid(time.Parse(time.DateOnly, r)); d != "" {
+			return d
+		}
+	}
+	if m := slashDate.FindStringSubmatch(version); m != nil {
+		if d := valid(time.Parse("01/02/2006", m[1])); d != "" {
+			return d
+		}
+	}
+	if m := wordDate.FindStringSubmatch(version); m != nil {
+		return valid(time.Parse("Jan 2 2006", m[1]))
+	}
+	return ""
+}
+
+// fwLocation reads a firmware component's Location when it is a plain
+// string (the iLO 4 inventory); the standard object form is left aside.
+func fwLocation(raw json.RawMessage) string {
+	var s string
+	if len(raw) == 0 || json.Unmarshal(raw, &s) != nil {
+		return ""
+	}
+	return strings.TrimSpace(s)
 }

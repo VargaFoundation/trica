@@ -144,6 +144,7 @@ types:
       mlag_state: {kind: string, label: {en: MLAG state, fr: État MLAG}, description: "MLAG state as reported by the switch: active, inactive, disabled."}
       mlag_peer: {kind: string, search: true, label: {en: MLAG peer, fr: Pair MLAG}, description: "Address of the MLAG peer switch, as configured on the peer link."}
       firmware_inventory: {kind: list, search: true, label: {en: Firmware inventory, fr: Inventaire des firmwares}, description: "Firmware components reported by the BMC, as name=version strings (BIOS, BMC, RAID controller, NIC, PSU)."}
+      firmware: {kind: json, label: {en: Firmware, fr: Firmwares}, description: "The running firmware components reported by the BMC, one record each, sorted by name: name, version, released (YYYY-MM-DD, from the inventory or the version string, absent when unknown), software_id, location, updateable. Backup images are left out."}
       log_window_days: {kind: int, unit: d, label: {en: Event log window, fr: Fenêtre du journal}, description: "Number of days the event log counters below look back."}
       log_critical_count: {kind: int, label: {en: Critical events, fr: Événements critiques}, description: "Critical entries of the hardware event log (iLO IML, iDRAC SEL) within the window."}
       log_warning_count: {kind: int, label: {en: Warning events, fr: Événements d'avertissement}, description: "Warning entries of the hardware event log within the window."}

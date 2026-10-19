@@ -74,7 +74,7 @@ reported as partial.
 | Inlet / exhaust temperature | `Chassis/Thermal`, by `PhysicalContext` then by sensor name | `device.inlet_temp_c`, `device.outlet_temp_c` |
 | BMC firmware | `Managers/<id>`.FirmwareVersion | `device.bmc_version` |
 | BMC address | first usable IPv4 of the manager's interfaces | `device.bmc_ip` and `device.mgmt_ip` (identity) |
-| Firmware inventory | HPE `FirmwareInventory` / `UpdateService/FirmwareInventory` | `device.firmware_inventory` (list of `Name=Version`) |
+| Firmware inventory | HPE `FirmwareInventory` / `UpdateService/FirmwareInventory` | `device.firmware_inventory` (list of `Name=Version`, backup images included) and `device.firmware` (records with `released`, `software_id`, `location`, `updateable`; backup images left out; ADR 0046) |
 | Event log counters | IML (iLO) and SEL (iDRAC) | `device.log_window_days`, `log_critical_count`, `log_warning_count`, `log_last_critical`, `log_last_critical_at` |
 | Processors | `Systems/<id>/Processors` | `cpu` (model, cores, threads, health), in the device |
 | Memory modules | `Systems/<id>/Memory` (HPE iLO 4: `Oem.Hp.Links.Memory`) | `memory` (name, serial, part number as `model`, `size_bytes`, `speed_mhz`, health); empty slots are skipped |
@@ -235,7 +235,7 @@ racadm get iDRAC.Users.3        # check: Privilege=0x1
 | DIMM error counters, drive temperature and power-on hours, SMART data | Not in the first version; not needed by an inventory. |
 | Storage volumes / logical drives, RAID levels | The schema has no volume type yet. |
 | PCIe devices, GPUs, NVMe namespaces, USB | Not modelled yet. |
-| Firmware per component as objects | Kept as one list attribute (`firmware_inventory`), not as objects. |
+| Firmware per component as objects | Kept as attributes of the device (`firmware_inventory`, `firmware`), not as objects. |
 | IPv6 addresses, DNS/NTP settings, BMC users and certificates | Not inventory data; user and certificate listings need privileges beyond Login. |
 | Sessions, power actions, anything with a side effect | The collector never writes. |
 | `Oem` data other than iLO's SmartStorage, memory, firmware and SSD endurance | Vendor-specific, out of scope for the first version. |

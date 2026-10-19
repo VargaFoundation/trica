@@ -127,6 +127,9 @@ export const schema: SchemaDoc = {
         { name: "uptime_s", kind: "int", label: { en: "Uptime", fr: "Durée de fonctionnement" }, description: "", search: false, required: false, custom: false, unit: "s" },
         { name: "memory_bytes", kind: "int", label: { en: "Memory", fr: "Mémoire" }, description: "", search: false, required: false, custom: false, unit: "B" },
         { name: "log_critical_count", kind: "int", label: { en: "Critical events", fr: "Événements critiques" }, description: "", search: false, required: false, custom: false },
+        { name: "model", kind: "string", label: { en: "Model", fr: "Modèle" }, description: "", search: true, required: false, custom: false },
+        { name: "firmware_inventory", kind: "list", label: { en: "Firmware inventory", fr: "Inventaire des firmwares" }, description: "", search: true, required: false, custom: false },
+        { name: "firmware", kind: "json", label: { en: "Firmware", fr: "Firmwares" }, description: "", search: false, required: false, custom: false },
       ],
     },
     {

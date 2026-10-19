@@ -391,6 +391,17 @@ type fwEntry struct {
 	Version       string
 	VersionString string
 	Status        status
+	// ReleaseDate and SoftwareId are standard since SoftwareInventory 1.1;
+	// Dell fills them, often with a placeholder date ("00:00:00Z").
+	ReleaseDate string
+	SoftwareID  string `json:"SoftwareId"`
+	Updateable  *bool
+	// Location is a string in the iLO 4 document; elsewhere it is an object
+	// or absent, and HPE says where the component sits in DeviceContext.
+	Location json.RawMessage
+	Oem      struct {
+		Hpe struct{ DeviceContext string }
+	}
 }
 
 // firmwareInventory is either the standard collection of components or the

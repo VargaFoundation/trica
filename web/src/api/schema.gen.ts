@@ -947,6 +947,11 @@ export interface components {
              */
             description?: string;
             /**
+             * Firmware
+             * @description The running firmware components reported by the BMC, one record each, sorted by name: name, version, released (YYYY-MM-DD, from the inventory or the version string, absent when unknown), software_id, location, updateable. Backup images are left out.
+             */
+            firmware?: unknown;
+            /**
              * Firmware inventory
              * @description Firmware components reported by the BMC, as name=version strings (BIOS, BMC, RAID controller, NIC, PSU).
              */

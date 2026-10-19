@@ -72,8 +72,8 @@
     {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/Installed-0-2.83.83.83"},
     {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/Installed-1-2.10.5"},
     {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/Previous-0-2.75.75.75"}], "Members@odata.count": 3},
-  "/redfish/v1/UpdateService/FirmwareInventory/Installed-0-2.83.83.83": {"Id": "Installed-0-2.83.83.83", "Name": "Integrated Dell Remote Access Controller", "Version": "2.83.83.83", "Updateable": true, "Status": {"Health": "OK", "State": "Enabled"}},
-  "/redfish/v1/UpdateService/FirmwareInventory/Installed-1-2.10.5": {"Id": "Installed-1-2.10.5", "Name": "BIOS", "Version": "2.10.5", "Updateable": true, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/UpdateService/FirmwareInventory/Installed-0-2.83.83.83": {"Id": "Installed-0-2.83.83.83", "Name": "Integrated Dell Remote Access Controller", "Version": "2.83.83.83", "SoftwareId": "25227", "ReleaseDate": "00:00:00Z", "Updateable": true, "Status": {"Health": "OK", "State": "Enabled"}},
+  "/redfish/v1/UpdateService/FirmwareInventory/Installed-1-2.10.5": {"Id": "Installed-1-2.10.5", "Name": "BIOS", "Version": "2.10.5", "SoftwareId": "159", "ReleaseDate": "2021-03-05T00:00:00Z", "Updateable": true, "Status": {"Health": "OK", "State": "Enabled"}},
   "/redfish/v1/UpdateService/FirmwareInventory/Previous-0-2.75.75.75": {"Id": "Previous-0-2.75.75.75", "Name": "Integrated Dell Remote Access Controller", "Version": "2.75.75.75", "Updateable": false, "Status": {"Health": "OK", "State": "StandbyOffline"}},
 
   "/redfish/v1/Chassis": {"Members": [{"@odata.id": "/redfish/v1/Chassis/System.Embedded.1"}], "Members@odata.count": 1},
