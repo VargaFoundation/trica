@@ -47,7 +47,25 @@ type FacePart struct {
 	// not say which spot it is.
 	Face string `json:"face,omitempty"`
 	Spot string `json:"spot,omitempty"`
+	// Unplaced says why a part has no spot: os (it is known only by the
+	// name its operating system gives it, which says nothing of where it
+	// sits), no_spot (its name points at a place this model's faces do not
+	// have: another chassis variant, a cage the drawing shows empty) or
+	// unread (the rules do not read its name). Empty for a placed part.
+	Unplaced string `json:"unplaced,omitempty"`
+	// Also are the other parts that are the same physical part, seen by
+	// another source under another name (the same disk serial number, the
+	// same port MAC address), when none of them has a spot; they are not
+	// listed on their own. A part that has a spot shares it instead.
+	Also []ObjectRef `json:"also,omitempty"`
 }
+
+// Why a part is not placed (FacePart.Unplaced).
+const (
+	UnplacedOS     = "os"
+	UnplacedNoSpot = "no_spot"
+	UnplacedUnread = "unread"
+)
 
 // DeviceFaces is the device drawn with its parts in place.
 type DeviceFaces struct {
@@ -134,12 +152,28 @@ func (s *Server) hObjectFaces(c *call) error {
 			parts = append(parts, o)
 		}
 	}
-	for _, fp := range placeParts(dev.ID, parts, out.Faces) {
-		if kinds[fp.Kind] || fp.Kind == spotPort && kinds[spotSlot] {
-			out.Parts = append(out.Parts, fp)
+	out.Parts = append(out.Parts, partsOnFaces(dev.ID, parts, out.Faces)...)
+	return c.json(200, out)
+}
+
+// partsOnFaces are the parts placeParts places, of the kinds the faces have
+// spots for (a port also when the faces have slots: a card's port goes in
+// its slot): the fans of a server whose fans are inside are no line of the
+// faces.
+func partsOnFaces(device string, parts []*store.Object, faces []DeviceFace) []FacePart {
+	kinds := map[string]bool{}
+	for _, f := range faces {
+		for _, sp := range f.Spots {
+			kinds[sp.Kind] = true
 		}
 	}
-	return c.json(200, out)
+	var out []FacePart
+	for _, fp := range placeParts(device, parts, faces) {
+		if kinds[fp.Kind] || fp.Kind == spotPort && kinds[spotSlot] {
+			out = append(out, fp)
+		}
+	}
+	return out
 }
 
 const (
@@ -177,6 +211,12 @@ var (
 		regexp.MustCompile(`^NIC\.Slot\.(\d+)-`),  // iDRAC
 	}
 	trailingLane = regexp.MustCompile(`[/-]\d+$`)
+
+	// The names an operating system gives a disk or a port: the kernel's
+	// (sda, nvme0n1) and systemd's (eno1, ens1f0, enp3s0f1). They say what a
+	// device is to the system, not where it sits in the chassis.
+	osDiskName = regexp.MustCompile(`^(?:sd[a-z]+|hd[a-z]+|vd[a-z]+|xvd[a-z]+|nvme\d+n\d+|mmcblk\d+)$`)
+	osPortName = regexp.MustCompile(`^(?:en[ospx]|eth|em|ib|wl)[0-9a-z]*$`)
 )
 
 type spotKey struct{ kind, name string }
@@ -244,12 +284,120 @@ func placeParts(device string, parts []*store.Object, faces []DeviceFace) []Face
 				break
 			}
 		}
+		if fp.Spot == "" {
+			fp.Unplaced = unplacedWhy(o, name, cands)
+		}
 		out = append(out, fp)
 	}
+	out = sameParts(parts, out)
 	slices.SortStableFunc(out, func(a, b FacePart) int {
 		return strings.Compare(a.Kind, b.Kind)
 	})
 	return out
+}
+
+// unplacedWhy says why a part has no spot (FacePart.Unplaced). cands are the
+// spots its name pointed at, its own name first for a port.
+func unplacedWhy(o *store.Object, name string, cands []spotKey) string {
+	switch {
+	case o.Type == "disk" && osDiskName.MatchString(name),
+		o.Type == "interface" && osPortName.MatchString(name):
+		return UnplacedOS
+	case o.Type == "interface" && len(cands) > 1, o.Type != "interface" && len(cands) > 0:
+		return UnplacedNoSpot
+	}
+	return UnplacedUnread
+}
+
+// physicalID is what makes two parts one physical part, whoever reports
+// them: a disk's serial number, a port's MAC address. Empty when the part has
+// none.
+func physicalID(o *store.Object) string {
+	key := ""
+	switch o.Type {
+	case "disk":
+		key, _ = o.Attrs["serial"].(string)
+	case "interface":
+		key, _ = o.Attrs["mac"].(string)
+	}
+	key = strings.ToLower(strings.TrimSpace(key))
+	if key == "" {
+		return ""
+	}
+	return o.Type + "\x00" + key
+}
+
+// sameParts counts a physical part once. The BMC and the operating system
+// report the same disk and the same port under two names (3:1 and nvme0n1;
+// 1 and eno1); where one of them has a spot, the others share it, and where
+// none has, the others are listed as Also of one of them, the one with a
+// name a person reads (eno49d1 rather than 6).
+func sameParts(parts []*store.Object, fps []FacePart) []FacePart {
+	ids := make(map[string]string, len(parts)) // object id -> physical id
+	for _, o := range parts {
+		if k := physicalID(o); k != "" {
+			ids[o.ID] = k
+		}
+	}
+	placed := map[string]*FacePart{}
+	for i := range fps {
+		if k := ids[fps[i].Part.ID]; k != "" && fps[i].Spot != "" {
+			if _, seen := placed[k]; !seen {
+				placed[k] = &fps[i]
+			}
+		}
+	}
+	lead := map[string]int{} // physical id -> index in out of the part listed
+	out := fps[:0:0]
+	for _, fp := range fps {
+		k := ids[fp.Part.ID]
+		switch {
+		case k == "" || fp.Spot != "":
+			out = append(out, fp)
+		case placed[k] != nil:
+			p := placed[k]
+			fp.Kind, fp.Face, fp.Spot, fp.Unplaced = p.Kind, p.Face, p.Spot, ""
+			out = append(out, fp)
+		default:
+			i, seen := lead[k]
+			if !seen {
+				lead[k] = len(out)
+				out = append(out, fp)
+				continue
+			}
+			first := out[i]
+			if allDigits(partNameOf(first.Part)) && !allDigits(partNameOf(fp.Part)) {
+				fp.Also = append([]ObjectRef{refOf(first.Part)}, first.Also...)
+				out[i] = fp
+			} else {
+				out[i].Also = append(out[i].Also, refOf(fp.Part))
+			}
+		}
+	}
+	return out
+}
+
+func refOf(v ObjectView) ObjectRef {
+	return ObjectRef{ID: v.ID, Type: v.Type, Display: v.Display}
+}
+
+func partNameOf(v ObjectView) string {
+	if n, _ := v.Attributes["name"].(string); n != "" {
+		return n
+	}
+	return v.Display
+}
+
+func allDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func partName(o *store.Object) string {

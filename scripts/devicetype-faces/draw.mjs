@@ -84,13 +84,24 @@ export const defs = `<defs>
 <pattern id="slots" width="3" height="6" patternUnits="userSpaceOnUse"><rect width="3" height="6" fill="#b3b8be"/><rect x="0.9" y="0.8" width="1.2" height="4.4" rx="0.6" fill="#2b2e32"/></pattern>
 </defs>`;
 
+// The definitions of the drive cages and carriers (driveCage, hotplugCarrier),
+// added only to the faces that use them, so that the others keep their bytes.
+const carrierDefs = `<defs>
+<linearGradient id="carrierdark" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3b3e43"/><stop offset="0.5" stop-color="#2f3236"/><stop offset="1" stop-color="#232528"/></linearGradient>
+<linearGradient id="carrierdarkh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b3e43"/><stop offset="0.5" stop-color="#2f3236"/><stop offset="1" stop-color="#232528"/></linearGradient>
+<linearGradient id="lever" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a5f66"/><stop offset="1" stop-color="#3e4247"/></linearGradient>
+<linearGradient id="leverh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a5f66"/><stop offset="1" stop-color="#3e4247"/></linearGradient>
+<pattern id="mesh" width="1.8" height="1.56" patternUnits="userSpaceOnUse"><rect width="1.8" height="1.56" fill="#45494f"/><circle cx="0.45" cy="0.39" r="0.36" fill="#0e0f11"/><circle cx="1.35" cy="1.17" r="0.36" fill="#0e0f11"/></pattern>
+</defs>`;
+
 /** A whole face: the SVG document around a body. */
 export function svgDoc(heightU, title, body) {
   const h = heightU * U;
+  const more = body.includes("url(#carrierdark") ? carrierDefs : "";
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${RACK_W} ${r(h)}" width="${RACK_W}mm" height="${r(h)}mm" ` +
     `font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif">` +
-    `<title>${esc(title)}</title>${defs}${body}</svg>\n`
+    `<title>${esc(title)}</title>${defs}${more}${body}</svg>\n`
   );
 }
 
@@ -340,5 +351,63 @@ export function pcie(x, y, w, h, { label } = {}) {
   s += rect(x + 2.5, y + h * 0.25, w - 5, h * 0.5, { fill: "url(#slots)" });
   s += circle(x + 1.6, y + h / 2, 0.8, { fill: "#6f757c" });
   if (label) s += text(x + w - 1.2, y + h - 0.8, label, { size: 1.7, anchor: "end", fill: "#3b3f45" });
+  return s;
+}
+
+// ───────────── Drive cages and carriers with more relief ─────────────
+// A dark cage around hot-plug bays and carriers that read as drives at the
+// size the object page draws them (a 2U face is about 800 pixels wide there):
+// a near-black frame, a dark carrier with a status ring, a pale label window,
+// a perforated vent, a release lever and its coloured latch. Generic features
+// of any hot-plug carrier; no vendor's part is copied.
+
+/** The dark frame of a drive cage, behind its bays. */
+export const driveCage = (x, y, w, h) =>
+  rect(x, y, w, h, { fill: "#1a1b1e", rx: 0.9, stroke: "#55595f", "stroke-width": 0.35 }) +
+  rect(x + 0.5, y + 0.5, w - 1, h - 1, { fill: "none", rx: 0.6, stroke: "#2c2f33", "stroke-width": 0.3 });
+
+/** A status ring (the drive's LED around its locate button). */
+const statusRing = (cx, cy, rad) =>
+  circle(cx, cy, rad, { fill: "#16171a", stroke: "#46c35e", "stroke-width": Math.max(0.45, rad * 0.24) }) +
+  circle(cx, cy, rad * 0.42, { fill: "#4d5258" });
+
+/** A pale label window with a few printed lines. */
+function labelWindow(x, y, w, h, vertical) {
+  let s = rect(x, y, w, h, { fill: "#a9aeb5", rx: 0.4, stroke: "#6f757c", "stroke-width": 0.2 });
+  for (let i = 0; i < 3; i++) {
+    s += vertical
+      ? rect(x + w * (0.22 + i * 0.22), y + h * 0.12, Math.max(0.35, w * 0.08), h * (i === 1 ? 0.5 : 0.76), { fill: "#5f656c" })
+      : rect(x + w * 0.1, y + h * (0.22 + i * 0.22), w * (i === 1 ? 0.5 : 0.76), Math.max(0.35, h * 0.08), { fill: "#5d636a" });
+  }
+  return s;
+}
+
+/**
+ * A hot-plug 2.5-inch carrier. horizontal: lying (1U servers); otherwise
+ * standing (2U servers). num: the bay number, printed on the cage above a
+ * standing carrier or on a lying one. nvme gives the latch another colour,
+ * so that an NVMe cage reads apart from a SAS/SATA one (schematic, as the
+ * rest).
+ */
+export function hotplugCarrier(x, y, w, h, { horizontal = true, num, nvme = false } = {}) {
+  const latch = nvme ? "#c9a227" : "#b8413c";
+  let s = rect(x, y, w, h, { fill: horizontal ? "url(#carrierdarkh)" : "url(#carrierdark)", rx: 0.7, stroke: "#0d0e10", "stroke-width": 0.35 });
+  if (horizontal) {
+    const ring = Math.min(2.7, h / 2 - 2.4);
+    s += labelWindow(x + 1.8, y + 2, w * 0.18, h - 8, false);
+    s += rect(x + 2.8 + w * 0.18, y + 1.6, w * 0.46, h - 7.2, { fill: "url(#mesh)", rx: 0.4 });
+    s += rect(x + 1.6, y + h - 4.8, w * 0.64 + 1, 3.4, { fill: "url(#leverh)", rx: 1.2, stroke: "#1b1d20", "stroke-width": 0.25 });
+    s += statusRing(x + w - 10.5, y + h / 2 - 1.2, ring);
+    s += rect(x + w - 5.4, y + 2, 3.4, h - 4, { fill: latch, rx: 0.6, stroke: "#3b1716", "stroke-width": 0.25 });
+    if (num !== undefined) s += text(x + w - 10.5, y + h - 1.3, String(num), { size: 1.9, anchor: "middle", fill: "#e3e6e9" });
+  } else {
+    const ring = Math.min(2.5, w / 2 - 1.8);
+    s += statusRing(x + w / 2, y + 4.6, ring);
+    s += labelWindow(x + 2.4, y + 9, w - 4.8, h * 0.18, true);
+    s += rect(x + 1.8, y + 10.2 + h * 0.18, w - 3.6, h * 0.3, { fill: "url(#mesh)", rx: 0.4 });
+    s += rect(x + 1.3, y + h * 0.62, w - 2.6, h * 0.36 - 1.3, { fill: "url(#lever)", rx: 1, stroke: "#1b1d20", "stroke-width": 0.25 });
+    s += rect(x + w / 2 - 2.2, y + h - 6.4, 4.4, 4.2, { fill: latch, rx: 0.6, stroke: "#3b1716", "stroke-width": 0.25 });
+    if (num !== undefined) s += text(x + w / 2, y - 0.9, String(num), { size: 2, anchor: "middle", fill: "#e3e6e9" });
+  }
   return s;
 }

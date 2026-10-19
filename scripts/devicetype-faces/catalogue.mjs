@@ -647,8 +647,9 @@ const hpe = [
   ["DL380 Gen9", 2, [["12lff", lff(12), {}]], { pcie: 6, nics: 4 }],
   // DL360 Gen10: slots 1-3, PSU 1-2, VGA, embedded 4x1GbE, iLO, optional serial, USB 3.0, FlexibleLOM.
   ["DL360 Gen10", 1, [["4lff", lff(4), { optical: true }], ["8sff", sff(8, { reserve: 120 }), { optical: true }]], { pcie: 3, nics: 4, ocp: "FlexibleLOM" }],
-  // DL380 Gen10: risers 1-3 (slots 1-8), serial, PSU 1-2, VGA, embedded 4x1GbE, iLO, 2 USB 3.0, UID, FlexibleLOM.
-  ["DL380 Gen10", 2, [["8lff", lff(8), { optical: true }], ["8sff", sff(8), { optical: true }], ["12lff", lff(12), {}], ["24sff", sff(24), {}]], { pcie: 8, nics: 4, ocp: "FlexibleLOM" }],
+  // DL380 Gen10: the LFF fronts only. Its SFF fronts (boxes 1-3) and its rear,
+  // with their layouts, are drawn in faces.mjs (dl380Gen10*).
+  ["DL380 Gen10", 2, [["8lff", lff(8), { optical: true }], ["12lff", lff(12), {}]], null],
 ];
 
 const hpeOutputs = hpe.flatMap(([model, u, variants, rear]) =>
@@ -656,7 +657,7 @@ const hpeOutputs = hpe.flatMap(([model, u, variants, rear]) =>
     const slug = `hpe-proliant-${model.toLowerCase().replace(/ /g, "-")}-${suffix}`;
     return [
       ["HPE", slug, "front", hpeFront(u, model, b, extra)],
-      ["HPE", slug, "rear", hpeRear(u, model, rear)],
+      ...(rear ? [["HPE", slug, "rear", hpeRear(u, model, rear)]] : []),
     ];
   }),
 );

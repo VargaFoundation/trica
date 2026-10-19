@@ -75,6 +75,44 @@ for (const theme of ["dark", "light"] as const) {
       await expectAccessible(page);
       expect(await csp()).toEqual([]);
     });
+
+    test("a DL380 Gen10 with NVMe drives in Box 3 shows them there, both supplies, each part once", async ({ page }) => {
+      const csp = await watchCsp(page);
+      await signInWithToken(page, `/objects/${ID.srvP2}`);
+      const section = page.locator(".faces-card");
+      const front = section.locator('figure[data-face="front"] svg');
+      const rear = section.locator('figure[data-face="rear"] svg');
+      await expect(front).toHaveAttribute("data-drawn", "image");
+      await expect(rear).toHaveAttribute("data-drawn", "image");
+      await expect(section.getByRole("link", { name: "ProLiant DL380 Gen10 8SFF" })).toBeVisible();
+
+      // The drives iLO calls 3:1 to 3:5 in Box 3; the three other bays of the box empty; no bay elsewhere.
+      await expect(front.locator("a.face-spot[data-kind=bay]")).toHaveCount(5);
+      await expect(front.locator("g.face-spot-empty[data-kind=bay]")).toHaveCount(3);
+      for (const b of [1, 2, 3, 4, 5]) await expect(front.locator(`a[data-spot="3:${b}"]`)).toHaveClass(/face-spot-ok/);
+      // The OS's name of a drive shares its bay: one bay, two names.
+      await expect(front.locator('a[data-spot="3:1"]')).toHaveAttribute("aria-label", "Bay 3:1: 3:1, nvme0n1, OK");
+      // Both power supplies, iLO's 0 in bay 1.
+      await expect(rear.locator('a[data-kind=psu][data-spot="1"]')).toHaveAttribute("aria-label", "Power supply 1: HpeServerPowerSupply 0, OK");
+      await expect(rear.locator('a[data-kind=psu][data-spot="2"]')).toHaveAttribute("aria-label", "Power supply 2: HpeServerPowerSupply 1, OK");
+      await expect(rear.locator('a[data-spot="nic2"]')).toHaveAttribute("aria-label", "Port nic2: eno2, 2, Link down");
+
+      // Not placed: the system disks and a port, grouped, each part once.
+      await expect(section.getByRole("heading", { name: /3 parts not placed/ })).toBeVisible();
+      const os = section.getByRole("region", { name: "Known only to the operating system" });
+      await expect(os.getByRole("listitem")).toHaveCount(3);
+      await expect(os.getByRole("listitem").nth(0)).toContainText("sda");
+      await expect(os.getByRole("listitem").nth(0)).toContainText("SYNTH-SATA-480");
+      await expect(os.getByRole("listitem").nth(2)).toContainText("also seen as 5");
+
+      if (SHOTS) {
+        await page.mouse.move(0, 0);
+        await page.waitForTimeout(300);
+        await section.screenshot({ path: `${SHOTS}/object-faces-dl380-gen10-${theme}.png`, scale: "device" });
+      }
+      await expectAccessible(page);
+      expect(await csp()).toEqual([]);
+    });
   });
 }
 

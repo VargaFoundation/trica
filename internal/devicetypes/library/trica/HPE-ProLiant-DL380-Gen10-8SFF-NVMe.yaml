@@ -1,0 +1,43 @@
+---
+# Written by the trica project (Apache-2.0); the face images are trica drawings
+# (CC0-1.0, sources in drawings/, generator in scripts/devicetype-faces/faces.mjs).
+#
+# The 8SFF chassis of the HPE ProLiant DL380 Gen10 with the 8 NVMe drive cage
+# in Box 3 instead of the SAS/SATA one, from its QuickSpecs (a00008180enw):
+# "HPE DL38X NVMe 8 Solid State Drive Express Bay Enablement Kit 826689-B21 ...
+# can only be populated in Box 1, Box 2 and Box 3 of the SFF chassis"; the
+# 4-port 8 NVMe primary riser (867807-B21) "can be connected to an 8SFF NVMe
+# drive cage in box 3". No part number of its own: the server reports the 8SFF
+# CTO's (868703-B21), so the library matches the 8SFF model and a person
+# chooses this one on the device (ADR 0048); being a variant of the 8SFF model,
+# that choice is no part-number conflict. Rack height, depth, airflow and port
+# templates are those of the upstream model HPE/ProLiant-DL380-Gen10.yaml
+# (netbox-community/devicetype-library, CC0-1.0).
+manufacturer: HPE
+model: ProLiant DL380 Gen10 8SFF NVMe
+slug: hpe-proliant-dl380-gen10-8sff-nvme
+variant_of: hpe-proliant-dl380-gen10-8sff
+u_height: 2
+is_full_depth: true
+airflow: front-to-rear
+comments: '[QuickSpecs](https://support.hpe.com/hpesc/public/api/document/a00008180enw)'
+console-ports:
+  - name: Serial
+    type: de-9
+power-ports:
+  - name: PS1
+    type: iec-60320-c14
+  - name: PS2
+    type: iec-60320-c14
+interfaces:
+  - name: Gig-E 1
+    type: 1000base-t
+  - name: Gig-E 2
+    type: 1000base-t
+  - name: Gig-E 3
+    type: 1000base-t
+  - name: Gig-E 4
+    type: 1000base-t
+  - name: iLO
+    type: 1000base-t
+    mgmt_only: true

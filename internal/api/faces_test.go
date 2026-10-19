@@ -40,10 +40,12 @@ type facesAnswer struct {
 		Spots        []api.FaceSpot `json:"spots"`
 	} `json:"faces"`
 	Parts []struct {
-		Part api.ObjectView `json:"part"`
-		Kind string         `json:"kind"`
-		Face string         `json:"face"`
-		Spot string         `json:"spot"`
+		Part     api.ObjectView  `json:"part"`
+		Kind     string          `json:"kind"`
+		Face     string          `json:"face"`
+		Spot     string          `json:"spot"`
+		Unplaced string          `json:"unplaced"`
+		Also     []api.ObjectRef `json:"also"`
 	} `json:"parts"`
 	Truncated bool `json:"truncated"`
 }
@@ -77,9 +79,15 @@ func (e *env) srvWithParts() string {
 		c.Object("fan", "fan").Identify("name", "Fan 1").In("srv")
 		c.Object("pfan", "fan").Identify("name", "Fan 2").In("p0")
 		c.Object("ilo", "interface").Identify("name", "iLO").In("srv").Set("kind", "bmc")
-		c.Object("eno1", "interface").Identify("name", "eno1").In("srv").Set("kind", "physical").Set("oper_status", "up")
+		c.Object("eno1", "interface").Identify("name", "eno1").In("srv").Set("kind", "physical").Set("oper_status", "up").Set("mac", "02:00:00:00:00:01")
 		c.Object("ens1", "interface").Identify("name", "ens1d1").In("srv").Set("kind", "physical")
-		c.Object("eno49", "interface").Identify("name", "eno49").In("srv")
+		c.Object("eno49", "interface").Identify("name", "eno49").In("srv").Set("mac", "02:00:00:00:00:49")
+		// The BMC's names of the same ports (iLO numbers them): eno1's MAC
+		// address shares its spot, eno49's is listed with it, once; a number
+		// without a MAC address says nothing.
+		c.Object("hpe1", "interface").Identify("name", "1").In("srv").Set("kind", "physical").Set("mac", "02:00:00:00:00:01")
+		c.Object("hpe6", "interface").Identify("name", "6").In("srv").Set("kind", "physical").Set("mac", "02:00:00:00:00:49")
+		c.Object("hpe5", "interface").Identify("name", "5").In("srv").Set("kind", "physical")
 		c.Object("bond", "interface").Identify("name", "bond0").In("srv").Set("kind", "lag")
 		// A processor has no spot on a face.
 		c.Object("cpu", "cpu").Identify("name", "CPU 1").In("srv")
@@ -125,20 +133,25 @@ func TestObjectFacesPlaceTheParts(t *testing.T) {
 	got := map[string]string{}
 	for _, p := range a.Parts {
 		name, _ := p.Part.Attributes["name"].(string)
-		got[name] = p.Kind + " " + p.Face + " " + p.Spot
+		got[name] = p.Kind + " " + p.Face + " " + p.Spot + " " + p.Unplaced
+		for _, o := range p.Also {
+			got[name] += " also:" + o.Display
+		}
 	}
 	want := map[string]string{
-		"Disk 1":                 "bay front 1:1",
-		"Disk 2":                 "bay front 1:2",
-		"Disk 3":                 "bay  ",
-		"sda":                    "bay  ",
-		"HpeServerPowerSupply 0": "psu rear 1",
-		"HpeServerPowerSupply 1": "psu rear 2",
-		"iLO":                    "port rear bmc",
-		"eno1":                   "port rear nic1",
-		"ens1d1":                 "slot rear 1",
-		"eno49":                  "port  ",
-		"Fan 1":                  "fan rear 1",
+		"Disk 1":                 "bay front 1:1 ",
+		"Disk 2":                 "bay front 1:2 ",
+		"Disk 3":                 "bay   no_spot",
+		"sda":                    "bay   os",
+		"HpeServerPowerSupply 0": "psu rear 1 ",
+		"HpeServerPowerSupply 1": "psu rear 2 ",
+		"iLO":                    "port rear bmc ",
+		"eno1":                   "port rear nic1 ",
+		"1":                      "port rear nic1 ",
+		"ens1d1":                 "slot rear 1 ",
+		"eno49":                  "port   os also:6",
+		"5":                      "port   unread",
+		"Fan 1":                  "fan rear 1 ",
 	}
 	if len(got) != len(want) {
 		t.Errorf("parts %v, want %d", got, len(want))

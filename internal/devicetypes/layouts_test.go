@@ -44,7 +44,7 @@ func TestEmbeddedLayoutsFitTheirDrawings(t *testing.T) {
 		}
 	}
 	if layouts < 20 {
-		t.Fatalf("%d layouts, want the 24 the generator writes", layouts)
+		t.Fatalf("%d layouts, want the 32 the generator writes", layouts)
 	}
 	has := func(slug, face, kind string, names ...string) {
 		t.Helper()
@@ -73,6 +73,44 @@ func TestEmbeddedLayoutsFitTheirDrawings(t *testing.T) {
 	has("arista-dcs-7280se-64-r", devicetypes.Front, devicetypes.SpotPort, "Ethernet1", "Ethernet48", "Ethernet52", "Management1")
 	has("arista-dcs-7280se-64-r", devicetypes.Rear, devicetypes.SpotFan, "1", "4")
 	has("mikrotik-crs354-48g-4s-plus-2q-plus-rm", devicetypes.Front, devicetypes.SpotPort, "ether1", "ether49", "sfp-sfpplus4", "qsfpplus2")
+	// DL380 Gen10 (QuickSpecs a00008180enw): the 8SFF CTO has its drives in
+	// Box 3, the box iLO names 3 (3:1 for an NVMe drive, 1I:3:1 for SAS);
+	// the NVMe cage takes the same bays; the 24SFF has the three boxes. The
+	// rear has the eight slots of the three risers, both supplies, the iLO
+	// port, the embedded and the FlexibleLOM ports; every chassis shares it.
+	for _, slug := range []string{"hpe-proliant-dl380-gen10-8sff", "hpe-proliant-dl380-gen10-8sff-nvme"} {
+		has(slug, devicetypes.Front, devicetypes.SpotBay, "3:1", "3:5", "3:8")
+		if n := len(ix.BySlug(slug).Layout(devicetypes.Front).Spots); n != 8 {
+			t.Errorf("%s front: %d spots, want the 8 bays of Box 3", slug, n)
+		}
+	}
+	has("hpe-proliant-dl380-gen10-24sff", devicetypes.Front, devicetypes.SpotBay, "1:1", "2:8", "3:8")
+	for _, slug := range []string{"hpe-proliant-dl380-gen10-8sff", "hpe-proliant-dl380-gen10-8sff-nvme", "hpe-proliant-dl380-gen10-24sff", "hpe-proliant-dl380-gen10-12lff", "hpe-proliant-dl380-gen10-8lff"} {
+		has(slug, devicetypes.Rear, devicetypes.SpotPSU, "1", "2")
+		has(slug, devicetypes.Rear, devicetypes.SpotSlot, "1", "2", "3", "4", "5", "6", "7", "8")
+		has(slug, devicetypes.Rear, devicetypes.SpotPort, "bmc", "nic1", "nic4", "flexlom1", "flexlom4")
+	}
+	// Box 1 on the left, Box 3 beside the controls; power supply bay 1 on the
+	// far right of the rear, bay 2 beside it (the rear legend and the CC0
+	// picture).
+	x := func(slug, face, kind, name string) float64 {
+		for _, s := range ix.BySlug(slug).Layout(face).Spots {
+			if s.Kind == kind && s.Name == name {
+				return s.X
+			}
+		}
+		t.Fatalf("%s %s: no %s %s", slug, face, kind, name)
+		return 0
+	}
+	if b1, b2, b3 := x("hpe-proliant-dl380-gen10-24sff", devicetypes.Front, devicetypes.SpotBay, "1:1"),
+		x("hpe-proliant-dl380-gen10-24sff", devicetypes.Front, devicetypes.SpotBay, "2:1"),
+		x("hpe-proliant-dl380-gen10-24sff", devicetypes.Front, devicetypes.SpotBay, "3:1"); b1 >= b2 || b2 >= b3 {
+		t.Errorf("DL380 Gen10 boxes at %g, %g, %g: want Box 1, 2, 3 from left to right", b1, b2, b3)
+	}
+	if p1, p2 := x("hpe-proliant-dl380-gen10-8sff", devicetypes.Rear, devicetypes.SpotPSU, "1"),
+		x("hpe-proliant-dl380-gen10-8sff", devicetypes.Rear, devicetypes.SpotPSU, "2"); p1 <= p2 {
+		t.Errorf("DL380 Gen10 supplies: bay 1 at %g, bay 2 at %g; want bay 1 on the right", p1, p2)
+	}
 	// A photograph has no layout: nobody measured it.
 	if l := ix.BySlug("hpe-proliant-dl360-gen9").Layout(devicetypes.Front); l != nil {
 		t.Errorf("an upstream photograph got a layout: %s", l.Path)

@@ -265,7 +265,7 @@ func TestChoicesOfACuratedFamily(t *testing.T) {
 		vendor, model string
 		want, not     []string
 	}{
-		{"HPE", "ProLiant DL380 Gen10", []string{"hpe-proliant-dl380-gen10", "hpe-proliant-dl380-gen10-8lff", "hpe-proliant-dl380-gen10-8sff", "hpe-proliant-dl380-gen10-12lff", "hpe-proliant-dl380-gen10-24sff"}, []string{"hpe-proliant-dl380-gen10-plus"}},
+		{"HPE", "ProLiant DL380 Gen10", []string{"hpe-proliant-dl380-gen10", "hpe-proliant-dl380-gen10-8lff", "hpe-proliant-dl380-gen10-8sff", "hpe-proliant-dl380-gen10-8sff-nvme", "hpe-proliant-dl380-gen10-12lff", "hpe-proliant-dl380-gen10-24sff"}, []string{"hpe-proliant-dl380-gen10-plus"}},
 		{"HPE", "ProLiant DL360 Gen10", []string{"hpe-proliant-dl360-gen10", "hpe-proliant-dl360-gen10-4lff", "hpe-proliant-dl360-gen10-8sff"}, []string{"hpe-proliant-dl360-gen10-plus"}},
 		{"Dell Inc.", "PowerEdge R730xd", []string{"dell-poweredge-r730xd", "dell-poweredge-r730xd-12lff", "dell-poweredge-r730xd-24sff"}, nil},
 		{"HPE", "ProLiant DL380 Gen10 Plus", []string{"hpe-proliant-dl380-gen10-plus"}, []string{"hpe-proliant-dl380-gen10"}},
@@ -282,5 +282,23 @@ func TestChoicesOfACuratedFamily(t *testing.T) {
 				t.Errorf("%s: candidates %v hold %s", c.model, got, n)
 			}
 		}
+	}
+}
+
+// A DL380 Gen10 reporting the 8SFF CTO's part number is that chassis, for
+// sure; its family still offers the same chassis with the 8 NVMe cage in
+// Box 3, which has no part number of its own (a person who sees the NVMe
+// drives chooses it).
+func TestChoicesOfTheDL380Gen10CTO(t *testing.T) {
+	ix := defaultIndex(t)
+	ch := ix.Choices("HPE", "ProLiant DL380 Gen10", "868703-B21")
+	if ch.Match == nil || ch.Match.Model.Slug != "hpe-proliant-dl380-gen10-8sff" || !ch.Certain || ch.Reason != devicetypes.BySKU {
+		t.Fatalf("868703-B21: %+v, want the 8SFF by its part number, certain", ch)
+	}
+	if got := slugs(ch.Candidates); !slices.Contains(got, "hpe-proliant-dl380-gen10-8sff-nvme") {
+		t.Errorf("candidates %v lack the 8SFF with the NVMe cage", got)
+	}
+	if m := ix.BySlug("hpe-proliant-dl380-gen10-8sff-nvme"); m == nil || m.VariantOf != "hpe-proliant-dl380-gen10-8sff" || len(m.PartNumbers) != 0 {
+		t.Errorf("the NVMe variant: %+v, want a variant of the 8SFF without a part number", m)
 	}
 }

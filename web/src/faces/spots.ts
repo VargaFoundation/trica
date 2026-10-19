@@ -38,8 +38,12 @@ export function partState(part: ObjectView): SpotState {
 // a healthy one (a breakout port) colours the spot.
 const RANK: Record<SpotState, number> = { critical: SEVERITY.critical, warning: SEVERITY.warning, down: 2, unknown: 3, up: 4, ok: 4, empty: 5 };
 
+// A part that says nothing of its state (the OS's name of a disk the BMC
+// reports healthy) does not grey out a spot another part speaks for.
 export function worst(states: SpotState[]): SpotState {
-  return states.reduce<SpotState>((w, s) => (RANK[s] < RANK[w] ? s : w), "empty");
+  const known = states.filter((s) => s !== "unknown");
+  if (known.length === 0) return states.length > 0 ? "unknown" : "empty";
+  return known.reduce<SpotState>((w, s) => (RANK[s] < RANK[w] ? s : w), "empty");
 }
 
 /**
@@ -67,6 +71,37 @@ export function placeSpots(face: DeviceFace, parts: FacePart[], locale: string):
 
 /** The parts the server could not place: their names do not say where they sit. */
 export const unplaced = (parts: FacePart[]): FacePart[] => parts.filter((p) => !p.spot);
+
+/** Why a part is not placed, as the server says it (FacePart.unplaced). */
+export type UnplacedWhy = "os" | "no_spot" | "unread";
+const WHY_ORDER: readonly UnplacedWhy[] = ["os", "no_spot", "unread"];
+const TYPE_ORDER = ["disk", "psu", "fan", "interface"];
+
+export interface UnplacedGroup {
+  why: UnplacedWhy;
+  parts: FacePart[];
+}
+
+/**
+ * The unplaced parts grouped by why they are not placed (the system's names
+ * first: the disks only the OS knows), each group disks first, then supplies,
+ * fans and ports, by name as a person counts. A server older than the reason
+ * says nothing: its parts are "unread".
+ */
+export function groupUnplaced(parts: FacePart[], locale: string): UnplacedGroup[] {
+  const collator = new Intl.Collator(locale, { numeric: true });
+  const rank = (t: string) => {
+    const i = TYPE_ORDER.indexOf(t);
+    return i < 0 ? TYPE_ORDER.length : i;
+  };
+  const why = (p: FacePart): UnplacedWhy => (WHY_ORDER.includes(p.unplaced as UnplacedWhy) ? (p.unplaced as UnplacedWhy) : "unread");
+  return WHY_ORDER.map((w) => ({
+    why: w,
+    parts: unplaced(parts)
+      .filter((p) => why(p) === w)
+      .sort((a, b) => rank(a.part.type) - rank(b.part.type) || collator.compare(a.part.display, b.part.display)),
+  })).filter((g) => g.parts.length > 0);
+}
 
 /** The attributes worth reading on a part, by type, in the order shown. */
 export const PART_FACTS: Record<string, readonly string[]> = {

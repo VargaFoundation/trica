@@ -5146,6 +5146,12 @@
       },
       "FacePart": {
         "properties": {
+          "also": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "type": "array"
+          },
           "face": {
             "type": "string"
           },
@@ -5156,6 +5162,9 @@
             "$ref": "#/components/schemas/Object"
           },
           "spot": {
+            "type": "string"
+          },
+          "unplaced": {
             "type": "string"
           }
         },

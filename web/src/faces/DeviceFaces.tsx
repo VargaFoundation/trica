@@ -18,7 +18,7 @@ import { useI18n, type MessageKey } from "../i18n";
 import { healthOf } from "../inventory/health";
 import { useFaceImage } from "../racks/faceImages";
 import { FaceCanvas } from "../racks/RackElevation";
-import { PART_FACTS, placeSpots, SPOT_STATES, unplaced, type PlacedSpot, type SpotState } from "./spots";
+import { groupUnplaced, PART_FACTS, placeSpots, SPOT_STATES, unplaced, type PlacedSpot, type SpotState, type UnplacedWhy } from "./spots";
 import "./faces.css";
 
 const KIND_TEXT: Record<string, MessageKey> = {
@@ -27,6 +27,12 @@ const KIND_TEXT: Record<string, MessageKey> = {
   fan: "faces.kind.fan",
   port: "faces.kind.port",
   slot: "faces.kind.slot",
+};
+
+const WHY_TEXT: Record<UnplacedWhy, { title: MessageKey; hint: MessageKey }> = {
+  os: { title: "faces.why.os", hint: "faces.why.osHint" },
+  no_spot: { title: "faces.why.noSpot", hint: "faces.why.noSpotHint" },
+  unread: { title: "faces.why.unread", hint: "faces.unplacedHint" },
 };
 
 const STATE_TEXT: Record<SpotState, MessageKey> = {
@@ -121,14 +127,17 @@ function Faces({
       {loose.length > 0 ? (
         <div className="faces-unplaced">
           <h3>{tp("faces.unplaced", loose.length)}</h3>
-          <p className="hint">{t("faces.unplacedHint")}</p>
-          <ul>
-            {loose.map((p) => (
-              <li key={p.part.id}>
-                <ObjectLink id={p.part.id} display={p.part.display} /> <span className="key">{lookup.typeLabel(p.part.type)}</span> <PartState part={p.part} />
-              </li>
-            ))}
-          </ul>
+          {groupUnplaced(parts, locale).map((g) => (
+            <section key={g.why} className="faces-unplaced-group" aria-labelledby={`faces-unplaced-${g.why}-${obj.id}`}>
+              <h4 id={`faces-unplaced-${g.why}-${obj.id}`}>{t(WHY_TEXT[g.why].title)}</h4>
+              <p className="hint">{t(WHY_TEXT[g.why].hint)}</p>
+              <ul>
+                {g.parts.map((p) => (
+                  <UnplacedPart key={p.part.id} p={p} lookup={lookup} />
+                ))}
+              </ul>
+            </section>
+          ))}
         </div>
       ) : null}
       {truncated ? (
@@ -273,6 +282,41 @@ function SpotDetails({ spot: s, lookup }: { spot: PlacedSpot; lookup: SchemaLook
         </div>
       ))}
     </>
+  );
+}
+
+/**
+ * One part not placed: its link, its type, what tells a system disk from a
+ * data disk (model and capacity), its state, and the other names the same
+ * part has (the BMC's number of an OS port).
+ */
+function UnplacedPart({ p, lookup }: { p: FacePart; lookup: SchemaLookup }) {
+  const { t } = useI18n();
+  const a = p.part.attributes;
+  const facts = (["model", "capacity_bytes"] as const).filter((k) => a[k] !== undefined && a[k] !== null && a[k] !== "");
+  return (
+    <li>
+      <ObjectLink id={p.part.id} display={p.part.display} /> <span className="key">{lookup.typeLabel(p.part.type)}</span>
+      {facts.map((k) => (
+        <span key={k} className="faces-unplaced-fact">
+          {" "}
+          <Quantity value={a[k]} unit={lookup.attribute(p.part.type, k)?.unit} />
+        </span>
+      ))}{" "}
+      <PartState part={p.part} />
+      {p.also && p.also.length > 0 ? (
+        <span className="faces-unplaced-also">
+          {" "}
+          {t("faces.also")}{" "}
+          {p.also.map((o, i) => (
+            <span key={o.id}>
+              {i > 0 ? ", " : null}
+              <ObjectLink id={o.id} display={o.display} />
+            </span>
+          ))}
+        </span>
+      ) : null}
+    </li>
   );
 }
 

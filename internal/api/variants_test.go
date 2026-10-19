@@ -24,12 +24,16 @@ func (l libIndex) DeviceTypeChoices(vendor, model, pn string) devicetypes.Choice
 func (l libIndex) DeviceTypeModel(slug string) *devicetypes.Model { return l.BySlug(slug) }
 
 // testLibrary: the Acme SRV-2, a generic model and two chassis (the 12LFF
-// listed by its part number), like Dell's R330. Only the 8SFF and the
-// 12LFF have pictures (testImages).
+// listed by its part number), a family curated by variant_of like the
+// catalogue's, and the 12LFF with an option
+// cage, a variant of the 12LFF without a part number of its own, like HPE's
+// DL380 Gen10 8SFF with its NVMe cage. Only the 8SFF and the 12LFF have
+// pictures (testImages).
 var testLibrary = libIndex{devicetypes.NewIndex([]*devicetypes.Model{
 	{Slug: "acme-srv2", Vendor: "Acme", Model: "SRV-2", UHeight: 1},
-	{Slug: "acme-srv2-8sff", Vendor: "Acme", Model: "SRV-2 8SFF", UHeight: 1, FullDepth: true},
-	{Slug: "acme-srv2-12lff", Vendor: "Acme", Model: "SRV-2 12LFF", UHeight: 2, PartNumbers: []string{"SKU-12"}},
+	{Slug: "acme-srv2-8sff", Vendor: "Acme", Model: "SRV-2 8SFF", UHeight: 1, FullDepth: true, VariantOf: "acme-srv2"},
+	{Slug: "acme-srv2-12lff", Vendor: "Acme", Model: "SRV-2 12LFF", UHeight: 2, PartNumbers: []string{"SKU-12"}, VariantOf: "acme-srv2"},
+	{Slug: "acme-srv2-12lff-nvme", Vendor: "Acme", Model: "SRV-2 12LFF NVMe", UHeight: 2, VariantOf: "acme-srv2-12lff"},
 })}
 
 func init() {
@@ -127,15 +131,15 @@ func TestChooseTheChassisVariant(t *testing.T) {
 	if c.CanChoose || len(c.Declarations) != 0 || c.LibraryMatch == nil || c.LibraryMatch.How != devicetypes.ByModel {
 		t.Fatalf("before: %+v (a reader may not choose)", c)
 	}
-	if len(c.Candidates) != 3 || c.Candidates[0].Slug != "acme-srv2" || !c.Candidates[0].Current || !c.Candidates[0].LibraryMatch ||
-		c.Candidates[2].Slug != "acme-srv2-8sff" || c.Candidates[2].FrontImage != "/api/v1/device-types/acme-srv2-8sff/front" || c.Candidates[1].UHeight != 2 {
+	if len(c.Candidates) != 4 || c.Candidates[0].Slug != "acme-srv2" || !c.Candidates[0].Current || !c.Candidates[0].LibraryMatch ||
+		c.Candidates[3].Slug != "acme-srv2-8sff" || c.Candidates[3].FrontImage != "/api/v1/device-types/acme-srv2-8sff/front" || c.Candidates[1].UHeight != 2 {
 		t.Fatalf("candidates %+v", c.Candidates)
 	}
 	if !e.choice(e.ids["srv-v"], tokProposer).CanChoose {
 		t.Fatal("carol may propose devices and models: she may choose")
 	}
-	if it := e.variantItem(); !it.VariantUncertain || it.Variants != 3 || it.FrontImage != "" {
-		t.Fatalf("rack item before %+v, want uncertain, 3 variants, no picture", it)
+	if it := e.variantItem(); !it.VariantUncertain || it.Variants != 4 || it.FrontImage != "" {
+		t.Fatalf("rack item before %+v, want uncertain, 4 variants, no picture", it)
 	}
 
 	// Refused: a reader, and a person who may propose devices but not models.
@@ -159,7 +163,7 @@ func TestChooseTheChassisVariant(t *testing.T) {
 		if !c.Certain || c.Reason != devicetypes.ByDeclared || c.DeclaredBy != "user:carol" || c.Current == nil || c.Current.Slug != "acme-srv2-8sff" {
 			t.Fatalf("%s: %+v", when, c)
 		}
-		if len(c.Declarations) != 1 || c.Declarations[0].Slug != "acme-srv2-8sff" || !c.Candidates[2].Current || c.Candidates[0].Current {
+		if len(c.Declarations) != 1 || c.Declarations[0].Slug != "acme-srv2-8sff" || !c.Candidates[3].Current || c.Candidates[0].Current {
 			t.Fatalf("%s: declarations %+v candidates %+v", when, c.Declarations, c.Candidates)
 		}
 		it := e.variantItem()
@@ -244,5 +248,34 @@ func TestDeviceTypeCandidatesRefusals(t *testing.T) {
 	var c choice
 	if err := json.Unmarshal(w.Body.Bytes(), &c); err != nil || w.Code != 200 || c.Certain || c.Reason != devicetypes.UncertainNone || len(c.Candidates) != 0 {
 		t.Fatalf("no library: %d %s", w.Code, w.Body)
+	}
+}
+
+// A declared model that is a variant of the chassis the part number names
+// (an option cage in the same CTO chassis) refines that chassis: no
+// sku_conflict. Declaring another chassis is one.
+func TestDeclaredRefinementIsNoSKUConflict(t *testing.T) {
+	e := newEnv(t, reconcile.Policy{})
+	e.collectSrvV("SKU-12")
+	e.syncLibrary()
+	if c := e.choice(e.ids["srv-v"], tokReader); !c.Certain || c.Reason != devicetypes.BySKU || c.Current == nil || c.Current.Slug != "acme-srv2-12lff" {
+		t.Fatalf("before: %+v, want the 12LFF by its part number", c)
+	}
+	declare := func(slug string) {
+		b := sdk.NewBatch("declaration:racks", sdk.ScopeFull)
+		b.Confidence = sdk.Declared
+		b.Object("dev", "device").Identify(sdk.IDKey, e.ids["srv-v"])
+		b.Object("dt", "device_type").Identify("slug", slug)
+		b.Relations = append(b.Relations, &sdk.Relation{Type: "instance_of", From: sdk.Ref("dev"), To: sdk.Ref("dt")})
+		e.apply(b)
+	}
+	declare("acme-srv2-12lff-nvme")
+	c := e.choice(e.ids["srv-v"], tokReader)
+	if c.Current == nil || c.Current.Slug != "acme-srv2-12lff-nvme" || c.Reason != devicetypes.ByDeclared || c.SKUConflict != nil {
+		t.Fatalf("the NVMe cage of the 12LFF: %+v, want it declared and no conflict", c)
+	}
+	declare("acme-srv2-8sff")
+	if c := e.choice(e.ids["srv-v"], tokReader); c.SKUConflict == nil || c.SKUConflict.Slug != "acme-srv2-12lff" {
+		t.Fatalf("another chassis: %+v, want the part number's 12LFF as a conflict", c)
 	}
 }
