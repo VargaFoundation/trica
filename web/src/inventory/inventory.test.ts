@@ -1,6 +1,6 @@
 import type { AttributeDoc, ObjectView, RelationLink } from "../api/types";
 import { formatBytes, formatDuration, formatQuantity } from "./format";
-import { countHealth, FOLD_AFTER, foldTiles, groupTiles, mountsOf, type Tile } from "./Fleet";
+import { countHealth, FOLD_AFTER, foldTiles, groupTiles, mountsOf, powerTotal, type Tile } from "./Fleet";
 import { healthOf } from "./health";
 import { kindOf } from "./kind";
 import { columnsOf, groupOf, isHealthEnum } from "../pages/ObjectOverview";
@@ -101,6 +101,20 @@ const obj = (id: string, display: string, attributes: Record<string, unknown> = 
 const tile = (o: ObjectView, health: Tile["health"], mount?: Tile["mount"]): Tile => ({ obj: o, kind: kindOf(o), kindLabel: String(o.attributes.role ?? "Device"), health, mount });
 
 describe("the fleet", () => {
+  it("says what its power total covers: devices measured, and supply output apart", () => {
+    const total = powerTotal([
+      tile(obj("s1", "s1", { role: "server", power_w: 150, power_basis: "input" }), "ok"),
+      tile(obj("s2", "s2", { role: "server", power_w: 120 }), "ok"),
+      tile(obj("w1", "w1", { role: "switch", power_w: 96.5, power_basis: "output" }), "ok"),
+      tile(obj("w2", "w2", { role: "switch" }), "ok"),
+      tile(obj("f1", "f1", { role: "firewall" }), "unknown"),
+      tile(obj("p1", "p1", { role: "patch_panel" }), "unknown"),
+      tile({ ...obj("old", "old", { role: "server", power_w: 300 }), status: "absent" }, "absent"),
+    ]);
+    // The absent server and the patch panel are not owed a reading.
+    expect(total).toEqual({ watts: 366.5, measured: 3, of: 5, outputWatts: 96.5 });
+  });
+
   it("knows where each device is mounted", () => {
     const link = {
       id: 1,

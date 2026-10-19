@@ -1162,6 +1162,20 @@
               "fr": "Référence"
             }
           },
+          "power_basis": {
+            "description": "Where power_w is measured: input, what the device draws from the mains (a BMC's consumed watts); output, what its supplies deliver, lower than the draw by their losses (a switch that reports no input power). Unset when the source does not say.",
+            "enum": [
+              "input",
+              "output"
+            ],
+            "title": "Power measured at",
+            "type": "string",
+            "x-trica-kind": "enum",
+            "x-trica-label": {
+              "en": "Power measured at",
+              "fr": "Puissance mesurée en"
+            }
+          },
           "power_state": {
             "description": "Power state reported by the BMC.",
             "enum": [
@@ -1178,7 +1192,7 @@
             }
           },
           "power_w": {
-            "description": "Last power reading.",
+            "description": "Last power reading. power_basis says whether it is drawn from the mains or delivered by the supplies.",
             "title": "Power draw",
             "type": "number",
             "x-trica-kind": "float",

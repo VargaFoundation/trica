@@ -1162,6 +1162,12 @@ export interface components {
              */
             part_number?: string;
             /**
+             * Power measured at
+             * @description Where power_w is measured: input, what the device draws from the mains (a BMC's consumed watts); output, what its supplies deliver, lower than the draw by their losses (a switch that reports no input power). Unset when the source does not say.
+             * @enum {string}
+             */
+            power_basis?: "input" | "output";
+            /**
              * Power state
              * @description Power state reported by the BMC.
              * @enum {string}
@@ -1169,7 +1175,7 @@ export interface components {
             power_state?: "on" | "off" | "unknown";
             /**
              * Power draw
-             * @description Last power reading.
+             * @description Last power reading. power_basis says whether it is drawn from the mains or delivered by the supplies.
              */
             power_w?: number;
             /**

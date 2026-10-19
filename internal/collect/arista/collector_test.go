@@ -172,7 +172,9 @@ func TestEOS414(t *testing.T) {
 	}
 	checkAttrs(t, dev, map[string]any{
 		"role": "switch", "vendor": "Arista", "model": "DCS-7050SX-64-F", "os_name": "EOS", "os_version": "4.14.2F",
-		"uptime_s": int64(1234567), "memory_bytes": int64(3794508 * 1024), "health": "ok", "power_w": 249.5,
+		"uptime_s": int64(1234567), "memory_bytes": int64(3794508 * 1024), "health": "ok",
+		// 4.14 reports no input power: the total is what the supplies deliver.
+		"power_w": 249.5, "power_basis": "output",
 		"mlag_domain": "MLAG-A", "mlag_state": "active", "mlag_peer": "203.0.113.2",
 	})
 	checkAbsent(t, dev, "inlet_temp_c", "outlet_temp_c") // no sensor says inlet or outlet
@@ -357,8 +359,9 @@ func TestEOS420(t *testing.T) {
 	checkAttrs(t, dev, map[string]any{
 		"role": "switch", "model": "DCS-7280SE-64-F", "os_version": "4.20.7M", "uptime_s": int64(2234567),
 		"memory_bytes": int64(8010656 * 1024), "mlag_state": "disabled",
-		// PSU 2 has lost its input: only PSU 1 delivers power.
-		"power_w": float64(160), "inlet_temp_c": 27.5, "outlet_temp_c": float64(38), "health": "ok",
+		// PSU 2 has lost its input: only PSU 1 draws power, 178.5 W for 160
+		// delivered.
+		"power_w": 178.5, "power_basis": "input", "inlet_temp_c": 27.5, "outlet_temp_c": float64(38), "health": "ok",
 	})
 	// MLAG is disabled: the empty domain and peer are not facts.
 	checkAbsent(t, dev, "mlag_domain", "mlag_peer")
@@ -758,4 +761,17 @@ func TestAirflowDirectionNotUnderstood(t *testing.T) {
 	if len(bd.warnings) != 1 || !strings.Contains(bd.warnings[0], "sidewaysAirflow") {
 		t.Errorf("warnings %q, want the unknown direction said", bd.warnings)
 	}
+}
+
+// One supply that reports its input and one that does not: the input total
+// would leave the second out, so the device gets what the supplies deliver,
+// and says so.
+func TestPowerBasisMixed(t *testing.T) {
+	d := &data{raw: map[string]json.RawMessage{cmdPower: json.RawMessage(`{"powerSupplies":{
+		"1":{"state":"ok","outputPower":100.0,"inputPower":110.0},
+		"2":{"state":"ok","outputPower":90.0}}}`)}, failed: map[string]error{}}
+	bd := &builder{b: sdk.NewBatch("t", sdk.ScopeFull), d: d, psuRef: map[string]string{}}
+	bd.b.Object("dev", "device")
+	bd.power()
+	checkAttrs(t, bd.b.Object("dev", "device"), map[string]any{"power_w": float64(190), "power_basis": "output"})
 }

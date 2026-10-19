@@ -70,7 +70,7 @@ reported as partial.
 | Location LED | `IndicatorLED` | `device.location_led` |
 | Memory total | `MemorySummary.TotalSystemMemoryGiB`/`GB` (else sum of the DIMMs) | `device.memory_bytes` |
 | CPU count | `ProcessorSummary.Count` (else number of processors) | `device.cpu_count` |
-| Power draw | `Chassis/Power`.PowerControl[0].PowerConsumedWatts (else `PowerMetrics.AverageConsumedWatts`) | `device.power_w` |
+| Power draw | `Chassis/Power`.PowerControl[0].PowerConsumedWatts (else `PowerMetrics.AverageConsumedWatts`) | `device.power_w`, `device.power_basis: input` |
 | Inlet / exhaust temperature | `Chassis/Thermal`, by `PhysicalContext` then by sensor name | `device.inlet_temp_c`, `device.outlet_temp_c` |
 | BMC firmware | `Managers/<id>`.FirmwareVersion | `device.bmc_version` |
 | BMC address | first usable IPv4 of the manager's interfaces | `device.bmc_ip` and `device.mgmt_ip` (identity) |

@@ -156,7 +156,7 @@ var profileCases = []profileCase{
 				"role": "server", "vendor": "HP", "model": "ProLiant DL360 Gen9", "part_number": "755258-B21",
 				"bios_version": "P89 v2.60 (05/21/2018)", "bmc_version": "iLO 4 v2.78", "bmc_ip": "192.0.2.11",
 				"power_state": "on", "health": "ok", "cpu_count": 2, "memory_bytes": int64(48) << 30,
-				"power_w": 181, "inlet_temp_c": 21, "location_led": "off",
+				"power_w": 181, "power_basis": "input", "inlet_temp_c": 21, "location_led": "off",
 				"firmware_inventory": []string{
 					"Backup System ROM=P89 v2.40 (02/17/2017)", "HP Smart Array P440ar Controller=6.06",
 					"Power Management Controller Firmware=1.0.4", "System ROM=P89 v2.60 (05/21/2018)", "iLO 4=2.78 Dec 08 2020",
@@ -223,7 +223,7 @@ var profileCases = []profileCase{
 			}, attrs: map[string]any{
 				"vendor": "HPE", "model": "ProLiant DL380 Gen10", "part_number": "868703-B21", "bios_version": "U30 v2.72 (07/09/2021)",
 				"bmc_version": "iLO 5 v2.72", "bmc_ip": "198.51.100.21", "health": "warning", "location_led": "on",
-				"cpu_count": 2, "memory_bytes": int64(64) << 30, "power_w": 214, "inlet_temp_c": 24,
+				"cpu_count": 2, "memory_bytes": int64(64) << 30, "power_w": 214, "power_basis": "input", "inlet_temp_c": 24,
 				"firmware_inventory": []string{"Smart Array P408i-a SR Gen10=2.62", "System ROM=U30 v2.72 (07/09/2021)", "iLO 5=2.72 Aug 24 2022"},
 				"firmware": []map[string]any{
 					{"name": "Smart Array P408i-a SR Gen10", "version": "2.62", "location": "Slot 0", "updateable": true},
@@ -275,7 +275,7 @@ var profileCases = []profileCase{
 			}, attrs: map[string]any{
 				"vendor": "Dell Inc.", "model": "PowerEdge R330", "bios_version": "2.10.5", "bmc_version": "2.83.83.83",
 				"bmc_ip": "203.0.113.31", "health": "critical", "location_led": "blinking", "power_state": "on",
-				"cpu_count": 1, "memory_bytes": int64(16) << 30, "power_w": 98, "inlet_temp_c": 22, "outlet_temp_c": 31,
+				"cpu_count": 1, "memory_bytes": int64(16) << 30, "power_w": 98, "power_basis": "input", "inlet_temp_c": 22, "outlet_temp_c": 31,
 				// The rollback image (Previous-*) is not what runs.
 				"firmware_inventory": []string{"BIOS=2.10.5", "Integrated Dell Remote Access Controller=2.83.83.83"},
 				// "00:00:00Z" is Dell's placeholder, not a date.
@@ -552,7 +552,7 @@ func TestPartialFailures(t *testing.T) {
 				if countType(b, "psu") != 0 {
 					t.Error("psu reported without the power resource")
 				}
-				checkAbsent(t, b, "dev", "power_w")
+				checkAbsent(t, b, "dev", "power_w", "power_basis")
 				checkObject(t, b, wantObj{ref: "dev", typ: "device", attrs: map[string]any{"inlet_temp_c": 24}})
 			}},
 		{"one log page fails", ILO4, func(f *FakeRedfish) {

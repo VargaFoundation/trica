@@ -573,7 +573,11 @@ func (bd *builder) power() {
 			slotsSeen[s] = true
 		}
 	}
-	total, haveTotal := 0.0, false
+	// The device's power is what its supplies draw when every supply that
+	// reports its output also reports its input, else what they deliver;
+	// power_basis says which, so that a total across devices does not add a
+	// draw to an output without saying so.
+	output, input, haveOutput, inputComplete := 0.0, 0.0, false, true
 	for _, slot := range sdk.SortedKeys(slotsSeen) {
 		o := bd.b.Object(bd.ensurePSU(slot), "psu")
 		if inv != nil {
@@ -599,12 +603,21 @@ func (bd *builder) power() {
 				o.Set("input_w", p.InputPower.V)
 			}
 			if p.OutputPower.OK {
-				total, haveTotal = total+p.OutputPower.V, true
+				output, haveOutput = output+p.OutputPower.V, true
+				if p.InputPower.OK {
+					input += p.InputPower.V
+				} else {
+					inputComplete = false
+				}
 			}
 		}
 	}
-	if haveTotal {
-		bd.b.Object("dev", "device").Set("power_w", math.Round(total*10)/10)
+	if haveOutput {
+		w, basis := output, "output"
+		if inputComplete {
+			w, basis = input, "input"
+		}
+		bd.b.Object("dev", "device").Set("power_w", math.Round(w*10)/10).Set("power_basis", basis)
 	}
 }
 

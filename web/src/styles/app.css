@@ -736,6 +736,10 @@ button.ghost:hover,
   font-size: 0.75rem;
   color: var(--trica-ink-muted);
 }
+.stat-note {
+  display: block;
+  margin-top: 0.15rem;
+}
 .stat-ok .stat-value {
   color: var(--trica-ok-ink);
 }

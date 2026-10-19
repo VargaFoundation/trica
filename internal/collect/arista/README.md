@@ -98,7 +98,7 @@ the refused command costs only its own data.
 | Role | fixed | `device.role` = `switch` |
 | Uptime | `show uptime` | `device.uptime_s` |
 | Overall health | `systemStatus` of the environment commands | `device.health` (worst of temperature and cooling) |
-| Power drawn | `show environment power` | `device.power_w` (sum of PSU output) |
+| Power drawn | `show environment power` | `device.power_w`: the PSUs' `inputPower` when every PSU that reports its output reports it too, `device.power_basis: input`; else the sum of their `outputPower`, `power_basis: output` (lower than the draw by the supplies' losses) |
 | Inlet / outlet temperature | `show environment temperature` | `device.inlet_temp_c`, `outlet_temp_c` (only when a sensor says inlet / exhaust) |
 | MLAG | `show mlag` | `device.mlag_state`, `mlag_domain`, `mlag_peer` (**new attributes**) |
 | Physical, Management, Port-Channel, Vlan (SVI), Loopback interfaces | `show interfaces`, `show interfaces status` | `interface` (child of the device): `kind`, `mac`, `description`, `admin_status`, `oper_status`, `mtu`, `duplex`, `speed_mbps` (link up only), `mode`, `native_vlan` |

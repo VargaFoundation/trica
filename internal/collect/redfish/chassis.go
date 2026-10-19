@@ -51,7 +51,8 @@ func (r *run) power(path string) {
 			w = p.PowerControl[0].PowerMetrics.AverageConsumedWatts
 		}
 		if w != nil {
-			r.dev.Set("power_w", *w)
+			// Redfish's consumed watts are what the chassis draws.
+			r.dev.Set("power_w", *w).Set("power_basis", "input")
 		}
 	}
 	names, ids := make([]string, len(p.PowerSupplies)), make([]string, len(p.PowerSupplies))
