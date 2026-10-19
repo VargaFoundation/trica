@@ -11,6 +11,7 @@ import { HealthPage } from "./pages/HealthPage";
 import { HomePage } from "./pages/HomePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ObjectPage } from "./pages/ObjectPage";
+import { ObjectsPage } from "./pages/ObjectsPage";
 import { ProposalPage, ProposalsPage } from "./pages/ProposalsPage";
 import { SearchPage } from "./pages/SearchPage";
 import { RackPage } from "./racks/RackPage";
@@ -79,7 +80,7 @@ function AfterSignIn() {
   return <Navigate to={to} replace />;
 }
 
-/** Every page has its own address: /objects/:id, /search?q=, /discrepancies, /proposals/:id, /topology, /health. */
+/** Every page has its own address: /objects?type=, /objects/:id, /search?q=, /discrepancies, /proposals/:id, /topology, /health. */
 export function App() {
   return (
     <AuthGate>
@@ -87,6 +88,7 @@ export function App() {
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="search" element={<SearchPage />} />
+          <Route path="objects" element={<ObjectsPage />} />
           <Route path="objects/:id" element={<ObjectPage />} />
           <Route path="discrepancies" element={<DiscrepanciesPage />} />
           <Route path="proposals" element={<ProposalsPage />} />

@@ -51,8 +51,9 @@ func site() []*sdk.Batch {
 	var out []*sdk.Batch
 	b := sdk.NewBatch("declare:site", sdk.ScopeFull)
 	b.Confidence = sdk.Declared
+	b.Object("par", "site").Identify("name", "paris").Identify("code", "PAR1")
 	b.Object("r1", "rack").Identify("name", "rack 1")
-	b.Object("r2", "rack").Identify("name", "rack 2")
+	b.Object("r2", "rack").Identify("name", "rack 2").In("par")
 	b.Object("inet", "internet_access").Identify("name", "uplink-a").Set("public_ips", []any{"198.51.100.7", "198.51.100.8"})
 	out = append(out, b)
 
@@ -73,7 +74,9 @@ func site() []*sdk.Batch {
 	b.Object("d", "device").Identify("serial", "CZ0001").Identify("name", "srv1").Set("role", "server").Set("vendor", "HPE").Set("power_w", 420.0).Set("mgmt_ip", "198.51.100.20")
 	b.Object("disk0", "disk").Identify("serial", "S3Z0A").In("d").Set("wear_pct", 74.0).Set("media", "ssd")
 	b.Object("disk1", "disk").Identify("serial", "S3Z0B").In("d").Set("wear_pct", 12.0).Set("media", "ssd")
-	b.Object("r2", "rack").Identify("name", "rack 2")
+	// A rack's name is unique within its parent: name the same one.
+	b.Object("par", "site").Identify("name", "paris")
+	b.Object("r2", "rack").Identify("name", "rack 2").In("par")
 	b.Relate("mounted_in", "d", "r2")
 	out = append(out, b)
 
@@ -155,7 +158,13 @@ func TestSearch(t *testing.T) {
 		{q: "type:device source!=redfish:* source!=declare:*", want: []string{"sw-a1", "sw-a2", "sw-b1"}},
 		{q: "type:device (vendor:hpe OR os_version:4.9.1)", want: []string{"srv1", "sw-b1"}},
 		{q: "type:rack,internet_access", want: []string{"rack 1", "rack 2", "uplink-a"}},
-		{q: "type!=device type!=interface type!=disk", want: []string{"rack 1", "rack 2", "uplink-a"}},
+		{q: "type!=device type!=interface type!=disk", want: []string{"paris", "rack 1", "rack 2", "uplink-a"}},
+		// Site: the site, what it contains, what is mounted there and their parts.
+		{q: "site:paris", want: []string{"paris", "rack 2", "srv1", "S3Z0A", "S3Z0B"}},
+		{q: "type:device site:PAR1", want: []string{"srv1"}},
+		{q: "type:disk site:par*", want: []string{"S3Z0A", "S3Z0B"}},
+		{q: "type:device role:server site!=paris", want: []string{"srv2"}},
+		{q: "site:lyon", want: nil},
 		// Absent objects only when asked.
 		{q: "decom-1", want: nil},
 		{q: "decom-1 status:absent", want: []string{"decom-1"}},
@@ -252,7 +261,7 @@ func TestSearchPagesAndCounts(t *testing.T) {
 		t.Errorf("empty result: %+v", r)
 	}
 	r, _ = s.Search(ctx, "", search.Page{Limit: 5000})
-	if r.Limit != 1000 || r.Total != 14 {
+	if r.Limit != 1000 || r.Total != 15 {
 		t.Errorf("an empty query lists every active object, capped pages: limit %d total %d by type %v", r.Limit, r.Total, r.ByType)
 	}
 }

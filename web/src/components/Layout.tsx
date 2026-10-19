@@ -22,6 +22,7 @@ export const NAV: { title: MessageKey; items: Item[] }[] = [
   {
     title: "nav.group.inventory",
     items: [
+      { to: "/objects", label: "nav.objects", icon: "object" },
       { to: "/search", label: "nav.search", icon: "search" },
       { to: "/rooms", label: "nav.rooms", icon: "rack" },
       { to: "/topology", label: "nav.topology", icon: "topology" },
