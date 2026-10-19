@@ -1,0 +1,42 @@
+---
+# Written by the trica project (Apache-2.0); the face images are trica drawings
+# (CC0-1.0, sources in drawings/, generator in scripts/devicetype-faces/).
+#
+# The 8SFF chassis of the DL360 Gen9: CTO 755258-B21 ("HP ProLiant DL360 Gen9 8SFF
+# Configure-to-order Server", QuickSpecs c04346229, step 1). Upstream's
+# ProLiant-DL360-Gen9 names the same part number but pictures the 10SFF build
+# (8SFF + the 2SFF kit in the media bay); part_numbers makes a server reporting
+# 755258-B21 match this model first. 4.32 x 43.47 x 69.85 cm; minimum weight
+# (one drive, one supply, one processor) 12.25 kg. Embedded 4x1GbE 331i,
+# dedicated iLO, optional serial port, two Flexible Slot supplies.
+manufacturer: HPE
+model: ProLiant DL360 Gen9 8SFF
+slug: hpe-proliant-dl360-gen9-8sff
+part_numbers:
+  - 755258-B21
+u_height: 1
+is_full_depth: true
+airflow: front-to-rear
+weight: 12.25
+weight_unit: kg
+comments: '[QuickSpecs](https://support.hpe.com/hpesc/public/api/document/c04346229)'
+console-ports:
+  - name: Serial
+    type: de-9
+power-ports:
+  - name: PS1
+    type: iec-60320-c14
+  - name: PS2
+    type: iec-60320-c14
+interfaces:
+  - name: iLO
+    type: 1000base-t
+    mgmt_only: true
+  - name: NIC 1
+    type: 1000base-t
+  - name: NIC 2
+    type: 1000base-t
+  - name: NIC 3
+    type: 1000base-t
+  - name: NIC 4
+    type: 1000base-t

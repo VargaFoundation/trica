@@ -27,12 +27,13 @@ is closed (history keeps it) and a new one opened.
 
 | Rule | Example |
 |---|---|
+| First, a part number listed in a model's `part_numbers` (the chassis variant, [ADR 0043](../adr/0043-device-type-variants-and-drawn-faces.md)) | `ProLiant DL380 Gen9` + `767032-B21` = `hpe-proliant-dl380-gen9-24sff`, matched `by sku` |
 | Case and punctuation ignored | `dcs 7050tx 48` = `DCS-7050TX-48`; the slug is accepted as a name too |
 | Vendor spellings aliased | `Arista Networks`, `HP`, `Hewlett Packard Enterprise`, `Dell Inc.`, `Dell EMC`, `Routerboard` |
 | Vendor repeated in the model is dropped | `Dell PowerEdge R640` |
 | Then the part number | `P19766-B21` |
 | Airflow variants | `DCS-7050SX3-48YC8` matches the `-F` model only if all variants agree on everything but airflow; airflow and part number are then left out |
-| Ambiguous name | matches nothing |
+| Ambiguous name, or a SKU listed by two models | matches nothing (the SKU then leaves the decision to the name) |
 | No vendor | matches nothing |
 
 ## Adding a model to the embedded library
@@ -44,6 +45,19 @@ they are; models written here go in `library/trica/`). Required: `manufacturer`,
 `lb`, `oz`. `airflow` is one of `front-to-rear`, `rear-to-front`, `left-to-right`,
 `right-to-left`, `side-to-rear`, `passive`, `mixed`. `go test ./internal/devicetypes/` loads
 and validates every file; an invalid one fails the load.
+
+`part_numbers` (a trica extension, ignored by upstream tools) lists the vendor SKUs of one
+chassis variant, configure-to-order and pre-configured: a server reporting one of them gets
+that model whatever its model name says. Use it when a vendor reports one name for several
+chassis (HPE: `ProLiant DL180 Gen9` for the 8SFF, 8LFF and 12LFF cages), take the SKUs from the
+vendor's tables only, and cite them in the file. A SKU must be listed by one model only.
+
+| Variant models (`library/trica/`) | SKUs |
+|---|---|
+| `hpe-proliant-dl360-gen9-8sff` | 755258-B21 |
+| `hpe-proliant-dl380-gen9-8sff` / `-24sff` | 719064-B21 / 767032-B21 |
+| `hpe-proliant-dl180-gen9-8sff` / `-8lff` / `-12lff` | 754523-B21, 833973-B21 / 754524-B21, 833971-B21, 833972-B21 / 775506-B21, 833974-B21 |
+| `dell-poweredge-r330-8sff` / `-4lff-hot-plug` / `-4lff-cabled` | none: Dell reports no chassis part number (the Redfish `SKU` is the service tag); a device reporting `PowerEdge R330` gets the upstream model, without picture. To show your chassis, copy the PNG of your variant to `elevation-images/Dell/dell-poweredge-r330.front.png` (and `.rear.png`) in your directory, see below |
 
 ## Face images
 
@@ -68,6 +82,11 @@ A model may have an image of each face. Decision: [ADR 0042](../adr/0042-device-
   its first variant (`-F`).
 
 Embedded images and their licences are listed in `internal/devicetypes/library/README.md`.
+Faces upstream has no picture of are **drawn by the project** ([ADR 0043](../adr/0043-device-type-variants-and-drawn-faces.md)):
+schematic, vendor-neutral, from the vendors' published counts and layouts, CC0-1.0. Their SVG
+sources are in `library/drawings/`, the generator in `scripts/devicetype-faces/`
+(`node scripts/devicetype-faces/generate.mjs --png`, in the Playwright image the e2e suite
+pins); such an image reports the origin `trica` even for an upstream model.
 
 ## Your own models and images
 

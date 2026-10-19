@@ -1,0 +1,40 @@
+---
+# Written by the trica project (Apache-2.0); the face images are trica drawings
+# (CC0-1.0, sources in drawings/, generator in scripts/devicetype-faces/).
+#
+# The 8SFF chassis of the DL380 Gen9: CTO 719064-B21 (QuickSpecs c04346247,
+# step 1): one 8SFF drive box (box 3), the two others closed by blanks (box 1
+# takes the optional Universal Media Bay). 8.73 x 44.55 x 67.94 cm; minimum
+# weight (8SFF, one drive, one processor, one supply) 14.759 kg. Embedded
+# 4x1GbE 331i, dedicated iLO, optional serial port, two Flexible Slot supplies.
+manufacturer: HPE
+model: ProLiant DL380 Gen9 8SFF
+slug: hpe-proliant-dl380-gen9-8sff
+part_numbers:
+  - 719064-B21
+u_height: 2
+is_full_depth: true
+airflow: front-to-rear
+weight: 14.76
+weight_unit: kg
+comments: '[QuickSpecs](https://support.hpe.com/hpesc/public/api/document/c04346247)'
+console-ports:
+  - name: Serial
+    type: de-9
+power-ports:
+  - name: PS1
+    type: iec-60320-c14
+  - name: PS2
+    type: iec-60320-c14
+interfaces:
+  - name: iLO
+    type: 1000base-t
+    mgmt_only: true
+  - name: NIC 1
+    type: 1000base-t
+  - name: NIC 2
+    type: 1000base-t
+  - name: NIC 3
+    type: 1000base-t
+  - name: NIC 4
+    type: 1000base-t

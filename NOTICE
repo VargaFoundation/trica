@@ -25,8 +25,9 @@ trica embeds, unchanged, device model files from:
   netbox-community/devicetype-library   CC0-1.0 (public domain dedication)
     https://github.com/netbox-community/devicetype-library
     licence checked 2026-10-14, master at 565a9ba8e0a68a4fa102ce4b35f30c6695a2d574
-    files: internal/devicetypes/library/<Vendor>/ (every directory but "trica"
-    and "elevation-images")
+    files: internal/devicetypes/library/<Vendor>/ (every directory but "trica",
+    "elevation-images" and "drawings"); Arista/DCS-7050SX-64-F.yaml, -R.yaml and
+    Dell/PowerEdge-R330.yaml copied at master 37f5f02c27eedf60767594174598daec5b9e2bee
 
 and device face images from the same repository, scaled down and recompressed
 (CC0 allows it; the list and the changes are in
@@ -34,9 +35,17 @@ internal/devicetypes/library/README.md):
 
   netbox-community/devicetype-library   CC0-1.0 (public domain dedication)
     licence checked 2026-10-17, master at 37f5f02c27eedf60767594174598daec5b9e2bee
-    files: internal/devicetypes/library/elevation-images/
+    files: internal/devicetypes/library/elevation-images/ (those without a source
+    in internal/devicetypes/library/drawings/)
 
 The models in internal/devicetypes/library/trica/ are written by this project.
+
+The device face drawings in internal/devicetypes/library/drawings/, and the PNG
+files generated from them in internal/devicetypes/library/elevation-images/
+(same name), are original works of this project, drawn from vendors' published
+facts (no vendor picture or stencil was used), and are dedicated to the public
+domain under CC0-1.0 (https://creativecommons.org/publicdomain/zero/1.0/). The
+list and the sources are in internal/devicetypes/library/README.md.
 
 The colour tokens of the web UI (web/src/styles/tokens.css) are steps of:
 

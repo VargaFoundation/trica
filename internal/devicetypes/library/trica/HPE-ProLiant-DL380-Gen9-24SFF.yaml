@@ -1,0 +1,37 @@
+---
+# Written by the trica project (Apache-2.0); the face images are trica drawings
+# (CC0-1.0, sources in drawings/, generator in scripts/devicetype-faces/).
+#
+# The 24SFF chassis of the DL380 Gen9: CTO 767032-B21 (QuickSpecs c04346247,
+# step 1, "HPE ProLiant DL380 Gen9 24SFF Configure-to-order Server"): three
+# 8SFF drive boxes. 8.73 x 44.55 x 67.94 cm. The QuickSpecs give no minimum
+# weight for this chassis, so none is claimed here.
+manufacturer: HPE
+model: ProLiant DL380 Gen9 24SFF
+slug: hpe-proliant-dl380-gen9-24sff
+part_numbers:
+  - 767032-B21
+u_height: 2
+is_full_depth: true
+airflow: front-to-rear
+comments: '[QuickSpecs](https://support.hpe.com/hpesc/public/api/document/c04346247)'
+console-ports:
+  - name: Serial
+    type: de-9
+power-ports:
+  - name: PS1
+    type: iec-60320-c14
+  - name: PS2
+    type: iec-60320-c14
+interfaces:
+  - name: iLO
+    type: 1000base-t
+    mgmt_only: true
+  - name: NIC 1
+    type: 1000base-t
+  - name: NIC 2
+    type: 1000base-t
+  - name: NIC 3
+    type: 1000base-t
+  - name: NIC 4
+    type: 1000base-t

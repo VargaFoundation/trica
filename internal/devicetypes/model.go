@@ -32,12 +32,17 @@ const (
 
 // Model is one validated device model.
 type Model struct {
-	Slug       string  `json:"slug"`
-	Vendor     string  `json:"vendor"`
-	Model      string  `json:"model"`
-	PartNumber string  `json:"part_number,omitempty"`
-	UHeight    float64 `json:"u_height"`
-	FullDepth  bool    `json:"full_depth"`
+	Slug       string `json:"slug"`
+	Vendor     string `json:"vendor"`
+	Model      string `json:"model"`
+	PartNumber string `json:"part_number,omitempty"`
+	// PartNumbers are the vendor part numbers (SKUs) of this exact variant
+	// of a chassis, a trica extension of the upstream format: a device whose
+	// part number is one of them matches this model before any name does,
+	// so that "ProLiant DL360 Gen9" + 755258-B21 picks the 8SFF chassis.
+	PartNumbers []string `json:"part_numbers,omitempty"`
+	UHeight     float64  `json:"u_height"`
+	FullDepth   bool     `json:"full_depth"`
 	// Airflow uses the trica schema spelling (front_to_rear).
 	Airflow  string  `json:"airflow,omitempty"`
 	WeightKg float64 `json:"weight_kg,omitempty"`
@@ -95,6 +100,7 @@ type rawModel struct {
 	Model              string    `yaml:"model"`
 	Slug               string    `yaml:"slug"`
 	PartNumber         string    `yaml:"part_number"`
+	PartNumbers        []string  `yaml:"part_numbers"`
 	UHeight            *float64  `yaml:"u_height"`
 	IsFullDepth        *bool     `yaml:"is_full_depth"`
 	Airflow            string    `yaml:"airflow"`
@@ -167,6 +173,18 @@ func Parse(data []byte, origin, path string) (*Model, error) {
 		if _, ok := v.(bool); v != nil && !ok {
 			return fail("%s must be true or false (the file is found by its name, see the library README)", k)
 		}
+	}
+	seenPN := map[string]bool{}
+	for i, pn := range r.PartNumbers {
+		pn = strings.TrimSpace(pn)
+		if pn == "" {
+			return fail("part_numbers entry %d is empty", i+1)
+		}
+		if seenPN[pn] {
+			return fail("part_numbers lists %q twice", pn)
+		}
+		seenPN[pn] = true
+		m.PartNumbers = append(m.PartNumbers, pn)
 	}
 	m.UHeight = *r.UHeight
 	m.FullDepth = r.IsFullDepth != nil && *r.IsFullDepth

@@ -1,0 +1,37 @@
+---
+# Written by the trica project (Apache-2.0); the face images are trica drawings
+# (CC0-1.0, sources in drawings/, generator in scripts/devicetype-faces/).
+#
+# A chassis of the Dell PowerEdge R330, from the Owner's Manual (Rev. A03):
+# 482.4 x 42.4 mm (434.0 mm without the ears), 666.2 mm deep without the bezel;
+# two 10/100/1000 ports, serial, optional iDRAC port card, up to two 350 W
+# redundant supplies. Upstream's PowerEdge-R330 (vendored as is) stays the model
+# a device reporting "PowerEdge R330" matches: Dell reports no chassis part
+# number (its Redfish SKU is the service tag), so a variant is only picked by
+# its own name or by an operator's model file (see the library README). The manual's
+# weight ("26.02 Kg (30.42 lb)") contradicts itself and is left out.
+#
+# Four 3.5-inch cabled drives, diagnostic indicators instead of the LCD.
+manufacturer: Dell
+model: PowerEdge R330 4 x 3.5in cabled
+slug: dell-poweredge-r330-4lff-cabled
+u_height: 1
+is_full_depth: true
+airflow: front-to-rear
+comments: '[Owner''s Manual](https://dl.dell.com/topicspdf/poweredge-r330_owners-manual_en-us.pdf)'
+console-ports:
+  - name: Serial
+    type: de-9
+power-ports:
+  - name: PSU1
+    type: iec-60320-c14
+  - name: PSU2
+    type: iec-60320-c14
+interfaces:
+  - name: iDRAC
+    type: 1000base-t
+    mgmt_only: true
+  - name: Gig-E 1
+    type: 1000base-t
+  - name: Gig-E 2
+    type: 1000base-t
