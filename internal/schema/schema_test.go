@@ -46,6 +46,7 @@ func TestParseRejects(t *testing.T) {
 		"bad kind":                   "types: {x: {attributes: {a: {kind: nope}}}}",
 		"enum no values":             "types: {x: {attributes: {a: {kind: enum}}}}",
 		"bad identity":               "types: {x: {attributes: {a: {kind: string, identity: maybe}}}}",
+		"series of a string":         "types: {x: {attributes: {a: {kind: string, series: true}}}}",
 		"bad name":                   "types: {X: {attributes: {}}}",
 		"unknown parent":             "types: {x: {parents: [y]}}",
 		"unknown end":                "types: {x: {}}\nrelations: {r: {from: [x], to: [y]}}",

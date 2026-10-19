@@ -1657,3 +1657,76 @@ label.check {
   stroke: var(--trica-focus);
   stroke-dasharray: 3 3;
 }
+
+/* Trends: measurement curves on an object (charts/), drawn in real pixels. */
+.series-range {
+  display: flex;
+  gap: 0.25rem;
+}
+.series-range button[aria-pressed="true"] {
+  background: var(--trica-accent-soft);
+  border-color: var(--trica-accent-line);
+  color: var(--trica-accent-ink);
+}
+.series-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 1fr));
+  gap: 0 1rem;
+}
+.series-item {
+  box-shadow: none;
+}
+.series-plot {
+  border-radius: var(--trica-radius-control);
+  overflow: hidden;
+}
+.series-plot:focus-visible {
+  outline: 2px solid var(--trica-focus);
+  outline-offset: 2px;
+}
+.series-plot svg {
+  display: block;
+}
+.series-guide {
+  stroke: var(--trica-line);
+  stroke-dasharray: 3 3;
+}
+.series-band {
+  fill: var(--trica-info-soft);
+}
+.series-line {
+  fill: none;
+  stroke: var(--trica-info-ink);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.series-tick {
+  fill: var(--trica-ink-muted);
+  font-size: 11px;
+}
+.series-cursor line {
+  stroke: var(--trica-ink-muted);
+}
+.series-cursor circle {
+  fill: var(--trica-info-ink);
+  stroke: var(--trica-raised);
+  stroke-width: 1.5;
+}
+.series-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--trica-ink-muted);
+  margin-top: 0.2rem;
+}
+.series-readout {
+  min-height: 1.2em;
+  font-size: 0.8rem;
+  margin: 0.3rem 0 0;
+}
+.series-summary,
+.series-empty {
+  font-size: 0.8rem;
+  color: var(--trica-ink-muted);
+  margin: 0.2rem 0 0;
+}

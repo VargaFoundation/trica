@@ -1,6 +1,6 @@
 # ADR-0041: Live topology overlay, proxied by the server; cables inferred for management controllers
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10); amended by ADR 0045 (measurements reported as attributes are drawn over time)
 - **Concerns**: `internal/live`, `internal/api` (one endpoint), `internal/server` (the `live` block),
   `internal/deduce`. Amends ADR 0024 (the topology reads more than relations) and ADR 0010 (who a
   forwarding table may cable).
@@ -98,8 +98,9 @@ address), next to `evidence` and `level`, which are unchanged: a BMC cable is `m
   address nor a name trica knows is unmatched, and says so in `trica_live_series{state="unmatched"}`
   and in the answer's `sources`. Fixing it is a `labels` override or a relabelling on the metrics
   side, not code.
-- There is no history of measurements in trica, by design: the metrics store keeps that, and a
-  question about last week's traffic is asked there.
+- There is no history of traffic in trica, by design: the metrics store keeps that, and a
+  question about last week's traffic is asked there. What collectors report as an attribute
+  (power, temperatures, optical levels) does have a history, drawn as curves (ADR 0045).
 - Cost: one instant query per configured metric and source per period; the join reads the devices,
   modules and interfaces of the inventory at each refresh.
 - MLAG: each switch's port-channel is its own interface with its own members; the two halves of an

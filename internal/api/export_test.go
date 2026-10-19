@@ -9,3 +9,6 @@ func (s *Server) RouteKeys() []string {
 	}
 	return keys
 }
+
+// Bucket exposes bucket to the tests.
+var Bucket = bucket

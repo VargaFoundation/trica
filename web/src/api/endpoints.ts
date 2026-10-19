@@ -25,6 +25,7 @@ import type {
   RelationView,
   SchemaDoc,
   SearchPage,
+  Series,
   SourceHealth,
 } from "./types";
 
@@ -51,6 +52,9 @@ export const api = {
   /** The devices mounted in a rack, with position, face, model, height and depth. */
   rackContents: (id: string, q: Paging = {}, signal?: AbortSignal) =>
     request<Page<RackItem>>(`/racks/${encodeURIComponent(id)}/contents`, { query: q, signal }),
+  /** A measurement of the object over a range, in buckets (average, lowest, highest). */
+  series: (id: string, q: QueryOf<"/objects/{id}/series">, signal?: AbortSignal) =>
+    request<Series>(`/objects/${encodeURIComponent(id)}/series`, { query: q, signal }),
   timeline: (id: string, q: Paging = {}, signal?: AbortSignal) =>
     request<Page<Change>>(`/objects/${encodeURIComponent(id)}/timeline`, { query: q, signal }),
 

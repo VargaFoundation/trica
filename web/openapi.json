@@ -199,6 +199,9 @@
           "search": {
             "type": "boolean"
           },
+          "series": {
+            "type": "boolean"
+          },
           "unit": {
             "type": "string"
           },
@@ -7001,6 +7004,73 @@
         ],
         "type": "object"
       },
+      "Series": {
+        "properties": {
+          "from": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "object_id": {
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesPoint"
+            },
+            "type": "array"
+          },
+          "step_seconds": {
+            "type": "integer"
+          },
+          "to": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "unit": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "key",
+          "object_id",
+          "points",
+          "step_seconds",
+          "to",
+          "truncated"
+        ],
+        "type": "object"
+      },
+      "SeriesPoint": {
+        "properties": {
+          "avg": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "min": {
+            "type": "number"
+          },
+          "t": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "avg",
+          "max",
+          "min",
+          "t"
+        ],
+        "type": "object"
+      },
       "SourceHealth": {
         "properties": {
           "collector": {
@@ -8232,6 +8302,113 @@
           }
         },
         "summary": "The object's relations, now or as of a date.",
+        "tags": [
+          "inventory"
+        ],
+        "x-trica-action": "read"
+      }
+    },
+    "/objects/{id}/series": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "getObjectSeries",
+        "parameters": [
+          {
+            "description": "Object id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The measurement: an attribute the schema marks as a series.",
+            "in": "query",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start of the range (default: 24 hours before to).",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time"
+                },
+                {
+                  "format": "date"
+                }
+              ],
+              "description": "RFC 3339 time or YYYY-MM-DD date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "End of the range (default: now).",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time"
+                },
+                {
+                  "format": "date"
+                }
+              ],
+              "description": "RFC 3339 time or YYYY-MM-DD date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of buckets, 1 to 1000 (default 120).",
+            "in": "query",
+            "name": "points",
+            "required": false,
+            "schema": {
+              "default": 120,
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Series"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "A measurement of the object (power, temperature) over a range, in buckets, from its history.",
         "tags": [
           "inventory"
         ],

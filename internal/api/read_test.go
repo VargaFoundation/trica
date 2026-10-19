@@ -64,14 +64,23 @@ func TestSchemaEndpoints(t *testing.T) {
 	var ty struct {
 		Name       string `json:"name"`
 		Attributes []struct {
-			Name string `json:"name"`
-			Kind string `json:"kind"`
+			Name   string `json:"name"`
+			Kind   string `json:"kind"`
+			Series bool   `json:"series"`
 		} `json:"attributes"`
 		Identity struct {
 			Strong []string `json:"strong"`
 		} `json:"identity"`
 	}
 	r.json(t, &ty)
+	// The measurements are marked, so that the UI draws them as curves.
+	series := map[string]bool{}
+	for _, a := range ty.Attributes {
+		series[a.Name] = a.Series
+	}
+	if !series["power_w"] || !series["inlet_temp_c"] || series["os_version"] || series["u_height"] {
+		t.Errorf("series flags of device: %v", series)
+	}
 	kinds := map[string]string{}
 	for _, a := range ty.Attributes {
 		kinds[a.Name] = a.Kind

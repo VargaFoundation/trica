@@ -118,9 +118,9 @@ types:
       airflow: {kind: enum, values: [front_to_rear, rear_to_front, left_to_right, right_to_left, side_to_rear, passive, mixed], label: {en: Airflow, fr: Flux d'air}, description: "Airflow as configured or observed."}
       power_state: {kind: enum, values: ["on", "off", unknown], label: {en: Power state, fr: État d'alimentation}, description: "Power state reported by the BMC."}
       health: {kind: enum, values: [ok, warning, critical, unknown], label: {en: Health, fr: Santé}, description: "Overall health rollup reported by the device."}
-      power_w: {kind: float, unit: W, label: {en: Power draw, fr: Consommation}, description: "Last power reading."}
-      inlet_temp_c: {kind: float, unit: °C, label: {en: Inlet temperature, fr: Température d'entrée}, description: "Last inlet (front) temperature reading."}
-      outlet_temp_c: {kind: float, unit: °C, label: {en: Outlet temperature, fr: Température de sortie}, description: "Last exhaust (rear) temperature reading."}
+      power_w: {kind: float, series: true, unit: W, label: {en: Power draw, fr: Consommation}, description: "Last power reading."}
+      inlet_temp_c: {kind: float, series: true, unit: °C, label: {en: Inlet temperature, fr: Température d'entrée}, description: "Last inlet (front) temperature reading."}
+      outlet_temp_c: {kind: float, series: true, unit: °C, label: {en: Outlet temperature, fr: Température de sortie}, description: "Last exhaust (rear) temperature reading."}
       cpu_count: {kind: int, label: {en: CPUs, fr: Processeurs}, description: "Number of CPU sockets populated."}
       memory_bytes: {kind: int, unit: B, label: {en: Memory, fr: Mémoire}, description: "Installed memory."}
       bios_version: {kind: string, search: true, label: {en: BIOS, fr: BIOS}, description: "System BIOS/UEFI version."}
@@ -172,7 +172,7 @@ types:
       serial: {kind: string, identity: strong, search: true, label: {en: Serial number, fr: Numéro de série}, description: "PSU serial number."}
       model: {kind: string, search: true, label: {en: Model, fr: Modèle}, description: "PSU model or part number."}
       capacity_w: {kind: int, unit: W, label: {en: Capacity, fr: Capacité}, description: "Rated output."}
-      input_w: {kind: float, unit: W, label: {en: Input power, fr: Puissance d'entrée}, description: "Last input power reading."}
+      input_w: {kind: float, series: true, unit: W, label: {en: Input power, fr: Puissance d'entrée}, description: "Last input power reading."}
       health: {kind: enum, values: [ok, warning, critical, unknown, absent], label: {en: Health, fr: Santé}, description: "PSU state."}
       feed: {kind: string, label: {en: Feed, fr: Voie}, description: "Power path (A or B) it is cabled to."}
       airflow: {kind: enum, values: [front_to_rear, rear_to_front, unknown], label: {en: Airflow, fr: Flux d'air}, description: "Fan direction of the PSU (port-side intake or exhaust)."}
@@ -184,8 +184,8 @@ types:
     parents: [device, module, psu]
     attributes:
       name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Fan name."}
-      speed_rpm: {kind: int, unit: rpm, label: {en: Speed, fr: Vitesse}, description: "Last speed reading."}
-      speed_pct: {kind: float, unit: "%", label: {en: Speed, fr: Vitesse}, description: "Last speed reading in percent of maximum."}
+      speed_rpm: {kind: int, series: true, unit: rpm, label: {en: Speed, fr: Vitesse}, description: "Last speed reading."}
+      speed_pct: {kind: float, series: true, unit: "%", label: {en: Speed, fr: Vitesse}, description: "Last speed reading in percent of maximum."}
       health: {kind: enum, values: [ok, warning, critical, unknown, absent], label: {en: Health, fr: Santé}, description: "Fan state."}
       airflow: {kind: enum, values: [front_to_rear, rear_to_front, unknown], label: {en: Airflow, fr: Flux d'air}, description: "Airflow direction of the fan."}
   disk:
@@ -201,14 +201,14 @@ types:
       media: {kind: enum, values: [ssd, nvme, hdd, unknown], label: {en: Media, fr: Technologie}, description: "Drive technology."}
       protocol: {kind: string, label: {en: Protocol, fr: Protocole}, description: "SATA, SAS, NVMe."}
       capacity_bytes: {kind: int, unit: B, label: {en: Capacity, fr: Capacité}, description: "Raw capacity."}
-      wear_pct: {kind: float, unit: "%", label: {en: Wear, fr: Usure}, description: "Endurance used (NVMe percentage used, SATA wearout inverted)."}
+      wear_pct: {kind: float, series: true, unit: "%", label: {en: Wear, fr: Usure}, description: "Endurance used (NVMe percentage used, SATA wearout inverted)."}
       written_bytes: {kind: int, unit: B, label: {en: Data written, fr: Volume écrit}, description: "Total host writes."}
-      spare_pct: {kind: float, unit: "%", label: {en: Available spare, fr: Réserve disponible}, description: "Remaining spare blocks."}
+      spare_pct: {kind: float, series: true, unit: "%", label: {en: Available spare, fr: Réserve disponible}, description: "Remaining spare blocks."}
       power_on_hours: {kind: int, unit: h, label: {en: Power-on hours, fr: Heures de fonctionnement}, description: "Hours powered on."}
       reallocated_sectors: {kind: int, label: {en: Reallocated sectors, fr: Secteurs réalloués}, description: "SMART 5."}
       pending_sectors: {kind: int, label: {en: Pending sectors, fr: Secteurs en attente}, description: "SMART 197."}
       media_errors: {kind: int, label: {en: Media errors, fr: Erreurs média}, description: "Uncorrectable media errors."}
-      temperature_c: {kind: float, unit: °C, label: {en: Temperature, fr: Température}, description: "Last temperature reading."}
+      temperature_c: {kind: float, series: true, unit: °C, label: {en: Temperature, fr: Température}, description: "Last temperature reading."}
       health: {kind: enum, values: [ok, warning, critical, unknown, absent], label: {en: Health, fr: Santé}, description: "Drive health."}
       firmware_version: {kind: string, search: true, label: {en: Firmware, fr: Firmware}, description: "Drive firmware."}
       slot: {kind: string, label: {en: Slot, fr: Emplacement}, description: "Physical bay."}
@@ -248,10 +248,10 @@ types:
       vendor: {kind: string, search: true, label: {en: Vendor, fr: Constructeur}, description: "Optic vendor."}
       model: {kind: string, search: true, label: {en: Model, fr: Modèle}, description: "Optic part number."}
       media_type: {kind: string, search: true, label: {en: Media type, fr: Type}, description: "10GBASE-SR, 40GBASE-SR4, DAC, ..."}
-      tx_power_dbm: {kind: float, unit: dBm, label: {en: TX power, fr: Puissance émise}, description: "Last transmit power."}
-      rx_power_dbm: {kind: float, unit: dBm, label: {en: RX power, fr: Puissance reçue}, description: "Last receive power."}
-      temperature_c: {kind: float, unit: °C, label: {en: Temperature, fr: Température}, description: "Optic temperature."}
-      voltage_v: {kind: float, unit: V, label: {en: Voltage, fr: Tension}, description: "Supply voltage."}
+      tx_power_dbm: {kind: float, series: true, unit: dBm, label: {en: TX power, fr: Puissance émise}, description: "Last transmit power."}
+      rx_power_dbm: {kind: float, series: true, unit: dBm, label: {en: RX power, fr: Puissance reçue}, description: "Last receive power."}
+      temperature_c: {kind: float, series: true, unit: °C, label: {en: Temperature, fr: Température}, description: "Optic temperature."}
+      voltage_v: {kind: float, series: true, unit: V, label: {en: Voltage, fr: Tension}, description: "Supply voltage."}
   sensor:
     layer: physical
     label: {en: Sensor, fr: Capteur}
@@ -261,7 +261,7 @@ types:
       name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Sensor name as reported."}
       kind: {kind: enum, values: [temperature, humidity, power, current, voltage, airflow, other], label: {en: Kind, fr: Type}, description: "Quantity measured."}
       placement: {kind: enum, values: [inlet, outlet, cpu, memory, psu, ambient, system, other], label: {en: Placement, fr: Emplacement}, description: "Where the sensor sits; inlet and outlet drive the airflow checks."}
-      reading: {kind: float, label: {en: Reading, fr: Valeur}, description: "Last reading, in the sensor unit."}
+      reading: {kind: float, series: true, label: {en: Reading, fr: Valeur}, description: "Last reading, in the sensor unit."}
       unit: {kind: string, label: {en: Unit, fr: Unité}, description: "Unit of the reading."}
       warning_threshold: {kind: float, label: {en: Warning threshold, fr: Seuil d'alerte}, description: "Upper warning threshold."}
       critical_threshold: {kind: float, label: {en: Critical threshold, fr: Seuil critique}, description: "Upper critical threshold."}
@@ -318,7 +318,7 @@ types:
     parents: [device]
     attributes:
       name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Outlet name or number."}
-      power_w: {kind: float, unit: W, label: {en: Power, fr: Puissance}, description: "Last power reading of the outlet."}
+      power_w: {kind: float, series: true, unit: W, label: {en: Power, fr: Puissance}, description: "Last power reading of the outlet."}
       state: {kind: enum, values: ["on", "off", unknown], label: {en: State, fr: État}, description: "Outlet state."}
   circuit:
     layer: energy
@@ -395,8 +395,8 @@ types:
       name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Gateway name."}
       address: {kind: ip, search: true, label: {en: Address, fr: Adresse}, description: "Gateway address."}
       status: {kind: enum, values: [online, offline, degraded, unknown], label: {en: Status, fr: État}, description: "Monitoring state of the gateway."}
-      latency_ms: {kind: float, unit: ms, label: {en: Latency, fr: Latence}, description: "Last measured latency."}
-      loss_pct: {kind: float, unit: "%", label: {en: Loss, fr: Perte}, description: "Last measured packet loss."}
+      latency_ms: {kind: float, series: true, unit: ms, label: {en: Latency, fr: Latence}, description: "Last measured latency."}
+      loss_pct: {kind: float, series: true, unit: "%", label: {en: Loss, fr: Perte}, description: "Last measured packet loss."}
   internet_access:
     layer: network
     label: {en: Internet access, fr: Accès Internet}
