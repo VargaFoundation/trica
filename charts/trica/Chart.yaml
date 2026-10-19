@@ -2,8 +2,8 @@ apiVersion: v2
 name: trica
 description: Infrastructure inventory and visualisation platform (CMDB/DCIM) with provenance, history and an MCP server.
 type: application
-version: 0.1.11
-appVersion: "0.1.11"
+version: 0.1.12
+appVersion: "0.1.12"
 home: https://github.com/VargaFoundation/trica
 sources:
   - https://github.com/VargaFoundation/trica
