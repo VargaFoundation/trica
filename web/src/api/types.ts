@@ -54,6 +54,8 @@ export type FacePart = Omit<S["FacePart"], "part"> & { part: ObjectView };
 export type DeviceFaces = Omit<S["DeviceFaces"], "parts"> & { parts: FacePart[] };
 export type DeviceFace = S["DeviceFace"];
 export type FaceSpot = S["FaceSpot"];
+export type DeviceTypeChoice = S["DeviceTypeChoice"];
+export type DeviceTypeCandidate = S["DeviceTypeCandidate"];
 
 export type Page<T> = { total: number; limit: number; offset: number; truncated?: boolean; items: T[] };
 

@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { callerSource, cleanAttrs, createObject, placeDevice, unplaceDevice, updateObject } from "./batch";
+import { callerSource, chooseModel, cleanAttrs, createObject, placeDevice, unplaceDevice, updateObject } from "./batch";
 
 const AT = new Date("2026-03-01T08:00:00Z");
 
@@ -39,6 +39,8 @@ function uiBatches() {
     unplace: unplaceDevice("@pdu", "@rack-p", AT),
     renameRack: updateObject("rack", "@rack", { name: "r14b", u_height: 48 }, [], AT),
     badFace: placeDevice({ device: { id: "@pdu" }, placement: { rackId: "@rack", position: 5, face: "side" } }, AT),
+    chooseVariant: chooseModel({ deviceId: "@srv-v", slug: "acme-srv2-8sff" }, AT),
+    changeVariant: chooseModel({ deviceId: "@srv-v", slug: "acme-srv2-12lff", withdraw: ["@model-8sff"] }, AT),
   };
 }
 
@@ -89,6 +91,14 @@ describe("the batches the forms send", () => {
 
   it("withdraws the attributes a person empties", () => {
     expect(updateObject("rack", "r1", {}, ["facing"], AT).objects).toEqual([{ ref: "obj", type: "rack", identity: { id: "r1" }, withdraw: ["facing"] }]);
+  });
+
+  it("declares a chosen model by its slug, and withdraws only the models it replaces", () => {
+    const b = chooseModel({ deviceId: "d1", slug: "dell-poweredge-r330-8sff", withdraw: ["m0", ""] }, AT);
+    expect(b.objects).toEqual([{ ref: "model", type: "device_type", identity: { slug: "dell-poweredge-r330-8sff" } }]);
+    expect(b.relations).toEqual([{ type: "instance_of", from: { type: "device", identity: { id: "d1" } }, to: { ref: "model" } }]);
+    expect(b.unrelations).toEqual([{ type: "instance_of", from: { type: "device", identity: { id: "d1" } }, to: { type: "device_type", identity: { id: "m0" } } }]);
+    expect(chooseModel({ deviceId: "d1", slug: "x" }, AT).unrelations).toBeUndefined();
   });
 
   it("knows the source the server will attribute the batch to", () => {

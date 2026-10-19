@@ -136,7 +136,7 @@ function SlotView({ slot: s, y }: { slot: Slot; y: number }) {
   const text = clipName(s.item.name);
   const range = formatRange(s.bottom, s.height);
   const healthText = `${t("health.label")}: ${t(HEALTH_TEXT[health])}`;
-  const tooltip = [`${s.item.name} (${range})`, s.item.typeName, healthText].filter(Boolean).join(" · ");
+  const tooltip = [`${s.item.name} (${range})`, s.item.typeName, healthText, s.item.variantUncertain ? t("variant.rackTooltip") : ""].filter(Boolean).join(" · ");
   const x = GUTTER + 1;
   const w = BODY - 2;
   const labelY = y + 1 + Math.min(h, UNIT_PX) / 2;
@@ -170,6 +170,7 @@ function SlotView({ slot: s, y }: { slot: Slot; y: number }) {
       data-id={s.item.id}
       data-health={health}
       data-face-drawn={drawn}
+      data-variant-uncertain={s.item.variantUncertain ? "true" : undefined}
     >
       {body}
     </Link>

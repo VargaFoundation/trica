@@ -143,5 +143,15 @@ export function defaultRoutes(me: Handler = APPROVER): Record<string, Handler> {
   for (const o of [swA1, srv01]) routes[`GET /objects/${o.id}/series`] = (c: Call) => seriesOf(o.id, c.query);
   // No model, so nothing to draw: the tests of the faces declare their own.
   for (const o of [swA1, srv01]) routes[`GET /objects/${o.id}/faces`] = { faces: [], parts: [], truncated: false };
+  // Nothing the library knows: no model section. The tests of the chooser declare their own.
+  for (const o of [swA1, srv01])
+    routes[`GET /objects/${o.id}/device-type-candidates`] = {
+      device: { id: o.id, type: o.type, display: o.display },
+      certain: false,
+      reason: "none",
+      declarations: [],
+      candidates: [],
+      can_choose: false,
+    };
   return routes;
 }

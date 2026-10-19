@@ -19,7 +19,7 @@ import { useI18n, type MessageKey } from "../i18n";
 export type RefNames = Record<string, string>;
 
 /** Every query a declaration can change; refreshed after an applied batch. */
-export const INVENTORY_QUERIES = ["object", "objects", "rooms", "room-contents", "rack-contents", "relations", "provenance", "timeline", "search", "discrepancies", "placement"];
+export const INVENTORY_QUERIES = ["object", "objects", "rooms", "room-contents", "rack-contents", "relations", "provenance", "timeline", "search", "discrepancies", "placement", "faces", "device-type-candidates"];
 
 function errorText(e: unknown): MessageKey {
   if (!(e instanceof ApiError)) return "edit.failed.generic";

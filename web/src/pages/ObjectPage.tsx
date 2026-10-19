@@ -21,6 +21,7 @@ import { ApiError } from "../api/client";
 import { Measurements } from "../charts/Measurements";
 import { FirmwareSection } from "../firmware/FirmwareCard";
 import { DeviceFacesSection } from "../faces/DeviceFaces";
+import { ModelChoiceSection, VariantPill } from "../devicetypes/ModelChoice";
 import { DevicePlacement } from "../edit/DevicePlacement";
 import { EditPanel, useCanDeclare } from "../edit/EditPanel";
 import { ObjectForm } from "../edit/ObjectForm";
@@ -88,6 +89,7 @@ function ObjectDetail({ obj }: { obj: ObjectView }) {
               </span>
               {hasHealth ? <HealthPill value={healthOf(obj)} /> : null}
               <Status value={obj.status} />
+              {obj.type === "device" ? <VariantPill obj={obj} /> : null}
             </div>
           </div>
           <div className="object-head-actions">
@@ -187,6 +189,7 @@ function ObjectDetail({ obj }: { obj: ObjectView }) {
           <>
             {CONTAINER_TYPES.includes(obj.type) ? <EditContainer obj={obj} /> : null}
             <OverviewSection obj={obj} lookup={lookup} onProvenance={() => setTab("provenance")} />
+            <ModelChoiceSection obj={obj} />
             <DeviceFacesSection obj={obj} lookup={lookup} />
             <Measurements obj={obj} lookup={lookup} />
             <FirmwareSection obj={obj} lookup={lookup} />

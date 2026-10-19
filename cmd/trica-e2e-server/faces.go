@@ -249,12 +249,7 @@ func buildParts(inv *inventory) {
 // device's parts in the places the inventory gives them.
 func (a *api) faces(w http.ResponseWriter, d obj) {
 	out := obj{"faces": []obj{}, "parts": []obj{}, "truncated": false}
-	var m obj
-	for _, r := range a.inv.relations {
-		if r.typ == "instance_of" && oid(r.from) == d["id"] {
-			m = a.inv.byID(oid(r.to))
-		}
-	}
+	m := a.modelOf(d["id"].(string))
 	if m == nil {
 		writeJSON(w, http.StatusOK, out)
 		return

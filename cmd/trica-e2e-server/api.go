@@ -82,6 +82,7 @@ type inventory struct {
 	relations []relation       // declared in the lab file
 	links     []link           // the network: declared, observed and deduced
 	places    map[string]place // where a part sits on its device's faces, by part id
+	modelIDs  map[string]int   // the R330 models of r22, by slug
 }
 
 // all lists every relation with its provenance, plain ones as declared.
@@ -159,6 +160,7 @@ func buildInventory() *inventory {
 	buildComponents(inv)
 	buildFaces(inv)
 	buildParts(inv)
+	buildVariants(inv)
 	return inv
 }
 
@@ -339,11 +341,14 @@ func page(items []obj) obj {
 }
 
 type api struct {
-	inv   *inventory
-	valid func(string) bool
+	inv     *inventory
+	valid   func(string) bool
+	choices *choices
 }
 
-func newAPI(valid func(string) bool) http.Handler { return &api{inv: buildInventory(), valid: valid} }
+func newAPI(valid func(string) bool) http.Handler {
+	return &api{inv: buildInventory(), valid: valid, choices: &choices{slug: map[string]string{}, by: map[string]string{}}}
+}
 
 func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -407,13 +412,28 @@ func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// batchRel is a relation of a batch body, its ends as sent.
+type batchRel struct {
+	Type string `json:"type"`
+	From struct {
+		Ref      string            `json:"ref"`
+		Identity map[string]string `json:"identity"`
+	} `json:"from"`
+	To struct {
+		Ref      string            `json:"ref"`
+		Identity map[string]string `json:"identity"`
+	} `json:"to"`
+}
+
 // batch answers POST /batches and /batches/preview without writing anything,
 // so that the browser tests stay independent of each other (they run in
 // parallel against one server). The preview lists what the batch says, as the
 // engine's preview would for objects it does not know: one create per object
 // that is not designated by id, one relate or unrelate per relation. A submit
 // is always queued as proposal 12, the pending proposal of the mock: the page
-// shows "sent for approval" and links to it.
+// shows "sent for approval" and links to it. The one exception is the
+// chassis chooser's declaration (variants.go): it is applied and kept, so
+// that the rack shows the chosen face.
 func (a *api) batch(w http.ResponseWriter, r *http.Request, preview bool) {
 	var b struct {
 		Objects []struct {
@@ -421,12 +441,28 @@ func (a *api) batch(w http.ResponseWriter, r *http.Request, preview bool) {
 			Type     string            `json:"type"`
 			Identity map[string]string `json:"identity"`
 		} `json:"objects"`
-		Relations   []struct{ Type string } `json:"relations"`
+		Relations   []batchRel              `json:"relations"`
 		Unrelations []struct{ Type string } `json:"unrelations"`
 	}
 	raw, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	if err != nil || json.Unmarshal(raw, &b) != nil {
 		problem(w, http.StatusBadRequest, "invalid-batch", "The body is not a batch")
+		return
+	}
+	identities := map[string]map[string]string{}
+	for _, o := range b.Objects {
+		identities[o.Ref] = o.Identity
+	}
+	if a.declaredChoice(identities, b.Relations, preview) {
+		rel := b.Relations[0]
+		model := oid(a.inv.modelIDs[identities[rel.To.Ref]["slug"]])
+		result := obj{"created": 0, "values_changed": 0, "relations_opened": 1, "relations_closed": len(b.Unrelations), "objects": obj{rel.To.Ref: model},
+			"changes": []obj{{"op": "relate", "object_id": rel.From.Identity["id"], "type": "device", "key": "instance_of", "other_id": model}}}
+		if preview {
+			writeJSON(w, http.StatusOK, obj{"source": "e2e", "result": result})
+		} else {
+			writeJSON(w, http.StatusOK, obj{"source": "e2e", "status": "applied", "result": result})
+		}
 		return
 	}
 	changes := []obj{}
@@ -528,6 +564,8 @@ func (a *api) one(w http.ResponseWriter, rest string) {
 		writeJSON(w, http.StatusOK, obj{"object_id": id, "attributes": a.provenanceOf(o)})
 	case "faces":
 		a.faces(w, o)
+	case "device-type-candidates":
+		a.candidates(w, o)
 	case "timeline":
 		writeJSON(w, http.StatusOK, page([]obj{{"at": t0, "object_id": id, "type": o["type"], "display": o["display"], "key": "hostname", "after": o["display"], "source": "declared:lab-file", "changeset_id": 1}}))
 	default:
@@ -543,12 +581,6 @@ func (a *api) rackContents(w http.ResponseWriter, id string) {
 		problem(w, http.StatusNotFound, "not-found", "No such rack")
 		return
 	}
-	model := map[int]int{}
-	for _, r := range a.inv.relations {
-		if r.typ == "instance_of" {
-			model[r.from] = r.to
-		}
-	}
 	var items []obj
 	for _, r := range a.inv.relations {
 		if r.typ != "mounted_in" || oid(r.to) != id {
@@ -561,10 +593,7 @@ func (a *api) rackContents(w http.ResponseWriter, id string) {
 				it[k] = v
 			}
 		}
-		var m obj
-		if id, ok := model[r.from]; ok {
-			m = a.inv.byID(oid(id))
-		}
+		m := a.modelOf(oid(r.from))
 		if m != nil {
 			it["model"] = obj{"id": m["id"], "type": m["type"], "display": m["display"]}
 			attrs, _ := m["attributes"].(obj)
@@ -574,6 +603,9 @@ func (a *api) rackContents(w http.ResponseWriter, id string) {
 			it["full_depth"] = attrs["full_depth"] == true
 		}
 		a.faceFields(it, d, m)
+		if u, n := a.uncertain(d); u {
+			it["variant_uncertain"], it["variants"] = true, n
+		}
 		items = append(items, it)
 	}
 	writeJSON(w, http.StatusOK, page(items))

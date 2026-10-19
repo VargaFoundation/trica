@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { ApiError } from "../api/client";
 import { api } from "../api/endpoints";
 import type { ObjectView } from "../api/types";
@@ -241,7 +241,16 @@ function Row({ slot: s }: { slot: Slot }) {
         <HealthPill value={overallHealth(s.item)} />
       </td>
       <td data-label={t("rack.col.notes")}>
-        {s.issues.length === 0 ? "—" : s.issues.map((i) => t(ISSUE_TEXT[i])).join(" · ")}
+        {s.issues.length === 0 && !s.item.variantUncertain ? "—" : s.issues.map((i) => t(ISSUE_TEXT[i])).join(" · ")}
+        {s.item.variantUncertain ? (
+          <>
+            {s.issues.length > 0 ? " · " : ""}
+            <Link to={`/objects/${encodeURIComponent(s.item.id)}#device-model`} data-variant-link="">
+              {t("variant.rackLink")}
+              <span className="sr-only"> ({s.item.name})</span>
+            </Link>
+          </>
+        ) : null}
       </td>
     </tr>
   );

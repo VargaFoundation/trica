@@ -12,6 +12,7 @@ import type {
   Change,
   DecisionOutcome,
   DeviceFaces,
+  DeviceTypeChoice,
   Discrepancy,
   Me,
   ObjectView,
@@ -53,6 +54,9 @@ export const api = {
   /** The faces of a device's model with its parts in place (ADR 0047). */
   objectFaces: (id: string, signal?: AbortSignal) =>
     request<DeviceFaces>(`/objects/${encodeURIComponent(id)}/faces`, { signal }),
+  /** How sure the inventory is of a device's model, and the models (chassis variants) it may be (ADR 0048). */
+  deviceTypeCandidates: (id: string, signal?: AbortSignal) =>
+    request<DeviceTypeChoice>(`/objects/${encodeURIComponent(id)}/device-type-candidates`, { signal }),
   /** The devices mounted in a rack, with position, face, model, height and depth. */
   rackContents: (id: string, q: Paging = {}, signal?: AbortSignal) =>
     request<Page<RackItem>>(`/racks/${encodeURIComponent(id)}/contents`, { query: q, signal }),

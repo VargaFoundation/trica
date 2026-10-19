@@ -512,11 +512,17 @@ func (s *Server) hRackContents(c *call) error {
 	}
 	modelOf := map[string]string{}
 	ids := append([]string(nil), devices...)
-	for _, r := range models {
-		if _, seen := modelOf[r.FromID]; !seen {
-			modelOf[r.FromID] = r.ToID
-			ids = append(ids, r.ToID)
+	for from, r := range modelRelations(models) {
+		modelOf[from] = r.ToID
+		ids = append(ids, r.ToID)
+	}
+	var declared map[string]bool
+	if s.lib != nil {
+		claims, err := s.st.RelationClaims(c.ctx(), "instance_of", devices)
+		if err != nil {
+			return err
 		}
+		declared = declaredDevices(claims)
 	}
 	objs, sites, err := c.visibleObjects(ids)
 	if err != nil {
@@ -544,8 +550,19 @@ func (s *Server) hRackContents(c *call) error {
 			it.ModelName, _ = attrs["model"].(string)
 			slug, _ := attrs["slug"].(string)
 			it.FrontImage, it.RearImage = s.faceImage(slug, "front"), s.faceImage(slug, "rear")
+			// A model a person just chose may not be described yet (the
+			// library's next pass does it): the library says its height.
+			if lm := s.libraryModel(slug); lm != nil && it.UHeight == nil {
+				it.UHeight, it.FullDepth = &lm.UHeight, lm.FullDepth
+				if it.ModelName == "" {
+					it.ModelName = lm.Model
+				}
+			}
 		}
 		da := redactMap(d.Attrs)
+		if !declared[d.ID] {
+			it.VariantUncertain, it.Variants = s.uncertainVariant(da)
+		}
 		it.Role, _ = da["role"].(string)
 		it.Health, _ = da["health"].(string)
 		it.PartsHealth = parts[d.ID]

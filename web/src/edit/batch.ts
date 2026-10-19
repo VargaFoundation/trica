@@ -119,6 +119,24 @@ export function unplaceDevice(deviceId: string, rackId: string, now?: Date): Bat
   return b;
 }
 
+export interface ChooseModel {
+  deviceId: string;
+  /** The library slug of the chosen model: the engine recognises the device_type by it, or creates it bare (the library describes it). */
+  slug: string;
+  /** Models (device_type ids) this caller declared before and replaces: this caller's claim on each is withdrawn. */
+  withdraw?: string[];
+}
+
+/** Declares which model (chassis variant) a device is: a declared instance_of, which wins over the library's match by name (ADR 0048). */
+export function chooseModel(c: ChooseModel, now?: Date): Batch {
+  const b = emptyBatch(now);
+  b.objects = [objectOf("model", "device_type", { slug: c.slug }, {})];
+  b.relations = [{ type: "instance_of", from: byId("device", c.deviceId), to: byRef("model") }];
+  const withdraw = (c.withdraw ?? []).filter((id) => id !== "");
+  if (withdraw.length > 0) b.unrelations = withdraw.map((id) => ({ type: "instance_of", from: byId("device", c.deviceId), to: byId("device_type", id) }));
+  return b;
+}
+
 /** The source a batch from this caller is attributed to (internal/api Principal.BatchSource). */
 export function callerSource(me: { kind: string; subject: string; source?: string } | undefined): string | undefined {
   if (!me) return undefined;

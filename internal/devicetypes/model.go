@@ -41,8 +41,14 @@ type Model struct {
 	// part number is one of them matches this model before any name does,
 	// so that "ProLiant DL360 Gen9" + 755258-B21 picks the 8SFF chassis.
 	PartNumbers []string `json:"part_numbers,omitempty"`
-	UHeight     float64  `json:"u_height"`
-	FullDepth   bool     `json:"full_depth"`
+	// VariantOf is the slug of the generic model this one is a chassis
+	// variant of, a trica extension (ADR 0048): the models that share it, and
+	// the generic model itself, are what a person chooses among when the
+	// device does not say which chassis it is. Without it the variants are
+	// found by name (see Index.Choices).
+	VariantOf string  `json:"variant_of,omitempty"`
+	UHeight   float64 `json:"u_height"`
+	FullDepth bool    `json:"full_depth"`
 	// Airflow uses the trica schema spelling (front_to_rear).
 	Airflow  string  `json:"airflow,omitempty"`
 	WeightKg float64 `json:"weight_kg,omitempty"`
@@ -105,6 +111,7 @@ type rawModel struct {
 	Slug               string    `yaml:"slug"`
 	PartNumber         string    `yaml:"part_number"`
 	PartNumbers        []string  `yaml:"part_numbers"`
+	VariantOf          string    `yaml:"variant_of"`
 	UHeight            *float64  `yaml:"u_height"`
 	IsFullDepth        *bool     `yaml:"is_full_depth"`
 	Airflow            string    `yaml:"airflow"`
@@ -156,7 +163,7 @@ func Parse(data []byte, origin, path string) (*Model, error) {
 	}
 	m := &Model{
 		Slug: strings.TrimSpace(r.Slug), Vendor: strings.TrimSpace(r.Manufacturer),
-		Model: strings.TrimSpace(r.Model), PartNumber: strings.TrimSpace(r.PartNumber),
+		Model: strings.TrimSpace(r.Model), PartNumber: strings.TrimSpace(r.PartNumber), VariantOf: strings.TrimSpace(r.VariantOf),
 		Origin: origin, Path: path,
 	}
 	fail := func(format string, a ...any) (*Model, error) {
@@ -169,6 +176,10 @@ func Parse(data []byte, origin, path string) (*Model, error) {
 		return fail("model is required")
 	case !slugRe.MatchString(m.Slug):
 		return fail("slug %q must be lowercase letters, digits, dots, dashes", m.Slug)
+	case m.VariantOf != "" && !slugRe.MatchString(m.VariantOf):
+		return fail("variant_of %q must be the slug of another model", m.VariantOf)
+	case m.VariantOf == m.Slug:
+		return fail("variant_of names the model itself")
 	}
 	if r.UHeight == nil || *r.UHeight <= 0 || *r.UHeight > 100 || math.IsNaN(*r.UHeight) {
 		return fail("u_height is required and must be in (0, 100]")
