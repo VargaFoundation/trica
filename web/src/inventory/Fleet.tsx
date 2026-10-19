@@ -164,6 +164,32 @@ export function foldTiles(tiles: Tile[]): Tile[] {
   return tiles.filter((x) => x.health !== "ok" || room-- > 0);
 }
 
+/** Devices that draw no power of their own: not counted as unmeasured. */
+const UNPOWERED_ROLES = new Set(["patch_panel"]);
+
+export type PowerTotal = { watts: number; measured: number; of: number; outputWatts: number };
+
+/**
+ * The power total of the fleet and what it covers: the devices the inventory
+ * still sees and that draw power, how many of them report a reading, and how
+ * much of the sum is what supplies deliver rather than what devices draw
+ * (power_basis "output", a switch that reports no input power). A total that
+ * leaves devices out or mixes outputs with draws says so.
+ */
+export function powerTotal(tiles: Tile[]): PowerTotal {
+  const t: PowerTotal = { watts: 0, measured: 0, of: 0, outputWatts: 0 };
+  for (const x of tiles) {
+    if (x.health === "absent" || UNPOWERED_ROLES.has(String(x.obj.attributes.role))) continue;
+    t.of++;
+    const w = num(x.obj.attributes.power_w);
+    if (w === undefined) continue;
+    t.measured++;
+    t.watts += w;
+    if (x.obj.attributes.power_basis === "output") t.outputWatts += w;
+  }
+  return t;
+}
+
 function GroupTiles({ tiles, showPosition }: { tiles: Tile[]; showPosition: boolean }) {
   const { t, number } = useI18n();
   const [open, setOpen] = useState(false);
@@ -223,7 +249,7 @@ export function Fleet({ defaultGroup = "rack", headingLevel = 2 }: { defaultGrou
             return { obj, kind: k.kind, kindLabel: k.label, health: healthOf(obj), mount: mountMap.get(obj.id) };
           });
           const counts = countHealth(tiles);
-          const watts = tiles.reduce((s, x) => s + (num(x.obj.attributes.power_w) ?? 0), 0);
+          const power = powerTotal(tiles);
           const grouping = mounts.isError ? "kind" : by;
           const shown = onlyProblems ? tiles.filter((x) => x.health === "critical" || x.health === "warning") : tiles;
           const groups = groupTiles(shown, grouping, t("fleet.notRacked"));
@@ -235,7 +261,21 @@ export function Fleet({ defaultGroup = "rack", headingLevel = 2 }: { defaultGrou
                 <Stat id="warning" value={number(counts.warning)} label={t("healthState.warning")} tone={counts.warning ? "warn" : undefined} />
                 <Stat id="critical" value={number(counts.critical)} label={t("healthState.critical")} tone={counts.critical ? "danger" : undefined} />
                 <Stat id="unknown" value={number(counts.unknown + counts.absent)} label={t("healthState.unknown")} />
-                <Stat id="power" value={formatQuantity(watts, "W", locale, w)} label={t("fleet.power")} />
+                <Stat
+                  id="power"
+                  value={formatQuantity(power.watts, "W", locale, w)}
+                  label={
+                    <>
+                      {t("fleet.power")}
+                      {power.measured < power.of ? (
+                        <span className="stat-note">{t("fleet.powerMeasured", { measured: number(power.measured), of: number(power.of) })}</span>
+                      ) : null}
+                      {power.outputWatts > 0 ? (
+                        <span className="stat-note">{t("fleet.powerOutput", { watts: formatQuantity(power.outputWatts, "W", locale, w) ?? "" })}</span>
+                      ) : null}
+                    </>
+                  }
+                />
               </Stats>
               {page.total > page.items.length ? (
                 <Alert role="note" tone="info">

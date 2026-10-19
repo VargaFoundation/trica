@@ -699,6 +699,8 @@ export const fr: Record<MessageKey, string> = {
   "fleet.stats": "La santé du parc en chiffres",
   "fleet.total": "Équipements",
   "fleet.power": "Consommation",
+  "fleet.powerMeasured": "mesurée sur {measured} équipements sur {of}",
+  "fleet.powerOutput": "dont {watts} en sortie d'alimentation, pas en entrée",
   "fleet.empty": "Aucun équipement dans l'inventaire pour l'instant.",
   "fleet.allClear": "Rien à signaler : chaque équipement est OK.",
   "fleet.noMatch": "Aucun équipement à surveiller.",

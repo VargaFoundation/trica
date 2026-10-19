@@ -699,6 +699,8 @@ export const en = {
   "fleet.stats": "Equipment health in figures",
   "fleet.total": "Devices",
   "fleet.power": "Power draw",
+  "fleet.powerMeasured": "measured on {measured} of {of} devices",
+  "fleet.powerOutput": "of which {watts} is supply output, not draw",
   "fleet.empty": "No device in the inventory yet.",
   "fleet.allClear": "Nothing needs attention: every device reports ok.",
   "fleet.noMatch": "No device needs attention.",

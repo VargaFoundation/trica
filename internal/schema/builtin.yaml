@@ -119,7 +119,8 @@ types:
       airflow: {kind: enum, values: [front_to_rear, rear_to_front, left_to_right, right_to_left, side_to_rear, passive, mixed], label: {en: Airflow, fr: Flux d'air}, description: "Airflow as configured or observed."}
       power_state: {kind: enum, values: ["on", "off", unknown], label: {en: Power state, fr: État d'alimentation}, description: "Power state reported by the BMC."}
       health: {kind: enum, values: [ok, warning, critical, unknown], label: {en: Health, fr: Santé}, description: "Overall health rollup reported by the device."}
-      power_w: {kind: float, series: true, unit: W, label: {en: Power draw, fr: Consommation}, description: "Last power reading."}
+      power_w: {kind: float, series: true, unit: W, label: {en: Power draw, fr: Consommation}, description: "Last power reading. power_basis says whether it is drawn from the mains or delivered by the supplies."}
+      power_basis: {kind: enum, values: [input, output], label: {en: Power measured at, fr: Puissance mesurée en}, description: "Where power_w is measured: input, what the device draws from the mains (a BMC's consumed watts); output, what its supplies deliver, lower than the draw by their losses (a switch that reports no input power). Unset when the source does not say."}
       inlet_temp_c: {kind: float, series: true, unit: °C, label: {en: Inlet temperature, fr: Température d'entrée}, description: "Last inlet (front) temperature reading."}
       outlet_temp_c: {kind: float, series: true, unit: °C, label: {en: Outlet temperature, fr: Température de sortie}, description: "Last exhaust (rear) temperature reading."}
       cpu_count: {kind: int, label: {en: CPUs, fr: Processeurs}, description: "Number of CPU sockets populated."}
