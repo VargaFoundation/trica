@@ -64,6 +64,7 @@ plays a release that converts every command.
 | DOM without optics | `"N/A"` | `"-inf"` |
 | Fan trays | one speed per tray, no `fans` list | `fans` list per tray, each with its own `name` |
 | Airflow | no `airflowDirection`; trays `FAN-7000-F`, PSUs `PWR-460AC-F`: all forward | `airflowDirection: frontToBackAirflow`, PSUs `PWR-511-AC-RED` (forward) but trays `FAN-7000-R`: **swapped trays, on purpose**, so that the collector's facts contradict each other and the airflow check (ADR 0049) says so |
+| PSU `label` in `show environment cooling` | `1` | `PowerSupply1`: the form a real 4.20.7M answers, seen in the objects it produced (issue #127); the other commands say `1` on both |
 | Temperature | chassis sensors and per-PSU sensors | adds `cardSlots` sensors and sensors named inlet / exhaust |
 | Power | `outputPower` only | `outputPower` and `inputPower`; PSU 2 in `powerLoss` |
 | MLAG | `state: active`, domain, peer address | `state: disabled`, empty strings |
