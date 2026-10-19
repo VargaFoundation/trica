@@ -52,6 +52,8 @@ export const outputs = [
   ["HPE", "hpe-proliant-dl380-gen10-8sff-nvme", "rear", f.dl380Gen10Rear],
   ["HPE", "hpe-proliant-dl380-gen10-24sff", "front", f.dl380Gen10Front24SFF],
   ["HPE", "hpe-proliant-dl380-gen10-24sff", "rear", f.dl380Gen10Rear],
+  ["HPE", "hpe-proliant-dl380-gen10-24sff-nvme", "front", f.dl380Gen10Front24SFFNVMe],
+  ["HPE", "hpe-proliant-dl380-gen10-24sff-nvme", "rear", f.dl380Gen10Rear],
   ["HPE", "hpe-proliant-dl380-gen10-12lff", "rear", f.dl380Gen10Rear],
   ["HPE", "hpe-proliant-dl380-gen10-8lff", "rear", f.dl380Gen10Rear],
   ["HPE", "hpe-proliant-dl180-gen9-8sff", "front", f.dl180Gen9Front8SFF],

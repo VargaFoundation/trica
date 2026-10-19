@@ -84,8 +84,13 @@ func TestEmbeddedLayoutsFitTheirDrawings(t *testing.T) {
 			t.Errorf("%s front: %d spots, want the 8 bays of Box 3", slug, n)
 		}
 	}
-	has("hpe-proliant-dl380-gen10-24sff", devicetypes.Front, devicetypes.SpotBay, "1:1", "2:8", "3:8")
-	for _, slug := range []string{"hpe-proliant-dl380-gen10-8sff", "hpe-proliant-dl380-gen10-8sff-nvme", "hpe-proliant-dl380-gen10-24sff", "hpe-proliant-dl380-gen10-12lff", "hpe-proliant-dl380-gen10-8lff"} {
+	for _, slug := range []string{"hpe-proliant-dl380-gen10-24sff", "hpe-proliant-dl380-gen10-24sff-nvme"} {
+		has(slug, devicetypes.Front, devicetypes.SpotBay, "1:1", "2:8", "3:1", "3:8")
+		if n := len(ix.BySlug(slug).Layout(devicetypes.Front).Spots); n != 24 {
+			t.Errorf("%s front: %d spots, want the 24 bays of the three boxes", slug, n)
+		}
+	}
+	for _, slug := range []string{"hpe-proliant-dl380-gen10-8sff", "hpe-proliant-dl380-gen10-8sff-nvme", "hpe-proliant-dl380-gen10-24sff", "hpe-proliant-dl380-gen10-24sff-nvme", "hpe-proliant-dl380-gen10-12lff", "hpe-proliant-dl380-gen10-8lff"} {
 		has(slug, devicetypes.Rear, devicetypes.SpotPSU, "1", "2")
 		has(slug, devicetypes.Rear, devicetypes.SpotSlot, "1", "2", "3", "4", "5", "6", "7", "8")
 		has(slug, devicetypes.Rear, devicetypes.SpotPort, "bmc", "nic1", "nic4", "flexlom1", "flexlom4")

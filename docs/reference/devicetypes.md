@@ -210,7 +210,7 @@ plenty; it is stretched to the U box, so a crop with the chassis' own proportion
 The embedded library is a **catalogue of the models people actually rack**: the servers,
 switches, firewalls, storage and power that sell most on the refurbished and data-centre market,
 each with its front and rear face where one could be had, and each chassis variant of a server as
-its own model. 190 models; 159 have faces (101 NetBox photographs, 212 faces drawn by the project).
+its own model. 191 models; 160 have faces (101 NetBox photographs, 214 faces drawn by the project).
 
 ### How the models were chosen
 
@@ -242,7 +242,7 @@ rack units, NetApp DS4246/DS2246 shelves, APC Smart-UPS and AP79xx PDUs, Eaton 5
    photograph, render, stencil (VisioCafe included) or reseller picture. CC0-1.0. Catalogue faces
    carry **no layout**: their bay and port numbering is not taken from the vendors' text, so a
    device's parts are listed beside them, not placed. Exception: the DL380 Gen10 SFF fronts (8SFF,
-   8SFF NVMe, 24SFF) and its rear, shared by its five chassis, are drawn by `faces.mjs` with their
+   8SFF NVMe, 24SFF, 24SFF NVMe) and its rear, shared by its six chassis, are drawn by `faces.mjs` with their
    layouts, from the QuickSpecs' box and rear legends (ADR 0047, addendum).
 3. **None** — the base model of a server whose chassis the name does not tell (`dell-poweredge-r730`,
    `hpe-proliant-dl380-gen9`...): its variants have the faces (next section).
@@ -372,6 +372,7 @@ Front and rear: **NetBox** = upstream CC0 photograph, **drawn** = schematic face
 | HPE ProLiant DL380 Gen10 | `hpe-proliant-dl380-gen10` | NetBox | NetBox |  |
 | ↳ HPE ProLiant DL380 Gen10 12LFF | `hpe-proliant-dl380-gen10-12lff` | drawn | drawn | 868705-B21, P19718-B21 |
 | ↳ HPE ProLiant DL380 Gen10 24SFF | `hpe-proliant-dl380-gen10-24sff` | drawn | drawn | 868704-B21, P19719-B21 |
+| ↳↳ HPE ProLiant DL380 Gen10 24SFF NVMe | `hpe-proliant-dl380-gen10-24sff-nvme` | drawn | drawn | — (the 24SFF CTO with the 8 NVMe cage in Box 3; chosen on the device) |
 | ↳ HPE ProLiant DL380 Gen10 8LFF | `hpe-proliant-dl380-gen10-8lff` | drawn | drawn | 868706-B21, P19717-B21 |
 | ↳ HPE ProLiant DL380 Gen10 8SFF | `hpe-proliant-dl380-gen10-8sff` | drawn | drawn | 868703-B21, P19720-B21, P56969-B21, P56970-B21 |
 | ↳↳ HPE ProLiant DL380 Gen10 8SFF NVMe | `hpe-proliant-dl380-gen10-8sff-nvme` | drawn | drawn | — (the 8SFF CTO with the 8 NVMe cage in Box 3; chosen on the device) |
