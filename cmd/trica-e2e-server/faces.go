@@ -63,7 +63,7 @@ func buildFaces(inv *inventory) {
 	}{
 		{"sw-f1", "switch", "ok", "arista-dcs-7050sx-64-r", "front", 22},
 		{"sw-f2", "switch", "warning", "arista-dcs-7280se-64-f", "front", 21},
-		{"sw-f3", "switch", "ok", "arista-dcs-7050tx-48", "front", 20},
+		{"sw-f3", "switch", "ok", "mikrotik-ccr1036-8g-2s-plus", "front", 20},
 		{"fw-f1", "firewall", "ok", "generic-1u-pfsense-appliance", "front", 19},
 		{"srv-f10", "server", "ok", "hpe-proliant-dl380-gen10", "front", 14},
 		{"srv-f11", "server", "critical", "hpe-proliant-dl380-gen9", "front", 12},
@@ -92,6 +92,7 @@ func buildFaces(inv *inventory) {
 		inv.relations = append(inv.relations, relation{"mounted_in", id, idRackF, obj{"position": d.u, "face": d.face}})
 	}
 	buildDrawn(inv)
+	buildCatalogue(inv)
 }
 
 // The drawn rack: r21 in lyon-1, one device per face the project drew

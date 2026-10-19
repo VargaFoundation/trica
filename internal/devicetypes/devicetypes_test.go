@@ -201,7 +201,9 @@ func TestMatching(t *testing.T) {
 		{"routerboard plus sign", "Routerboard", "CRS326-24G-2S+RM", "", "mikrotik-crs326-24g-2s-plus-rm", devicetypes.ByModel},
 		{"vendor repeated, punctuation differs from slug", "MikroTik", "MikroTik CRS326-24G-2S+RM", "", "mikrotik-crs326-24g-2s-plus-rm", devicetypes.ByModel},
 		{"long vendor name repeated", "Hewlett Packard Enterprise", "Hewlett Packard Enterprise ProLiant DL380 Gen9", "", "hpe-proliant-dl380-gen9", devicetypes.ByModel},
-		{"part number only", "HPE", "unknown chassis", "P19766-B21", "hpe-proliant-dl360-gen10", devicetypes.ByPartNumber},
+		{"part number only", "HPE", "unknown chassis", "673648-B21", "hpe-proliant-dl360p-gen8", devicetypes.ByPartNumber},
+		// The upstream part number of the DL360 Gen10 is the 8SFF NC CTO SKU: the chassis variant that lists it wins.
+		{"variant sku over upstream part number", "HPE", "ProLiant DL360 Gen10", "P19766-B21", "hpe-proliant-dl360-gen10-8sff", devicetypes.BySKU},
 		{"slug as model", "MikroTik", "mikrotik-crs326-24g-2s-plus-rm", "", "mikrotik-crs326-24g-2s-plus-rm", devicetypes.ByModel},
 		{"airflow variant", "Arista Networks", "DCS-7050SX3-48YC8", "", "arista-dcs-7050sx3-48yc8", devicetypes.ByVariant},
 		{"own model", "Generic", "Generic 1U pfSense appliance", "", "generic-1u-pfsense-appliance", devicetypes.ByModel},

@@ -1,0 +1,41 @@
+---
+# Written by the trica project (Apache-2.0); the face images are trica drawings
+# (CC0-1.0, sources in drawings/, generator in scripts/devicetype-faces/catalogue.mjs).
+#
+# The 8SFF chassis of the HPE ProLiant DL380 Gen10, from its QuickSpecs (a00008180enw): drive
+# cage and configure-to-order SKUs from the CTO table (Network Choice and BC models included);
+# front and rear legends for the faces. Rack height, depth, airflow and port templates are
+# those of the upstream model HPE/ProLiant-DL380-Gen10.yaml (netbox-community/devicetype-library, CC0-1.0).
+manufacturer: HPE
+model: ProLiant DL380 Gen10 8SFF
+slug: hpe-proliant-dl380-gen10-8sff
+variant_of: hpe-proliant-dl380-gen10
+part_numbers:
+  - 868703-B21
+  - P19720-B21
+  - P56969-B21
+  - P56970-B21
+u_height: 2
+is_full_depth: true
+airflow: front-to-rear
+comments: '[QuickSpecs](https://support.hpe.com/hpesc/public/api/document/a00008180enw)'
+console-ports:
+  - name: Serial
+    type: de-9
+power-ports:
+  - name: PS1
+    type: iec-60320-c14
+  - name: PS2
+    type: iec-60320-c14
+interfaces:
+  - name: Gig-E 1
+    type: 1000base-t
+  - name: Gig-E 2
+    type: 1000base-t
+  - name: Gig-E 3
+    type: 1000base-t
+  - name: Gig-E 4
+    type: 1000base-t
+  - name: iLO
+    type: 1000base-t
+    mgmt_only: true

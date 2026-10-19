@@ -59,8 +59,14 @@ func TestEmbeddedImagesAreFoundByTheirName(t *testing.T) {
 		{"dell-poweredge-r330-4lff-cabled", img{pngT, local}, img{pngT, local}},
 		{"arista-dcs-7280se-64-f", img{pngT, local}, img{pngT, local}},
 		{"arista-dcs-7280se-64-r", img{pngT, local}, img{pngT, local}},
-		// The upstream file says front_image: true, but the image is not vendored.
-		{"hpe-proliant-dl360-gen10", none, none},
+		{"hpe-proliant-dl360-gen10", img{pngT, up}, img{pngT, up}},
+		// Catalogue: upstream photographs, and faces drawn for upstream and trica models.
+		{"dell-poweredge-r730xd", img{pngT, up}, img{pngT, up}},
+		{"cisco-ws-c2960x-48ts-l", img{pngT, up}, img{pngT, local}},
+		{"dell-poweredge-r730xd-12lff", img{pngT, local}, img{pngT, local}},
+		{"hpe-proliant-dl380-gen10-24sff", img{pngT, local}, img{pngT, local}},
+		{"apc-smt1500rmi2u", img{pngT, local}, img{pngT, local}},
+		{"dell-poweredge-r730", none, none},
 		// No picture: the variant is not known from the name alone.
 		{"hpe-proliant-dl380-gen9", none, none},
 		{"dell-poweredge-r330", none, none},

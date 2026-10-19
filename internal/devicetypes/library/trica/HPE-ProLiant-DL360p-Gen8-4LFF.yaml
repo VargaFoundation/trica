@@ -1,0 +1,42 @@
+---
+# Written by the trica project (Apache-2.0); the face images are trica drawings
+# (CC0-1.0, sources in drawings/, generator in scripts/devicetype-faces/catalogue.mjs).
+#
+# The 4LFF chassis of the HPE ProLiant DL360p Gen8, from its QuickSpecs (c04128242): drive
+# cage and configure-to-order SKUs from the CTO table (Network Choice and BC models included);
+# front and rear legends for the faces. Rack height, depth, airflow and port templates are
+# those of the upstream model HPE/ProLiant-DL360p-Gen8.yaml (netbox-community/devicetype-library, CC0-1.0).
+manufacturer: HPE
+model: ProLiant DL360p Gen8 4LFF
+slug: hpe-proliant-dl360p-gen8-4lff
+variant_of: hpe-proliant-dl360p-gen8
+part_numbers:
+  - 655651-B21
+u_height: 1
+is_full_depth: true
+airflow: front-to-rear
+comments: '[QuickSpecs](https://support.hpe.com/hpesc/public/api/document/c04128242)'
+console-ports:
+  - name: Serial
+    type: de-9
+power-ports:
+  - name: PS1
+    type: iec-60320-c14
+  - name: PS2
+    type: iec-60320-c14
+interfaces:
+  - name: Gig-E 1
+    type: 1000base-t
+    mgmt_only: false
+  - name: Gig-E 2
+    type: 1000base-t
+    mgmt_only: false
+  - name: Gig-E 3
+    type: 1000base-t
+    mgmt_only: false
+  - name: Gig-E 4
+    type: 1000base-t
+    mgmt_only: false
+  - name: iLO
+    type: 1000base-t
+    mgmt_only: true

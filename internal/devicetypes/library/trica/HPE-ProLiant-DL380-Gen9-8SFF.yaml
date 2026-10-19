@@ -10,6 +10,7 @@
 manufacturer: HPE
 model: ProLiant DL380 Gen9 8SFF
 slug: hpe-proliant-dl380-gen9-8sff
+variant_of: hpe-proliant-dl380-gen9
 part_numbers:
   - 719064-B21
 u_height: 2

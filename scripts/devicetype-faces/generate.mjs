@@ -14,17 +14,25 @@
 // the e2e suite pins, so that the bytes are reproducible:
 //
 //   docker run --rm -v "$PWD":/src -w /src mcr.microsoft.com/playwright:v1.63.0-noble \
-//     bash -c "npm --prefix web ci && node scripts/devicetype-faces/generate.mjs --png"
+//     bash -c "apt-get update -qq && apt-get install -y -qq pngquant >/dev/null && \
+//              npm --prefix web ci && node scripts/devicetype-faces/generate.mjs --png"
+//
+// The PNG are then reduced to a 256-colour palette by pngquant (2.x, --speed 1,
+// deterministic): the catalogue holds a few hundred faces embedded in the
+// binary. Without pngquant the PNG stay as Chromium wrote them, and the
+// generator says so.
 //
 // The drawings are original works of the trica project from vendors' public
 // facts (see faces.mjs), dedicated to the public domain under CC0-1.0.
 
+import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { withMarks } from "./draw.mjs";
+import { catalogueOutputs } from "./catalogue.mjs";
 import * as f from "./faces.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -58,6 +66,8 @@ export const outputs = [
   ["Arista", "arista-dcs-7050sx-64-r", "rear", () => f.aristaPowerSide("DCS-7050SX-64-R", "rear-to-front")],
   ["MikroTik", "mikrotik-crs354-48g-4s-plus-2q-plus-rm", "front", f.crs354Front],
   ["MikroTik", "mikrotik-crs354-48g-4s-plus-2q-plus-rm", "rear", f.crs354Rear],
+  // The catalogue of common models (catalogue.mjs).
+  ...catalogueOutputs,
 ];
 
 const LIBRARY_WIDTH_PX = 1000;
@@ -68,6 +78,29 @@ function layoutJSON(svg, spots) {
   const [, w, h] = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svg);
   const lines = spots.map((s) => "    " + JSON.stringify(s));
   return `{\n  "width_mm": ${w},\n  "height_mm": ${h},\n  "spots": [\n${lines.join(",\n")}\n  ]\n}\n`;
+}
+
+// quantize reduces each PNG to a palette with pngquant, in place, when it
+// is installed; a file pngquant cannot make smaller is left as it is.
+function quantize(files) {
+  try {
+    execFileSync("pngquant", ["--version"], { stdio: "ignore" });
+  } catch {
+    console.warn("pngquant not found: the PNG are left as Chromium wrote them (see the header of this file)");
+    return;
+  }
+  let before = 0;
+  let after = 0;
+  for (const f of files) {
+    before += readFileSync(f).length;
+    try {
+      execFileSync("pngquant", ["--force", "--skip-if-larger", "--strip", "--speed", "1", "--quality", "70-95", "--output", f, f], { stdio: "ignore" });
+    } catch {
+      // exit 98/99: no smaller file at that quality; keep the original.
+    }
+    after += readFileSync(f).length;
+  }
+  console.log(`pngquant: ${files.length} PNG, ${before} B -> ${after} B`);
 }
 
 async function main() {
@@ -118,6 +151,7 @@ async function main() {
     await browser.close();
   }
   if (inspectDir) return;
+  quantize(written.map((w) => join(lib, "elevation-images", w.vendor, `${w.slug}.${w.face}.png`)));
   // Fail loudly if a file came out empty.
   for (const w of written) {
     const out = join(lib, "elevation-images", w.vendor, `${w.slug}.${w.face}.png`);
