@@ -77,6 +77,24 @@ export function dl360Gen9Front8SFF() {
   return svgDoc(1, "HPE ProLiant DL360 Gen9 8SFF, front (schematic)", s);
 }
 
+// The FlexibleLOM bay of an HPE ProLiant: an option card whose ports the
+// chassis does not fix (4 x 1GbE 331FLR, 2 x 10GbE 530FLR-SFP+, 2 x 40GbE
+// 544+FLR-QSFP...). The bay is drawn as one opening with four port positions,
+// flexlom1-4 from left to right; a two-port card fills the first two. Linux
+// names its ports after the onboard index the firmware gives the card (eno49
+// on Gen9, eno5 on Gen10; eno49d1 for the second port of one function).
+function flexLomBay(x, y, caption = { dx: 0, dy: 15.8 }) {
+  let s = recess(x - 0.6, y - 1.2, 4 * 12.6 + 0.2, 12, 0.8);
+  for (let i = 0; i < 4; i++) {
+    const px = x + i * 12.6;
+    s += rect(px + 0.4, y, 11.6, 9.6, { fill: "#1b1d20", rx: 0.6, stroke: "#5b6067", "stroke-width": 0.3, "stroke-dasharray": "1 0.8" });
+    s += text(px + 6.2, y + 6.4, String(i + 1), { size: 1.6, anchor: "middle", fill: "#8a9098" });
+    s += mark("port", `flexlom${i + 1}`, px + 0.4, y, 11.6, 9.6);
+  }
+  s += text(x + caption.dx, y + caption.dy, "FlexibleLOM (option card)", { size: 1.7 });
+  return s;
+}
+
 // DL360 Gen9 rear. QuickSpecs c04346229 rear legend: PCIe 3.0 slots 1-3
 // (slot 1 full height, 2 and 3 low profile), two Flexible Slot power
 // supplies, video connector, embedded 4x1GbE, dedicated iLO, optional
@@ -92,8 +110,7 @@ export function dl360Gen9Rear() {
   s += pcie(x + 208, 2.2, 96, 15.6, { label: "3" }) + mark("slot", 3, x + 208, 2.2, 96, 15.6);
   // I/O row
   const y = 21.5;
-  for (let i = 0; i < 4; i++) s += rj45(x + 1 + i * 12.6, y, { up: false }) + mark("port", `flexlom${i + 1}`, x + 1 + i * 12.6, y, 11.6, 9.6);
-  s += text(x + 1, y + 15.8, "FlexibleLOM", { size: 1.7 });
+  s += flexLomBay(x + 0.6, y, { dx: 0.4, dy: 15.8 });
   s += led(x + 55, y + 5, "blue");
   s += text(x + 55, y + 11.2, "UID", { size: 1.6, anchor: "middle" });
   s += usb(x + 59, y - 1.4, { usb3: true });
@@ -179,8 +196,7 @@ export function dl380Gen9Rear() {
   s += text(x + 281, 42, "rear 2 SFF (option)", { size: 1.8, anchor: "middle", fill: "#4a4e54" });
   // I/O row along the bottom
   const y = 52;
-  for (let i = 0; i < 4; i++) s += rj45(x + 1 + i * 12.6, y, { up: false }) + mark("port", `flexlom${i + 1}`, x + 1 + i * 12.6, y, 11.6, 9.6);
-  s += text(x + 1, y + 15.8, "FlexibleLOM", { size: 1.7 });
+  s += flexLomBay(x + 0.6, y, { dx: 0.4, dy: 15.8 });
   s += dsub(x + 55, y - 0.6, "db9");
   s += dsub(x + 89, y - 0.6, "vga");
   for (let i = 0; i < 4; i++) s += rj45(x + 124 + i * 12.6, y, { up: false }) + mark("port", `nic${i + 1}`, x + 124 + i * 12.6, y, 11.6, 9.6);
@@ -279,9 +295,7 @@ export function dl380Gen10Rear() {
   s += vent(psu2, 32, c.x1 - 2 - psu2, 11.5);
   // I/O row along the bottom, left to right.
   const y = 54;
-  s += recess(x - 0.6, y - 3.2, 4 * 12.6 + 1.4, 16.4, 0.8);
-  for (let i = 0; i < 4; i++) s += rj45(x + 0.4 + i * 12.6, y, { up: false }) + mark("port", `flexlom${i + 1}`, x + 0.4 + i * 12.6, y, 11.6, 9.6);
-  s += text(x, y + 17.6, "FlexibleLOM", { size: 1.7 });
+  s += flexLomBay(x, y, { dx: 0, dy: 17.6 });
   s += usb(x + 56, y - 1.4, { usb3: true });
   s += usb(x + 56, y + 5.6, { usb3: true });
   s += led(x + 73, y + 5, "blue");

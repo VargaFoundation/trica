@@ -501,7 +501,7 @@ Front and rear: **NetBox** = upstream CC0 photograph, **drawn** = schematic face
 
 The server runs `Sync` at start, after the migrations, then every `deduce.interval`
 ([configuration](configuration.md)). Module bays are ignored; a model is picked by hand one
-device at a time (ADR 0048), not for many at once. Parts are not placed from HPE Redfish NIC names (`1`..`8`), a FlexibleLOM seen as `eno49`, or a
+device at a time (ADR 0048), not for many at once. Parts are not placed from HPE Redfish NIC names (`1`..`8`) alone (they share the spot of the OS port with the same MAC), or a
 power supply's `BayNumber`; the Dell R330 variants and the DL180 Gen9 LFF fronts have no layout
 reachable today (ADR 0047). Images are not reloaded without a restart, and the export PDF holds the images as part of its
 picture, not as separate objects.

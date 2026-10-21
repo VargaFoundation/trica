@@ -55,7 +55,7 @@ picture.
 - The project's drawings (ADR 0043) all have layouts. Upstream images (the DL380 Gen10, the
   7050SX-64 fronts) have none: the object page shows the picture without spots and says so.
 - Known gaps, each leaving parts unplaced rather than misplaced: HPE Redfish NICs named `1`..`8`
-  (not `eno<n>`), a FlexibleLOM port seen by Linux as `eno49`, power supplies read by
+  (not `eno<n>`), power supplies read by
   `BayNumber` (ignored: the name is used), a Dell R330 that matches the upstream model (no
   variant, so no layout), and the DL180 Gen9 LFF fronts, whose bay positions are schematic and
   have no layout.
@@ -111,3 +111,21 @@ wrong box: nothing was placed, and the upstream photograph of the generic model 
 Where the two SATA system disks of such a server physically sit (a Box 1 or 2 cage on the
 embedded controller, the Universal Media Bay's 2 SFF, a rear cage) the inventory does not say: no
 collector reports it, and they stay unplaced until one does or a person records it.
+
+## Addendum (2026-10): the FlexibleLOM is an option card
+
+Seen on the real fleet: every HPE server carries a 544+FLR-QSFP (2 x 40GbE, one PCI function) in
+its FlexibleLOM bay, where the drawings had four RJ45. Linux names its ports after the onboard
+index the firmware gives the card, `eno49`/`eno49d1` on a DL360 Gen9 and `eno5`/`eno5d1` on a
+DL380 Gen10 (the SMBIOS label reads "Embedded FlexibleLOM 1 Port 1"); they stayed unplaced.
+
+1. **The bay is drawn as an opening with four port positions**, `flexlom1`-`flexlom4` from left
+   to right, not as a given card's connectors: the chassis does not fix the card (331FLR 4 x 1GbE,
+   530FLR-SFP+ 2 x 10GbE, 544+FLR-QSFP 2 x 40GbE...). A two-port card fills the first two.
+2. **An `eno<n>` (or `eno<n>d<k>`) whose `nic<n>` the faces do not have is the FlexibleLOM's**,
+   when the faces have its bay: the embedded ports hold the first onboard indexes, the card the
+   next one. Its ports are numbered in the order of `n` then `k`. A face without the bay (a Dell)
+   leaves such a port unplaced. iLO's port with the same MAC shares the spot.
+3. **Rejected:** a chassis variant per card (the card is a field-replaceable option, not a
+   chassis), and reading the card from the firmware inventory's name to draw its connectors (the
+   faces are images drawn ahead, the same for every device of a model).
