@@ -211,6 +211,8 @@ var (
 		regexp.MustCompile(`^NIC\.Slot\.(\d+)-`),  // iDRAC
 	}
 	trailingLane = regexp.MustCompile(`[/-]\d+$`)
+	// systemd: onboard device n, port k of one PCI function (eno49d1).
+	onboardNIC = regexp.MustCompile(`^eno(\d+)(?:d(\d+))?$`)
 
 	// The names an operating system gives a disk or a port: the kernel's
 	// (sda, nvme0n1) and systemd's (eno1, ens1f0, enp3s0f1). They say what a
@@ -244,6 +246,7 @@ func placeParts(device string, parts []*store.Object, faces []DeviceFace) []Face
 			}
 		}
 	}
+	flexLOM := flexLOMPorts(parts, where)
 	var out []FacePart
 	for _, o := range parts {
 		var kind string
@@ -274,6 +277,9 @@ func placeParts(device string, parts []*store.Object, faces []DeviceFace) []Face
 			}
 			kind = spotPort
 			cands = interfaceSpots(name, k)
+			if n, ok := flexLOM[name]; ok {
+				cands = append(cands, spotKey{spotPort, "flexlom" + strconv.Itoa(n)})
+			}
 		default:
 			continue
 		}
@@ -293,6 +299,56 @@ func placeParts(device string, parts []*store.Object, faces []DeviceFace) []Face
 	slices.SortStableFunc(out, func(a, b FacePart) int {
 		return strings.Compare(a.Kind, b.Kind)
 	})
+	return out
+}
+
+// flexLOMPorts numbers the ports of an HPE FlexibleLOM, when the faces have
+// its bay (flexlom<n>): Linux names an onboard port eno<n> after the index
+// the firmware gives its device, the embedded ports 1-4 and the FlexibleLOM
+// the next one (eno5 on a Gen10, eno49 on a Gen9), eno<n>d<k> for the k-th
+// port of one PCI function. An eno<n> whose nic<n> the faces do not have is
+// therefore the FlexibleLOM's; its ports are numbered in the order of n then
+// k (eno5 1, eno5d1 2; eno49 to eno52, 1 to 4).
+func flexLOMPorts(parts []*store.Object, where map[spotKey]string) map[string]int {
+	if _, ok := where[spotKey{spotPort, "flexlom1"}]; !ok {
+		return nil
+	}
+	type port struct {
+		name string
+		n, k int
+	}
+	var ports []port
+	seen := map[string]bool{}
+	for _, o := range parts {
+		if o.Type != "interface" {
+			continue
+		}
+		name := partName(o)
+		m := onboardNIC.FindStringSubmatch(name)
+		if m == nil || seen[name] {
+			continue
+		}
+		n, _ := strconv.Atoi(m[1])
+		if _, embedded := where[spotKey{spotPort, "nic" + strconv.Itoa(n)}]; embedded {
+			continue
+		}
+		k := 0
+		if m[2] != "" {
+			k, _ = strconv.Atoi(m[2])
+		}
+		seen[name] = true
+		ports = append(ports, port{name, n, k})
+	}
+	slices.SortFunc(ports, func(a, b port) int {
+		if a.n != b.n {
+			return a.n - b.n
+		}
+		return a.k - b.k
+	})
+	out := make(map[string]int, len(ports))
+	for i, p := range ports {
+		out[p.name] = i + 1
+	}
 	return out
 }
 
