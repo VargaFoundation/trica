@@ -248,6 +248,8 @@ export const dl380Gen10Front8SFF = () => dl380Gen10Front("8SFF", ["blank", "blan
 export const dl380Gen10Front8SFFNVMe = () => dl380Gen10Front("8SFF with 8 NVMe in Box 3", ["blank", "blank", "nvme"]);
 // 24SFF CTO (868704-B21): the three boxes.
 export const dl380Gen10Front24SFF = () => dl380Gen10Front("24SFF", ["sff", "sff", "sff"]);
+// The same chassis with the 8 NVMe cage in Box 3 instead (826689-B21).
+export const dl380Gen10Front24SFFNVMe = () => dl380Gen10Front("24SFF with 8 NVMe in Box 3", ["sff", "sff", "nvme"]);
 
 // DL380 Gen10 rear. QuickSpecs a00008180enw rear view legend: primary riser
 // (slots 1-3, top to bottom), secondary riser (slots 4-6, top to bottom),
