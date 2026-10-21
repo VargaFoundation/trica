@@ -101,7 +101,7 @@ func TestPlaceAStorageNodeOnTheDL380Gen10(t *testing.T) {
 			"nvme0n1": "front 3:1", "nvme4n1": "front 3:5",
 			"HpeServerPowerSupply 0": "rear 1", "HpeServerPowerSupply 1": "rear 2",
 			"bmc": "rear bmc", "1": "rear nic1", "eno1": "rear nic1", "4": "rear nic4", "eno4": "rear nic4",
-			"sda": " os", "sdb": " os", "eno5": " os", "eno5d1": " os",
+			"sda": " os", "sdb": " os", "eno5": "rear flexlom1", "eno5d1": "rear flexlom2",
 		}
 		for name, w := range want {
 			fp, ok := got[name]
@@ -113,10 +113,10 @@ func TestPlaceAStorageNodeOnTheDL380Gen10(t *testing.T) {
 				t.Errorf("%s: %s at %q, want %q", slug, name, where, w)
 			}
 		}
-		if fp := got["eno5"]; len(fp.Also) != 1 || fp.Also[0].Display != "5" {
-			t.Errorf("%s: eno5 also %+v, want iLO's port 5 with it", slug, fp.Also)
+		if fp := got["5"]; fp.Face+" "+fp.Spot != "rear flexlom1" {
+			t.Errorf("%s: iLO's port 5 at %q, want the FlexibleLOM spot of eno5 (same MAC)", slug, fp.Face+" "+fp.Spot)
 		}
-		for _, name := range []string{"5", "DA000000", "DA00000A", "Fan 1"} {
+		for _, name := range []string{"DA000000", "DA00000A", "Fan 1"} {
 			if _, listed := got[name]; listed {
 				t.Errorf("%s: %s listed on its own", slug, name)
 			}
@@ -127,8 +127,8 @@ func TestPlaceAStorageNodeOnTheDL380Gen10(t *testing.T) {
 				placed++
 			}
 		}
-		if len(got) != 25 || placed != 21 {
-			t.Errorf("%s: %d parts, %d placed; want 25 and 21", slug, len(got), placed)
+		if len(got) != 26 || placed != 24 {
+			t.Errorf("%s: %d parts, %d placed; want 26 and 24", slug, len(got), placed)
 		}
 	}
 }
@@ -146,5 +146,36 @@ func TestADriveInAnEmptyBoxIsNoSpot(t *testing.T) {
 	fps = placeParts(dev, parts, libraryFaces(t, "hpe-proliant-dl380-gen10-24sff"))
 	if len(fps) != 1 || fps[0].Spot != "2:1" || fps[0].Unplaced != "" {
 		t.Fatalf("24SFF: %+v, want bay 2:1", fps)
+	}
+}
+
+// The FlexibleLOM of a DL360 Gen9 (544+FLR-QSFP, one PCI function, two
+// ports): Linux names it eno49 and eno49d1, after the firmware's onboard
+// index; they fill the first two positions of the bay, the embedded ports
+// keep theirs, and a card in PCIe slot 1 (ens1, ens1d1) goes in its slot.
+func TestFlexibleLOMPortsOfAGen9(t *testing.T) {
+	dev := "dev"
+	var parts []*store.Object
+	for i, name := range []string{"eno1", "eno4", "eno49", "eno49d1", "ens1", "ens1d1"} {
+		parts = append(parts, &store.Object{ID: fmt.Sprintf("i%d", i), Type: "interface", ParentID: &dev, Display: name, Status: "active",
+			Attrs: map[string]any{"name": name, "kind": "physical", "mac": fmt.Sprintf("02:00:5e:00:01:%02d", i)}})
+	}
+	want := map[string]string{"eno1": "port nic1", "eno4": "port nic4", "eno49": "port flexlom1", "eno49d1": "port flexlom2", "ens1": "slot 1", "ens1d1": "slot 1"}
+	for _, fp := range placeParts(dev, parts, libraryFaces(t, "hpe-proliant-dl360-gen9-8sff")) {
+		name := partNameOf(fp.Part)
+		if got := fp.Kind + " " + fp.Spot; got != want[name] {
+			t.Errorf("%s at %q, want %q", name, got, want[name])
+		}
+	}
+}
+
+// Without the FlexibleLOM bay on the faces (a Dell), an eno<n> beyond the
+// embedded ports stays unplaced: nothing is guessed.
+func TestNoFlexibleLOMBayNoFlexibleLOMPort(t *testing.T) {
+	dev := "dev"
+	parts := []*store.Object{{ID: "i", Type: "interface", ParentID: &dev, Display: "eno5", Status: "active", Attrs: map[string]any{"name": "eno5", "kind": "physical"}}}
+	fps := placeParts(dev, parts, libraryFaces(t, "dell-poweredge-r330-8sff"))
+	if len(fps) != 1 || fps[0].Spot != "" {
+		t.Fatalf("%+v, want eno5 unplaced", fps)
 	}
 }
