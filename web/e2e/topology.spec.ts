@@ -177,7 +177,7 @@ test("the French topology page is accessible too", async ({
 test("the filters narrow the picture and the address keeps them", async ({
   page,
 }) => {
-  await signInWithToken(page, "/topology");
+  await signInWithToken(page, "/topology?view=network");
   await expect(ready(page, 200)).toBeVisible(LAYOUT_200);
   const summary = page.locator("p.summary");
   await page.getByLabel("Rack").selectOption({ label: "rl1" });
@@ -323,6 +323,8 @@ test("a 200-device topology is laid out and drawn in a few seconds", async ({
   // From the click on the menu to the last node placed: the bulk reads, the model, the ELK layout, the paint.
   const started = Date.now();
   await page.getByRole("link", { name: "Topology" }).click();
+  // The map is the default view; the graph is the Network tab.
+  await page.getByRole("tab", { name: "Network" }).click();
   const canvas = ready(page, 200);
   await expect(canvas).toBeVisible(LAYOUT_200);
   const total = Date.now() - started;

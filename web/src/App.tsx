@@ -21,10 +21,10 @@ import { RackPage } from "./racks/RackPage";
 import { RoomPage, RoomsPage } from "./racks/RoomPages";
 import { ThemeProvider, type ThemePreference } from "./theme";
 
-// The topology page carries cytoscape and the ELK layout engine (about 1.5 MB):
-// a separate chunk, fetched when the page is opened, not on every visit.
-const TopologyPage = lazy(() =>
-  import("./topology/TopologyPage").then((m) => ({ default: m.TopologyPage })),
+// The topology page (the isometric map and, behind a tab, the network graph) is its own chunk,
+// fetched when the page is opened; the graph's cytoscape and ELK (about 1.5 MB) are a further one.
+const TopologyShell = lazy(() =>
+  import("./topology/TopologyShell").then((m) => ({ default: m.TopologyShell })),
 );
 
 function Lazy({ children }: { children: ReactNode }) {
@@ -103,7 +103,7 @@ export function App() {
             path="topology"
             element={
               <Lazy>
-                <TopologyPage />
+                <TopologyShell />
               </Lazy>
             }
           />

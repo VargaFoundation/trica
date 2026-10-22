@@ -79,7 +79,7 @@ function routes(live: Handler): Record<string, Handler> {
 
 async function open(live: Handler, locale: "en" | "fr" = "en") {
   const api = mockApi(routes(live));
-  renderApp({ at: "/topology", locale });
+  renderApp({ at: "/topology?view=network", locale });
   await screen.findByRole("table");
   return api;
 }

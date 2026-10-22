@@ -14,7 +14,8 @@ const views: { name: string; path: string; ready: (p: Page) => Promise<void> }[]
   { name: "object-server-components", path: `/objects/${ID.srv01}?tab=components`, ready: (p) => expect(p.getByRole("table", { name: /Power supply of srv-01/ })).toBeVisible() },
   { name: "object-switch", path: `/objects/${ID.swA1}`, ready: (p) => expect(p.locator(".attr-list").first()).toBeVisible() },
   { name: "rack", path: `/racks/${ID.r12}`, ready: (p) => expect(p.locator(".rack-svg").first()).toBeVisible() },
-  { name: "topology", path: "/topology", ready: (p) => expect(p.locator(".topology-canvas canvas").first()).toBeVisible({ timeout: 30_000 }) },
+  { name: "topology-map", path: "/topology", ready: (p) => expect(p.locator('.iso-svg[data-state="drawn"] .iso-item').first()).toBeVisible() },
+  { name: "topology", path: "/topology?view=network", ready: (p) => expect(p.locator(".topology-canvas canvas").first()).toBeVisible({ timeout: 30_000 }) },
 ];
 
 for (const theme of ["dark", "light"] as const) {
@@ -64,7 +65,7 @@ test("a server, a switch, a PDU and a NAS each have their own icon", async ({ pa
 });
 
 test("the topology canvas follows the theme", async ({ page }) => {
-  await signInWithToken(page, "/topology");
+  await signInWithToken(page, "/topology?view=network");
   const canvas = page.locator(".topology-canvas");
   await expect(canvas.locator("canvas").first()).toBeVisible({ timeout: 30_000 });
   await page.getByRole("combobox", { name: "Theme" }).selectOption("dark");

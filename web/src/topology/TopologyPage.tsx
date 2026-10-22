@@ -24,13 +24,13 @@ import {
 import { useTopology, type TopologyData } from "./useTopology";
 
 /** /topology — the layer-2 links of the inventory, as a graph and as a table. */
-export function TopologyPage() {
+export function TopologyPage({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n();
-  usePageTitle(t("topology.title"));
+  usePageTitle(embedded ? undefined : t("topology.title"));
   const data = useTopology();
   return (
     <>
-      <h1>{t("topology.title")}</h1>
+      {embedded ? null : <h1>{t("topology.title")}</h1>}
       <p>{t("topology.intro")}</p>
       <Async query={data}>{(d) => <Topo data={d} />}</Async>
     </>

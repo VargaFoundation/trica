@@ -89,6 +89,19 @@
   --trica-graph-health-crit: #ff9592;
   --trica-graph-group: #212225;
   --trica-graph-group-line: #797e86;
+  /* The isometric topology map: floor, three shaded faces (light from the left), a neutral family for what is not a place. */
+  --trica-iso-floor: #1f2125;
+  --trica-iso-floor-line: #34373d;
+  --trica-iso-top: #355a8a;
+  --trica-iso-south: #284569;
+  --trica-iso-east: #1e3555;
+  --trica-iso-edge: #8cc0f5;
+  --trica-iso-neutral-top: #4a4e56;
+  --trica-iso-neutral-south: #373a41;
+  --trica-iso-neutral-east: #2b2e34;
+  --trica-iso-neutral-edge: #b0b4ba;
+  --trica-iso-shadow: #000000;
+  --trica-iso-label-bg: #18191b;
 }
 
 /* Not colours: one place for the type, the radii and the rhythm. */
@@ -165,6 +178,19 @@
   --trica-graph-health-crit: #ce2c31;
   --trica-graph-group: #f0f0f3;
   --trica-graph-group-line: #80838d;
+  /* The isometric topology map: floor, three shaded faces (light from the left), a neutral family for what is not a place. */
+  --trica-iso-floor: #eef0f4;
+  --trica-iso-floor-line: #d3d7de;
+  --trica-iso-top: #d8e8fb;
+  --trica-iso-south: #b4d1f4;
+  --trica-iso-east: #9dbfea;
+  --trica-iso-edge: #2f66a0;
+  --trica-iso-neutral-top: #e3e5ea;
+  --trica-iso-neutral-south: #cbced6;
+  --trica-iso-neutral-east: #b7bbc5;
+  --trica-iso-neutral-edge: #60646c;
+  --trica-iso-shadow: #1c2024;
+  --trica-iso-label-bg: #ffffff;
 }
 :root[data-theme="light"] {
   --trica-shadow-raised: 0 1px 2px rgb(28 32 36 / 6%);
@@ -232,6 +258,19 @@
     --trica-graph-health-crit: #ce2c31;
     --trica-graph-group: #f0f0f3;
     --trica-graph-group-line: #80838d;
+    /* The isometric topology map: floor, three shaded faces (light from the left), a neutral family for what is not a place. */
+    --trica-iso-floor: #eef0f4;
+    --trica-iso-floor-line: #d3d7de;
+    --trica-iso-top: #d8e8fb;
+    --trica-iso-south: #b4d1f4;
+    --trica-iso-east: #9dbfea;
+    --trica-iso-edge: #2f66a0;
+    --trica-iso-neutral-top: #e3e5ea;
+    --trica-iso-neutral-south: #cbced6;
+    --trica-iso-neutral-east: #b7bbc5;
+    --trica-iso-neutral-edge: #60646c;
+    --trica-iso-shadow: #1c2024;
+    --trica-iso-label-bg: #ffffff;
   }
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --trica-shadow-raised: 0 1px 2px rgb(28 32 36 / 6%);
