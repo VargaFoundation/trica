@@ -42,6 +42,8 @@ export interface PlaceDeviceProps {
   device?: { id: string; display: string };
   initialPosition?: number;
   initialFace?: string;
+  /** Preview the change as soon as the form is valid (a move or a turn: everything is already said). */
+  autoPreview?: boolean;
   onClose: () => void;
 }
 
@@ -51,7 +53,7 @@ export function PlaceDeviceForm(props: PlaceDeviceProps) {
   return <Async query={schema}>{(doc) => <PlaceDevice {...props} rules={editRules(doc)} />}</Async>;
 }
 
-function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, initialFace, onClose, rules }: PlaceDeviceProps & { rules: EditRules }) {
+function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, initialFace, autoPreview, onClose, rules }: PlaceDeviceProps & { rules: EditRules }) {
   const { t, number, label } = useI18n();
   const uid = useId();
   const source = callerSource(useMe().data);
@@ -337,7 +339,7 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
           ))}
         </ul>
       ) : null}
-      <BatchReview batch={batch} names={mode === "new" ? { device: newName } : {}} warnings={warnings} resultWarnings={resultWarnings} onCancel={onClose} />
+      <BatchReview batch={batch} names={mode === "new" ? { device: newName } : {}} warnings={warnings} resultWarnings={resultWarnings} autoPreview={autoPreview} onCancel={onClose} />
     </form>
   );
 }

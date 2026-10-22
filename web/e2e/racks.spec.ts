@@ -11,7 +11,11 @@ test("a rack draws both faces from the schema's position attributes", async ({
   await expect(front.locator("a.rack-slot")).toHaveCount(3); // sw-a1, sw-a2, srv-01
   await expect(rear.locator("a.rack-slot")).toHaveCount(1); // pdu-a
   // srv-01 is full depth, mounted at the front: its rear is drawn as a shadow, not as a device.
-  await expect(rear.locator("g.rack-shadow")).toHaveCount(1);
+  await expect(rear.locator("g.rack-shadow:not(.rack-behind)")).toHaveCount(1);
+  // sw-a1 and sw-a2 are shallow: from the rear, an outline says their units are used from the front;
+  // pdu-a, shallow and mounted at the rear, is the same outline on the front.
+  await expect(rear.locator("g.rack-behind")).toHaveCount(2);
+  await expect(front.locator("g.rack-behind")).toHaveCount(1);
   // sw-a1 sits above sw-a2 (U40 over U39): higher U, smaller y.
   const y = async (name: string) =>
     Number(

@@ -238,8 +238,9 @@ describe("rack render time", () => {
 
   it("draws a 48 U rack, both faces fully populated, in well under a second", () => {
     const layout = layoutRack(48, FULL);
-    expect(layout.front).toHaveLength(48);
-    expect(layout.rear).toHaveLength(48);
+    // 48 devices of each face, and the 48 of the other seen from behind.
+    expect(layout.front.filter((s) => !s.behind)).toHaveLength(48);
+    expect(layout.rear.filter((s) => !s.behind)).toHaveLength(48);
     const t0 = performance.now();
     const { container } = render(
       <Providers locale="en">

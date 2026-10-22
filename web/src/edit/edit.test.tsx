@@ -228,6 +228,41 @@ describe("placing a device from the rack page", () => {
     expect(within(panel).getByRole("button", { name: "Submit" })).toBeEnabled();
   });
 
+  it("turns a device from the table: the form opens on the other face and previews the change at once", async () => {
+    const api = await openRackPlacement();
+    fireEvent.click(await screen.findByRole("button", { name: /^Turn ?\(pdu-a\)$/ }));
+    const panel = await screen.findByRole("region", { name: "Move pdu-a in rack r12" });
+    await waitFor(() => expect(api.count("POST /batches/preview")).toBe(1));
+    const sent = bodyOf(api, "POST /batches/preview");
+    expect(sent.relations).toEqual([{ type: "mounted_in", from: { type: "device", identity: { id: EID.pdu } }, to: { type: "rack", identity: { id: EID.rack } }, attributes: { position: 1, face: "front" } }]);
+    expect(await within(panel).findByRole("region", { name: "What the inventory would change" })).toBeInTheDocument();
+    expect(api.count("POST /batches")).toBe(0);
+  });
+
+  it("moves a device by dragging it to another unit: the form opens there, nothing is sent before Submit", async () => {
+    const api = await openRackPlacement();
+    const link = document.querySelector(`svg[data-face="front"] a[data-id="${EID.srv}"]`) as SVGElement;
+    expect(link).not.toBeNull();
+    // jsdom has no PointerEvent: React reads the type, the coordinates come from MouseEvent.
+    fireEvent(link, new MouseEvent("pointerdown", { bubbles: true, clientY: 100, button: 0 }));
+    fireEvent(window, new MouseEvent("pointermove", { clientY: 78 }));
+    await waitFor(() => expect(document.querySelector("[data-drop-u]")?.getAttribute("data-drop-u")).toBe("11"));
+    fireEvent(window, new MouseEvent("pointerup", { clientY: 78 }));
+    const panel = await screen.findByRole("region", { name: "Move srv-01 in rack r12" });
+    expect(await within(panel).findByLabelText("Position (lowest U)")).toHaveValue(11);
+    await waitFor(() => expect(api.count("POST /batches/preview")).toBe(1));
+    expect(bodyOf(api, "POST /batches/preview").relations?.[0]?.attributes).toEqual({ position: 11, face: "front" });
+    expect(api.count("POST /batches")).toBe(0);
+  });
+
+  it("draws a shallow device of the other face as an outline that leaves the unit free", async () => {
+    await openRackPlacement();
+    const behind = document.querySelector(`svg[data-face="front"] [data-behind="${EID.pdu}"]`);
+    expect(behind).not.toBeNull();
+    expect(behind?.getAttribute("aria-hidden")).toBe("true");
+    expect(freeU("front", 1)).not.toBeNull();
+  });
+
   it("offers no placement when the schema has no mounted_in with a position", async () => {
     mockApi(routes(PROPOSER, {}, { ...physicalSchema, relations: [] }));
     renderApp({ at: `/racks/${EID.rack}` });

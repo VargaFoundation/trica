@@ -35,7 +35,12 @@ From the schema as it is (`internal/schema/builtin.yaml`): the `mounted_in` rela
 `facing`; the room carries `width_mm`, `depth_mm` and `tile_mm` (the side of a tile, 600 when not
 set; ADR 0030).
 
+- **Mounted from the rear** means the device's front faces the rear of the rack (NetBox's
+  convention, and the airflow check's): the rear elevation shows its front (a switch's ports), the
+  front elevation its rear.
 - A **full-depth** device is drawn on its face and as a dashed shadow on the other; it blocks both.
+  A **shallow** device is a dashed outline with its name on the other face: the unit reads as used
+  from behind, stays free there (a shallow device may face it) and still takes a click.
 - **Aisles and airflow** (ADR 0049). The rack's `front_aisle` (`cold` or `hot`; the rear faces
   the other one) names the aisle of each elevation (blue "Cold aisle", red "Hot aisle") and
   draws the rack from the side with the air going from the cold aisle to the hot one. Every
@@ -163,7 +168,7 @@ for a caller who holds `propose` (`GET /me`); the API checks every write again.
 |---|---|
 | `/rooms` | **Add a site**, **Add a room** (in a site or building chosen from the schema's parents) |
 | `/rooms/<id>` | **Add a rack** in the room, on a floor tile (click a free tile: its X and Y are filled in); **Edit this room** (name, size, tile) |
-| `/racks/<id>` | **Place a device** (click a free unit: its U and face are filled in): a device the inventory has (search by name), or one no collector sees (a PDU, a UPS, a patch panel, a shelf: name or serial or asset tag, role, vendor, model, height); **Edit this rack** (name, height, floor tile, facing) |
+| `/racks/<id>` | **Place a device** (click a free unit: its U and face are filled in): a device the inventory has (search by name), or one no collector sees (a PDU, a UPS, a patch panel, a shelf: name or serial or asset tag, role, vendor, model, height); **move a device by dragging it** to another unit (its outline follows the pointer, red over another device or out of the rack; Escape cancels); **Move** and **Turn** (mount it from the other face) in the table of mounted devices: the placement form opens filled in and previews the change at once, nothing is sent before Submit; **Edit this rack** (name, height, floor tile, facing) |
 | `/objects/<id>` of a device | **Rack placement**: where it is mounted and who said so; **Place in a rack** / **Move**, **Remove from this rack** |
 | `/objects/<id>` of a device whose chassis is not certain | **Device model** (ADR 0048): one radio button per candidate chassis, with its front painted, its name, height and depth; the chosen one's front and rear larger; the batch relates the device to that model (`instance_of`, the model by its slug). **Change the model** on a certain model for an administrator, and for the person whose declaration decides (their earlier choice is withdrawn, a colleague's is not). Needs `propose` on devices and on device models (`can_choose`) |
 | `/objects/<id>` of a site, building, room, row or rack | **Edit**: its attributes from the schema; emptying a field withdraws your own value only |
@@ -189,8 +194,9 @@ for a caller who holds `propose` (`GET /me`); the API checks every write again.
   before anything is sent.
 - Fields, enum values, units and labels come from `GET /schema`; nothing is offered for an
   attribute the schema does not have.
-- Keyboard: free units and free tiles are pointer shortcuts only; the **Place a device** and **Add
-  a rack** buttons open the same forms. A form opens in the page, focus moves to its title, and
+- Keyboard: free units, free tiles and dragging a device are pointer shortcuts only; the **Place a
+  device** and **Add a rack** buttons, and **Move** and **Turn** in the rack's table, open the same
+  forms. A form opens in the page, focus moves to its title, and
   the preview and the outcome take the focus when they arrive.
 
 ### Which aisle a rack faces

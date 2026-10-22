@@ -147,9 +147,11 @@ export interface BatchReviewProps {
   resultWarnings?: (result: ApplyResult) => string[];
   onDone?: (outcome: BatchOutcome) => void;
   onCancel: () => void;
+  /** Preview the first batch the form hands over without waiting for the button (once). */
+  autoPreview?: boolean;
 }
 
-export function BatchReview({ batch, names = {}, warnings: own = [], resultWarnings, onDone, onCancel }: BatchReviewProps) {
+export function BatchReview({ batch, names = {}, warnings: own = [], resultWarnings, onDone, onCancel, autoPreview }: BatchReviewProps) {
   const { t, tp } = useI18n();
   const client = useQueryClient();
   const [reason, setReason] = useState("");
@@ -164,6 +166,7 @@ export function BatchReview({ batch, names = {}, warnings: own = [], resultWarni
     },
   });
   const [previewedKey, setPreviewedKey] = useState("");
+  const autoDone = useRef(false);
   const outcomeRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLHeadingElement>(null);
 
@@ -177,6 +180,14 @@ export function BatchReview({ batch, names = {}, warnings: own = [], resultWarni
       resetSubmit();
     }
   }, [stale, submitted, resetPreview, resetSubmit]);
+
+  const { mutate: runPreview } = preview;
+  useEffect(() => {
+    if (!autoPreview || autoDone.current || !batch) return;
+    autoDone.current = true;
+    setPreviewedKey(key);
+    runPreview(batch);
+  }, [autoPreview, batch, key, runPreview]);
 
   useEffect(() => {
     if (preview.isSuccess && !stale) previewRef.current?.focus();

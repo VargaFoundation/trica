@@ -6,7 +6,10 @@ import type { Health as SharedHealth } from "../inventory/health";
 // builtin.yaml): U 1 is the bottom of the rack; a device is mounted with
 // `mounted_in` (position = the lowest U it occupies, face = front | rear);
 // its height is the u_height of its device type, and a full_depth device
-// occupies both faces whichever one it is mounted from.
+// occupies both faces whichever one it is mounted from. Mounted from the rear
+// means the device's front faces the rear of the rack (NetBox's convention, and
+// the airflow check's, ADR 0049): a switch whose ports face the hot aisle is
+// mounted from the rear, and the rear elevation shows its ports.
 
 export type Face = "front" | "rear";
 
@@ -55,9 +58,14 @@ export function overallHealth(m: Pick<Mounted, "health" | "partsHealth">): Healt
   return worst;
 }
 
-/** The image of the face a slot is drawn on, if the model has one. */
-export function slotImage(s: Pick<Slot, "item" | "face">): string | undefined {
-  return s.face === "front" ? s.item.frontImage : s.item.rearImage;
+/**
+ * The image a slot is drawn with, if the model has one: the device's front on
+ * the face it is mounted from, its rear on the other face of a full-depth
+ * device, none for a shallow device seen from behind (only its outline).
+ */
+export function slotImage(s: Pick<Slot, "item" | "shadow" | "behind">): string | undefined {
+  if (s.behind) return undefined;
+  return s.shadow ? s.item.rearImage : s.item.frontImage;
 }
 
 export type Issue = "overlap" | "outOfRange" | "assumedHeight" | "assumedFace";
@@ -65,8 +73,14 @@ export type Issue = "overlap" | "outOfRange" | "assumedHeight" | "assumedFace";
 export interface Slot {
   item: Mounted;
   face: Face;
-  /** True on the face the device is not mounted from (full-depth devices only). */
+  /** True on the face the device is not mounted from. */
   shadow: boolean;
+  /**
+   * A shallow (not full-depth) device seen from the face it is not mounted
+   * from: drawn as an outline, so that the unit reads as used from behind; it
+   * overlaps nothing and leaves the unit free on this face.
+   */
+  behind?: boolean;
   bottom: number;
   height: number;
   /** Highest U occupied (inclusive). */
@@ -113,13 +127,15 @@ export function layoutRack(uHeight: number, items: readonly Mounted[]): RackLayo
     const bottom = item.position;
     const top = bottom + height - 1;
     if (bottom < 1 || top > uHeight + 1e-9) issues.push("outOfRange");
-    const faces: Face[] = item.fullDepth ? ["front", "rear"] : [mountedFace];
-    for (const face of faces) {
-      out[face].push({ item, face, shadow: face !== mountedFace, bottom, height, top, issues: [...issues], overlaps: [] });
+    for (const face of ["front", "rear"] as const) {
+      const shadow = face !== mountedFace;
+      out[face].push({ item, face, shadow, behind: shadow && !item.fullDepth, bottom, height, top, issues: shadow && !item.fullDepth ? [] : [...issues], overlaps: [] });
     }
   }
   for (const face of ["front", "rear"] as const) {
-    const slots = out[face].sort((a, b) => a.bottom - b.bottom || a.item.name.localeCompare(b.item.name));
+    // Behind slots first, so that the devices of this face are drawn over them.
+    out[face].sort((a, b) => Number(!!b.behind) - Number(!!a.behind) || a.bottom - b.bottom || a.item.name.localeCompare(b.item.name));
+    const slots = out[face].filter((s) => !s.behind);
     for (let i = 0; i < slots.length; i++) {
       const a = slots[i] as Slot;
       for (let j = i + 1; j < slots.length; j++) {
@@ -147,7 +163,10 @@ export function formatRange(bottom: number, height: number): string {
 export function freeUnits(uHeight: number, slots: readonly Slot[]): number {
   let free = 0;
   for (let u = 1; u <= uHeight; u++) {
-    if (!slots.some((s) => intervalsOverlap(u, 1, s.bottom, s.height))) free++;
+    if (!slots.some((s) => !s.behind && intervalsOverlap(u, 1, s.bottom, s.height))) free++;
   }
   return free;
 }
+
+/** The other face of a rack. */
+export const otherFace = (f: Face): Face => (f === "front" ? "rear" : "front");
