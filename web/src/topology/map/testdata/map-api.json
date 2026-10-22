@@ -1,0 +1,915 @@
+{
+  "global": {
+    "level": "global",
+    "trail": [],
+    "inventory_at": "2026-03-01T08:00:00Z",
+    "truncated": false,
+    "live": {
+      "enabled": true,
+      "generated_at": "2026-03-01T08:00:00Z",
+      "stale": false,
+      "refresh_seconds": 15
+    },
+    "nodes": [
+      {
+        "id": "internet",
+        "kind": "internet",
+        "display": "Internet",
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 0,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 0,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "<lyon>",
+        "kind": "site",
+        "display": "lyon-1",
+        "drill": {
+          "level": "site",
+          "id": "<lyon>"
+        },
+        "counts": {
+          "rooms": 0,
+          "racks": 1,
+          "devices": 2,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 2,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "<paris>",
+        "kind": "site",
+        "display": "paris-1",
+        "drill": {
+          "level": "site",
+          "id": "<paris>"
+        },
+        "counts": {
+          "rooms": 1,
+          "racks": 3,
+          "devices": 4,
+          "internal_links": 2
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 4,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "unplaced",
+        "kind": "unplaced",
+        "display": "Unplaced",
+        "drill": {
+          "level": "unplaced"
+        },
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 1,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 1,
+          "critical_events": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "<lyon>~<paris>~tunnel",
+        "a": "<lyon>",
+        "b": "<paris>",
+        "medium": "tunnel",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 0,
+          "neighbor_of": 0,
+          "tunnel": 1,
+          "uplink": 0
+        },
+        "links": 1,
+        "confidence": "declared",
+        "capacity_partial": false,
+        "oper": "up",
+        "measured": false,
+        "tunnel": {
+          "kind": "wireguard",
+          "status": "up",
+          "resolved": true
+        },
+        "members": [],
+        "members_truncated": false
+      },
+      {
+        "id": "<paris>~internet~uplink",
+        "a": "<paris>",
+        "b": "internet",
+        "medium": "uplink",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 0,
+          "neighbor_of": 0,
+          "tunnel": 0,
+          "uplink": 1
+        },
+        "links": 1,
+        "confidence": "declared",
+        "capacity_mbps": 1000,
+        "capacity_partial": false,
+        "oper": "up",
+        "measured": false,
+        "uplink": {
+          "status": "online",
+          "provider": "Example ISP",
+          "bandwidth_mbps": 1000
+        },
+        "members": [],
+        "members_truncated": false
+      }
+    ],
+    "notes": {
+      "ambiguous_placements": 0,
+      "links_without_place": 0,
+      "unresolved_tunnels": 0,
+      "unplaced_devices": 1
+    }
+  },
+  "rack": {
+    "level": "rack",
+    "focus": {
+      "id": "<r1>",
+      "type": "rack",
+      "display": "R1"
+    },
+    "trail": [
+      {
+        "id": "<paris>",
+        "type": "site",
+        "display": "paris-1"
+      },
+      {
+        "id": "<room>",
+        "type": "room",
+        "display": "A1"
+      }
+    ],
+    "inventory_at": "2026-03-01T08:00:00Z",
+    "truncated": false,
+    "live": {
+      "enabled": true,
+      "generated_at": "2026-03-01T08:00:00Z",
+      "stale": false,
+      "refresh_seconds": 15
+    },
+    "nodes": [
+      {
+        "id": "<fwa>",
+        "kind": "device",
+        "display": "fw-a",
+        "mount": {
+          "position": 10,
+          "full_depth": false
+        },
+        "role": "switch",
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 0,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 1,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "<swa>",
+        "kind": "device",
+        "display": "sw-r1",
+        "mount": {
+          "position": 10,
+          "full_depth": false
+        },
+        "role": "switch",
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 0,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 1,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "portal:internet",
+        "kind": "portal",
+        "place_type": "internet",
+        "display": "Internet",
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 0,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 0,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "portal:<r2>",
+        "kind": "portal",
+        "place_type": "rack",
+        "display": "R2",
+        "drill": {
+          "level": "rack",
+          "id": "<r2>"
+        },
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 0,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 0,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "portal:<lyon>",
+        "kind": "portal",
+        "place_type": "site",
+        "display": "lyon-1",
+        "drill": {
+          "level": "site",
+          "id": "<lyon>"
+        },
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 0,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 0,
+          "critical_events": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "<fwa>~portal:<lyon>~tunnel",
+        "a": "<fwa>",
+        "b": "portal:<lyon>",
+        "medium": "tunnel",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 0,
+          "neighbor_of": 0,
+          "tunnel": 1,
+          "uplink": 0
+        },
+        "links": 1,
+        "confidence": "declared",
+        "capacity_partial": false,
+        "oper": "up",
+        "measured": false,
+        "tunnel": {
+          "kind": "wireguard",
+          "status": "up",
+          "resolved": true
+        },
+        "members": [],
+        "members_truncated": false
+      },
+      {
+        "id": "<fwa>~portal:internet~uplink",
+        "a": "<fwa>",
+        "b": "portal:internet",
+        "medium": "uplink",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 0,
+          "neighbor_of": 0,
+          "tunnel": 0,
+          "uplink": 1
+        },
+        "links": 1,
+        "confidence": "declared",
+        "capacity_mbps": 1000,
+        "capacity_partial": false,
+        "oper": "up",
+        "measured": false,
+        "uplink": {
+          "status": "online",
+          "provider": "Example ISP",
+          "bandwidth_mbps": 1000
+        },
+        "members": [],
+        "members_truncated": false
+      },
+      {
+        "id": "<swa>~portal:<r2>~physical",
+        "a": "<swa>",
+        "b": "portal:<r2>",
+        "medium": "physical",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 2,
+          "neighbor_of": 0,
+          "tunnel": 0,
+          "uplink": 0
+        },
+        "links": 2,
+        "confidence": "declared",
+        "capacity_mbps": 20000,
+        "capacity_partial": false,
+        "a_to_b_bps": 150000000,
+        "b_to_a_bps": 15000000,
+        "util": 0.0075,
+        "oper": "up",
+        "measured": true,
+        "members": [
+          {
+            "a_device": {
+              "id": "<swa>",
+              "type": "device",
+              "display": "sw-r1"
+            },
+            "a_port": {
+              "id": "<swaEthernet1>",
+              "type": "interface",
+              "display": "Ethernet1"
+            },
+            "b_device": {
+              "id": "<swb>",
+              "type": "device",
+              "display": "sw-r2"
+            },
+            "b_port": {
+              "id": "<swbEthernet1>",
+              "type": "interface",
+              "display": "Ethernet1"
+            },
+            "kind": "cabled_to",
+            "confidence": "declared"
+          },
+          {
+            "a_device": {
+              "id": "<swa>",
+              "type": "device",
+              "display": "sw-r1"
+            },
+            "a_port": {
+              "id": "<swaEthernet2>",
+              "type": "interface",
+              "display": "Ethernet2"
+            },
+            "b_device": {
+              "id": "<swb>",
+              "type": "device",
+              "display": "sw-r2"
+            },
+            "b_port": {
+              "id": "<swbEthernet2>",
+              "type": "interface",
+              "display": "Ethernet2"
+            },
+            "kind": "cabled_to",
+            "confidence": "declared"
+          }
+        ],
+        "members_truncated": false
+      }
+    ],
+    "notes": {
+      "ambiguous_placements": 0,
+      "links_without_place": 0,
+      "unresolved_tunnels": 0,
+      "unplaced_devices": 1
+    }
+  },
+  "room": {
+    "level": "room",
+    "focus": {
+      "id": "<room>",
+      "type": "room",
+      "display": "A1",
+      "width_mm": 6000,
+      "depth_mm": 4800,
+      "tile_mm": 600
+    },
+    "trail": [
+      {
+        "id": "<paris>",
+        "type": "site",
+        "display": "paris-1"
+      }
+    ],
+    "inventory_at": "2026-03-01T08:00:00Z",
+    "truncated": false,
+    "live": {
+      "enabled": true,
+      "generated_at": "2026-03-01T08:00:00Z",
+      "stale": false,
+      "refresh_seconds": 15
+    },
+    "nodes": [
+      {
+        "id": "portal:internet",
+        "kind": "portal",
+        "place_type": "internet",
+        "display": "Internet",
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 0,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 0,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "portal:<lyon>",
+        "kind": "portal",
+        "place_type": "site",
+        "display": "lyon-1",
+        "drill": {
+          "level": "site",
+          "id": "<lyon>"
+        },
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 0,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 0,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "<r1>",
+        "kind": "rack",
+        "display": "R1",
+        "drill": {
+          "level": "rack",
+          "id": "<r1>"
+        },
+        "floor": {
+          "x": 1,
+          "y": 1,
+          "facing": "south"
+        },
+        "size": {},
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 2,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 2,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "<r2>",
+        "kind": "rack",
+        "display": "R2",
+        "drill": {
+          "level": "rack",
+          "id": "<r2>"
+        },
+        "floor": {
+          "x": 3,
+          "y": 1,
+          "facing": "south"
+        },
+        "size": {},
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 1,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 1,
+          "critical_events": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "<r1>~<r2>~physical",
+        "a": "<r1>",
+        "b": "<r2>",
+        "medium": "physical",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 2,
+          "neighbor_of": 0,
+          "tunnel": 0,
+          "uplink": 0
+        },
+        "links": 2,
+        "confidence": "declared",
+        "capacity_mbps": 20000,
+        "capacity_partial": false,
+        "a_to_b_bps": 150000000,
+        "b_to_a_bps": 15000000,
+        "util": 0.0075,
+        "oper": "up",
+        "measured": true,
+        "members": [
+          {
+            "a_device": {
+              "id": "<swa>",
+              "type": "device",
+              "display": "sw-r1"
+            },
+            "a_port": {
+              "id": "<swaEthernet1>",
+              "type": "interface",
+              "display": "Ethernet1"
+            },
+            "b_device": {
+              "id": "<swb>",
+              "type": "device",
+              "display": "sw-r2"
+            },
+            "b_port": {
+              "id": "<swbEthernet1>",
+              "type": "interface",
+              "display": "Ethernet1"
+            },
+            "kind": "cabled_to",
+            "confidence": "declared"
+          },
+          {
+            "a_device": {
+              "id": "<swa>",
+              "type": "device",
+              "display": "sw-r1"
+            },
+            "a_port": {
+              "id": "<swaEthernet2>",
+              "type": "interface",
+              "display": "Ethernet2"
+            },
+            "b_device": {
+              "id": "<swb>",
+              "type": "device",
+              "display": "sw-r2"
+            },
+            "b_port": {
+              "id": "<swbEthernet2>",
+              "type": "interface",
+              "display": "Ethernet2"
+            },
+            "kind": "cabled_to",
+            "confidence": "declared"
+          }
+        ],
+        "members_truncated": false
+      },
+      {
+        "id": "<r1>~portal:<lyon>~tunnel",
+        "a": "<r1>",
+        "b": "portal:<lyon>",
+        "medium": "tunnel",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 0,
+          "neighbor_of": 0,
+          "tunnel": 1,
+          "uplink": 0
+        },
+        "links": 1,
+        "confidence": "declared",
+        "capacity_partial": false,
+        "oper": "up",
+        "measured": false,
+        "tunnel": {
+          "kind": "wireguard",
+          "status": "up",
+          "resolved": true
+        },
+        "members": [],
+        "members_truncated": false
+      },
+      {
+        "id": "<r1>~portal:internet~uplink",
+        "a": "<r1>",
+        "b": "portal:internet",
+        "medium": "uplink",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 0,
+          "neighbor_of": 0,
+          "tunnel": 0,
+          "uplink": 1
+        },
+        "links": 1,
+        "confidence": "declared",
+        "capacity_mbps": 1000,
+        "capacity_partial": false,
+        "oper": "up",
+        "measured": false,
+        "uplink": {
+          "status": "online",
+          "provider": "Example ISP",
+          "bandwidth_mbps": 1000
+        },
+        "members": [],
+        "members_truncated": false
+      }
+    ],
+    "notes": {
+      "ambiguous_placements": 0,
+      "links_without_place": 0,
+      "unresolved_tunnels": 0,
+      "unplaced_devices": 1
+    }
+  },
+  "site": {
+    "level": "site",
+    "focus": {
+      "id": "<paris>",
+      "type": "site",
+      "display": "paris-1"
+    },
+    "trail": [],
+    "inventory_at": "2026-03-01T08:00:00Z",
+    "truncated": false,
+    "live": {
+      "enabled": true,
+      "generated_at": "2026-03-01T08:00:00Z",
+      "stale": false,
+      "refresh_seconds": 15
+    },
+    "nodes": [
+      {
+        "id": "area:<paris>",
+        "kind": "area",
+        "display": "Site floor",
+        "drill": {
+          "level": "room",
+          "id": "<paris>"
+        },
+        "counts": {
+          "rooms": 0,
+          "racks": 1,
+          "devices": 1,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 1,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "portal:internet",
+        "kind": "portal",
+        "place_type": "internet",
+        "display": "Internet",
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 0,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 0,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "portal:<lyon>",
+        "kind": "portal",
+        "place_type": "site",
+        "display": "lyon-1",
+        "drill": {
+          "level": "site",
+          "id": "<lyon>"
+        },
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 0,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 0,
+          "critical_events": 0
+        }
+      },
+      {
+        "id": "<room>",
+        "kind": "room",
+        "display": "A1",
+        "drill": {
+          "level": "room",
+          "id": "<room>"
+        },
+        "size": {
+          "width_mm": 6000,
+          "depth_mm": 4800
+        },
+        "counts": {
+          "rooms": 0,
+          "racks": 2,
+          "devices": 3,
+          "internal_links": 2
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 3,
+          "critical_events": 0
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "<room>~portal:<lyon>~tunnel",
+        "a": "<room>",
+        "b": "portal:<lyon>",
+        "medium": "tunnel",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 0,
+          "neighbor_of": 0,
+          "tunnel": 1,
+          "uplink": 0
+        },
+        "links": 1,
+        "confidence": "declared",
+        "capacity_partial": false,
+        "oper": "up",
+        "measured": false,
+        "tunnel": {
+          "kind": "wireguard",
+          "status": "up",
+          "resolved": true
+        },
+        "members": [],
+        "members_truncated": false
+      },
+      {
+        "id": "<room>~portal:internet~uplink",
+        "a": "<room>",
+        "b": "portal:internet",
+        "medium": "uplink",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 0,
+          "neighbor_of": 0,
+          "tunnel": 0,
+          "uplink": 1
+        },
+        "links": 1,
+        "confidence": "declared",
+        "capacity_mbps": 1000,
+        "capacity_partial": false,
+        "oper": "up",
+        "measured": false,
+        "uplink": {
+          "status": "online",
+          "provider": "Example ISP",
+          "bandwidth_mbps": 1000
+        },
+        "members": [],
+        "members_truncated": false
+      }
+    ],
+    "notes": {
+      "ambiguous_placements": 0,
+      "links_without_place": 0,
+      "unresolved_tunnels": 0,
+      "unplaced_devices": 1
+    }
+  },
+  "unplaced": {
+    "level": "unplaced",
+    "trail": [],
+    "inventory_at": "2026-03-01T08:00:00Z",
+    "truncated": false,
+    "live": {
+      "enabled": true,
+      "generated_at": "2026-03-01T08:00:00Z",
+      "stale": false,
+      "refresh_seconds": 15
+    },
+    "nodes": [
+      {
+        "id": "<nas>",
+        "kind": "device",
+        "display": "nas-1",
+        "role": "storage",
+        "counts": {
+          "rooms": 0,
+          "racks": 0,
+          "devices": 0,
+          "internal_links": 0
+        },
+        "health": {
+          "worst": "unknown",
+          "ok": 0,
+          "warning": 0,
+          "critical": 0,
+          "unknown": 1,
+          "critical_events": 0
+        }
+      }
+    ],
+    "edges": [],
+    "notes": {
+      "ambiguous_placements": 0,
+      "links_without_place": 0,
+      "unresolved_tunnels": 0,
+      "unplaced_devices": 1
+    }
+  }
+}

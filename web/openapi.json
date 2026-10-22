@@ -5672,6 +5672,450 @@
         ],
         "type": "object"
       },
+      "MapCounts": {
+        "properties": {
+          "devices": {
+            "type": "integer"
+          },
+          "internal_links": {
+            "type": "integer"
+          },
+          "racks": {
+            "type": "integer"
+          },
+          "rooms": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "devices",
+          "internal_links",
+          "racks",
+          "rooms"
+        ],
+        "type": "object"
+      },
+      "MapDrill": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "level"
+        ],
+        "type": "object"
+      },
+      "MapEdge": {
+        "properties": {
+          "a": {
+            "type": "string"
+          },
+          "a_to_b_bps": {
+            "type": "number"
+          },
+          "b": {
+            "type": "string"
+          },
+          "b_to_a_bps": {
+            "type": "number"
+          },
+          "capacity_mbps": {
+            "type": "number"
+          },
+          "capacity_partial": {
+            "type": "boolean"
+          },
+          "confidence": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kinds": {
+            "$ref": "#/components/schemas/MapKinds"
+          },
+          "links": {
+            "type": "integer"
+          },
+          "measured": {
+            "type": "boolean"
+          },
+          "medium": {
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/MapMember"
+            },
+            "type": "array"
+          },
+          "members_truncated": {
+            "type": "boolean"
+          },
+          "oper": {
+            "type": "string"
+          },
+          "tunnel": {
+            "$ref": "#/components/schemas/MapTunnel"
+          },
+          "uplink": {
+            "$ref": "#/components/schemas/MapUplink"
+          },
+          "util": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "a",
+          "b",
+          "capacity_partial",
+          "confidence",
+          "id",
+          "kinds",
+          "links",
+          "measured",
+          "medium",
+          "members",
+          "members_truncated",
+          "oper"
+        ],
+        "type": "object"
+      },
+      "MapFloor": {
+        "properties": {
+          "facing": {
+            "type": "string"
+          },
+          "x": {
+            "type": "integer"
+          },
+          "y": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "type": "object"
+      },
+      "MapGroup": {
+        "properties": {
+          "display": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "display",
+          "id",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "MapHealth": {
+        "properties": {
+          "critical": {
+            "type": "integer"
+          },
+          "critical_events": {
+            "type": "integer"
+          },
+          "ok": {
+            "type": "integer"
+          },
+          "unknown": {
+            "type": "integer"
+          },
+          "warning": {
+            "type": "integer"
+          },
+          "worst": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "critical",
+          "critical_events",
+          "ok",
+          "unknown",
+          "warning",
+          "worst"
+        ],
+        "type": "object"
+      },
+      "MapKinds": {
+        "properties": {
+          "cable": {
+            "type": "integer"
+          },
+          "cabled_to": {
+            "type": "integer"
+          },
+          "neighbor_of": {
+            "type": "integer"
+          },
+          "tunnel": {
+            "type": "integer"
+          },
+          "uplink": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cable",
+          "cabled_to",
+          "neighbor_of",
+          "tunnel",
+          "uplink"
+        ],
+        "type": "object"
+      },
+      "MapLive": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "refresh_seconds": {
+            "type": "integer"
+          },
+          "stale": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "refresh_seconds",
+          "stale"
+        ],
+        "type": "object"
+      },
+      "MapMember": {
+        "properties": {
+          "a_device": {
+            "$ref": "#/components/schemas/MapPlace"
+          },
+          "a_port": {
+            "$ref": "#/components/schemas/MapPlace"
+          },
+          "b_device": {
+            "$ref": "#/components/schemas/MapPlace"
+          },
+          "b_port": {
+            "$ref": "#/components/schemas/MapPlace"
+          },
+          "confidence": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "a_device",
+          "a_port",
+          "b_device",
+          "b_port",
+          "confidence",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "MapMount": {
+        "properties": {
+          "face": {
+            "type": "string"
+          },
+          "full_depth": {
+            "type": "boolean"
+          },
+          "position": {
+            "type": "number"
+          },
+          "u_height": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "full_depth",
+          "position"
+        ],
+        "type": "object"
+      },
+      "MapNode": {
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/MapCounts"
+          },
+          "display": {
+            "type": "string"
+          },
+          "drill": {
+            "$ref": "#/components/schemas/MapDrill"
+          },
+          "floor": {
+            "$ref": "#/components/schemas/MapFloor"
+          },
+          "group": {
+            "$ref": "#/components/schemas/MapGroup"
+          },
+          "health": {
+            "$ref": "#/components/schemas/MapHealth"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "mount": {
+            "$ref": "#/components/schemas/MapMount"
+          },
+          "place_type": {
+            "type": "string"
+          },
+          "power_w": {
+            "type": "number"
+          },
+          "role": {
+            "type": "string"
+          },
+          "size": {
+            "$ref": "#/components/schemas/MapSize"
+          }
+        },
+        "required": [
+          "counts",
+          "display",
+          "health",
+          "id",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "MapNotes": {
+        "properties": {
+          "ambiguous_placements": {
+            "type": "integer"
+          },
+          "links_without_place": {
+            "type": "integer"
+          },
+          "unplaced_devices": {
+            "type": "integer"
+          },
+          "unresolved_tunnels": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ambiguous_placements",
+          "links_without_place",
+          "unplaced_devices",
+          "unresolved_tunnels"
+        ],
+        "type": "object"
+      },
+      "MapPlace": {
+        "properties": {
+          "depth_mm": {
+            "type": "integer"
+          },
+          "display": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "tile_mm": {
+            "type": "integer"
+          },
+          "type": {
+            "type": "string"
+          },
+          "width_mm": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "display",
+          "id",
+          "type"
+        ],
+        "type": "object"
+      },
+      "MapSize": {
+        "properties": {
+          "depth_mm": {
+            "type": "integer"
+          },
+          "u_height": {
+            "type": "integer"
+          },
+          "width_mm": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MapTunnel": {
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "peer": {
+            "type": "string"
+          },
+          "resolved": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "resolved",
+          "status"
+        ],
+        "type": "object"
+      },
+      "MapUplink": {
+        "properties": {
+          "bandwidth_mbps": {
+            "type": "number"
+          },
+          "latency_ms": {
+            "type": "number"
+          },
+          "loss_pct": {
+            "type": "number"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
       "Me": {
         "properties": {
           "actions": {
@@ -8039,6 +8483,58 @@
           "ca_file",
           "insecure",
           "min_version"
+        ],
+        "type": "object"
+      },
+      "TopologyMap": {
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/MapEdge"
+            },
+            "type": "array"
+          },
+          "focus": {
+            "$ref": "#/components/schemas/MapPlace"
+          },
+          "inventory_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "live": {
+            "$ref": "#/components/schemas/MapLive"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/MapNode"
+            },
+            "type": "array"
+          },
+          "notes": {
+            "$ref": "#/components/schemas/MapNotes"
+          },
+          "trail": {
+            "items": {
+              "$ref": "#/components/schemas/MapPlace"
+            },
+            "type": "array"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "edges",
+          "inventory_at",
+          "level",
+          "live",
+          "nodes",
+          "notes",
+          "trail",
+          "truncated"
         ],
         "type": "object"
       },
@@ -10710,6 +11206,72 @@
           }
         },
         "summary": "Live state of the links: throughput, link state and utilisation per interface id, read by the server from the configured metrics endpoint and cached (refresh_seconds). enabled is false when the server has no live block; stale is true when the last refresh failed and the values are the last good ones. Only interfaces the caller may read are listed. Nothing here is stored in the inventory.",
+        "tags": [
+          "inventory"
+        ],
+        "x-trica-action": "read"
+      }
+    },
+    "/topology/map": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "getTopologyMap",
+        "parameters": [
+          {
+            "description": "The level to show.",
+            "in": "query",
+            "name": "level",
+            "required": true,
+            "schema": {
+              "enum": [
+                "global",
+                "site",
+                "room",
+                "rack",
+                "unplaced"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The place the level is about: a site, a room or a rack. Absent for global and unplaced.",
+            "in": "query",
+            "name": "id",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopologyMap"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "One level of the topology map (ADR 0051): the places of the level (sites; the rooms of a site; the racks of a room; the devices of a rack; or the devices in no site) as nodes, the links between them aggregated per pair and medium as edges (physical cables and adjacencies, tunnels, Internet uplinks), with the live rates when a live source is configured, and portals standing for what lies outside the level. level is global, site, room or rack, or unplaced; id is the site, the room (or a site, for its floor outside rooms) or the rack, and is refused for global and unplaced. Computed from the shared inventory graph, at most 10 seconds behind the last commit; nodes and edges are listed only if the caller may read them (the Internet and the uplinks only to a caller who reads gateways in every site).",
         "tags": [
           "inventory"
         ],

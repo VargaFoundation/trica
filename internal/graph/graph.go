@@ -33,6 +33,10 @@ type Edge struct {
 	From   string `json:"from"`
 	To     string `json:"to"`
 	Impact string `json:"impact,omitempty"`
+	// Confidence and Attrs are read by the topology map (ADR 0051); they are
+	// not part of what MCP serves.
+	Confidence string         `json:"-"`
+	Attrs      map[string]any `json:"-"`
 }
 
 // Snapshot is an immutable view of the current graph.
@@ -78,7 +82,7 @@ func Build(objects []*store.Object, relations []store.Relation, reg *schema.Regi
 		if s.Nodes[r.FromID] == nil || s.Nodes[r.ToID] == nil {
 			continue
 		}
-		e := Edge{Type: r.Type, From: r.FromID, To: r.ToID}
+		e := Edge{Type: r.Type, From: r.FromID, To: r.ToID, Confidence: r.Confidence, Attrs: r.Attrs}
 		if reg != nil {
 			if rt, err := reg.Relation(r.Type); err == nil {
 				e.Impact = rt.Impact
@@ -104,19 +108,43 @@ type Cache struct {
 
 	cur   atomic.Pointer[Snapshot]
 	dirty atomic.Bool
-	mu    sync.Mutex // serialises reloads
+	// dirtySince is when the snapshot was first marked stale (unix
+	// nanoseconds), 0 while it is not.
+	dirtySince atomic.Int64
+	mu         sync.Mutex // serialises reloads
+	now        func() time.Time
 }
 
 // NewCache returns an empty cache; call Refresh or Get to load it.
 func NewCache(l Loader, reg func() *schema.Registry) *Cache {
-	c := &Cache{loader: l, schema: reg}
+	c := &Cache{loader: l, schema: reg, now: time.Now}
 	c.dirty.Store(true)
 	return c
 }
 
 // Invalidate marks the snapshot stale. It is cheap and safe to call from the
 // engine's OnCommit hook.
-func (c *Cache) Invalidate() { c.dirty.Store(true) }
+func (c *Cache) Invalidate() {
+	if c.dirty.CompareAndSwap(false, true) {
+		c.dirtySince.Store(c.now().UnixNano())
+	}
+}
+
+// Recent returns the current snapshot, or one at most maxStale old since the
+// inventory changed: a reader that does not need the last commit (the
+// topology map) shares one reload among a burst of commits instead of
+// triggering one each.
+func (c *Cache) Recent(ctx context.Context, maxStale time.Duration) (*Snapshot, error) {
+	if s := c.cur.Load(); s != nil {
+		if !c.dirty.Load() {
+			return s, nil
+		}
+		if since := c.dirtySince.Load(); since != 0 && c.now().Sub(time.Unix(0, since)) < maxStale {
+			return s, nil
+		}
+	}
+	return c.Refresh(ctx)
+}
 
 // Get returns a current snapshot, reloading it first if it is stale.
 func (c *Cache) Get(ctx context.Context) (*Snapshot, error) {
@@ -140,14 +168,15 @@ func (c *Cache) Refresh(ctx context.Context) (*Snapshot, error) {
 	}
 	// Clear first: a commit landing during the load marks it dirty again.
 	c.dirty.Store(false)
+	c.dirtySince.Store(0)
 	objs, err := c.loader.AllObjects(ctx)
 	if err != nil {
-		c.dirty.Store(true)
+		c.Invalidate()
 		return nil, err
 	}
 	rels, err := c.loader.CurrentRelations(ctx)
 	if err != nil {
-		c.dirty.Store(true)
+		c.Invalidate()
 		return nil, err
 	}
 	var reg *schema.Registry

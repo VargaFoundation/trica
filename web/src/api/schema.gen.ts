@@ -766,6 +766,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/topology/map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One level of the topology map (ADR 0051): the places of the level (sites; the rooms of a site; the racks of a room; the devices of a rack; or the devices in no site) as nodes, the links between them aggregated per pair and medium as edges (physical cables and adjacencies, tunnels, Internet uplinks), with the live rates when a live source is configured, and portals standing for what lies outside the level. level is global, site, room or rack, or unplaced; id is the site, the room (or a site, for its floor outside rooms) or the rack, and is refused for global and unplaced. Computed from the shared inventory graph, at most 10 seconds behind the last commit; nodes and edges are listed only if the caller may read them (the Internet and the uplinks only to a caller who reads gateways in every site).
+         * @description Requires the "read" action.
+         */
+        get: operations["getTopologyMap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/whohad": {
         parameters: {
             query?: never;
@@ -3230,6 +3250,129 @@ export interface components {
             sources: components["schemas"]["LiveSourceStatus"][];
             stale: boolean;
         };
+        MapCounts: {
+            devices: number;
+            internal_links: number;
+            racks: number;
+            rooms: number;
+        };
+        MapDrill: {
+            id?: string;
+            level: string;
+        };
+        MapEdge: {
+            a: string;
+            a_to_b_bps?: number;
+            b: string;
+            b_to_a_bps?: number;
+            capacity_mbps?: number;
+            capacity_partial: boolean;
+            confidence: string;
+            id: string;
+            kinds: components["schemas"]["MapKinds"];
+            links: number;
+            measured: boolean;
+            medium: string;
+            members: components["schemas"]["MapMember"][];
+            members_truncated: boolean;
+            oper: string;
+            tunnel?: components["schemas"]["MapTunnel"];
+            uplink?: components["schemas"]["MapUplink"];
+            util?: number;
+        };
+        MapFloor: {
+            facing?: string;
+            x: number;
+            y: number;
+        };
+        MapGroup: {
+            display: string;
+            id: string;
+            kind: string;
+        };
+        MapHealth: {
+            critical: number;
+            critical_events: number;
+            ok: number;
+            unknown: number;
+            warning: number;
+            worst: string;
+        };
+        MapKinds: {
+            cable: number;
+            cabled_to: number;
+            neighbor_of: number;
+            tunnel: number;
+            uplink: number;
+        };
+        MapLive: {
+            enabled: boolean;
+            /** Format: date-time */
+            generated_at?: string;
+            refresh_seconds: number;
+            stale: boolean;
+        };
+        MapMember: {
+            a_device: components["schemas"]["MapPlace"];
+            a_port: components["schemas"]["MapPlace"];
+            b_device: components["schemas"]["MapPlace"];
+            b_port: components["schemas"]["MapPlace"];
+            confidence: string;
+            kind: string;
+        };
+        MapMount: {
+            face?: string;
+            full_depth: boolean;
+            position: number;
+            u_height?: number;
+        };
+        MapNode: {
+            counts: components["schemas"]["MapCounts"];
+            display: string;
+            drill?: components["schemas"]["MapDrill"];
+            floor?: components["schemas"]["MapFloor"];
+            group?: components["schemas"]["MapGroup"];
+            health: components["schemas"]["MapHealth"];
+            id: string;
+            kind: string;
+            mount?: components["schemas"]["MapMount"];
+            place_type?: string;
+            power_w?: number;
+            role?: string;
+            size?: components["schemas"]["MapSize"];
+        };
+        MapNotes: {
+            ambiguous_placements: number;
+            links_without_place: number;
+            unplaced_devices: number;
+            unresolved_tunnels: number;
+        };
+        MapPlace: {
+            depth_mm?: number;
+            display: string;
+            id: string;
+            tile_mm?: number;
+            type: string;
+            width_mm?: number;
+        };
+        MapSize: {
+            depth_mm?: number;
+            u_height?: number;
+            width_mm?: number;
+        };
+        MapTunnel: {
+            kind: string;
+            peer?: string;
+            resolved: boolean;
+            status: string;
+        };
+        MapUplink: {
+            bandwidth_mbps?: number;
+            latency_ms?: number;
+            loss_pct?: number;
+            provider?: string;
+            status: string;
+        };
         Me: {
             actions: string[];
             kind: string;
@@ -4145,6 +4288,18 @@ export interface components {
             ca_file: string;
             insecure: boolean;
             min_version: string;
+        };
+        TopologyMap: {
+            edges: components["schemas"]["MapEdge"][];
+            focus?: components["schemas"]["MapPlace"];
+            /** Format: date-time */
+            inventory_at: string;
+            level: string;
+            live: components["schemas"]["MapLive"];
+            nodes: components["schemas"]["MapNode"][];
+            notes: components["schemas"]["MapNotes"];
+            trail: components["schemas"]["MapPlace"][];
+            truncated: boolean;
         };
         TypeDoc: {
             attributes: components["schemas"]["AttributeDoc"][];
@@ -5476,6 +5631,36 @@ export interface operations {
             };
             401: components["responses"]["Problem401"];
             403: components["responses"]["Problem403"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getTopologyMap: {
+        parameters: {
+            query: {
+                /** @description The level to show. */
+                level: "global" | "site" | "room" | "rack" | "unplaced";
+                /** @description The place the level is about: a site, a room or a rack. Absent for global and unplaced. */
+                id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopologyMap"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
             500: components["responses"]["Problem500"];
         };
     };

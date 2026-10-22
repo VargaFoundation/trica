@@ -1,6 +1,6 @@
 # ADR-0011: Impact analysis on an in-memory graph, with relation impact modes
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10); the graph cache has a second reader, the topology map, since ADR 0051 (`Cache.Recent`)
 - **Concerns**: `internal/graph`, MCP `impact_analysis`
 
 ## Context

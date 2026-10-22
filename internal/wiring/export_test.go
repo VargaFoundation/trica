@@ -12,3 +12,10 @@ func SetCollectRetry(d time.Duration) (restore func()) {
 
 // CollectLockKey is the advisory lock key of in-server collection.
 const CollectLockKey = collectLockKey
+
+// SetMapMaxStale shortens how stale the topology map may be after a commit.
+func SetMapMaxStale(d time.Duration) (restore func()) {
+	old := mapMaxStale
+	mapMaxStale = d
+	return func() { mapMaxStale = old }
+}

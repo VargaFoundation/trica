@@ -25,6 +25,7 @@ import type {
   Proposal,
   Provenance,
   QueryOf,
+  TopologyMap,
   RackItem,
   RelationLink,
   LiveTopology,
@@ -56,6 +57,9 @@ export const api = {
     request<Page<RelationLink>>("/relations", { query: q, signal }),
   /** The live overlay of the topology: throughput and link state per interface id (ADR 0041). */
   liveTopology: (signal?: AbortSignal) => request<LiveTopology>("/topology/live", { signal }),
+  /** One level of the topology map: places as nodes, aggregated links as edges, live rates (ADR 0051). */
+  topologyMap: (q: QueryOf<"/topology/map">, signal?: AbortSignal) =>
+    request<TopologyMap>("/topology/map", { query: q, signal }),
   /** The faces of a device's model with its parts in place (ADR 0047). */
   objectFaces: (id: string, signal?: AbortSignal) =>
     request<DeviceFaces>(`/objects/${encodeURIComponent(id)}/faces`, { signal }),

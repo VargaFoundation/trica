@@ -11,6 +11,7 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"log/slog"
@@ -19,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/VargaFoundation/trica/internal/graph"
 	"github.com/VargaFoundation/trica/internal/live"
 	"github.com/VargaFoundation/trica/internal/reconcile"
 	"github.com/VargaFoundation/trica/internal/schema"
@@ -59,6 +61,13 @@ type Config struct {
 	// Collectors is the collector catalogue and the targets this server runs
 	// (ADR 0055). Nil: the registry alone, with no target.
 	Collectors CollectorSource
+	// Graph is the shared inventory graph the topology map reads (ADR 0051),
+	// kept current by the reconciliation engine's commits. Nil: the map loads
+	// a snapshot on each request.
+	Graph *graph.Cache
+	// MapMaxStale is how long after a commit the map may still be served from
+	// the previous graph (default 10 s): bursts of commits cost one reload.
+	MapMaxStale time.Duration
 }
 
 // LiveSource is the live overlay: a shared, cached measurement set.
@@ -81,6 +90,8 @@ type Server struct {
 	routes     []route
 	live       LiveSource
 	collectors CollectorSource
+	graph      *graph.Cache
+	mapStale   time.Duration
 }
 
 // New builds a Server. It fails without an engine, an Authorizer and an
@@ -98,7 +109,7 @@ func New(cfg Config) (*Server, error) {
 		eng: cfg.Engine, st: cfg.Engine.Store, searcher: &search.Searcher{Store: cfg.Engine.Store},
 		auth: cfg.Authorizer, audit: cfg.Auditor, log: cfg.Logger, version: cfg.Version, now: cfg.Now,
 		images: cfg.Images, lib: cfg.Library,
-		live: cfg.Live, collectors: cfg.Collectors,
+		live: cfg.Live, collectors: cfg.Collectors, graph: cfg.Graph, mapStale: cmp.Or(cfg.MapMaxStale, mapMaxStale),
 	}
 	if s.log == nil {
 		s.log = slog.Default()
