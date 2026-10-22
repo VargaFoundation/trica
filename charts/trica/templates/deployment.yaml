@@ -10,6 +10,15 @@
 {{- if and .Values.live.enabled .Values.config.live }}
 {{- fail "set the live block in live.config, not config.live" }}
 {{- end }}
+{{- if and .Values.theme.builtin .Values.theme.existingConfigMap }}
+{{- fail "theme.builtin and theme.existingConfigMap are exclusive: a theme comes from one source" }}
+{{- end }}
+{{- if and .Values.theme.archiveKey (not .Values.theme.existingConfigMap) }}
+{{- fail "theme.archiveKey needs theme.existingConfigMap: the key of the ConfigMap that holds the archive" }}
+{{- end }}
+{{- if and .Values.config.web (hasKey .Values.config.web "theme") }}
+{{- fail "set the theme in theme.*, not config.web.theme" }}
+{{- end }}
 {{- if and .Values.collect.kubernetes.rbac.enabled (not .Values.collect.enabled) }}
 {{- fail "collect.kubernetes.rbac.enabled needs collect.enabled: the role is for the in-server collectors" }}
 {{- end }}
@@ -130,6 +139,13 @@ spec:
               subPath: {{ . }}
               {{- end }}
             {{- end }}
+            {{- if .Values.theme.existingConfigMap }}
+            # A directory mount, never a subPath: Kubernetes updates the files of
+            # a ConfigMap in place and the server re-reads them (ADR 0054).
+            - name: theme
+              mountPath: /etc/trica/theme
+              readOnly: true
+            {{- end }}
             {{- if .Values.transport.enabled }}
             - name: transport-ca
               mountPath: /var/lib/trica/ca
@@ -169,6 +185,11 @@ spec:
           persistentVolumeClaim:
             claimName: {{ .Values.deviceTypes.existingClaim }}
             readOnly: true
+        {{- end }}
+        {{- if .Values.theme.existingConfigMap }}
+        - name: theme
+          configMap:
+            name: {{ .Values.theme.existingConfigMap }}
         {{- end }}
         {{- if .Values.live.enabled }}
         {{- range .Values.live.secrets }}

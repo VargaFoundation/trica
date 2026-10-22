@@ -1,0 +1,307 @@
+{
+  "schema": 1,
+  "name": "flat",
+  "title": "Flat",
+  "version": "1.0.0",
+  "description": "Square corners, a near-black and white palette with a green signal; a sober look in the manner of the Diametral design system.",
+  "colors": {
+    "surface": {
+      "light": "#ffffff",
+      "dark": "#0e0e10"
+    },
+    "raised": {
+      "light": "#ffffff",
+      "dark": "#161618"
+    },
+    "sidebar": {
+      "light": "#f5f5f5",
+      "dark": "#161618"
+    },
+    "surface-muted": {
+      "light": "#ececec",
+      "dark": "#1b1c1f"
+    },
+    "line": {
+      "light": "#e4e4e6",
+      "dark": "#2c2d31"
+    },
+    "line-strong": {
+      "light": "#767884",
+      "dark": "#8b8d97"
+    },
+    "ink": {
+      "light": "#161616",
+      "dark": "#f3f3f1"
+    },
+    "ink-muted": {
+      "light": "#434649",
+      "dark": "#c7c8cc"
+    },
+    "link": {
+      "light": "#0f6d85",
+      "dark": "#6fd0e8"
+    },
+    "accent": {
+      "light": "#161616",
+      "dark": "#32333a"
+    },
+    "accent-hover": {
+      "light": "#434649",
+      "dark": "#434650"
+    },
+    "accent-ink": {
+      "light": "#ffffff",
+      "dark": "#ffffff"
+    },
+    "accent-soft": {
+      "light": "#e4e4e6",
+      "dark": "#232428"
+    },
+    "accent-line": {
+      "light": "#cdced0",
+      "dark": "#3a3b42"
+    },
+    "focus": {
+      "light": "#161616",
+      "dark": "#f3f3f1"
+    },
+    "signal": {
+      "light": "#53ff64",
+      "dark": "#53ff64"
+    },
+    "ok-soft": {
+      "light": "#eef4ef",
+      "dark": "#14241d"
+    },
+    "ok-line": {
+      "light": "#b9d4c1",
+      "dark": "#245a3c"
+    },
+    "ok-ink": {
+      "light": "#2e7d4f",
+      "dark": "#7fd6a0"
+    },
+    "ok-solid": {
+      "light": "#2e7d4f",
+      "dark": "#7fd6a0"
+    },
+    "warn-soft": {
+      "light": "#fff0e8",
+      "dark": "#35190d"
+    },
+    "warn-line": {
+      "light": "#f2c3a5",
+      "dark": "#6b3417"
+    },
+    "warn-ink": {
+      "light": "#a33900",
+      "dark": "#ff9d6b"
+    },
+    "warn-solid": {
+      "light": "#cf4500",
+      "dark": "#ff9d6b"
+    },
+    "danger-soft": {
+      "light": "#f9ebe9",
+      "dark": "#321715"
+    },
+    "danger-line": {
+      "light": "#e7b3ac",
+      "dark": "#6b2a24"
+    },
+    "danger-ink": {
+      "light": "#c0392b",
+      "dark": "#f08a7e"
+    },
+    "danger-solid": {
+      "light": "#c81f00",
+      "dark": "#f08a7e"
+    },
+    "info-soft": {
+      "light": "#eafaff",
+      "dark": "#0f262e"
+    },
+    "info-line": {
+      "light": "#a9d9e6",
+      "dark": "#1c5566"
+    },
+    "info-ink": {
+      "light": "#0f6d85",
+      "dark": "#6fd0e8"
+    },
+    "info-solid": {
+      "light": "#137e9a",
+      "dark": "#6fd0e8"
+    },
+    "declared-soft": {
+      "light": "#f0ecf6",
+      "dark": "#241d33"
+    },
+    "declared-line": {
+      "light": "#cfc3e2",
+      "dark": "#483a6b"
+    },
+    "declared-ink": {
+      "light": "#6a4d96",
+      "dark": "#c3a9ea"
+    },
+    "declared-solid": {
+      "light": "#7b5ea7",
+      "dark": "#c3a9ea"
+    },
+    "neutral-soft": {
+      "light": "#ececec",
+      "dark": "#212123"
+    },
+    "neutral-line": {
+      "light": "#cdced0",
+      "dark": "#2c2d31"
+    },
+    "neutral-ink": {
+      "light": "#434649",
+      "dark": "#c7c8cc"
+    },
+    "neutral-solid": {
+      "light": "#727480",
+      "dark": "#8b8d97"
+    },
+    "graph-paper": {
+      "light": "#ffffff",
+      "dark": "#161618"
+    },
+    "graph-ink": {
+      "light": "#161616",
+      "dark": "#f3f3f1"
+    },
+    "graph-node": {
+      "light": "#eafaff",
+      "dark": "#0f262e"
+    },
+    "graph-node-line": {
+      "light": "#0f6d85",
+      "dark": "#6fd0e8"
+    },
+    "graph-unresolved": {
+      "light": "#ececec",
+      "dark": "#212123"
+    },
+    "graph-unresolved-line": {
+      "light": "#434649",
+      "dark": "#c7c8cc"
+    },
+    "graph-declared": {
+      "light": "#161616",
+      "dark": "#f3f3f1"
+    },
+    "graph-observed": {
+      "light": "#0f6d85",
+      "dark": "#6fd0e8"
+    },
+    "graph-deduced": {
+      "light": "#a33900",
+      "dark": "#ff9d6b"
+    },
+    "graph-util-normal": {
+      "light": "#434649",
+      "dark": "#c7c8cc"
+    },
+    "graph-util-warn": {
+      "light": "#a33900",
+      "dark": "#ff9d6b"
+    },
+    "graph-util-crit": {
+      "light": "#c81f00",
+      "dark": "#f08a7e"
+    },
+    "graph-down": {
+      "light": "#c81f00",
+      "dark": "#f08a7e"
+    },
+    "graph-util-unknown": {
+      "light": "#727480",
+      "dark": "#8b8d97"
+    },
+    "graph-health-ok": {
+      "light": "#2e7d4f",
+      "dark": "#7fd6a0"
+    },
+    "graph-health-warn": {
+      "light": "#a33900",
+      "dark": "#ff9d6b"
+    },
+    "graph-health-crit": {
+      "light": "#c81f00",
+      "dark": "#f08a7e"
+    },
+    "graph-group": {
+      "light": "#ececec",
+      "dark": "#212123"
+    },
+    "graph-group-line": {
+      "light": "#727480",
+      "dark": "#8b8d97"
+    },
+    "iso-floor": {
+      "light": "#f5f5f5",
+      "dark": "#161618"
+    },
+    "iso-floor-line": {
+      "light": "#e4e4e6",
+      "dark": "#2c2d31"
+    },
+    "iso-label-bg": {
+      "light": "#ffffff",
+      "dark": "#0e0e10"
+    },
+    "iso-top": {
+      "light": "#ffffff",
+      "dark": "#27282c"
+    },
+    "iso-top-hi": {
+      "light": "#ffffff",
+      "dark": "#2e2f34"
+    },
+    "iso-south": {
+      "light": "#e4e4e6",
+      "dark": "#1f2023"
+    },
+    "iso-east": {
+      "light": "#cdced0",
+      "dark": "#18191b"
+    },
+    "iso-neutral-top": {
+      "light": "#f5f5f5",
+      "dark": "#232428"
+    },
+    "iso-neutral-south": {
+      "light": "#e4e4e6",
+      "dark": "#1b1c1f"
+    },
+    "iso-neutral-east": {
+      "light": "#d6d7d9",
+      "dark": "#161618"
+    },
+    "iso-edge": {
+      "light": "#161616",
+      "dark": "#f3f3f1"
+    },
+    "iso-neutral-edge": {
+      "light": "#434649",
+      "dark": "#c7c8cc"
+    },
+    "iso-shadow": {
+      "light": "#161616",
+      "dark": "#000000"
+    }
+  },
+  "fonts": {
+    "sans": "Geist, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif",
+    "mono": "\"Geist Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace",
+    "title_weight": 300
+  },
+  "radius": {
+    "control": "0px",
+    "surface": "0px"
+  },
+  "signal_bar": "2px"
+}

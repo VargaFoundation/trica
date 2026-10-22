@@ -16,7 +16,11 @@ export default defineConfig({
   },
   server: {
     // `npm run dev` talks to a trica server started separately.
-    proxy: { "/api": process.env.TRICA_API ?? "http://127.0.0.1:8080" },
+    proxy: {
+      "/api": process.env.TRICA_API ?? "http://127.0.0.1:8080",
+      // The theme (ADR 0054) is served by the Go server, before sign-in.
+      "/theme": process.env.TRICA_API ?? "http://127.0.0.1:8080",
+    },
   },
   test: {
     // The Playwright specs in e2e/ run with `npm run e2e`, not here.

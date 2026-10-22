@@ -161,6 +161,15 @@ A token bucket per principal (per peer address for an unauthenticated request): 
 requests at once, refilled at `rate` per second. An empty bucket gets `429` with `Retry-After`
 in whole seconds. `X-Forwarded-For` is not trusted.
 
+## Themes
+
+A theme is configuration, not user content, but it is validated as if it were not: archive and
+file limits counted on bytes read, path rules, no symlink, content checked by type (magic bytes,
+an SVG sanitiser, a CSS scanner that refuses `@import`, remote `url()` and escapes), and the
+contrast of its palette. `/theme/...` is public (the sign-in page is themed) and serves only files
+a validated theme references, under a sandboxing policy; the page's Content-Security-Policy is
+unchanged. A theme that fails never stops the server. See [themes](themes.md), ADR 0054.
+
 ## Audit log
 
 Every mutating request (not GET, HEAD, OPTIONS) and every denied request (401, 403, 429) is

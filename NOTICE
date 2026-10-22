@@ -60,3 +60,7 @@ The colour tokens of the web UI (web/src/styles/tokens.css) are steps of:
 
   Radix Colors   Copyright (c) 2022 WorkOS   MIT licence
     https://github.com/radix-ui/colors
+
+The palette of the built-in "flat" theme (internal/theme/builtin/flat/theme.json) takes its
+colour values from the Diametral Design System, MIT licence. No logo, name or font file of it is
+included.

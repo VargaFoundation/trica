@@ -22,6 +22,7 @@ import (
 	"github.com/VargaFoundation/trica/internal/mcp"
 	"github.com/VargaFoundation/trica/internal/reconcile"
 	"github.com/VargaFoundation/trica/internal/server"
+	"github.com/VargaFoundation/trica/internal/theme"
 	"github.com/VargaFoundation/trica/internal/web"
 )
 
@@ -45,6 +46,9 @@ type Wiring struct {
 	targetsOnce sync.Once
 	targets     []collect.Target
 	targetsErr  error
+	themeOnce   sync.Once
+	theme       *theme.Service // nil when no theme is configured
+	themeErr    error
 }
 
 // core is the shared state.
@@ -85,7 +89,7 @@ func (w *Wiring) Components() []server.Component {
 		cs = append(cs, server.Component{Name: "mcp", Mount: w.mountMCP})
 	}
 	if !w.cfg.Web.Disabled {
-		cs = append(cs, server.Component{Name: "web", Mount: w.mountWeb})
+		cs = append(cs, server.Component{Name: "web", Mount: w.mountWeb, Run: w.runTheme})
 	}
 	if !w.cfg.Deduce.Disabled {
 		cs = append(cs, server.Component{Name: "deduce", Run: w.runDeduce})
@@ -283,6 +287,13 @@ func (w *Wiring) mountWeb(mux *http.ServeMux, d server.Deps) error {
 	var cfg web.Config
 	if o := w.cfg.Web.OIDC; o != nil {
 		cfg.OIDC = &web.OIDC{Issuer: o.Issuer, ClientID: o.ClientID, Scopes: o.Scopes, Bearer: o.Bearer}
+	}
+	ts, err := w.themeService(d)
+	if err != nil {
+		return err
+	}
+	if ts != nil {
+		cfg.Theme = themeProvider{ts}
 	}
 	h, err := web.DefaultWithConfig(cfg)
 	if err != nil {

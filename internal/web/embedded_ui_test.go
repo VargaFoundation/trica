@@ -108,3 +108,27 @@ func TestBuiltAssetsNeedNothingTheCSPForbids(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// The theme's stylesheet must come after the stylesheet Vite emits, or it
+// would lose to it on order (ADR 0054), and the page must still hold no inline
+// style or script once the link is added.
+func TestBuiltIndexTakesTheThemeLinkLast(t *testing.T) {
+	h, err := web.NewWithConfig(builtFS(t), web.Config{Theme: fakeTheme{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := get(h, "GET", "/")
+	page := body(t, r)
+	css := strings.LastIndex(page, `rel="stylesheet"`)
+	link := strings.Index(page, `href="/theme/theme.css"`)
+	app := regexp.MustCompile(`href="/assets/[^"]+\.css"`).FindStringIndex(page)
+	if app == nil || link < 0 || link < app[0] || css < 0 {
+		t.Fatalf("the theme link does not follow the application's stylesheet:\n%s", page)
+	}
+	if inlineStyle.MatchString(page) || styleAttr.MatchString(page) || eventAttr.MatchString(page) {
+		t.Error("the themed page holds an inline style or handler")
+	}
+	if r.Header.Get("Content-Security-Policy") != web.ContentSecurityPolicy {
+		t.Error("the CSP changed")
+	}
+}

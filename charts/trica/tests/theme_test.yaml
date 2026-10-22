@@ -1,0 +1,119 @@
+suite: theme
+templates:
+  - templates/deployment.yaml
+  - templates/configmap.yaml
+set:
+  database.existingSecret: trica-db
+tests:
+  - it: mounts no theme and configures none by default
+    template: templates/deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: theme
+            configMap:
+              name: trica-theme
+  - it: no theme block in the server configuration by default
+    template: templates/configmap.yaml
+    asserts:
+      - notMatchRegex:
+          path: data["trica.yaml"]
+          pattern: "theme"
+
+  - it: mounts a ConfigMap read-only as a directory, with no subPath
+    template: templates/deployment.yaml
+    set:
+      theme.existingConfigMap: trica-theme
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: theme
+            configMap:
+              name: trica-theme
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: theme
+            mountPath: /etc/trica/theme
+            readOnly: true
+  - it: points web.theme.path at the mounted directory
+    template: templates/configmap.yaml
+    set:
+      theme.existingConfigMap: trica-theme
+    asserts:
+      - matchRegex:
+          path: data["trica.yaml"]
+          pattern: "path: /etc/trica/theme\n"
+  - it: points web.theme.path at the archive when archiveKey is set
+    template: templates/configmap.yaml
+    set:
+      theme.existingConfigMap: trica-theme
+      theme.archiveKey: theme.zip
+    asserts:
+      - matchRegex:
+          path: data["trica.yaml"]
+          pattern: "path: /etc/trica/theme/theme.zip\n"
+  - it: selects a built-in theme without any volume
+    set:
+      theme.builtin: flat
+    asserts:
+      - matchRegex:
+          path: data["trica.yaml"]
+          pattern: "builtin: flat"
+        template: templates/configmap.yaml
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: theme
+            configMap:
+              name: trica-theme
+        template: templates/deployment.yaml
+  - it: keeps the single sign-on settings of config.web next to the theme
+    template: templates/configmap.yaml
+    set:
+      theme.builtin: flat
+      config.web.oidc.client_id: trica-ui
+    asserts:
+      - matchRegex:
+          path: data["trica.yaml"]
+          pattern: "client_id: trica-ui"
+      - matchRegex:
+          path: data["trica.yaml"]
+          pattern: "builtin: flat"
+
+  - it: refuses two sources
+    template: templates/deployment.yaml
+    set:
+      theme.builtin: flat
+      theme.existingConfigMap: trica-theme
+    asserts:
+      - failedTemplate:
+          errorMessage: "theme.builtin and theme.existingConfigMap are exclusive: a theme comes from one source"
+  - it: refuses an archiveKey with no ConfigMap
+    template: templates/deployment.yaml
+    set:
+      theme.archiveKey: theme.zip
+    asserts:
+      - failedTemplate:
+          errorMessage: "theme.archiveKey needs theme.existingConfigMap: the key of the ConfigMap that holds the archive"
+  - it: refuses the theme in config.web
+    template: templates/deployment.yaml
+    set:
+      config.web.theme.builtin: flat
+    asserts:
+      - failedTemplate:
+          errorMessage: "set the theme in theme.*, not config.web.theme"
+  - it: refuses an unknown built-in theme (schema)
+    template: templates/deployment.yaml
+    set:
+      theme.builtin: neon
+    asserts:
+      - failedTemplate: {}
+  - it: refuses an unknown theme key (schema)
+    template: templates/deployment.yaml
+    set:
+      theme.url: https://example.org/t.zip
+    asserts:
+      - failedTemplate: {}

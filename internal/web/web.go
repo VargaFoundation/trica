@@ -72,6 +72,7 @@ type handler struct {
 	etag   string
 	csp    string
 	config []byte
+	theme  ThemeProvider
 }
 
 // New returns the handler that serves the application from fsys (the
@@ -96,7 +97,12 @@ func NewWithConfig(fsys fs.FS, cfg Config) (http.Handler, error) {
 	if err != nil {
 		return nil, fmt.Errorf("web: config: %w", err)
 	}
-	return &handler{fsys: fsys, index: idx, etag: etagOf(idx), csp: cfg.csp(), config: doc}, nil
+	if cfg.Theme != nil {
+		if idx, err = linkTheme(idx); err != nil {
+			return nil, err
+		}
+	}
+	return &handler{fsys: fsys, index: idx, etag: etagOf(idx), csp: cfg.csp(), config: doc, theme: cfg.Theme}, nil
 }
 
 // Default returns the handler for the embedded assets (see Built).
@@ -142,6 +148,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case name == configPath:
 		h.serveConfig(w, r)
+		return
+	case name == "theme" || strings.HasPrefix(name, "theme/"):
+		// Before the file lookup, and never the shell: a missing theme file
+		// fails loudly instead of loading HTML as a stylesheet or an image.
+		h.serveTheme(w, r, name)
 		return
 	case name == "api" || strings.HasPrefix(name, "api/"):
 		// The API is mounted beside this handler; a request that reaches us

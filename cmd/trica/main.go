@@ -67,6 +67,7 @@ commands:
   token    create (prints the token once on stdout), list or revoke API tokens
   enrol    create an enrolment token for an agent or collector (prints it once
            on stdout; --prefix for a class token shared by a fleet), or revoke one
+  theme    check a UI theme (theme check ARCHIVE.zip|DIR): the checks the server runs
   version  print the version
 
 server, migrate, backup, restore, token and enrol read the database URL from TRICA_DATABASE_URL or the file
@@ -87,6 +88,8 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return runExport(ctx, args, stdout, stderr, getenv)
 	case "import":
 		return runImport(ctx, args, stdin, stdout, stderr, getenv)
+	case "theme":
+		return runTheme(args, stdout, stderr)
 	case "token":
 		return runToken(ctx, args, stdout, stderr, getenv)
 	case "enrol":

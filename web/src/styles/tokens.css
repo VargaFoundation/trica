@@ -11,8 +11,11 @@
  * every foreground/background pair (4.5:1 for text, 3:1 for interface parts)
  * in both themes, and checks the light and system-light blocks are identical.
  *
- * No web font (ADR 0018): the system sans to read, the system monospace for
- * what is compared (identifiers, addresses, numbers, timestamps).
+ * No web font in the page itself (ADR 0018): the system sans to read, the system
+ * monospace for what is compared (identifiers, addresses, numbers, timestamps).
+ * A theme (ADR 0054) is a second stylesheet served at /theme/theme.css and linked
+ * after this one; it restates these tokens with a higher specificity (`:root:root`),
+ * so the three selectors below must keep their shape (a test checks it).
  */
 
 /* ─────────────────────────────── dark (default) ─────────────────────────────── */
@@ -41,6 +44,8 @@
   --trica-accent-soft: #202248;
   --trica-accent-line: #3d3e82;
   --trica-focus: #6e6ade;
+  /* A decorative line (active tab, active entry): never text, never the only cue. */
+  --trica-signal: #5b5bd6;
 
   /* Status pills: a tinted ground, a line of its hue, its text; and a solid dot. */
   --trica-ok-soft: #132d21;
@@ -109,8 +114,18 @@
 :root {
   --trica-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --trica-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  /* Titles take the sans stack and weight 600 unless a theme says otherwise (ADR 0054). */
+  --trica-font-title: var(--trica-font-sans);
+  --trica-font-title-weight: 600;
   --trica-radius-control: 4px;
   --trica-radius-surface: 6px;
+  /* The brand mark: the drawn icon on the accent ground, unless a theme gives a logo. */
+  --trica-logo: none;
+  --trica-logo-width: 1.5rem;
+  --trica-brand-icon: block;
+  --trica-brand-ground: var(--trica-accent);
+  /* Width of the signal bar on the active sidebar entry; 0 draws none. */
+  --trica-signal-width: 0px;
   --trica-topbar: 48px;
   --trica-sidebar-width: 15rem;
   --trica-rail-width: 3.25rem;
@@ -139,6 +154,7 @@
   --trica-accent-soft: #f0f1fe;
   --trica-accent-line: #cbcdff;
   --trica-focus: #5b5bd6;
+  --trica-signal: #5b5bd6;
   --trica-ok-soft: #e6f6eb;
   --trica-ok-line: #adddc0;
   --trica-ok-ink: #1f6d4b;
@@ -222,6 +238,7 @@
     --trica-accent-soft: #f0f1fe;
     --trica-accent-line: #cbcdff;
     --trica-focus: #5b5bd6;
+    --trica-signal: #5b5bd6;
     --trica-ok-soft: #e6f6eb;
     --trica-ok-line: #adddc0;
     --trica-ok-ink: #1f6d4b;
