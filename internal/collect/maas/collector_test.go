@@ -666,3 +666,24 @@ func TestOddMachinesAreSkippedWithWarnings(t *testing.T) {
 	}
 	noObj(t, bd.b, "machine/fkodd1/if/")
 }
+
+// TestVLANDomains: a fabric mapped by options.vlan_domains files its VLANs
+// under the named layer-2 domain (so they meet the switches' VLANs), every
+// other fabric stays its own domain (ADR 0050).
+func TestVLANDomains(t *testing.T) {
+	f := newFake(t, V35)
+	b := collectFrom(t, targetFor(t, f, "vlan_domains: {fabric-0: default}"))
+
+	mapped := obj(t, b, "vlan/default:204")
+	wantIdentity(t, mapped, map[string]string{"key": "default:204"})
+	wantAttrs(t, mapped, map[string]any{"vid": int64(204), "domain": "default"})
+	noObj(t, b, "vlan/fabric-0:204")
+	if r := rel(b, "member_of", "machine/fk0a01/if/bond0.204", "vlan/default:204"); r == nil {
+		t.Error("bond0.204 is not a member of the mapped VLAN")
+	}
+	if rel(b, "assigned_to", "prefix/198.51.100.0/24", "vlan/default:204") == nil {
+		t.Error("the subnet is not on the mapped VLAN")
+	}
+	// An unmapped fabric keeps its own name.
+	wantAttrs(t, obj(t, b, "vlan/fabric-1:0"), map[string]any{"domain": "fabric-1"})
+}

@@ -55,7 +55,7 @@ export async function loadTopology(signal?: AbortSignal): Promise<TopologyData> 
   const rels = (types: readonly string[]) =>
     readAll((offset) => api.relationLinks({ type: types.join(","), limit: PAGE, offset }, signal));
   const objects = (type: string) => readAll((offset) => api.objects({ type, limit: PAGE, offset }, signal));
-  const [links, context, devices, modules, sites, psus, fans] = await Promise.all([
+  const [links, context, devices, modules, sites, psus, fans, vlans] = await Promise.all([
     rels(LINK_TYPES),
     rels(CONTEXT_TYPES),
     objects("device"),
@@ -63,6 +63,7 @@ export async function loadTopology(signal?: AbortSignal): Promise<TopologyData> 
     objects("site"),
     objects("psu"),
     objects("fan"),
+    objects("vlan"),
   ]);
   const moduleDevice = new Map<string, string>();
   for (const m of modules.items) if (m.parent_id) moduleDevice.set(m.id, m.parent_id);
@@ -80,8 +81,9 @@ export async function loadTopology(signal?: AbortSignal): Promise<TopologyData> 
     moduleDevice,
     sites: new Map(sites.items.map((s) => [s.id, s.display])),
     partsHealth,
+    vlanInfo: new Map(vlans.items.map((v) => [v.id, { name: text(v.attributes?.name), domain: text(v.attributes?.domain) }])),
   });
-  return { topology, truncated: [links, context, devices, modules, sites, psus, fans].some((r) => r.truncated) };
+  return { topology, truncated: [links, context, devices, modules, sites, psus, fans, vlans].some((r) => r.truncated) };
 }
 
 export function useTopology() {

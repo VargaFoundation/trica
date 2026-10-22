@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/VargaFoundation/trica/internal/collect"
 	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
@@ -291,7 +292,7 @@ func (bd *builder) vlans() {
 		ref := "vlan/" + key
 		bd.vlanRef[key] = ref
 		bd.b.Object(ref, "vlan").
-			Identify("key", fmt.Sprintf("%s:%d", bd.c.domain, vid)).
+			Identify("key", collect.VLANKey(bd.c.domain, vid)).
 			Set("vid", int64(vid)).
 			Set("name", strings.TrimSpace(rec.Name)).
 			Set("domain", bd.c.domain)

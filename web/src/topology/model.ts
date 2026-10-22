@@ -21,6 +21,7 @@
 
 import type { RelationEnd, RelationLink } from "../api/types";
 import { SEVERITY, type Health } from "../inventory/health";
+import { vlanLabels, type VlanInfo } from "./vlans";
 
 export const LINK_TYPES = ["cabled_to", "connects", "neighbor_of", "uplinked_to"] as const;
 export const CONTEXT_TYPES = ["mounted_in", "member_of"] as const;
@@ -83,6 +84,8 @@ export interface TopologyInput {
   sites: ReadonlyMap<string, string>;
   /** The health of the parts of each device (modules, power supplies, fans), when the page read them. */
   partsHealth?: ReadonlyMap<string, readonly Health[]>;
+  /** The VLAN objects' name and domain, to tell apart VLANs that share a VID. */
+  vlanInfo?: ReadonlyMap<string, VlanInfo>;
 }
 
 export interface Node {
@@ -269,7 +272,7 @@ export function buildTopology(input: TopologyInput): Topology {
       });
     }
   }
-  return { rows, nodes, racks, vlans, sites: new Map(input.sites), vlanOf, lagOf, lagName, skipped };
+  return { rows, nodes, racks, vlans: vlanLabels(vlans, input.vlanInfo), sites: new Map(input.sites), vlanOf, lagOf, lagName, skipped };
 }
 
 export interface Filters {

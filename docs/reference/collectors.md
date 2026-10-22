@@ -26,6 +26,8 @@ a pasted secret stops the start instead of collecting nothing.
 | `domain` | Routing domain (VRF, site, network) the addresses and prefixes the target reports are unique in, stamped on all of them: the same private address under two domains is two objects ([ADR 0036](../adr/0036-identity-scope.md)). Empty (default): the global domain. Letters, digits, `.`, `_`, `:`, `-`, at most 64; anything else stops the start. Set it before the first run: changing it creates new objects. |
 | `options` | Collector-specific settings; unknown keys are an error. |
 
+| `options.vlan_domain` | Arista, MikroTik, pfSense: the layer-2 domain the target's VLANs are identified in (`<domain>:<vid>`), `default` when unset. Targets on the same network use the same domain, so a VLAN seen by a switch and by the firewall is one object ([ADR 0050](../adr/0050-vlan-layer2-domain.md)). MAAS has `options.vlan_domains`, a map from fabric name to domain; a fabric not listed is its own domain. |
+
 One example per kind (documentation addresses, names and MACs; nothing here is a real device):
 
 ```yaml
@@ -54,6 +56,7 @@ targets:
     tls: {ca_file: /etc/trica/lab-ca.crt}
     options:
       skip: [nat]
+      vlan_domain: default     # the same as the switches': one VLAN object, not two
 
   - kind: redfish              # a server's BMC
     name: srv-01

@@ -22,13 +22,23 @@ followed, so the key cannot leave the configured address.
   options:
     skip: []                     # firewall_rules, nat, vpn, routes
     base_path: /api/v2           # only behind a reverse proxy that rewrites it
+    vlan_domain: default         # layer-2 domain of the VLANs; the switches' too, so a VLAN is one object
 ```
 
 `name` also namespaces the objects the schema cannot scope under the device
-(gateways, tunnels, VLANs): they are named `<name>/<gateway>`,
-`<name>/openvpn-server-<vpnid>`, `<name>/ipsec-<ikeid>`, VLAN key `<name>:<vid>`,
-because two firewalls both have a `WAN_DHCP` gateway and a VLAN 20. Choose a
-`name` once and keep it.
+(gateways, tunnels): they are named `<name>/<gateway>`,
+`<name>/openvpn-server-<vpnid>`, `<name>/ipsec-<ikeid>`, because two firewalls
+both have a `WAN_DHCP` gateway. Choose a `name` once and keep it.
+
+VLANs are not namespaced by the firewall: a VLAN is identified by its layer-2
+domain and its VID (key `<domain>:<vid>`), and `options.vlan_domain` names the
+domain, `default` unless set, like the Arista and MikroTik collectors. The
+firewall and the switches of one network therefore report one VLAN object. Give
+a network that is not connected to the others its own domain. Before this change
+(ADR 0050) the domain was the target name: after the upgrade the old
+`<name>:<vid>` objects stop being seen and become `absent`, nothing is deleted;
+set `vlan_domain` to the target name to keep them. A firewall carrying the same
+tag on two layer-2 networks cannot tell them apart: both land in the one domain.
 
 ## What is collected
 
@@ -41,7 +51,7 @@ because two firewalls both have a `WAN_DHCP` gateway and a VLAN 20. Choose a
 | target address, when it is an IP | `device.mgmt_ip` (identity, weak) |
 | constant | `device.role` = firewall |
 | `interfaces` + `status/interfaces` + `interface/vlans` | `interface` in the device, named by OS name (`igb0`, `igb1.20`): `kind` (physical, vlan, loopback, lag, tunnel, virtual), `description`, `mac`, `admin_status`, `oper_status`, `speed_mbps`, `duplex` (from `media`), `mtu`. A VLAN parent that is not assigned still gets an interface |
-| `interface/vlans` | `vlan` (key `<name>:<tag>`, `vid`, `name`, `domain`) and `member_of` (tagged) from the VLAN interface |
+| `interface/vlans` | `vlan` (key `<vlan_domain>:<tag>`, `vid`, `name`, `domain`) and `member_of` (tagged) from the VLAN interface |
 | interface addresses (live from `status/interfaces`, configured as fallback; IPv4 and IPv6, link-local skipped) | `ip_address` + `prefix_length`, `assigned_to` the interface; `prefix` (the network, `assigned_to` the interface) |
 | `routing/gateways` + `status/gateways` | `gateway` (`address`, `status` online/offline/degraded, `latency_ms`, `loss_pct`), `contains` from the device. Dynamic gateways (`WAN_DHCP`) exist only in the live state and are reported from it. The `defaultgw` one gets `routes_via` from the device |
 | `routing/static_routes` (enabled, network is a CIDR, gateway known) | `prefix` `routes_via` the `gateway` |

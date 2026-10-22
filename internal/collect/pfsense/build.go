@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/VargaFoundation/trica/internal/collect"
 	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
@@ -17,11 +18,14 @@ import (
 // found while mapping.
 //
 // Objects that the schema cannot scope under the device (gateways, tunnels,
-// VLANs, which have no parent types) are named "<target>/<name>": two
-// firewalls both have a "WAN_DHCP" gateway and a VLAN 20, and the schema
-// identifies them across the whole inventory. The target name is the
-// operator's own, stable label of the firewall, so a hostname change does not
-// rename them.
+// which have no parent types) are named "<target>/<name>": two firewalls both
+// have a "WAN_DHCP" gateway, and the schema identifies them across the whole
+// inventory. The target name is the operator's own, stable label of the
+// firewall, so a hostname change does not rename them.
+//
+// VLANs are not scoped by firewall: a VLAN is identified by its layer-2 domain
+// and its VID (the vlan_domain option, "default" like the switches), so the
+// firewall and the switches report one object (ADR 0050).
 func (c *collector) build(b *sdk.Batch, s *snapshot) (string, []string) {
 	ns := c.t.Name
 	osVersion := versionString(s.version)
@@ -173,9 +177,9 @@ func (c *collector) buildInterfaces(b *sdk.Batch, s *snapshot, ns string) {
 			if tag, ok := atoi(v.Tag); ok && tag >= 1 && tag <= 4094 {
 				vref := "vlan:" + strconv.Itoa(tag)
 				b.Object(vref, "vlan").
-					Identify("key", ns+":"+strconv.Itoa(tag)).
+					Identify("key", collect.VLANKey(c.vlanDomain, tag)).
 					Set("vid", tag).
-					Set("domain", ns).
+					Set("domain", c.vlanDomain).
 					Set("name", string(v.Descr))
 				b.Relate("member_of", ref, vref).With("tagged", true)
 			}

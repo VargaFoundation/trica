@@ -12,6 +12,7 @@ import {
   end,
   port,
   rel,
+  sampleContext,
   sampleInput,
   sampleLinks,
 } from "./fixtures";
@@ -135,6 +136,34 @@ describe("ends that are not ports", () => {
     const t = build({ links: [rel("cabled_to", stray, ENO1)] });
     expect(t.nodes.get("0123456789abcdef")).toMatchObject({ unresolved: true, name: "01234567" });
     expect(t.nodes.get(T.srv01)?.unresolved).toBe(false);
+  });
+});
+
+describe("VLANs that share a VID", () => {
+  // Two VLAN objects of two layer-2 domains, both VID 10: two options, told apart, never merged.
+  const twin = "p-vlan-10-lab";
+  const context = [...sampleContext(), rel("member_of", A1E3, end(twin, "vlan", "VLAN 10"), { confidence: "declared" })];
+
+  it("keeps two ids with two different labels", () => {
+    const vlanInfo = new Map([
+      [T.vlan10, { name: "MGMT", domain: "default" }],
+      [twin, { name: "MGMT", domain: "lab" }],
+    ]);
+    const t = buildTopology(sampleInput({ context, vlanInfo }));
+    expect(t.vlans.size).toBe(3);
+    expect(t.vlans.get(T.vlan10)).toBe("VLAN 10 MGMT (default)");
+    expect(t.vlans.get(twin)).toBe("VLAN 10 MGMT (lab)");
+    expect(t.vlans.get(T.vlan20)).toBe("VLAN 20");
+  });
+
+  it("falls back to the display when the VLAN objects were not read, still never two alike", () => {
+    expect(buildTopology(sampleInput()).vlans.get(T.vlan10)).toBe("VLAN 10");
+    const t = buildTopology(sampleInput({ context }));
+    const a = t.vlans.get(T.vlan10);
+    const b = t.vlans.get(twin);
+    expect(a).not.toBe(b);
+    expect(a).toMatch(/^VLAN 10/);
+    expect(b).toMatch(/^VLAN 10/);
   });
 });
 
