@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "react-router";
 import { useI18n, type MessageKey } from "../i18n";
 import { faceKind, genericFace, type Prim } from "./faces";
@@ -45,6 +45,11 @@ export function clipName(name: string): string {
  * has one, else a generic face drawn for its role; a strip on its left edge
  * says its health (the worst of its own and its parts'), in words in the
  * tooltip and the accessible name.
+ *
+ * With onMove, a device of this face can be dragged to another unit: the drop
+ * hands the slot and its new lowest unit to the page, which opens the
+ * placement form there (nothing is sent before the person applies it). Like
+ * onPick it is a pointer shortcut: the page's table offers Move and Turn.
  */
 export function RackElevation({
   rack,
@@ -52,14 +57,52 @@ export function RackElevation({
   face,
   slots,
   onPick,
+  onMove,
 }: {
   rack: string;
   uHeight: number;
   face: Face;
   slots: readonly Slot[];
   onPick?: (u: number, face: Face) => void;
+  onMove?: (slot: Slot, bottom: number) => void;
 }) {
   const { t } = useI18n();
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [drag, setDrag] = useState<{ slot: Slot; startY: number; scale: number; bottom: number; moved: boolean } | null>(null);
+  // A drag that moved swallows the click that ends it: the device's link is not followed.
+  const swallowClick = useRef(false);
+  const startDrag = (slot: Slot, e: ReactPointerEvent) => {
+    if (!onMove || e.button !== 0) return;
+    const ctm = svgRef.current?.getScreenCTM?.();
+    setDrag({ slot, startY: e.clientY, scale: ctm && ctm.d ? ctm.d : 1, bottom: slot.bottom, moved: false });
+  };
+  useEffect(() => {
+    if (!drag) return;
+    const move = (e: PointerEvent) => {
+      const dy = (e.clientY - drag.startY) / drag.scale;
+      const moved = drag.moved || Math.abs(dy) > 4;
+      const bottom = Math.min(Math.max(drag.slot.bottom - Math.round(dy / UNIT_PX), 1), Math.max(uHeight - drag.slot.height + 1, 1));
+      if (moved !== drag.moved || bottom !== drag.bottom) setDrag({ ...drag, moved, bottom });
+    };
+    const up = () => {
+      if (drag.moved) {
+        swallowClick.current = true;
+        if (drag.bottom !== drag.slot.bottom) onMove?.(drag.slot, drag.bottom);
+      }
+      setDrag(null);
+    };
+    const cancel = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDrag(null);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("keydown", cancel);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("keydown", cancel);
+    };
+  }, [drag, onMove, uHeight]);
   const width = GUTTER + BODY + 2 * PAD;
   const height = uHeight * UNIT_PX + 2 * PAD;
   const faceName = t(face === "front" ? "rack.front" : "rack.rear");
@@ -75,6 +118,15 @@ export function RackElevation({
       role="group"
       aria-label={t("rack.figureLabel", { face: faceName, rack, units: uHeight })}
       data-face={face}
+      data-dragging={drag?.moved ? "true" : undefined}
+      ref={svgRef}
+      onClickCapture={(e) => {
+        if (swallowClick.current) {
+          swallowClick.current = false;
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
     >
       <rect className="rack-frame" x={GUTTER} y={PAD} width={BODY} height={uHeight * UNIT_PX} />
       {Array.from({ length: uHeight }, (_, i) => {
@@ -91,7 +143,7 @@ export function RackElevation({
       })}
       {onPick
         ? Array.from({ length: uHeight }, (_, i) => i + 1)
-            .filter((u) => !slots.some((s) => intervalsOverlap(u, 1, s.bottom, s.height)))
+            .filter((u) => !slots.some((s) => !s.behind && intervalsOverlap(u, 1, s.bottom, s.height)))
             .map((u) => (
               <rect
                 key={`free-${u}`}
@@ -108,14 +160,44 @@ export function RackElevation({
               </rect>
             ))
         : null}
-      {slots.map((s) => (
-        <SlotView key={`${s.item.id}-${s.face}`} slot={s} y={yOf(s.top)} />
-      ))}
+      {slots.map((s) =>
+        s.behind ? (
+          <BehindView key={`${s.item.id}-${s.face}`} slot={s} y={yOf(s.top)} />
+        ) : (
+        <SlotView
+          key={`${s.item.id}-${s.face}`}
+          slot={s}
+          y={yOf(s.top)}
+          dragged={drag?.moved === true && drag.slot.item.id === s.item.id && drag.slot.face === s.face}
+          onPointerDown={onMove && !s.shadow ? (e) => startDrag(s, e) : undefined}
+        />
+        ),
+      )}
+      {drag?.moved ? <DropTarget slot={drag.slot} bottom={drag.bottom} slots={slots} uHeight={uHeight} y={yOf(drag.bottom + drag.slot.height - 1)} /> : null}
     </svg>
   );
 }
 
-function SlotView({ slot: s, y }: { slot: Slot; y: number }) {
+/**
+ * Where a dragged device would land: its outline at the unit under the pointer,
+ * red when it would overlap a device of this face or leave the rack (the form
+ * says so too; the drop is still allowed, as the form allows it with a warning).
+ */
+function DropTarget({ slot, bottom, slots, uHeight, y }: { slot: Slot; bottom: number; slots: readonly Slot[]; uHeight: number; y: number }) {
+  const { t } = useI18n();
+  const clash = slots.some((o) => !o.behind && o.item.id !== slot.item.id && intervalsOverlap(bottom, slot.height, o.bottom, o.height));
+  const out = bottom < 1 || bottom + slot.height - 1 > uHeight;
+  return (
+    <g className={`rack-drop${clash || out ? " rack-drop-bad" : ""}`} aria-hidden="true" data-drop-u={bottom}>
+      <rect x={GUTTER + 1} y={y + 1} width={BODY - 2} height={Math.max(slot.height * UNIT_PX - 2, 6)} rx={2} />
+      <text x={LABEL_X} y={y + 1 + Math.min(slot.height * UNIT_PX, UNIT_PX) / 2 + 4}>
+        {t("rack.dropAt", { range: formatRange(bottom, slot.height) })}
+      </text>
+    </g>
+  );
+}
+
+function SlotView({ slot: s, y, dragged, onPointerDown }: { slot: Slot; y: number; dragged?: boolean; onPointerDown?: (e: ReactPointerEvent) => void }) {
   const { t } = useI18n();
   const h = Math.max(s.height * UNIT_PX - 2, 6);
   const bad = s.issues.some((i) => i === "overlap" || i === "outOfRange");
@@ -133,6 +215,8 @@ function SlotView({ slot: s, y }: { slot: Slot; y: number }) {
     bad ? "rack-problem" : "",
     reversed ? "rack-airflow-mismatch" : "",
     drawn !== "none" ? "rack-has-face" : "",
+    onPointerDown ? "rack-movable" : "",
+    dragged ? "rack-dragged" : "",
     `rack-health-${health}`,
   ]
     .filter(Boolean)
@@ -178,9 +262,33 @@ function SlotView({ slot: s, y }: { slot: Slot; y: number }) {
       data-face-drawn={drawn}
       data-variant-uncertain={s.item.variantUncertain ? "true" : undefined}
       data-airflow={s.item.airflow?.status}
+      onPointerDown={onPointerDown}
+      draggable={false}
     >
       {body}
     </Link>
+  );
+}
+
+/**
+ * A shallow device mounted on the other face, seen from this one: its outline
+ * and its name, so that the unit reads as used from behind. Not a link (the
+ * device is on the other elevation) and no target: clicks reach the free unit
+ * under it.
+ */
+function BehindView({ slot: s, y }: { slot: Slot; y: number }) {
+  const { t } = useI18n();
+  const h = Math.max(s.height * UNIT_PX - 2, 6);
+  const other = t(s.face === "front" ? "rack.rear" : "rack.front");
+  const text = clipName(`${s.item.name} · ${t("rack.behindShort", { face: other.toLowerCase() })}`);
+  return (
+    <g className="rack-slot rack-shadow rack-behind" aria-hidden="true" data-behind={s.item.id}>
+      <title>{t("rack.behindTooltip", { device: s.item.name, range: formatRange(s.bottom, s.height), face: other.toLowerCase() })}</title>
+      <rect className="rack-outline" x={GUTTER + 1} y={y + 1} width={BODY - 2} height={h} rx={2} />
+      <text x={LABEL_X} y={y + 1 + Math.min(h, UNIT_PX) / 2 + 4}>
+        {text}
+      </text>
+    </g>
   );
 }
 

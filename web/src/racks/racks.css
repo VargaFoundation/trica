@@ -114,3 +114,48 @@ a.rack-slot:focus-visible .rack-outline {
 .rack-slot .rack-face-storage .rf-bay {
   fill: var(--trica-info-soft);
 }
+
+/* A shallow device mounted on the other face: an outline over the empty unit,
+   transparent to the pointer so that the free unit under it stays a target. */
+.rack-slot.rack-behind {
+  pointer-events: none;
+}
+.rack-slot.rack-behind .rack-outline {
+  fill: transparent;
+  stroke: var(--trica-neutral-solid);
+  stroke-dasharray: 2 3;
+}
+.rack-slot.rack-behind text {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* Drag to move (RackElevation onMove). */
+.rack-slot.rack-movable {
+  cursor: grab;
+  touch-action: none;
+}
+.rack-svg[data-dragging="true"],
+.rack-svg[data-dragging="true"] * {
+  cursor: grabbing;
+}
+.rack-slot.rack-dragged {
+  opacity: 0.35;
+}
+.rack-drop {
+  pointer-events: none;
+}
+.rack-drop rect {
+  fill: var(--trica-info-soft);
+  stroke: var(--trica-focus);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+.rack-drop text {
+  fill: var(--trica-ink);
+  font-weight: 600;
+}
+.rack-drop.rack-drop-bad rect {
+  fill: var(--trica-danger-soft);
+  stroke: var(--trica-danger-solid);
+}

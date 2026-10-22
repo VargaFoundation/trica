@@ -13,7 +13,7 @@ import { useI18n, type MessageKey } from "../i18n";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { useCrumbs } from "../components/crumbs";
 import { usePageTitle } from "../usePageTitle";
-import { DEFAULT_RACK_U, freeUnits, formatRange, layoutRack, overallHealth, slotImage, type Issue, type Slot } from "./layout";
+import { DEFAULT_RACK_U, freeUnits, formatRange, layoutRack, otherFace, overallHealth, slotImage, type Issue, type Slot } from "./layout";
 import { HealthPill } from "../components/ui";
 import { RackElevation } from "./RackElevation";
 import { loadFaceImages } from "./faceImages";
@@ -27,7 +27,12 @@ import { AisleSection } from "../aisles/AisleSection";
 import { AirflowPill } from "../aisles/Airflow";
 import { aisleOf, faceAisle } from "../aisles/aisles";
 
-type Panel = { kind: "place"; u?: number; face?: Face } | { kind: "edit" } | null;
+/**
+ * The panel open under the actions. A placement with a device is a move or a
+ * turn of a device already in this rack (a drop, or the table's buttons): the
+ * form opens filled in and previews the change at once.
+ */
+type Panel = { kind: "place"; u?: number; face?: Face; device?: { id: string; display: string } } | { kind: "edit" } | null;
 
 const ISSUE_TEXT: Record<Issue, MessageKey> = {
   overlap: "rack.issue.overlap",
@@ -75,12 +80,14 @@ function Rack({ rack }: { rack: ObjectView }) {
         </p>
       ) : null}
       {canMount && panel?.kind === "place" ? (
-        <EditPanel title={t("edit.place.titleRack", { rack: rack.display })}>
+        <EditPanel title={panel.device ? t("edit.place.titleMove", { device: panel.device.display, rack: rack.display }) : t("edit.place.titleRack", { rack: rack.display })}>
           <PlaceDeviceForm
-            key={`${panel.u ?? ""}-${panel.face ?? ""}`}
+            key={`${panel.device?.id ?? ""}-${panel.u ?? ""}-${panel.face ?? ""}`}
             rack={{ id: rack.id, display: rack.display }}
+            device={panel.device}
             initialPosition={panel.u}
             initialFace={panel.face}
+            autoPreview={!!panel.device}
             onClose={() => setPanel(null)}
           />
         </EditPanel>
@@ -93,7 +100,15 @@ function Rack({ rack }: { rack: ObjectView }) {
       ) : null}
       <AisleSection rack={rack} items={contents.data?.items} />
       <Async query={contents}>
-        {(c) => <Elevations rack={rack} uHeight={uHeight} contents={c} onPick={canMount ? (u, face) => setPanel({ kind: "place", u, face }) : undefined} />}
+        {(c) => (
+          <Elevations
+            rack={rack}
+            uHeight={uHeight}
+            contents={c}
+            onPick={canMount ? (u, face) => setPanel({ kind: "place", u, face }) : undefined}
+            onPlace={canMount ? (s, u, face) => setPanel({ kind: "place", u, face, device: { id: s.item.id, display: s.item.name } }) : undefined}
+          />
+        )}
       </Async>
     </>
   );
@@ -114,11 +129,14 @@ function Elevations({
   uHeight,
   contents,
   onPick,
+  onPlace,
 }: {
   rack: ObjectView;
   uHeight: number;
   contents: RackContents;
   onPick?: (u: number, face: Face) => void;
+  /** Move or turn a device of this rack: the placement form, filled in with the new unit and face. */
+  onPlace?: (slot: Slot, u: number, face: Face) => void;
 }) {
   const { t, tp, number } = useI18n();
   const layout = useMemo(() => layoutRack(uHeight, contents.items), [uHeight, contents.items]);
@@ -160,7 +178,14 @@ function Elevations({
               {t(face === "front" ? "rack.front" : "rack.rear")}
               <FaceAisle aisle={faceAisle(frontAisle, face)} />
             </figcaption>
-            <RackElevation rack={rack.display} uHeight={uHeight} face={face} slots={layout[face]} onPick={onPick} />
+            <RackElevation
+              rack={rack.display}
+              uHeight={uHeight}
+              face={face}
+              slots={layout[face]}
+              onPick={onPick}
+              onMove={onPlace ? (s, bottom) => onPlace(s, bottom, s.face) : undefined}
+            />
           </figure>
         ))}
       </div>
@@ -168,6 +193,7 @@ function Elevations({
       <p className="hint">{t("rack.facesLegend")}</p>
       {frontAisle ? <p className="hint">{t("aisle.legend")}</p> : null}
       {onPick ? <p className="hint">{t("edit.place.clickHint")}</p> : null}
+      {onPlace ? <p className="hint">{t("rack.moveHint")}</p> : null}
       <ExportButtons
         basename={`trica-rack-${fileSlug(rack.display)}`}
         title={t("rack.pageTitle", { rack: rack.display })}
@@ -219,11 +245,12 @@ function Elevations({
                 <th scope="col">{t("health.label")}</th>
                 <th scope="col">{t("airflow.label")}</th>
                 <th scope="col">{t("rack.col.notes")}</th>
+                {onPlace ? <th scope="col">{t("rack.col.actions")}</th> : null}
               </tr>
             </thead>
             <tbody>
               {rows.map((s) => (
-                <Row key={`${s.item.id}-${s.face}`} slot={s} />
+                <Row key={`${s.item.id}-${s.face}`} slot={s} onPlace={onPlace} />
               ))}
             </tbody>
           </table>
@@ -233,8 +260,9 @@ function Elevations({
   );
 }
 
-function Row({ slot: s }: { slot: Slot }) {
+function Row({ slot: s, onPlace }: { slot: Slot; onPlace?: (slot: Slot, u: number, face: Face) => void }) {
   const { t, number } = useI18n();
+  const turnTo = otherFace(s.face);
   return (
     <tr>
       <th scope="row" data-label={t("rack.col.device")}>
@@ -265,6 +293,23 @@ function Row({ slot: s }: { slot: Slot }) {
           </>
         ) : null}
       </td>
+      {onPlace ? (
+        <td data-label={t("rack.col.actions")} className="row-actions">
+          <button type="button" onClick={() => onPlace(s, s.bottom, s.face)} data-move={s.item.id}>
+            {t("rack.move")}
+            <span className="sr-only"> ({s.item.name})</span>
+          </button>{" "}
+          <button
+            type="button"
+            onClick={() => onPlace(s, s.bottom, turnTo)}
+            data-turn={s.item.id}
+            title={t("rack.turnTitle", { face: t(turnTo === "front" ? "rack.front" : "rack.rear").toLowerCase() })}
+          >
+            {t("rack.turn")}
+            <span className="sr-only"> ({s.item.name})</span>
+          </button>
+        </td>
+      ) : null}
     </tr>
   );
 }

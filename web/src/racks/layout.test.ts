@@ -1,5 +1,5 @@
 import { DEFAULT_TILE_MM, layoutFloor, tileOf } from "./floor";
-import { formatRange, freeUnits, intervalsOverlap, layoutRack, type Mounted } from "./layout";
+import { formatRange, freeUnits, intervalsOverlap, layoutRack, slotImage, type Mounted, type Slot } from "./layout";
 
 const dev = (id: string, position: number | undefined, heightU: number | undefined, extra: Partial<Mounted> = {}): Mounted => ({
   id,
@@ -15,13 +15,37 @@ describe("layoutRack", () => {
     const l = layoutRack(42, [dev("sw-a1", 10, 2)]);
     expect(l.front).toHaveLength(1);
     expect(l.front[0]).toMatchObject({ bottom: 10, height: 2, top: 11, shadow: false, issues: [], overlaps: [] });
-    expect(l.rear).toHaveLength(0);
+    // Seen from behind: an outline on the other face, never an overlap or a used unit there.
+    expect(l.rear).toHaveLength(1);
+    expect(l.rear[0]).toMatchObject({ shadow: true, behind: true, bottom: 10, height: 2, issues: [] });
+    expect(freeUnits(42, l.rear)).toBe(42);
   });
 
   it("keeps the two faces apart: devices on opposite faces at the same U do not overlap", () => {
     const l = layoutRack(42, [dev("a", 5, 1, { face: "front" }), dev("b", 5, 1, { face: "rear" })]);
     expect(l.front[0]?.issues).toEqual([]);
     expect(l.rear[0]?.issues).toEqual([]);
+  });
+
+  it("a shallow device behind a device of this face is no overlap", () => {
+    const l = layoutRack(42, [dev("srv", 5, 1, { face: "front" }), dev("sw", 5, 1, { face: "rear" })]);
+    expect(l.front.map((s) => [s.item.id, !!s.behind, s.issues])).toEqual([
+      ["sw", true, []],
+      ["srv", false, []],
+    ]);
+  });
+
+  it("draws a device's front on the face it is mounted from and its rear on the other (NetBox's convention)", () => {
+    const img = { frontImage: "F", rearImage: "R" };
+    const rear = layoutRack(42, [dev("sw", 3, 1, { face: "rear", fullDepth: true, ...img })]);
+    expect(slotImage(rear.rear[0] as Slot)).toBe("F");
+    expect(slotImage(rear.front[0] as Slot)).toBe("R");
+    const front = layoutRack(42, [dev("srv", 3, 1, { face: "front", fullDepth: true, ...img })]);
+    expect(slotImage(front.front[0] as Slot)).toBe("F");
+    expect(slotImage(front.rear[0] as Slot)).toBe("R");
+    const shallow = layoutRack(42, [dev("mt", 3, 1, { face: "rear", ...img })]);
+    expect(slotImage(shallow.rear[0] as Slot)).toBe("F");
+    expect(slotImage(shallow.front[0] as Slot)).toBeUndefined();
   });
 
   it("a full-depth device occupies both faces, and the other face is a shadow", () => {
