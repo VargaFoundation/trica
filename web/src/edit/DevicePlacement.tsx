@@ -35,14 +35,22 @@ export function DevicePlacement({ device }: { device: ObjectView }) {
                 {p.mounts.map((m) => (
                   <li key={m.rackId} data-rack={m.rackId}>
                     <ObjectLink id={m.rackId} display={m.rackName} />
-                    {m.position !== undefined ? `, U${number(m.position)}` : `, ${t("edit.placement.noPosition")}`}
-                    {m.face ? `, ${m.face === "front" ? t("rack.front") : m.face === "rear" ? t("rack.rear") : enumText(m.face)}` : ""}{" "}
+                    {m.position !== undefined
+                      ? `, U${number(m.position)}`
+                      : `, ${t("edit.placement.noPosition")}`}
+                    {m.face
+                      ? `, ${m.face === "front" ? t("rack.front") : m.face === "rear" ? t("rack.rear") : enumText(m.face)}`
+                      : ""}{" "}
                     <span className="muted">({m.source})</span>
                     {can ? (
                       <>
                         {" "}
-                        <button type="button" onClick={() => setOpen({ kind: "remove", mount: m })}>
-                          {t("edit.placement.remove")} <span className="sr-only">{m.rackName}</span>
+                        <button
+                          type="button"
+                          onClick={() => setOpen({ kind: "remove", mount: m })}
+                        >
+                          {t("edit.placement.remove")}{" "}
+                          <span className="sr-only">{m.rackName}</span>
                         </button>
                       </>
                     ) : null}
@@ -51,24 +59,49 @@ export function DevicePlacement({ device }: { device: ObjectView }) {
               </ul>
             )}
             {canMount && open === null ? (
-              <button type="button" className="primary" onClick={() => setOpen({ kind: "place" })}>
-                {p.mounts.length > 0 ? t("edit.placement.move") : t("edit.placement.place")}
+              <button
+                type="button"
+                className="primary"
+                onClick={() => setOpen({ kind: "place" })}
+              >
+                {p.mounts.length > 0
+                  ? t("edit.placement.move")
+                  : t("edit.placement.place")}
               </button>
             ) : null}
           </>
         )}
       </Async>
       {canMount && open?.kind === "place" ? (
-        <EditPanel title={t("edit.place.titleDevice", { device: device.display })}>
-          <PlaceDeviceForm device={{ id: device.id, display: device.display }} onClose={() => setOpen(null)} />
+        <EditPanel
+          title={t("edit.place.titleDevice", { device: device.display })}
+        >
+          <PlaceDeviceForm
+            device={{ id: device.id, display: device.display }}
+            onClose={() => setOpen(null)}
+          />
         </EditPanel>
       ) : null}
       {can && open?.kind === "remove" ? (
-        <EditPanel title={t("edit.placement.removeTitle", { device: device.display, rack: open.mount.rackName })}>
+        <EditPanel
+          title={t("edit.placement.removeTitle", {
+            device: device.display,
+            rack: open.mount.rackName,
+          })}
+        >
           <p>{t("edit.placement.removeHint")}</p>
           <BatchReview
             batch={unplaceDevice(device.id, open.mount.rackId)}
-            warnings={source && open.mount.source !== source ? [t("edit.place.otherSource", { rack: open.mount.rackName, source: open.mount.source })] : []}
+            warnings={
+              source && open.mount.source !== source
+                ? [
+                    t("edit.place.otherSource", {
+                      rack: open.mount.rackName,
+                      source: open.mount.source,
+                    }),
+                  ]
+                : []
+            }
             onCancel={() => setOpen(null)}
           />
         </EditPanel>

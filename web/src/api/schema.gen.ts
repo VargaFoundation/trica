@@ -4841,6 +4841,8 @@ export interface operations {
                 type?: "aisle" | "application" | "building" | "cable" | "circuit" | "component" | "component_instance" | "contract" | "cpu" | "device" | "device_type" | "disk" | "endpoint" | "environment" | "fan" | "firewall_rule" | "front_port" | "gateway" | "ingress" | "interface" | "internet_access" | "ip_address" | "k8s_cluster" | "k8s_node" | "k8s_service" | "listener" | "memory" | "module" | "namespace" | "person" | "pod" | "power_outlet" | "power_port" | "prefix" | "psu" | "rack" | "rear_port" | "room" | "row" | "sensor" | "service" | "site" | "software" | "team" | "ticket" | "transceiver" | "tunnel" | "vendor" | "version_policy" | "vlan" | "vm" | "vrf" | "workload";
                 /** @description Comma-separated fields, a leading - sorts descending. */
                 sort?: string;
+                /** @description true keeps the objects mounted in a rack now, false those mounted in none (the same as rel.mounted_in:* and -rel.mounted_in:*). */
+                mounted?: "true" | "false";
                 /** @description Page size, 1 to 1000 (default 50). */
                 limit?: number;
                 /** @description Items to skip (default 0). */

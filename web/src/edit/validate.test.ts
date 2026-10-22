@@ -1,7 +1,7 @@
 import type { Mounted } from "../racks/layout";
 import { physicalSchema, wholeUnitSchema } from "./fixtures";
 import { editRules } from "./rules";
-import { checkPlacement, checkTile, firstFit, parseNumber } from "./validate";
+import { checkPlacement, checkTile, firstFit, nearestFit, parseNumber } from "./validate";
 
 const m = (id: string, position: number, heightU: number, face: "front" | "rear", fullDepth = false): Mounted => ({ id, name: id, position, heightU, face, fullDepth });
 const base = { rackU: 12, heightU: 1, face: "front" as const, fullDepth: false, halfUnits: true, others: [] as Mounted[] };
@@ -47,6 +47,27 @@ describe("firstFit", () => {
     expect(firstFit(12, 2, "front", false, others, false)).toBe(5);
     expect(firstFit(12, 1, "rear", false, others, false)).toBe(1);
     expect(firstFit(2, 3, "front", false, [], false)).toBeUndefined();
+  });
+});
+
+describe("nearestFit", () => {
+  const others = [m("a", 5, 2, "front"), m("b", 1, 3, "front")];
+  it("answers the wanted unit when it is free, else the closest free one, the lower on a tie", () => {
+    expect(nearestFit(12, 1, "front", false, others, false, 9)).toBe(9);
+    // U5-U6 is taken: U4 and U7 are both one away from 5/6; from 6 the closest is U7.
+    expect(nearestFit(12, 1, "front", false, others, false, 6)).toBe(7);
+    expect(nearestFit(12, 1, "front", false, others, false, 5)).toBe(4);
+    // A 2 U device: U4 alone is free below (b holds U1-U3), so U7-U8 above.
+    expect(nearestFit(12, 2, "front", false, others, false, 5)).toBe(7);
+  });
+  it("respects the face, full depth and the rack's top", () => {
+    expect(nearestFit(12, 1, "rear", false, others, false, 5)).toBe(5);
+    expect(nearestFit(12, 1, "rear", true, others, false, 5)).toBe(4);
+    expect(nearestFit(6, 1, "front", false, [m("x", 1, 6, "front")], false, 3)).toBeUndefined();
+    expect(nearestFit(12, 2, "front", false, [], false, 12)).toBe(11);
+  });
+  it("walks half units when the schema allows them", () => {
+    expect(nearestFit(12, 0.5, "front", false, [m("a", 5, 1, "front")], true, 5)).toBe(4.5);
   });
 });
 

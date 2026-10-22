@@ -4,6 +4,7 @@ export { Alert } from "./Alert";
 export { Breadcrumbs, type Crumb } from "./Breadcrumbs";
 export { ButtonLink } from "./Button";
 export { Card } from "./Card";
+export { Dialog, type DialogProps } from "./Dialog";
 export { EmptyState } from "./EmptyState";
 export { Icon, type IconName } from "./icons";
 export { KindIcon, useKindLabel } from "./KindIcon";

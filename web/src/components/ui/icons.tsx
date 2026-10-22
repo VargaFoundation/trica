@@ -251,6 +251,7 @@ const PATHS = {
     </>
   ),
   signOut: <path d="M9 21.5H5a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
+  close: <path d="M5.5 5.5l13 13M18.5 5.5l-13 13" />,
   inbox: <path d="M3 12h5l2 3h4l2-3h5M3 12v6.5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V12l-3-7.5H6z" />,
 } satisfies Record<string, ReactElement>;
 

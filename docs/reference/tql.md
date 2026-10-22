@@ -8,6 +8,7 @@ sw-a1
 aa-bb-cc-00-00-01
 type:device vendor:arista os_version<4.20
 type:disk wear_pct>70 rel.mounted_in:"rack 2"
+type:device -rel.mounted_in:*
 type:device role:server sort:-power_w limit:10
 (vendor:arista OR vendor:mikrotik) -has:serial
 type:device mgmt_ip<<192.0.2.0/24

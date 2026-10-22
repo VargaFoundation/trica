@@ -198,7 +198,34 @@ func (s *Server) hObjects(c *call) error {
 	if err != nil {
 		return err
 	}
+	if err := restrictMounted(q, v.Get("mounted")); err != nil {
+		return err
+	}
 	return c.runSearch(q, v.Get("q"), pp)
+}
+
+// restrictMounted narrows parsed, in its syntax tree, to the objects with an
+// open mounted_in relation (mounted=true) or without one (mounted=false), as
+// the query rel.mounted_in:* does: the rack page offers only devices that are
+// in no rack. An absent value leaves the query as it is.
+func restrictMounted(parsed *tql.Query, mounted string) error {
+	var node tql.Node
+	switch mounted {
+	case "":
+		return nil
+	case "true":
+		node = tql.Pred{Field: "rel.mounted_in", Op: tql.OpEq, Values: []string{"*"}}
+	case "false":
+		node = tql.Not{Term: tql.Pred{Field: "rel.mounted_in", Op: tql.OpEq, Values: []string{"*"}}}
+	default:
+		return badRequest("mounted must be true or false, not %q", mounted)
+	}
+	if parsed.Where == nil {
+		parsed.Where = node
+	} else {
+		parsed.Where = tql.And{Terms: []tql.Node{node, parsed.Where}}
+	}
+	return nil
 }
 
 func (s *Server) hSearch(c *call) error {

@@ -15,7 +15,14 @@ const ERROR_TEXT: Record<FieldError, MessageKey> = {
 };
 
 /** The kinds a person types in a form here; the others (ip, time, json, list…) are left to collectors. */
-export const EDITABLE_KINDS = new Set(["string", "text", "int", "float", "enum", "bool"]);
+export const EDITABLE_KINDS = new Set([
+  "string",
+  "text",
+  "int",
+  "float",
+  "enum",
+  "bool",
+]);
 
 /** An enum value as the schema writes it, underscores read as spaces (the registry has no labels for values). */
 export const enumText = (v: string): string => v.replace(/_/g, " ");
@@ -30,7 +37,10 @@ export function rawOf(v: unknown): string {
 }
 
 /** The value a field holds, typed by its kind; undefined when empty. */
-export function parseField(a: AttributeDoc, raw: string): { value?: unknown; error?: FieldError } {
+export function parseField(
+  a: AttributeDoc,
+  raw: string,
+): { value?: unknown; error?: FieldError } {
   const s = raw.trim();
   if (s === "") return a.required ? { error: "required" } : {};
   switch (a.kind) {
@@ -76,7 +86,13 @@ export function AttributeField({
   let input;
   if (attr.kind === "enum") {
     input = (
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={describedBy}>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy}
+      >
         <option value="">{t("edit.notSaid")}</option>
         {(attr.values ?? []).map((v) => (
           <option key={v} value={v}>
@@ -87,7 +103,12 @@ export function AttributeField({
     );
   } else if (attr.kind === "bool") {
     input = (
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} aria-describedby={describedBy}>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-describedby={describedBy}
+      >
         <option value="">{t("edit.notSaid")}</option>
         <option value="true">{t("app.yes")}</option>
         <option value="false">{t("app.no")}</option>
@@ -99,7 +120,9 @@ export function AttributeField({
       <input
         id={id}
         type={numeric ? "number" : "text"}
-        inputMode={numeric ? (attr.kind === "int" ? "numeric" : "decimal") : undefined}
+        inputMode={
+          numeric ? (attr.kind === "int" ? "numeric" : "decimal") : undefined
+        }
         step={attr.kind === "int" ? 1 : numeric ? "any" : undefined}
         min={min}
         value={value}
