@@ -5,7 +5,7 @@ import { expectNoA11yViolations } from "../../test/axe";
 import { READER } from "../../test/fixtures";
 import { defaultRoutes, mockApi, renderApp, type Call, type Opts } from "../../test/support";
 import type { MapEdge } from "../../api/types";
-import { arc, arrowHead, buildScene, UPLINKED_DASH, UPLINKED_SHIFT } from "./scene";
+import { arc, arrowHead, buildScene, MEDIUM_SHIFT, UPLINKED_DASH } from "./scene";
 import { MAPS, withLive } from "./testdata/maps";
 
 vi.setConfig({ testTimeout: 20_000 });
@@ -40,7 +40,7 @@ describe("the uplinked_to edge in the scene", () => {
     const a = sc.items.find((i) => i.id === up?.edge.a);
     const b = sc.items.find((i) => i.id === up?.edge.b);
     if (!a || !b || !up) throw new Error("ends missing");
-    const shifted = arc(a.port, b.port, UPLINKED_SHIFT);
+    const shifted = arc(a.port, b.port, MEDIUM_SHIFT.uplinked_to);
     const tip = parse(up.arrows[0] as string)[0] as [number, number];
     // The tip is the b end of the shifted line, not the a end.
     expect(tip).toEqual([Math.round(shifted.ends[1].x * 10) / 10, Math.round(shifted.ends[1].y * 10) / 10]);
@@ -60,7 +60,7 @@ describe("the uplinked_to edge in the scene", () => {
     const a = s.items.find((i) => i.id === base.a);
     const b = s.items.find((i) => i.id === base.b);
     if (!a || !b) throw new Error("ends missing");
-    const e = arc(a.port, b.port, UPLINKED_SHIFT).ends[0];
+    const e = arc(a.port, b.port, MEDIUM_SHIFT.uplinked_to).ends[0];
     expect(parse(s.edges[0]?.arrows[0] as string)[0]).toEqual([Math.round(e.x * 10) / 10, Math.round(e.y * 10) / 10]);
   });
 

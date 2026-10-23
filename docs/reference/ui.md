@@ -110,15 +110,22 @@ addresses (`site`, `rack`, `vlan` or `classes` without `view`) keep opening the 
   otherwise.
 - **Device uplinks** (ADR 0051, amendment of #185). `uplinked_to` is drawn as an edge of its own
   medium, "Uplink (port unknown)": dash-dot-dot (the tunnel's is dash-dot), an arrowhead towards
-  the uplink device, shifted 8 px off the arc a cable between the same two places shares, in the
+  the uplink device, shifted off the arc a cable shares (see "Lines of one pair"), in the
   grey of an unmeasured line. It is drawn only when no port-level link the caller can read joins
   the two devices, and never measured (the panel says "An uplink names no port: there is nothing to
   measure."). The legend lists it only while one is drawn. The map has no export.
+- **Lines of one pair** (ADR 0051, amendments of #195 and #196). Each medium has a fixed sideways
+  shift off the arc its pair shares: cable (`physical`) and Internet access (`uplink`) 0, device
+  uplink +8 px, tunnel -8 px on the other side; the measured lanes of a line follow its shift. An
+  Internet access and a cable never share a pair (an access always ends at the Internet), so they
+  share 0. Media that can share a pair are at least 8 px apart, over half the 14 px hit target. The
+  legend lists the tunnel (dash-dot) and the device uplink only while one is drawn.
 - **Chunk**: the map does not import the graph engine (`graph.ts`, Cytoscape); a test reads the
   sources and fails if it does.
 - **Tests**: `src/topology/map/*.test.ts(x)` (geometry, layout, flows, navigation, address, page on the
   recorded API answers `testdata/map-api.json`; `uplinked.test.tsx` for the device uplink: arrowheads,
-  dash, legend, table and panel in both languages with axe), `e2e/topology-map.spec.ts` (every level in both
+  dash, legend, table and panel in both languages with axe; `tunnel.test.tsx` for the lines of one pair: shifts,
+  lanes, tunnel dash and legend entry), `e2e/topology-map.spec.ts` (every level in both
   themes with axe and no CSP violation, drill by mouse and keyboard, flow animations present and
   absent under reduced motion, a rack of 96 devices drawn in under a second, a device uplink drawn
   with its arrow, legend entry and table row).

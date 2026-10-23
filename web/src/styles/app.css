@@ -1503,7 +1503,8 @@ a.floor-rack:focus-visible {
 .legend-line-deduced {
   stroke: var(--trica-graph-deduced);
 }
-.legend-line-uplink {
+.legend-line-uplink,
+.legend-line-tunnel {
   stroke: var(--trica-graph-ink);
 }
 .legend-arrow-uplink {
@@ -2138,9 +2139,6 @@ label.check {
   stroke: var(--trica-graph-util-unknown);
   stroke-linecap: round;
   pointer-events: none;
-}
-.iso-edge.m-tunnel .iso-edge-base {
-  stroke-dasharray: 10 4 2 4;
 }
 /* The arrowhead of a device uplink, towards the device the other one reaches the network through. */
 .iso-edge-arrow {

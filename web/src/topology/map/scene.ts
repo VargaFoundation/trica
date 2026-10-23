@@ -200,9 +200,17 @@ export function arc(a: Pt, b: Pt, shift = 0, reverse = false): { d: string; mid:
   };
 }
 
-/** The dash-dot-dot of a device uplink (the tunnel's dash-dot is taken) and how far it sits off the arc a cable shares. */
+/** The dash-dot-dot of a device uplink (the tunnel's dash-dot is taken) and the tunnel's dash-dot. */
 export const UPLINKED_DASH = "10 3 2 3 2 3";
-export const UPLINKED_SHIFT = 8;
+export const TUNNEL_DASH = "10 4 2 4";
+/** The dash a medium draws with, whatever the confidence or the state; media without one follow the confidence. */
+export const MEDIUM_DASH: Readonly<Record<string, string>> = { tunnel: TUNNEL_DASH, uplinked_to: UPLINKED_DASH };
+/**
+ * px along the arc's normal (positive: the side it bows to). Media that can share a pair are at least 8 apart, over
+ * half the 14 px hit stroke. physical and uplink share 0: an uplink always ends at the Internet, a cable never does.
+ */
+export const MEDIUM_SHIFT: Readonly<Record<string, number>> = { physical: 0, uplink: 0, uplinked_to: 8, tunnel: -8 };
+export const mediumShift = (m: string): number => MEDIUM_SHIFT[m] ?? 0;
 
 /** The points of an arrowhead whose tip is `tip`, pointing along the tangent `tip - ctrl`. */
 export function arrowHead(tip: Pt, ctrl: Pt, size = 8): string {
@@ -324,7 +332,8 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
     const b = at.get(e.b);
     if (!a || !b) continue;
     const uplinked = e.medium === "uplinked_to";
-    const base = arc(a.port, b.port, uplinked ? UPLINKED_SHIFT : 0);
+    const shift = mediumShift(e.medium);
+    const base = arc(a.port, b.port, shift);
     const arrows: string[] = [];
     if (uplinked) {
       if (e.toward === "a" || e.toward === "both") arrows.push(arrowHead(base.ends[0], base.c));
@@ -333,8 +342,8 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
     const lanes: SceneLane[] = [];
     if (e.measured) {
       // Two lanes side by side: a to b on one side of the line, b to a on the other, each drawn in its own direction.
-      lanes.push({ dir: "ab", d: arc(a.port, b.port, -LANE_GAP).d });
-      lanes.push({ dir: "ba", d: arc(a.port, b.port, LANE_GAP, true).d });
+      lanes.push({ dir: "ab", d: arc(a.port, b.port, shift - LANE_GAP).d });
+      lanes.push({ dir: "ba", d: arc(a.port, b.port, shift + LANE_GAP, true).d });
     }
     edges.push({ edge: e, d: base.d, lanes, util: edgeUtilClass(e), mid: base.mid, arrows });
   }

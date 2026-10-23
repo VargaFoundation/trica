@@ -1049,6 +1049,7 @@ export const en = {
   "topology.map.medium.tunnel": "Tunnel",
   "topology.map.medium.uplink": "Internet access",
   "topology.map.medium.uplinked_to": "Uplink (port unknown)",
+  "topology.map.legend.tunnel": "Tunnel: a VPN between two places, or towards the Internet when its far end is not known (dash-dot line)",
   "topology.map.legend.uplinkedTo": "Uplink: a controller names the device another one reaches the network through, not the ports (dash-dot-dot line, arrow towards the uplink)",
   "topology.map.oper.up": "Up",
   "topology.map.oper.down": "Down",

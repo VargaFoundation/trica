@@ -1,11 +1,11 @@
 import { useI18n, type MessageKey } from "../../i18n";
-import { UPLINKED_DASH } from "./scene";
+import { TUNNEL_DASH, UPLINKED_DASH } from "./scene";
 
 const UTIL = ["normal", "warn", "crit", "down", "unknown"] as const;
 const CONF = ["declared", "observed", "deduced"] as const;
 const DASH: Record<(typeof CONF)[number], string | undefined> = { declared: undefined, observed: "7 4", deduced: "2 5" };
 
-export function MapLegend({ live, uplinks }: { live: boolean; uplinks: boolean }) {
+export function MapLegend({ live, uplinks, tunnels }: { live: boolean; uplinks: boolean; tunnels: boolean }) {
   const { t } = useI18n();
   return (
     <div className="iso-legend" role="group" aria-label={t("topology.map.legend")}>
@@ -18,6 +18,14 @@ export function MapLegend({ live, uplinks }: { live: boolean; uplinks: boolean }
             {t(`topology.legend.${c}` as MessageKey)}
           </li>
         ))}
+        {tunnels ? (
+          <li>
+            <svg width="44" height="10" aria-hidden="true" focusable="false">
+              <line className="legend-line-tunnel" x1="1" y1="5" x2="43" y2="5" strokeWidth="3" strokeDasharray={TUNNEL_DASH} />
+            </svg>
+            {t("topology.map.legend.tunnel")}
+          </li>
+        ) : null}
         {uplinks ? (
           <li>
             <svg width="44" height="10" aria-hidden="true" focusable="false">
