@@ -2,7 +2,9 @@ import type { AttributeDoc, ObjectView, RelationLink } from "../api/types";
 import { formatBytes, formatDuration, formatQuantity } from "./format";
 import { countHealth, FOLD_AFTER, foldTiles, groupTiles, mountsOf, powerTotal, type Tile } from "./Fleet";
 import { healthOf } from "./health";
-import { kindOf } from "./kind";
+import { KNOWN_ROLES, kindOf } from "./kind";
+import { en } from "../i18n/en";
+import { fr } from "../i18n/fr";
 import { columnsOf, groupOf, isHealthEnum } from "../pages/ObjectOverview";
 
 const W = { d: "d", h: "h", min: "min", s: "s" };
@@ -18,6 +20,9 @@ describe("what an object is", () => {
     ["storage", "storage", "storage"],
     ["pdu", "pdu", "power"],
     ["ups", "ups", "power"],
+    ["access_point", "router", "network"],
+    ["access_control", "firewall", "security"],
+    ["camera", "device", "security"],
   ])("a device with role %s is drawn as %s, in the %s family", (role, icon, family) => {
     expect(kindOf(dev(role))).toEqual({ key: role, role, icon, family });
   });
@@ -25,6 +30,15 @@ describe("what an object is", () => {
   it("tells a server, a switch, a NAS and a PDU apart: four icons, four words", () => {
     const kinds = ["server", "switch", "nas", "pdu"].map((r) => kindOf(dev(r)));
     expect(new Set(kinds.map((k) => k.icon)).size).toBe(4);
+  });
+
+  it("knows the roles a UniFi estate brings, with a word each in both languages", () => {
+    for (const role of ["access_point", "access_control", "camera"]) {
+      expect(kindOf(dev(role)).role).toBe(role);
+      expect(KNOWN_ROLES).toContain(role);
+      expect(en[`role.${role}` as keyof typeof en]).toBeTruthy();
+      expect(fr[`role.${role}` as keyof typeof fr]).toBeTruthy();
+    }
   });
 
   it("reads the role, never the name", () => {

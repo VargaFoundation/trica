@@ -1296,7 +1296,7 @@
             }
           },
           "role": {
-            "description": "Function of the device.",
+            "description": "Function of the device: a wireless access point, an access control hub or reader and a camera are roles of their own.",
             "enum": [
               "server",
               "switch",
@@ -1309,7 +1309,10 @@
               "sensor",
               "nas",
               "kvm",
-              "other"
+              "other",
+              "access_point",
+              "access_control",
+              "camera"
             ],
             "title": "Role",
             "type": "string",

@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "hostId": "host-office-b:1",
+      "hostName": "Office B",
+      "updatedAt": "2026-10-21T09:00:00Z",
+      "devices": [
+        {"id": "020000020001", "mac": "020000020001", "name": "Office B", "model": "UCG Max", "shortname": "UCGMAX", "ip": "192.0.2.101", "productLine": "network", "status": "online", "version": "4.1.13", "firmwareStatus": "upToDate", "updateAvailable": "", "isConsole": true, "isManaged": true, "startupTime": "2026-10-10T08:00:00Z", "note": ""},
+        {"id": "020000020002", "mac": "020000020002", "name": "ap-b-01", "model": "U7 Pro", "shortname": "U7PRO", "ip": "192.0.2.102", "productLine": "network", "status": "online", "version": "8.7.11", "firmwareStatus": "upToDate", "updateAvailable": "", "isConsole": false, "isManaged": true, "startupTime": "2026-10-10T08:01:00Z", "note": ""}
+      ]
+    }
+  ],
+  "httpStatusCode": 200,
+  "traceId": "00000000000000000000000000000000"
+}

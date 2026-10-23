@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "hostId": "host-office-a:1",
+      "hostName": "Office A",
+      "updatedAt": "2026-10-22T10:00:00Z",
+      "devices": [
+        {"id": "020000010001", "mac": "020000010001", "name": "Office A", "model": "UDM Pro", "shortname": "UDMPRO", "ip": "198.51.100.20", "productLine": "network", "status": "online", "version": "5.0.6", "firmwareStatus": "upToDate", "updateAvailable": "", "isConsole": true, "isManaged": true, "startupTime": "2026-10-20T08:00:00Z", "note": null},
+        {"id": "020000010002", "mac": "020000010002", "name": "ap-lobby", "model": "U6 Lite", "shortname": "U6LITE", "ip": "192.0.2.21", "productLine": "network", "status": "offline", "version": "6.6.77", "firmwareStatus": "upToDate", "updateAvailable": "", "isConsole": false, "isManaged": true, "startupTime": "2026-10-01T08:00:00Z", "note": "lobby ceiling"},
+        {"id": "020000010003", "mac": "020000010003", "name": "sw-core", "model": "USW Pro 24", "shortname": "USPM24", "ip": "192.0.2.22", "productLine": "network", "status": "online", "version": 7, "firmwareStatus": "updateAvailable", "updateAvailable": "7.5.20", "isConsole": false, "isManaged": true, "startupTime": "2026-10-20T08:01:00Z", "note": ""},
+        {"id": "020000010004", "mac": "020000010004", "name": "cam-gate", "model": "UVC G5 Bullet", "shortname": "UVCG5BULLET", "ip": "192.0.2.23", "productLine": "protect", "status": "online", "version": "4.74.106", "firmwareStatus": "upToDate", "updateAvailable": "", "isConsole": false, "isManaged": true, "startupTime": "2026-10-20T08:02:00Z", "note": ""},
+        {"id": "020000010005", "mac": "020000010005", "name": "mystery", "model": "XYZ-9000", "shortname": "XYZ9000", "ip": "192.0.2.24", "productLine": "network", "status": "updating", "version": "1.0.0", "firmwareStatus": "upToDate", "updateAvailable": "", "isConsole": false, "isManaged": true, "startupTime": "2026-10-20T08:03:00Z", "note": ""},
+        {"id": "020000010006", "mac": "020000010006", "name": "spare-ap", "model": "U6 Pro", "shortname": "U6PRO", "ip": "192.0.2.25", "productLine": "network", "status": "pendingAdoption", "version": "6.6.77", "firmwareStatus": "upToDate", "updateAvailable": "", "isConsole": false, "isManaged": false, "startupTime": "", "note": ""}
+      ]
+    },
+    {
+      "hostId": "host-server:1",
+      "hostName": "Self-hosted Network",
+      "updatedAt": "2026-10-22T10:00:00Z",
+      "devices": [
+        {"id": "020000010051", "mac": "020000010051", "name": "sw-lab", "model": "USW Lite 8 PoE", "shortname": "USL8LP", "ip": "192.0.2.51", "productLine": "network", "status": "online", "version": "7.1.26", "firmwareStatus": "upToDate", "updateAvailable": "", "isConsole": false, "isManaged": true, "startupTime": "2026-10-20T08:00:00Z", "note": ""}
+      ]
+    }
+  ],
+  "httpStatusCode": 200,
+  "nextToken": "page-2",
+  "traceId": "00000000000000000000000000000000"
+}

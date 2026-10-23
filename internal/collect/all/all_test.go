@@ -18,7 +18,7 @@ import (
 // Importing the package is what makes every collector available to a runner.
 func TestEveryCollectorIsRegistered(t *testing.T) {
 	kinds := collect.Kinds()
-	for _, k := range []string{"arista", "kubernetes", "maas", "mikrotik", "pfsense", "redfish"} {
+	for _, k := range []string{"arista", "kubernetes", "maas", "mikrotik", "pfsense", "redfish", "unifi"} {
 		if !slices.Contains(kinds, k) {
 			t.Errorf("%s is not registered (have %v)", k, kinds)
 		}

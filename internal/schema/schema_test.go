@@ -190,6 +190,12 @@ func TestAllows(t *testing.T) {
 	if !r.Relations["depends_on"].Allows("application", "device") {
 		t.Error("wildcard refused")
 	}
+	if !r.Relations["managed_by"].Allows("device", "device") || r.Relations["managed_by"].Allows("interface", "device") {
+		t.Error("managed_by must go from a device to a device only")
+	}
+	if r.Relations["managed_by"].Impact != "" {
+		t.Errorf("managed_by carries impact %q: a device keeps forwarding when its controller is down", r.Relations["managed_by"].Impact)
+	}
 	if !r.Types["interface"].AllowsParent("device") || r.Types["interface"].AllowsParent("rack") {
 		t.Error("interface parents")
 	}

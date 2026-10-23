@@ -1,0 +1,35 @@
+{
+  "data": [
+    {
+      "id": "host-office-b:1",
+      "type": "console",
+      "ipAddress": "203.0.113.40",
+      "isBlocked": false,
+      "reportedState": {
+        "hostname": "office-b",
+        "name": "Office B",
+        "mac": "02:00:00:02:00:01",
+        "ip": 0,
+        "version": "4.1.13",
+        "state": "disconnected",
+        "ipAddrs": ["192.0.2.101"],
+        "hardware": {
+          "name": "UniFi Cloud Gateway Max",
+          "shortname": "UCGMAX",
+          "mac": "02:00:00:02:00:01",
+          "serialno": "02:00:00:02:00:01",
+          "firmwareVersion": "4.1.13"
+        },
+        "features": {"hasGateway": true},
+        "controllers": [
+          {"name": "network", "version": "9.0.114", "state": "active", "isInstalled": true, "isRunning": true}
+        ],
+        "wans": [
+          {"enabled": true, "interface": "eth4", "ipv4": "198.51.100.40", "mac": "02:00:00:00:02:0b", "plugged": true, "speedType": "2.5GbE", "type": "WAN"}
+        ]
+      }
+    }
+  ],
+  "httpStatusCode": 200,
+  "traceId": "00000000000000000000000000000000"
+}

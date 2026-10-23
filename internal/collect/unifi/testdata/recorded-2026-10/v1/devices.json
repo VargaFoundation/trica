@@ -1,0 +1,293 @@
+{
+  "data": [
+    {
+      "hostId": "000000000000000000000000000000000000000000000000000000000001:1234567890",
+      "hostName": "Office A",
+      "devices": [
+        {
+          "id": "020000000001",
+          "mac": "020000000001",
+          "name": "Office A",
+          "model": "UDM Pro Max",
+          "shortname": "UDMPROMAX",
+          "ip": "198.51.100.2",
+          "productLine": "network",
+          "status": "online",
+          "version": "5.1.33",
+          "firmwareStatus": "upToDate",
+          "updateAvailable": "",
+          "isConsole": true,
+          "isManaged": true,
+          "startupTime": "2026-10-22T17:27:17Z",
+          "adoptionTime": "2024-11-14T13:00:56Z",
+          "note": "",
+          "uidb": {
+            "guid": "6b7e871c-c911-4e5a-a8ea-0d886a88e4c9",
+            "iconId": "7722b0be-6fc3-4c7f-9123-29720c6dab9c",
+            "id": "40ae7055-11f8-4c8e-9a58-a4c6eead2055",
+            "images": {
+              "default": "4a4722f355074f13d9a4ea8e3dbca7be",
+              "nopadding": "70904ddb99b8b68ddfc3856c98962695",
+              "topology": "5e6416b3bdb6b6891ba500ce265672b5"
+            }
+          }
+        },
+        {
+          "id": "020000000002",
+          "mac": "020000000002",
+          "name": "ap-01",
+          "model": "U7 Pro",
+          "shortname": "U7PRO",
+          "ip": "192.0.2.11",
+          "productLine": "network",
+          "status": "online",
+          "version": "8.7.11",
+          "firmwareStatus": "upToDate",
+          "updateAvailable": "",
+          "isConsole": false,
+          "isManaged": true,
+          "startupTime": "2026-10-22T17:28:47Z",
+          "adoptionTime": "2024-11-14T13:45:14Z",
+          "note": "",
+          "uidb": {
+            "guid": "cc5dfd33-f116-4256-8398-6d7bbf8bafd1",
+            "iconId": "83e2e098-562f-47e3-99fe-73d04a09fc5e",
+            "id": "fa3e6687-7eba-46ea-9539-51486184b584",
+            "images": {
+              "default": "f06e3e23921f5a2082f2a7b08ac3bd2d",
+              "nopadding": "27aadf0b859cec10725643b1b4fbba62",
+              "topology": "82c87b6d101d91926bb88b4aab2cb8af"
+            }
+          }
+        },
+        {
+          "id": "020000000003",
+          "mac": "020000000003",
+          "name": "ap-02",
+          "model": "U7 Pro",
+          "shortname": "U7PRO",
+          "ip": "192.0.2.12",
+          "productLine": "network",
+          "status": "online",
+          "version": "8.7.11",
+          "firmwareStatus": "upToDate",
+          "updateAvailable": "",
+          "isConsole": false,
+          "isManaged": true,
+          "startupTime": "2026-10-22T17:28:49Z",
+          "adoptionTime": "2024-11-14T13:10:31Z",
+          "note": "",
+          "uidb": {
+            "guid": "cc5dfd33-f116-4256-8398-6d7bbf8bafd1",
+            "iconId": "83e2e098-562f-47e3-99fe-73d04a09fc5e",
+            "id": "fa3e6687-7eba-46ea-9539-51486184b584",
+            "images": {
+              "default": "f06e3e23921f5a2082f2a7b08ac3bd2d",
+              "nopadding": "27aadf0b859cec10725643b1b4fbba62",
+              "topology": "82c87b6d101d91926bb88b4aab2cb8af"
+            }
+          }
+        },
+        {
+          "id": "020000000004",
+          "mac": "020000000004",
+          "name": "ap-03",
+          "model": "U7 Pro",
+          "shortname": "U7PRO",
+          "ip": "192.0.2.13",
+          "productLine": "network",
+          "status": "online",
+          "version": "8.7.11",
+          "firmwareStatus": "upToDate",
+          "updateAvailable": "",
+          "isConsole": false,
+          "isManaged": true,
+          "startupTime": "2026-10-22T17:28:49Z",
+          "adoptionTime": "2024-11-14T13:11:04Z",
+          "note": "",
+          "uidb": {
+            "guid": "cc5dfd33-f116-4256-8398-6d7bbf8bafd1",
+            "iconId": "83e2e098-562f-47e3-99fe-73d04a09fc5e",
+            "id": "fa3e6687-7eba-46ea-9539-51486184b584",
+            "images": {
+              "default": "f06e3e23921f5a2082f2a7b08ac3bd2d",
+              "nopadding": "27aadf0b859cec10725643b1b4fbba62",
+              "topology": "82c87b6d101d91926bb88b4aab2cb8af"
+            }
+          }
+        },
+        {
+          "id": "020000000005",
+          "mac": "020000000005",
+          "name": "ap-04",
+          "model": "U7 Pro",
+          "shortname": "U7PRO",
+          "ip": "192.0.2.14",
+          "productLine": "network",
+          "status": "online",
+          "version": "8.7.11",
+          "firmwareStatus": "upToDate",
+          "updateAvailable": "",
+          "isConsole": false,
+          "isManaged": true,
+          "startupTime": "2026-10-22T17:28:48Z",
+          "adoptionTime": "2024-11-14T13:11:04Z",
+          "note": "",
+          "uidb": {
+            "guid": "cc5dfd33-f116-4256-8398-6d7bbf8bafd1",
+            "iconId": "83e2e098-562f-47e3-99fe-73d04a09fc5e",
+            "id": "fa3e6687-7eba-46ea-9539-51486184b584",
+            "images": {
+              "default": "f06e3e23921f5a2082f2a7b08ac3bd2d",
+              "nopadding": "27aadf0b859cec10725643b1b4fbba62",
+              "topology": "82c87b6d101d91926bb88b4aab2cb8af"
+            }
+          }
+        },
+        {
+          "id": "020000000006",
+          "mac": "020000000006",
+          "name": "ap-05",
+          "model": "U7 Pro",
+          "shortname": "U7PRO",
+          "ip": "192.0.2.15",
+          "productLine": "network",
+          "status": "online",
+          "version": "8.7.11",
+          "firmwareStatus": "upToDate",
+          "updateAvailable": "",
+          "isConsole": false,
+          "isManaged": true,
+          "startupTime": "2026-10-22T17:28:48Z",
+          "adoptionTime": "2024-11-14T13:11:39Z",
+          "note": "",
+          "uidb": {
+            "guid": "cc5dfd33-f116-4256-8398-6d7bbf8bafd1",
+            "iconId": "83e2e098-562f-47e3-99fe-73d04a09fc5e",
+            "id": "fa3e6687-7eba-46ea-9539-51486184b584",
+            "images": {
+              "default": "f06e3e23921f5a2082f2a7b08ac3bd2d",
+              "nopadding": "27aadf0b859cec10725643b1b4fbba62",
+              "topology": "82c87b6d101d91926bb88b4aab2cb8af"
+            }
+          }
+        },
+        {
+          "id": "020000000007",
+          "mac": "020000000007",
+          "name": "ap-06",
+          "model": "U7 Pro",
+          "shortname": "U7PRO",
+          "ip": "192.0.2.16",
+          "productLine": "network",
+          "status": "online",
+          "version": "8.7.11",
+          "firmwareStatus": "upToDate",
+          "updateAvailable": "",
+          "isConsole": false,
+          "isManaged": true,
+          "startupTime": "2026-10-22T17:28:44Z",
+          "adoptionTime": "2024-11-14T13:11:04Z",
+          "note": "",
+          "uidb": {
+            "guid": "cc5dfd33-f116-4256-8398-6d7bbf8bafd1",
+            "iconId": "83e2e098-562f-47e3-99fe-73d04a09fc5e",
+            "id": "fa3e6687-7eba-46ea-9539-51486184b584",
+            "images": {
+              "default": "f06e3e23921f5a2082f2a7b08ac3bd2d",
+              "nopadding": "27aadf0b859cec10725643b1b4fbba62",
+              "topology": "82c87b6d101d91926bb88b4aab2cb8af"
+            }
+          }
+        },
+        {
+          "id": "020000000008",
+          "mac": "020000000008",
+          "name": "door-hub-01",
+          "model": "UA Hub Door",
+          "shortname": "UAH-DOOR",
+          "ip": "192.0.2.17",
+          "productLine": "access",
+          "status": "online",
+          "version": "4.13.9.0",
+          "firmwareStatus": "upToDate",
+          "updateAvailable": "",
+          "isConsole": false,
+          "isManaged": true,
+          "startupTime": "2026-10-22T17:28:55Z",
+          "adoptionTime": "2024-11-14T20:22:32Z",
+          "note": "",
+          "uidb": {
+            "guid": "9af69ede-feaa-40c1-abe5-e85bed8afcd1",
+            "iconId": "ca4c65f9-303b-4a05-a7a7-a3632691ff1d",
+            "id": "d10c347c-e037-423b-a8d8-5420f636ed4e",
+            "images": {
+              "default": "3b8e29b11541c36f3c7800379b09024c",
+              "nopadding": "d0e7efa8a02dd6f67564983440a8b3f6",
+              "topology": "25058961b8ffdc24ebc96054ef25b08a"
+            }
+          }
+        },
+        {
+          "id": "020000000009",
+          "mac": "020000000009",
+          "name": "reader-01",
+          "model": "UA G2 Pro",
+          "shortname": "UA-G2-PRO",
+          "ip": "192.0.2.18",
+          "productLine": "access",
+          "status": "online",
+          "version": "1.14.17.0",
+          "firmwareStatus": "upToDate",
+          "updateAvailable": "",
+          "isConsole": false,
+          "isManaged": true,
+          "startupTime": "2026-10-22T17:29:39Z",
+          "adoptionTime": "2024-11-14T20:22:33Z",
+          "note": "",
+          "uidb": {
+            "guid": "06d4277c-3dd3-4691-8aac-3e140abb8699",
+            "iconId": "31162628-113a-428b-8786-dfeb82d46c8c",
+            "id": "d971fee4-ed77-4900-bcdd-231dd29da0b8",
+            "images": {
+              "default": "da035486db686a8acb316fd304db60f6",
+              "nopadding": "51cc7bbebba8e649aed65306a210a3b9",
+              "topology": "68c26d3b029969344bfadef36c414554"
+            }
+          }
+        },
+        {
+          "id": "02000000000A",
+          "mac": "02000000000A",
+          "name": "sw-01",
+          "model": "USW Pro Max 24 PoE",
+          "shortname": "USPM24P",
+          "ip": "192.0.2.19",
+          "productLine": "network",
+          "status": "online",
+          "version": "7.5.15",
+          "firmwareStatus": "upToDate",
+          "updateAvailable": "",
+          "isConsole": false,
+          "isManaged": true,
+          "startupTime": "2026-10-22T17:27:09Z",
+          "adoptionTime": "2024-11-14T13:11:04Z",
+          "note": "",
+          "uidb": {
+            "guid": "4a5ee13a-94f7-415d-ba16-22cb87bca755",
+            "iconId": "e7914154-3da6-4307-af17-6e52c77bd667",
+            "id": "c460c6a3-bc23-43c5-8bae-80257b15d6f6",
+            "images": {
+              "default": "1403a964069b976ef84c6018c552d159",
+              "nopadding": "4fa0ddd426de932fae6eb6be14566ef8",
+              "topology": "e6817f5dfcdb97f30d205800d0b3182f"
+            }
+          }
+        }
+      ],
+      "updatedAt": "2026-10-22T17:33:40Z"
+    }
+  ],
+  "httpStatusCode": 200,
+  "traceId": "00000000000000000000000000000000"
+}

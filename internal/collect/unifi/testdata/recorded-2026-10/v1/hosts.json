@@ -1,0 +1,632 @@
+{
+  "data": [
+    {
+      "id": "000000000000000000000000000000000000000000000000000000000001:1234567890",
+      "hardwareId": "00000000-0000-4000-8000-000000000001",
+      "type": "console",
+      "ipAddress": "203.0.113.10",
+      "owner": false,
+      "isBlocked": false,
+      "registrationTime": "2024-11-14T13:00:44Z",
+      "lastConnectionStateChange": "2026-10-22T17:28:25Z",
+      "latestBackupTime": "",
+      "userData": {
+        "apps": [
+          "users"
+        ],
+        "consoleGroupMembers": [
+          {
+            "mac": "020000000001",
+            "role": "UNADOPTED",
+            "roleAttributes": {
+              "applications": {},
+              "candidateRoles": [
+                "PRIMARY"
+              ],
+              "connectedState": "CONNECTED",
+              "connectedStateLastChanged": "2024-11-14T13:03:34.374Z"
+            },
+            "sysId": 59954
+          }
+        ],
+        "controllers": [
+          "network",
+          "protect",
+          "access",
+          "talk",
+          "connect",
+          "innerspace"
+        ],
+        "email": "operator@example.test",
+        "features": {
+          "deviceGroups": true,
+          "dsSupported": true,
+          "floorplan": {
+            "canEdit": true,
+            "canView": true
+          },
+          "manageApplications": true,
+          "msApixSupported": true,
+          "notifications": true,
+          "webrtc": {
+            "hasSessionStats": true,
+            "iceRestart": true,
+            "mediaStreams": true,
+            "mediaStreamsAV1": true,
+            "mediaStreamsH265": true,
+            "msIdSupported": true,
+            "twoWayAudio": true
+          }
+        },
+        "fullName": "Example Operator",
+        "localId": "00000000-0000-4000-8000-0000000000aa",
+        "permissions": {
+          "network.management": [
+            "read"
+          ]
+        },
+        "role": "admin",
+        "roleId": "00000000-0000-4000-8000-0000000000ab",
+        "status": "ACTIVE"
+      },
+      "reportedState": {
+        "anonid": "00000000-0000-4000-8000-000000000002",
+        "apps": [
+          {
+            "controllerStatus": "READY",
+            "features": {
+              "apiIntegration": true,
+              "assignmentFlags": true,
+              "driveUIComponentForUserConsolidation": true,
+              "fetchServiceStatusFromAccess": true,
+              "identityCertificateDistribution": true,
+              "supportAPIGetUcsUpdateConfig": true,
+              "supportAPIKeysMigration": true,
+              "supportAPIUcsSetupState": true,
+              "supportCsvImportAccessCredentials": true,
+              "supportFeatures": true,
+              "supportProtectGranularPermissions": true,
+              "supportRadiusULPUserIdProvisioning": true,
+              "supportUserDelegateAuthOnDrivePortal": true,
+              "upgradeUcs": true,
+              "upgradeUcsAgentBeforeAdoption": true,
+              "userConsolidation": true,
+              "userConsolidationViaGlobalFunc": true
+            },
+            "flags": [
+              "skipConnectionBlocker",
+              "supportUserPanel",
+              "isIdentityStandard",
+              "isIdentityEnterprise",
+              "unifiedAdminsUsersPage"
+            ],
+            "identityFeatures": {
+              "hostingIdentityHubScore": 55,
+              "standard": true,
+              "ucs": true,
+              "ucsAgent": true,
+              "ucsRemoteAccessViaUOS": true,
+              "unifiedAdminsUsersPage": true
+            },
+            "identityState": {
+              "enterpriseActivated": false,
+              "migrationNeeded": false,
+              "migrationStatus": "",
+              "migrationStatusMessage": "",
+              "organizationManaged": false,
+              "standard": {
+                "access": {
+                  "face": 0,
+                  "lpr": 0,
+                  "nfcAssigned": 58,
+                  "nfcTotal": 91,
+                  "pin": 2,
+                  "qr": 0,
+                  "tpAssigned": 0,
+                  "visitor": 1
+                },
+                "directory": {
+                  "enabled": false,
+                  "type": ""
+                },
+                "services": {
+                  "access": {
+                    "assigned": true,
+                    "enabled": true
+                  },
+                  "camera": {
+                    "assigned": false,
+                    "enabled": false
+                  },
+                  "drive": {
+                    "assigned": false,
+                    "enabled": false
+                  },
+                  "evstation": {
+                    "assigned": false,
+                    "enabled": false
+                  },
+                  "smart_iot": {
+                    "assigned": false,
+                    "enabled": false
+                  },
+                  "talk": {
+                    "assigned": false,
+                    "enabled": false
+                  },
+                  "vpn": {
+                    "assigned": true,
+                    "enabled": true
+                  },
+                  "wifi": {
+                    "assigned": true,
+                    "enabled": true
+                  }
+                }
+              },
+              "standardActivated": true,
+              "ucsActivated": false,
+              "ucsAgentActivated": false,
+              "ucsAgentVersion": "1.8.8+2046",
+              "ucsSetuped": false,
+              "ucsVersion": "1.8.8+4053",
+              "usersOrAdminsExist": true
+            },
+            "isConfigured": true,
+            "isInstalled": true,
+            "isRunning": true,
+            "name": "users",
+            "port": 9080,
+            "prefetch": [],
+            "swaiVersion": 2,
+            "type": "app",
+            "uiIcon": "icon.png",
+            "uiVersion": "1.13.6-4345",
+            "version": "1.13.11+6130"
+          }
+        ],
+        "autoUpdate": {
+          "includeApplications": true,
+          "preferencesPrompt": null,
+          "schedule": {
+            "day": 0,
+            "frequency": "daily",
+            "hour": 3
+          }
+        },
+        "availableChannels": [
+          "release"
+        ],
+        "cloudSystemLogState": "disabled",
+        "consolesOnSameLocalNetwork": [],
+        "controller_uuid": "000000000000000000000000000000000000000000000000000000000001:1234567890",
+        "controllers": [
+          {
+            "applicationDegradation": {
+              "loadLevel": "normal",
+              "pressures": [],
+              "targetedForSuspension": false,
+              "updatedAt": 1792690543109,
+              "version": 1
+            },
+            "commonApiOverrides": {
+              "getFabricConfig": "/v2/api/ucore/fabric/config"
+            },
+            "controllerStatus": "READY",
+            "fabric": {
+              "configLastUpdated": 1792690186831
+            },
+            "features": {
+              "alarmManager": true,
+              "applicationDegradation": true,
+              "fabricSnapshot": true,
+              "storeUlpIdForOneClickVpn": true
+            },
+            "handledRequirements": {},
+            "initialDeviceListSynced": true,
+            "installState": "installed",
+            "integrationApis": [
+              {
+                "apiDocsLocation": "/proxy/network/api-docs/integration.json",
+                "name": "Integration",
+                "version": "0.1"
+              }
+            ],
+            "isConfigured": true,
+            "isInstalled": true,
+            "isPending": false,
+            "isRunning": true,
+            "name": "network",
+            "port": 8081,
+            "prefetch": [],
+            "releaseChannel": "release",
+            "required": true,
+            "rollback": {
+              "availableBackup": {
+                "path": "/data/backup/example",
+                "releaseChannel": "release",
+                "timestamp": 1789693426777,
+                "version": "10.6.101"
+              },
+              "status": "available"
+            },
+            "state": "active",
+            "status": "ok",
+            "statusMessage": "",
+            "swaiVersion": 3,
+            "type": "controller",
+            "uiVersion": "10.6.106.0",
+            "unadoptedDevices": [],
+            "updatable": true,
+            "updateAvailable": null,
+            "version": "10.6.106",
+            "versionRaw": "10.6.106-36011-1"
+          },
+          {
+            "controllerStatus": "READY",
+            "dsSupported": true,
+            "features": {
+              "alarmManager": true,
+              "armMode": "disabled",
+              "devicesConfigs": true,
+              "stackable": false
+            },
+            "httpBridgeUri": "",
+            "initialDeviceListSynced": true,
+            "installState": "installed",
+            "integrationApis": [
+              {
+                "apiDocsLocation": "/proxy/protect/api-docs/integration.json",
+                "name": "Integration",
+                "version": "0.1"
+              }
+            ],
+            "integrations": {
+              "noonlight": {
+                "application": "protect",
+                "maxInstances": 1,
+                "name": "Noonlight"
+              },
+              "shopify": {
+                "application": "protect",
+                "maxInstances": 1,
+                "name": "Shopify PoS"
+              },
+              "sia-dc09": {
+                "application": "protect",
+                "maxInstances": 1,
+                "name": "SIA DC-09"
+              }
+            },
+            "isConfigured": true,
+            "isGeofencingEnabled": false,
+            "isInstalled": true,
+            "isPending": false,
+            "isRunning": true,
+            "isVideoSigningEnabled": false,
+            "limitedMode": false,
+            "msApixSupported": true,
+            "msBridgeUri": "",
+            "name": "protect",
+            "port": 7080,
+            "releaseChannel": "release",
+            "restorePercentage": 100,
+            "rollback": {
+              "availableBackup": {
+                "path": "/data/backup/example",
+                "releaseChannel": "release",
+                "timestamp": 1791942697666,
+                "version": "7.2.105"
+              },
+              "status": "available"
+            },
+            "state": "active",
+            "status": "ok",
+            "statusMessage": "",
+            "swaiVersion": 5,
+            "syslogCategories": [
+              "System",
+              "IoT",
+              "Site Activity",
+              "Admin Activity",
+              "Detection"
+            ],
+            "tcpBridgeUri": "",
+            "type": "controller",
+            "uiVersion": "7.3.26",
+            "unadoptedDevices": [],
+            "updatable": true,
+            "updateAvailable": null,
+            "version": "7.3.70",
+            "versionRaw": "7.3.70",
+            "wsBridgeUri": ""
+          },
+          {
+            "controllerStatus": "READY",
+            "features": {
+              "alarmManager": true,
+              "devicesLog": true,
+              "lastRestoreResult": true
+            },
+            "httpBridgeUri": "",
+            "initialDeviceListSynced": true,
+            "installState": "installed",
+            "integrationApis": [],
+            "isConfigured": true,
+            "isInstalled": true,
+            "isPending": false,
+            "isRunning": true,
+            "name": "access",
+            "port": 12080,
+            "prefetch": [],
+            "releaseChannel": "release",
+            "rollback": {
+              "availableBackup": {
+                "path": "/data/backup/example",
+                "releaseChannel": "release",
+                "timestamp": 1792544421718,
+                "version": "4.3.12"
+              },
+              "status": "available"
+            },
+            "state": "active",
+            "status": "ok",
+            "statusMessage": "",
+            "swaiVersion": 2,
+            "tcpBridgeUri": "",
+            "type": "controller",
+            "uiIcon": "icon.png",
+            "uiVersion": "4.3.22-6550",
+            "unadoptedDevices": [],
+            "updatable": true,
+            "updateAvailable": null,
+            "version": "4.3.22",
+            "versionRaw": "4.3.22+12152",
+            "wsBridgeUri": ""
+          },
+          {
+            "installState": "uninstalled",
+            "isConfigured": false,
+            "isInstalled": false,
+            "isPending": false,
+            "isRunning": false,
+            "name": "talk",
+            "port": 30080,
+            "releaseChannel": "release",
+            "state": "inactive",
+            "status": "offline",
+            "statusMessage": "",
+            "type": "controller",
+            "unadoptedDevices": [],
+            "updatable": true,
+            "updateAvailable": null,
+            "version": ""
+          },
+          {
+            "installState": "uninstalled",
+            "isConfigured": false,
+            "isInstalled": false,
+            "isPending": false,
+            "isRunning": false,
+            "name": "connect",
+            "port": 18080,
+            "releaseChannel": "release",
+            "state": "inactive",
+            "status": "offline",
+            "statusMessage": "",
+            "type": "controller",
+            "unadoptedDevices": [],
+            "updatable": true,
+            "updateAvailable": null,
+            "version": ""
+          },
+          {
+            "installState": "uninstalled",
+            "isConfigured": false,
+            "isInstalled": false,
+            "isPending": false,
+            "isRunning": false,
+            "name": "innerspace",
+            "port": 17080,
+            "releaseChannel": "release",
+            "state": "inactive",
+            "status": "offline",
+            "statusMessage": "",
+            "type": "controller",
+            "unadoptedDevices": [],
+            "updatable": true,
+            "updateAvailable": null,
+            "version": ""
+          }
+        ],
+        "country": 250,
+        "deviceErrorCode": null,
+        "deviceState": "setup",
+        "deviceStateLastChanged": 1792690106,
+        "directConnectDomain": "0000000000000000.id.ui.direct",
+        "features": {
+          "alarmManager": true,
+          "alarms": {
+            "alarmPausing": true,
+            "alarmProfiles": true,
+            "alarmRestrictions": true,
+            "alarmsActivity": true,
+            "triggersWithPrecondition": true,
+            "userNotificationMuting": true,
+            "userNotificationRestrictions": true
+          },
+          "apiIntegration": true,
+          "applications": {
+            "access": {
+              "mspPlayback": true
+            }
+          },
+          "captiveProxy": true,
+          "cloud": {
+            "applicationEvents": true,
+            "applicationEventsHttp": true,
+            "fabric": {
+              "systemlogs": true
+            },
+            "ucp4GuestConnection": true,
+            "ucp4OrganizationConnection": true,
+            "ztp": false
+          },
+          "cloudBackup": true,
+          "coLocated": {
+            "primary": true,
+            "shadow": true
+          },
+          "customSmtpServer": true,
+          "deviceList": {
+            "autolinkDevices": true,
+            "deviceTags": {
+              "grpcApi": true
+            },
+            "partialUpdates": true,
+            "ucp4Events": true
+          },
+          "directRemoteConnection": true,
+          "hasBezel": false,
+          "hasGateway": true,
+          "hasLCM": true,
+          "hasLED": false,
+          "identity": {
+            "hostingIdentityHubScore": 55,
+            "standard": true,
+            "ucs": true,
+            "ucsAgent": true,
+            "ucsRemoteAccessViaUOS": true,
+            "unifiedAdminsUsersPage": true
+          },
+          "infoApis": {
+            "firmwareUpdate": true
+          },
+          "integrations": true,
+          "isAutomaticFailoverAvailable": false,
+          "localVantagePoint": true,
+          "mfa": true,
+          "mspBridgeModesSupported": true,
+          "multiplePoolsSupport": false,
+          "netInAppBackupSupport": true,
+          "notifications": true,
+          "sharedTokens": true,
+          "snmpConfig": false,
+          "supportForm": true,
+          "syslog": true,
+          "teleport": true,
+          "teleportFeatures": {
+            "regularAdminLongTermToken": true
+          },
+          "teleportState": "ENABLED",
+          "uidService": true,
+          "updates": {
+            "applicationReleaseChannels": true,
+            "applicationSchedules": true
+          },
+          "ups": {
+            "canBePaired": true,
+            "pairing": true
+          },
+          "upsPairing": true
+        },
+        "firmwareUpdate": {
+          "latestAvailableVersion": null
+        },
+        "hardware": {
+          "bom": "113-09532-20",
+          "cpu.id": "",
+          "debianCodename": "bullseye",
+          "firmwareVersion": "5.1.33",
+          "hwrev": 2440212,
+          "mac": "020000000001",
+          "name": "UniFi Dream Machine Pro Max",
+          "qrid": "AAAAAA",
+          "reboot": "30",
+          "serialno": "020000000001",
+          "shortname": "UDMPROMAX",
+          "subtype": "",
+          "sysid": 59954,
+          "upgrade": "310",
+          "uuid": "00000000-0000-4000-8000-000000000001"
+        },
+        "host_type": 59954,
+        "hostname": "office-a",
+        "internetIssues5min": {
+          "periods": [
+            {
+              "index": 5975632,
+              "not_reported": true
+            },
+            {
+              "index": 5975633
+            }
+          ]
+        },
+        "ip": "198.51.100.2",
+        "ipAddrs": [
+          "fe80::0:ff:fe00:d",
+          "fe80::0:ff:fe00:e",
+          "198.51.100.2",
+          "fe80::0:ff:fe00:c",
+          "192.0.2.1",
+          "fe80::0:ff:fe00:d"
+        ],
+        "isStacked": false,
+        "location": {
+          "lat": 0,
+          "long": 0,
+          "radius": 0,
+          "text": "Example City"
+        },
+        "mac": "020000000001",
+        "mgmt_port": 443,
+        "name": "Office A",
+        "releaseChannel": "release",
+        "state": "connected",
+        "timezone": "Europe/Paris",
+        "uidb": {
+          "guid": "6b7e871c-c911-4e5a-a8ea-0d886a88e4c9",
+          "id": "40ae7055-11f8-4c8e-9a58-a4c6eead2055",
+          "images": {
+            "blueprint": "6529193f0ee3bb1f70e7c131c16c4438",
+            "blueprint-dark": "68669f9e58e13b0c8e637fdd4191a6b5",
+            "default": "4a4722f355074f13d9a4ea8e3dbca7be",
+            "mobile-connection": "99a37f041e777464355ddea7f227c44f",
+            "mobile-internet-connected": "c55008ce93b5f52c44d4df9c364685d0",
+            "mobile-no-internet": "6cb0066cc395343614d2f5fa3611b4f1",
+            "nopadding": "70904ddb99b8b68ddfc3856c98962695",
+            "rack": "c1dde79fe5ddc3f6510492713022f0bf",
+            "topology": "5e6416b3bdb6b6891ba500ce265672b5"
+          }
+        },
+        "unadoptedUnifiOSDevices": [],
+        "version": "5.1.132",
+        "wans": [
+          {
+            "enabled": true,
+            "interface": "eth8",
+            "mac": "02:00:00:00:00:0b",
+            "plugged": false,
+            "port": 9,
+            "speedType": "2.5GbE",
+            "type": "WAN2"
+          },
+          {
+            "enabled": true,
+            "interface": "eth9",
+            "ipv4": "198.51.100.2",
+            "ipv6": "fe80::0:ff:fe00:c",
+            "mac": "02:00:00:00:00:0c",
+            "plugged": true,
+            "port": 10,
+            "speedType": "10G SFP+",
+            "type": "WAN"
+          }
+        ]
+      }
+    }
+  ],
+  "httpStatusCode": 200,
+  "traceId": "00000000000000000000000000000000"
+}

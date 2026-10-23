@@ -1305,10 +1305,10 @@ export interface components {
             provisioning_zone?: string;
             /**
              * Role
-             * @description Function of the device.
+             * @description Function of the device: a wireless access point, an access control hub or reader and a camera are roles of their own.
              * @enum {string}
              */
-            role?: "server" | "switch" | "router" | "firewall" | "storage" | "pdu" | "ups" | "patch_panel" | "sensor" | "nas" | "kvm" | "other";
+            role?: "server" | "switch" | "router" | "firewall" | "storage" | "pdu" | "ups" | "patch_panel" | "sensor" | "nas" | "kvm" | "other" | "access_point" | "access_control" | "camera";
             /**
              * Serial number
              * @description Chassis serial number, the primary identity.
