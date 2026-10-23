@@ -2277,3 +2277,199 @@ label.check {
 .iso-links tr[aria-selected="true"] {
   background: var(--trica-accent-soft);
 }
+
+/* ───────────────────────────── dialog (ADR 0052) ───────────────────────────── */
+.dialog {
+  padding: 0;
+  border: 1px solid var(--trica-line);
+  border-radius: calc(var(--trica-radius-surface) * 2);
+  background: var(--trica-raised);
+  color: var(--trica-ink);
+  box-shadow: var(--trica-shadow-overlay);
+  width: min(34rem, calc(100vw - 2rem));
+  max-height: min(42rem, calc(100vh - 2rem));
+  overflow: hidden;
+}
+.dialog[open] {
+  display: flex;
+  animation: dialog-in 140ms var(--trica-easing);
+}
+.dialog-compact {
+  width: min(26rem, calc(100vw - 2rem));
+}
+.dialog::backdrop {
+  background: var(--trica-scrim);
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.985);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog[open] {
+    animation: none;
+  }
+}
+.dialog-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+.dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem 0.6rem 1.25rem;
+}
+.dialog-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.dialog-close {
+  padding: 0 0.4rem;
+  flex: none;
+}
+.dialog-body {
+  padding: 0.25rem 1.25rem 1rem;
+  overflow-y: auto;
+  display: grid;
+  gap: 0.9rem;
+}
+.dialog-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--trica-line);
+  background: var(--trica-surface);
+}
+.dialog-foot .spacer {
+  flex: 1;
+}
+.dialog-foot .sent {
+  font-weight: 500;
+}
+.dialog .field {
+  margin: 0;
+}
+
+/* The device picker: a search box over a short list of what can still be placed. */
+.picker {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--trica-line);
+  border-radius: var(--trica-radius-surface);
+  max-height: 11rem;
+  overflow-y: auto;
+}
+.picker-list li + li {
+  border-top: 1px solid var(--trica-line);
+}
+.picker-list label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+}
+.picker-list label:hover {
+  background: var(--trica-surface-muted);
+}
+.picker-list label:has(input:checked) {
+  background: var(--trica-accent-soft);
+}
+.picker-list label:has(input:focus-visible) {
+  outline: 2px solid var(--trica-focus);
+  outline-offset: -2px;
+}
+.picker-name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.picker-chosen {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  justify-content: space-between;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--trica-accent-line);
+  border-radius: var(--trica-radius-surface);
+  background: var(--trica-accent-soft);
+}
+
+/* A two-way choice drawn as one control (a face): radios, so the keyboard and screen readers keep their behaviour. */
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--trica-line-strong);
+  border-radius: var(--trica-radius-control);
+  overflow: hidden;
+  min-height: 2rem;
+}
+.seg label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.85rem;
+  cursor: pointer;
+  color: var(--trica-ink-muted);
+  font-weight: 500;
+}
+.seg label + label {
+  border-left: 1px solid var(--trica-line-strong);
+}
+.seg label:has(input:checked) {
+  background: var(--trica-accent);
+  color: var(--trica-accent-ink);
+}
+.seg label:has(input:focus-visible) {
+  outline: 2px solid var(--trica-focus);
+  outline-offset: -2px;
+}
+.seg input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+.fit-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+.fit-line.fit-free {
+  color: var(--trica-ok-ink);
+}
+.fit-line.fit-taken {
+  color: var(--trica-danger-ink);
+}
+.dialog-preview {
+  border-left: 3px solid var(--trica-accent-line);
+  padding-left: 0.75rem;
+}
+.dialog-preview h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.85rem;
+  color: var(--trica-ink-muted);
+  font-weight: 500;
+}
+.dialog-preview ul.changes {
+  margin: 0;
+}

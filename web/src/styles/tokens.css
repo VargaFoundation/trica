@@ -116,6 +116,9 @@
   --trica-rail-width: 3.25rem;
   --trica-easing: cubic-bezier(0.4, 0, 0.2, 1);
   --trica-shadow-raised: none;
+  /* A modal dialog (ADR 0052): the veil over the page and the shadow that lifts it. */
+  --trica-scrim: rgb(0 0 0 / 60%);
+  --trica-shadow-overlay: 0 12px 40px rgb(0 0 0 / 55%), 0 0 0 1px rgb(255 255 255 / 4%);
 }
 
 /* ─────────────────────────────── light ─────────────────────────────── */
@@ -196,6 +199,8 @@
 }
 :root[data-theme="light"] {
   --trica-shadow-raised: 0 1px 2px rgb(28 32 36 / 6%);
+  --trica-scrim: rgb(28 32 36 / 40%);
+  --trica-shadow-overlay: 0 12px 40px rgb(28 32 36 / 22%), 0 0 0 1px rgb(28 32 36 / 6%);
 }
 
 /* "System" (no data-theme): a reader whose system prefers light gets the light block. */
@@ -277,5 +282,7 @@
   }
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --trica-shadow-raised: 0 1px 2px rgb(28 32 36 / 6%);
+    --trica-scrim: rgb(28 32 36 / 40%);
+    --trica-shadow-overlay: 0 12px 40px rgb(28 32 36 / 22%), 0 0 0 1px rgb(28 32 36 / 6%);
   }
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -34,6 +35,7 @@ const (
 	idT2U   = 0xc2
 	idTFull = 0xc3
 	idPDU   = 0xd1
+	idSpare = 0xd9   // a device in no rack
 	firstR3 = 0x1000 // devices of r48
 
 	idSiteL    = 5 // lyon-1
@@ -132,6 +134,8 @@ func buildInventory() *inventory {
 		"role": "server", "health": "critical", "model": "ex-server", "serial": "EXSV0001", "os_name": "linux", "os_version": "6.8", "power_w": 412.5,
 		"inlet_temp_c": 23, "outlet_temp_c": 38.5, "uptime_s": 1303200, "memory_bytes": 274877906944, "cpu_count": 2, "log_critical_count": 2}))
 	inv.add(object(idPDU, "device", "pdu-a", idRack, idSite, obj{"hostname": "pdu-a", "vendor": "example", "role": "pdu", "health": "ok", "power_w": 1840}))
+	// A device in no rack: what the placement dialog offers (ADR 0052).
+	inv.add(object(idSpare, "device", "spare-01", idSite, idSite, obj{"hostname": "spare-01", "vendor": "example", "role": "server", "health": "ok"}))
 	inv.mount(idSwA1, idRack, 40, "front", idT1U)
 	inv.mount(idSwA2, idRack, 39, "front", idT1U)
 	inv.mount(idSrv01, idRack, 10, "front", idTFull)
@@ -383,7 +387,7 @@ func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case path == "/me":
 		writeJSON(w, http.StatusOK, obj{"subject": "e2e-user", "kind": "token", "source": "e2e", "actions": []string{"read", "propose", "approve"}})
 	case path == "/objects":
-		writeJSON(w, http.StatusOK, a.list(r.URL.Query().Get("type")))
+		writeJSON(w, http.StatusOK, a.list(r.URL.Query()))
 	case path == "/relations":
 		a.relationLinks(w, r.URL.Query().Get("type"))
 	case path == "/search":
@@ -515,12 +519,28 @@ func proposal(id int, status string) obj {
 	return p
 }
 
-func (a *api) list(typ string) obj {
+func (a *api) list(q url.Values) obj {
+	typ := q.Get("type")
+	// The picker's text, without its status clause: a substring of the display name.
+	text := strings.ToLower(strings.TrimSpace(strings.SplitN(q.Get("q"), "(status:", 2)[0]))
+	mounted := map[string]bool{}
+	for _, r := range a.inv.relations {
+		if r.typ == "mounted_in" {
+			mounted[oid(r.from)] = true
+		}
+	}
 	var items []obj
 	for _, o := range a.inv.objects {
-		if typ == "" || o["type"] == typ {
-			items = append(items, a.withAisle(o))
+		if typ != "" && o["type"] != typ {
+			continue
 		}
+		if text != "" && !strings.Contains(strings.ToLower(o["display"].(string)), text) {
+			continue
+		}
+		if q.Get("mounted") == "false" && mounted[o["id"].(string)] {
+			continue
+		}
+		items = append(items, a.withAisle(o))
 	}
 	sort.SliceStable(items, func(i, j int) bool { return items[i]["display"].(string) < items[j]["display"].(string) })
 	return page(items)

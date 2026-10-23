@@ -12,14 +12,36 @@ import { Async } from "../components/Async";
 import { ObjectLink } from "../components/ObjectLink";
 import { useMe, useSchema } from "../hooks";
 import { useI18n, type MessageKey } from "../i18n";
-import { DEFAULT_RACK_U, formatRange, type Face, type Mounted } from "../racks/layout";
+import {
+  DEFAULT_RACK_U,
+  formatRange,
+  type Face,
+  type Mounted,
+} from "../racks/layout";
 import { useRackContents } from "../racks/useRack";
-import { AttributeField, EDITABLE_KINDS, enumText, parseField, type FieldError } from "./AttributeFields";
+import { DevicePicker } from "./DevicePicker";
+import {
+  AttributeField,
+  EDITABLE_KINDS,
+  enumText,
+  parseField,
+  type FieldError,
+} from "./AttributeFields";
 import { BatchReview } from "./BatchReview";
-import { callerSource, placeDevice, type Attrs, type DeviceChoice } from "./batch";
+import {
+  callerSource,
+  placeDevice,
+  type Attrs,
+  type DeviceChoice,
+} from "./batch";
 import { editRules, NEW_DEVICE_FIELDS, type EditRules } from "./rules";
 import { usePlacement } from "./usePlacement";
-import { checkPlacement, firstFit, parseNumber, type PlacementError } from "./validate";
+import {
+  checkPlacement,
+  firstFit,
+  parseNumber,
+  type PlacementError,
+} from "./validate";
 
 export interface RackRef {
   id: string;
@@ -42,6 +64,12 @@ export interface PlaceDeviceProps {
   device?: { id: string; display: string };
   initialPosition?: number;
   initialFace?: string;
+  /** A device chosen already (the quick dialog's, carried over); the person may pick another. */
+  initialDevice?: { id: string; display: string };
+  /** The height the quick dialog was given, carried over. */
+  initialHeight?: number;
+  /** Start on "a device no collector sees". */
+  initialDeclare?: boolean;
   /** Preview the change as soon as the form is valid (a move or a turn: everything is already said). */
   autoPreview?: boolean;
   onClose: () => void;
@@ -50,10 +78,25 @@ export interface PlaceDeviceProps {
 /** The form needs the schema (faces, units, roles): it waits for it. */
 export function PlaceDeviceForm(props: PlaceDeviceProps) {
   const schema = useSchema();
-  return <Async query={schema}>{(doc) => <PlaceDevice {...props} rules={editRules(doc)} />}</Async>;
+  return (
+    <Async query={schema}>
+      {(doc) => <PlaceDevice {...props} rules={editRules(doc)} />}
+    </Async>
+  );
 }
 
-function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, initialFace, autoPreview, onClose, rules }: PlaceDeviceProps & { rules: EditRules }) {
+function PlaceDevice({
+  rack: fixedRack,
+  device: fixedDevice,
+  initialPosition,
+  initialFace,
+  initialDevice,
+  initialHeight,
+  initialDeclare,
+  autoPreview,
+  onClose,
+  rules,
+}: PlaceDeviceProps & { rules: EditRules }) {
   const { t, number, label } = useI18n();
   const uid = useId();
   const source = callerSource(useMe().data);
@@ -62,7 +105,8 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
   const [rackChoice, setRackChoice] = useState("");
   const racks = useQuery({
     queryKey: ["objects", { type: "rack", sort: "name", limit: 1000 }],
-    queryFn: ({ signal }) => api.objects({ type: "rack", sort: "name", limit: 1000 }, signal),
+    queryFn: ({ signal }) =>
+      api.objects({ type: "rack", sort: "name", limit: 1000 }, signal),
     enabled: !fixedRack,
     staleTime: 30_000,
   });
@@ -74,45 +118,66 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
     staleTime: 5 * 60_000,
   });
   const declaredU = rackObj.data?.attributes.u_height;
-  const rackU = typeof declaredU === "number" && declaredU > 0 ? Math.floor(declaredU) : DEFAULT_RACK_U;
+  const rackU =
+    typeof declaredU === "number" && declaredU > 0
+      ? Math.floor(declaredU)
+      : DEFAULT_RACK_U;
   const contents = useRackContents(rackId);
 
   /* ---- which device ---- */
-  const [mode, setMode] = useState<"existing" | "new">("existing");
-  const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState<{ id: string; display: string } | undefined>(fixedDevice);
-  const search = useQuery({
-    queryKey: ["device-search", query.trim()],
-    queryFn: ({ signal }) => api.objects({ q: query.trim(), type: "device", limit: 20 }, signal),
-    enabled: !fixedDevice && mode === "existing" && query.trim().length > 0,
-    staleTime: 15_000,
-  });
+  const [mode, setMode] = useState<"existing" | "new">(
+    initialDeclare ? "new" : "existing",
+  );
+  const [picked, setPicked] = useState<
+    { id: string; display: string } | undefined
+  >(fixedDevice ?? initialDevice);
   const deviceId = mode === "existing" ? picked?.id : undefined;
   const placement = usePlacement(deviceId);
 
   const deviceType = rules.type("device");
-  const newFields = NEW_DEVICE_FIELDS.map((k) => deviceType?.attributes.find((a) => a.name === k)).filter(
-    (a): a is AttributeDoc => !!a && EDITABLE_KINDS.has(a.kind),
-  );
+  const newFields = NEW_DEVICE_FIELDS.map((k) =>
+    deviceType?.attributes.find((a) => a.name === k),
+  ).filter((a): a is AttributeDoc => !!a && EDITABLE_KINDS.has(a.kind));
   const [newValues, setNewValues] = useState<Record<string, string>>({});
 
   /* ---- where ---- */
-  const [positionRaw, setPositionRaw] = useState(initialPosition === undefined ? "" : String(initialPosition));
+  const [positionRaw, setPositionRaw] = useState(
+    initialPosition === undefined ? "" : String(initialPosition),
+  );
   const faces = rules.faces;
-  const [face, setFace] = useState(initialFace && faces.includes(initialFace) ? initialFace : (faces[0] ?? ""));
-  const knownModelHeight = mode === "existing" ? placement.data?.modelHeight : undefined;
+  const [face, setFace] = useState(
+    initialFace && faces.includes(initialFace) ? initialFace : (faces[0] ?? ""),
+  );
+  const knownModelHeight =
+    mode === "existing" ? placement.data?.modelHeight : undefined;
   // undefined until the person types: the field then starts from the device's own height.
-  const [heightRaw, setHeightRaw] = useState<string | undefined>(undefined);
+  const [heightRaw, setHeightRaw] = useState<string | undefined>(
+    initialHeight === undefined ? undefined : String(initialHeight),
+  );
   const ownHeight = mode === "existing" ? placement.data?.ownHeight : undefined;
   const heightShown = knownModelHeight === undefined && rules.deviceHeight;
-  const heightText = heightRaw ?? (ownHeight !== undefined ? String(ownHeight) : "");
+  const heightText =
+    heightRaw ?? (ownHeight !== undefined ? String(ownHeight) : "");
   const typedHeight = parseNumber(heightText);
   const heightU = knownModelHeight ?? typedHeight ?? 1;
   const position = parseNumber(positionRaw);
-  const fullDepth = mode === "existing" ? (placement.data?.fullDepth ?? false) : false;
+  const fullDepth =
+    mode === "existing" ? (placement.data?.fullDepth ?? false) : false;
 
-  const others: Mounted[] = (contents.data?.items ?? []).filter((m) => m.id !== deviceId);
-  const fit = rackId && contents.data && positionRaw.trim() === "" ? firstFit(rackU, heightU, (face || "front") as Face, fullDepth, others, rules.halfUnits) : undefined;
+  const others: Mounted[] = (contents.data?.items ?? []).filter(
+    (m) => m.id !== deviceId,
+  );
+  const fit =
+    rackId && contents.data && positionRaw.trim() === ""
+      ? firstFit(
+          rackU,
+          heightU,
+          (face || "front") as Face,
+          fullDepth,
+          others,
+          rules.halfUnits,
+        )
+      : undefined;
   const check = checkPlacement({
     rackU,
     position,
@@ -133,36 +198,65 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
   const newAttrs: Attrs = {};
   for (const p of newParsed) {
     if (p.value === undefined) continue;
-    if (rules.isIdentity("device", p.a.name) && p.a.kind === "string") newIdentity[p.a.name] = String(p.value);
+    if (rules.isIdentity("device", p.a.name) && p.a.kind === "string")
+      newIdentity[p.a.name] = String(p.value);
     else newAttrs[p.a.name] = p.value;
   }
 
   const formErrors: string[] = [];
   if (!rackId) formErrors.push(t("edit.place.error.rack"));
-  if (mode === "existing" && !deviceId) formErrors.push(t("edit.place.error.device"));
-  if (mode === "new" && Object.keys(newIdentity).length === 0) formErrors.push(t("edit.place.error.identity"));
-  if (heightShown && heightText.trim() !== "" && typedHeight === undefined) formErrors.push(t("edit.error.number"));
-  const placementErrors = check.errors.map((e) => t(PLACEMENT_TEXT[e], { units: number(rackU), top: number((position ?? 1) + heightU - 1) }));
+  if (mode === "existing" && !deviceId)
+    formErrors.push(t("edit.place.error.device"));
+  if (mode === "new" && Object.keys(newIdentity).length === 0)
+    formErrors.push(t("edit.place.error.identity"));
+  if (heightShown && heightText.trim() !== "" && typedHeight === undefined)
+    formErrors.push(t("edit.error.number"));
+  const placementErrors = check.errors.map((e) =>
+    t(PLACEMENT_TEXT[e], {
+      units: number(rackU),
+      top: number((position ?? 1) + heightU - 1),
+    }),
+  );
   const fieldErrors = newParsed.some((p) => p.error && mode === "new");
-  const blocked = formErrors.length > 0 || placementErrors.length > 0 || fieldErrors || (mode === "existing" && placement.isPending && !!deviceId);
+  const blocked =
+    formErrors.length > 0 ||
+    placementErrors.length > 0 ||
+    fieldErrors ||
+    (mode === "existing" && placement.isPending && !!deviceId);
 
   /* ---- warnings said before anything is sent ---- */
   const warnings: string[] = [];
   for (const o of check.overlaps) {
-    warnings.push(t("edit.place.overlap", { device: o.name, range: formatRange(o.position ?? 1, o.heightU ?? 1) }));
+    warnings.push(
+      t("edit.place.overlap", {
+        device: o.name,
+        range: formatRange(o.position ?? 1, o.heightU ?? 1),
+      }),
+    );
   }
   const mounts = placement.data?.mounts ?? [];
   const leaving = mounts.filter((m) => m.rackId !== rackId);
   for (const m of mounts) {
-    if (source && m.source !== source) warnings.push(t("edit.place.otherSource", { rack: m.rackName, source: m.source }));
+    if (source && m.source !== source)
+      warnings.push(
+        t("edit.place.otherSource", { rack: m.rackName, source: m.source }),
+      );
   }
-  if (knownModelHeight === undefined && typedHeight === undefined) warnings.push(t("edit.place.heightAssumed"));
+  if (knownModelHeight === undefined && typedHeight === undefined)
+    warnings.push(t("edit.place.heightAssumed"));
 
   let batch: Batch | null = null;
   if (!blocked && rackId && position !== undefined) {
-    const device: DeviceChoice = mode === "new" ? { create: { identity: newIdentity, attributes: newAttrs } } : { id: deviceId as string };
-    const ownSaid = heightShown && typedHeight !== undefined && typedHeight !== ownHeight ? typedHeight : undefined;
-    const createdHeight = mode === "new" && heightShown ? typedHeight : undefined;
+    const device: DeviceChoice =
+      mode === "new"
+        ? { create: { identity: newIdentity, attributes: newAttrs } }
+        : { id: deviceId as string };
+    const ownSaid =
+      heightShown && typedHeight !== undefined && typedHeight !== ownHeight
+        ? typedHeight
+        : undefined;
+    const createdHeight =
+      mode === "new" && heightShown ? typedHeight : undefined;
     batch = placeDevice({
       device,
       placement: { rackId, position, face: face || undefined },
@@ -170,18 +264,34 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
       leave: leaving.map((m) => m.rackId),
     });
   }
-  const newName = newIdentity.name ?? newIdentity.serial ?? newIdentity.asset_tag ?? "";
+  const newName =
+    newIdentity.name ?? newIdentity.serial ?? newIdentity.asset_tag ?? "";
   const resultWarnings = (r: ApplyResult): string[] =>
-    mode === "new" && !(r.changes ?? []).some((c) => c.op === "create" && c.type === "device") ? [t("edit.place.matchesExisting", { name: newName })] : [];
+    mode === "new" &&
+    !(r.changes ?? []).some((c) => c.op === "create" && c.type === "device")
+      ? [t("edit.place.matchesExisting", { name: newName })]
+      : [];
 
   return (
     <form className="edit-form" noValidate onSubmit={(e) => e.preventDefault()}>
       {fixedRack ? (
-        <p>{t("edit.place.inRack", { rack: fixedRack.display, units: number(rackU) })}</p>
+        <p>
+          {t("edit.place.inRack", {
+            rack: fixedRack.display,
+            units: number(rackU),
+          })}
+        </p>
       ) : (
         <div className="field">
-          <label htmlFor={`${uid}-rack`}>{label(rules.type("rack")?.label, "rack")}</label>
-          <select id={`${uid}-rack`} value={rackChoice} onChange={(e) => setRackChoice(e.target.value)} aria-describedby={`${uid}-rack-hint`}>
+          <label htmlFor={`${uid}-rack`}>
+            {label(rules.type("rack")?.label, "rack")}
+          </label>
+          <select
+            id={`${uid}-rack`}
+            value={rackChoice}
+            onChange={(e) => setRackChoice(e.target.value)}
+            aria-describedby={`${uid}-rack-hint`}
+          >
             <option value="">{t("edit.place.chooseRack")}</option>
             {(racks.data?.items ?? []).map((r) => (
               <option key={r.id} value={r.id}>
@@ -190,7 +300,9 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
             ))}
           </select>
           <span id={`${uid}-rack-hint`} className="hint">
-            {rackId ? t("edit.place.rackHeight", { units: number(rackU) }) : t("edit.place.rackHint")}
+            {rackId
+              ? t("edit.place.rackHeight", { units: number(rackU) })
+              : t("edit.place.rackHint")}
           </span>
         </div>
       )}
@@ -201,34 +313,29 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
         <fieldset>
           <legend>{t("edit.place.which")}</legend>
           <label className="check">
-            <input type="radio" name={`${uid}-mode`} checked={mode === "existing"} onChange={() => setMode("existing")} /> {t("edit.place.existing")}
+            <input
+              type="radio"
+              name={`${uid}-mode`}
+              checked={mode === "existing"}
+              onChange={() => setMode("existing")}
+            />{" "}
+            {t("edit.place.existing")}
           </label>
           <label className="check">
-            <input type="radio" name={`${uid}-mode`} checked={mode === "new"} onChange={() => setMode("new")} /> {t("edit.place.new")}
+            <input
+              type="radio"
+              name={`${uid}-mode`}
+              checked={mode === "new"}
+              onChange={() => setMode("new")}
+            />{" "}
+            {t("edit.place.new")}
           </label>
           {mode === "existing" ? (
-            <div>
-              <div className="field">
-                <label htmlFor={`${uid}-search`}>{t("edit.place.search")}</label>
-                <input id={`${uid}-search`} type="search" value={query} onChange={(e) => setQuery(e.target.value)} autoComplete="off" />
-              </div>
-              {search.isFetching ? <p role="status">{t("app.loading")}</p> : null}
-              {search.data ? (
-                search.data.items.length === 0 ? (
-                  <p>{t("edit.place.noMatch")}</p>
-                ) : (
-                  <fieldset className="results">
-                    <legend>{t("edit.place.results")}</legend>
-                    {search.data.items.map((d) => (
-                      <label key={d.id} className="check">
-                        <input type="radio" name={`${uid}-device`} checked={picked?.id === d.id} onChange={() => setPicked({ id: d.id, display: d.display })} />{" "}
-                        {d.display}
-                      </label>
-                    ))}
-                  </fieldset>
-                )
-              ) : null}
-            </div>
+            <DevicePicker
+              picked={picked?.id}
+              onPick={setPicked}
+              exclude={new Set((contents.data?.items ?? []).map((m) => m.id))}
+            />
           ) : (
             <>
               <p className="hint">{t("edit.place.newHint")}</p>
@@ -240,7 +347,9 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
                     idPrefix={`${uid}-new`}
                     value={p.raw}
                     error={p.error}
-                    onChange={(v) => setNewValues((s) => ({ ...s, [p.a.name]: v }))}
+                    onChange={(v) =>
+                      setNewValues((s) => ({ ...s, [p.a.name]: v }))
+                    }
                   />
                 ))}
               </div>
@@ -258,7 +367,9 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
                 <ObjectLink id={m.rackId} display={m.rackName} />
                 {m.position !== undefined ? `, U${number(m.position)}` : ""}
                 {m.face ? `, ${enumText(m.face)}` : ""} ({m.source})
-                {m.rackId !== rackId && rackId ? ` — ${t("edit.place.willLeave")}` : ""}
+                {m.rackId !== rackId && rackId
+                  ? ` — ${t("edit.place.willLeave")}`
+                  : ""}
               </li>
             ))}
           </ul>
@@ -281,7 +392,9 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
             aria-invalid={placementErrors.length > 0 ? true : undefined}
           />
           <span id={`${uid}-position-hint`} className="hint">
-            {rules.halfUnits ? t("edit.place.positionHintHalf") : t("edit.place.positionHint")}
+            {rules.halfUnits
+              ? t("edit.place.positionHintHalf")
+              : t("edit.place.positionHint")}
           </span>
           {fit !== undefined ? (
             <button type="button" onClick={() => setPositionRaw(String(fit))}>
@@ -292,10 +405,18 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
         {faces.length > 0 ? (
           <div className="field">
             <label htmlFor={`${uid}-face`}>{t("rack.col.face")}</label>
-            <select id={`${uid}-face`} value={face} onChange={(e) => setFace(e.target.value)}>
+            <select
+              id={`${uid}-face`}
+              value={face}
+              onChange={(e) => setFace(e.target.value)}
+            >
               {faces.map((f) => (
                 <option key={f} value={f}>
-                  {f === "front" ? t("rack.front") : f === "rear" ? t("rack.rear") : enumText(f)}
+                  {f === "front"
+                    ? t("rack.front")
+                    : f === "rear"
+                      ? t("rack.rear")
+                      : enumText(f)}
                 </option>
               ))}
             </select>
@@ -321,7 +442,12 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
             </span>
           </div>
         ) : knownModelHeight !== undefined ? (
-          <p className="hint">{t("edit.place.heightFromModel", { units: number(knownModelHeight), model: placement.data?.modelName ?? "" })}</p>
+          <p className="hint">
+            {t("edit.place.heightFromModel", {
+              units: number(knownModelHeight),
+              model: placement.data?.modelName ?? "",
+            })}
+          </p>
         ) : null}
       </div>
 
@@ -339,7 +465,14 @@ function PlaceDevice({ rack: fixedRack, device: fixedDevice, initialPosition, in
           ))}
         </ul>
       ) : null}
-      <BatchReview batch={batch} names={mode === "new" ? { device: newName } : {}} warnings={warnings} resultWarnings={resultWarnings} autoPreview={autoPreview} onCancel={onClose} />
+      <BatchReview
+        batch={batch}
+        names={mode === "new" ? { device: newName } : {}}
+        warnings={warnings}
+        resultWarnings={resultWarnings}
+        autoPreview={autoPreview}
+        onCancel={onClose}
+      />
     </form>
   );
 }

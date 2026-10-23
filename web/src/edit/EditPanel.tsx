@@ -4,10 +4,17 @@ import { editRules } from "./rules";
 
 /**
  * A form opened in place (not a modal: the page stays readable around it).
+ * The quick placement questions are modal on purpose (ADR 0052); this is the full form.
  * Focus moves to its heading when it opens, so a keyboard or screen-reader
  * user lands on it.
  */
-export function EditPanel({ title, children }: { title: string; children: ReactNode }) {
+export function EditPanel({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
   const id = useId();
   const ref = useRef<HTMLHeadingElement>(null);
   useEffect(() => {

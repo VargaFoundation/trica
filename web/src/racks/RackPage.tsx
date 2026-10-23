@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { ApiError } from "../api/client";
 import { api } from "../api/endpoints";
@@ -13,7 +13,17 @@ import { useI18n, type MessageKey } from "../i18n";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { useCrumbs } from "../components/crumbs";
 import { usePageTitle } from "../usePageTitle";
-import { DEFAULT_RACK_U, freeUnits, formatRange, layoutRack, otherFace, overallHealth, slotImage, type Issue, type Slot } from "./layout";
+import {
+  DEFAULT_RACK_U,
+  freeUnits,
+  formatRange,
+  layoutRack,
+  otherFace,
+  overallHealth,
+  slotImage,
+  type Issue,
+  type Slot,
+} from "./layout";
 import { HealthPill } from "../components/ui";
 import { RackElevation } from "./RackElevation";
 import { loadFaceImages } from "./faceImages";
@@ -21,6 +31,8 @@ import { useRackContents, type RackContents } from "./useRack";
 import { EditPanel, useCanDeclare, useCanMount } from "../edit/EditPanel";
 import { ObjectForm } from "../edit/ObjectForm";
 import { PlaceDeviceForm } from "../edit/PlaceDeviceForm";
+import { QuickPlaceDialog, type PlaceMode } from "../edit/QuickPlaceDialog";
+import type { PickedDevice } from "../edit/DevicePicker";
 import { useFloorContext, useRoomOf } from "../edit/useFloor";
 import type { Face } from "./layout";
 import { AisleSection } from "../aisles/AisleSection";
@@ -28,11 +40,29 @@ import { AirflowPill } from "../aisles/Airflow";
 import { aisleOf, faceAisle } from "../aisles/aisles";
 
 /**
- * The panel open under the actions. A placement with a device is a move or a
- * turn of a device already in this rack (a drop, or the table's buttons): the
- * form opens filled in and previews the change at once.
+ * What is open. Placing, moving and turning a device are a dialog (ADR 0052);
+ * the full form (warn-only on overlaps, a device no collector sees) and the
+ * rack's own fields stay a panel under the actions.
  */
-type Panel = { kind: "place"; u?: number; face?: Face; device?: { id: string; display: string } } | { kind: "edit" } | null;
+type Panel =
+  | {
+      kind: "quick";
+      mode: PlaceMode;
+      u?: number;
+      face?: Face;
+      device?: PickedDevice;
+    }
+  | {
+      kind: "full";
+      u?: number;
+      face?: Face;
+      device?: PickedDevice;
+      fixed: boolean;
+      height?: number;
+      declare?: boolean;
+    }
+  | { kind: "edit" }
+  | null;
 
 const ISSUE_TEXT: Record<Issue, MessageKey> = {
   overlap: "rack.issue.overlap",
@@ -44,55 +74,132 @@ const ISSUE_TEXT: Record<Issue, MessageKey> = {
 /** /racks/:id — front and rear elevations of one rack. */
 export function RackPage() {
   const { id = "" } = useParams();
-  const rack = useQuery({ queryKey: ["object", id], queryFn: ({ signal }) => api.object(id, signal), staleTime: 5 * 60_000 });
-  if (rack.isError && rack.error instanceof ApiError && rack.error.status === 404) return <NotFoundPage />;
-  return <Async query={rack}>{(r) => (r.type === "rack" ? <Rack rack={r} /> : <NotFoundPage />)}</Async>;
+  const rack = useQuery({
+    queryKey: ["object", id],
+    queryFn: ({ signal }) => api.object(id, signal),
+    staleTime: 5 * 60_000,
+  });
+  if (
+    rack.isError &&
+    rack.error instanceof ApiError &&
+    rack.error.status === 404
+  )
+    return <NotFoundPage />;
+  return (
+    <Async query={rack}>
+      {(r) => (r.type === "rack" ? <Rack rack={r} /> : <NotFoundPage />)}
+    </Async>
+  );
 }
 
 function Rack({ rack }: { rack: ObjectView }) {
   const { t, number } = useI18n();
   const contents = useRackContents(rack.id);
   usePageTitle(t("rack.pageTitle", { rack: rack.display }));
-  useCrumbs([{ label: t("nav.rooms"), to: "/rooms" }, { label: rack.display, to: `/objects/${encodeURIComponent(rack.id)}` }, { label: t("rack.elevation") }]);
+  useCrumbs([
+    { label: t("nav.rooms"), to: "/rooms" },
+    { label: rack.display, to: `/objects/${encodeURIComponent(rack.id)}` },
+    { label: t("rack.elevation") },
+  ]);
   const declared = rack.attributes?.u_height;
-  const uHeight = typeof declared === "number" && declared > 0 ? Math.floor(declared) : DEFAULT_RACK_U;
+  const uHeight =
+    typeof declared === "number" && declared > 0
+      ? Math.floor(declared)
+      : DEFAULT_RACK_U;
   const can = useCanDeclare();
   const canMount = useCanMount();
   const [panel, setPanel] = useState<Panel>(null);
+  const [done, setDone] = useState("");
+  const placeButton = useRef<HTMLButtonElement>(null);
+  const open = (p: Panel) => {
+    setDone("");
+    setPanel(p);
+  };
+  const form = panel?.kind === "full" ? panel : undefined;
   return (
     <>
       <h1>{t("rack.pageTitle", { rack: rack.display })}</h1>
       <p>
         <ObjectLink id={rack.id} display={t("rack.openObject")} />
       </p>
-      {can && panel === null ? (
+      {can && (panel === null || panel.kind === "quick") ? (
         <p className="actions">
           {canMount ? (
             <>
-              <button type="button" className="primary" onClick={() => setPanel({ kind: "place" })}>
+              <button
+                ref={placeButton}
+                type="button"
+                className="primary"
+                onClick={() => open({ kind: "quick", mode: "add" })}
+              >
                 {t("edit.place.button")}
               </button>{" "}
             </>
           ) : null}
-          <button type="button" onClick={() => setPanel({ kind: "edit" })}>
+          <button type="button" onClick={() => open({ kind: "edit" })}>
             {t("edit.rack.button")}
           </button>
         </p>
       ) : null}
-      {canMount && panel?.kind === "place" ? (
-        <EditPanel title={panel.device ? t("edit.place.titleMove", { device: panel.device.display, rack: rack.display }) : t("edit.place.titleRack", { rack: rack.display })}>
+      {done ? (
+        <p role="status" className="decision-notice" data-outcome="applied">
+          {done}
+        </p>
+      ) : null}
+      {canMount && panel?.kind === "quick" ? (
+        <QuickPlaceDialog
+          key={`${panel.mode}-${panel.device?.id ?? ""}-${panel.u ?? ""}-${panel.face ?? ""}`}
+          mode={panel.mode}
+          rack={{ id: rack.id, display: rack.display }}
+          device={panel.device}
+          initialPosition={panel.u}
+          initialFace={panel.face}
+          returnFocus={() => placeButton.current}
+          onClose={() => setPanel(null)}
+          onDone={(message) => {
+            setDone(message);
+            setPanel(null);
+          }}
+          onFullForm={(carry) =>
+            setPanel({
+              kind: "full",
+              u: carry.position,
+              face: carry.face as Face | undefined,
+              device: carry.device,
+              fixed: panel.mode !== "add",
+              height: carry.heightU,
+              declare: carry.declare,
+            })
+          }
+        />
+      ) : null}
+      {canMount && form ? (
+        <EditPanel
+          title={
+            form.device && form.fixed
+              ? t("edit.place.titleMove", {
+                  device: form.device.display,
+                  rack: rack.display,
+                })
+              : t("edit.place.titleRack", { rack: rack.display })
+          }
+        >
           <PlaceDeviceForm
-            key={`${panel.device?.id ?? ""}-${panel.u ?? ""}-${panel.face ?? ""}`}
+            key={`${form.device?.id ?? ""}-${form.u ?? ""}-${form.face ?? ""}-${form.declare ? "new" : ""}`}
             rack={{ id: rack.id, display: rack.display }}
-            device={panel.device}
-            initialPosition={panel.u}
-            initialFace={panel.face}
-            autoPreview={!!panel.device}
+            device={form.fixed ? form.device : undefined}
+            initialDevice={form.fixed ? undefined : form.device}
+            initialPosition={form.u}
+            initialFace={form.face}
+            initialHeight={form.height}
+            initialDeclare={form.declare}
             onClose={() => setPanel(null)}
           />
         </EditPanel>
       ) : null}
-      {can && panel?.kind === "edit" ? <EditRack rack={rack} onClose={() => setPanel(null)} /> : null}
+      {can && panel?.kind === "edit" ? (
+        <EditRack rack={rack} onClose={() => setPanel(null)} />
+      ) : null}
       {uHeight !== declared ? (
         <p role="note" className="notice">
           {t("rack.assumedHeight", { units: number(uHeight) })}
@@ -105,8 +212,23 @@ function Rack({ rack }: { rack: ObjectView }) {
             rack={rack}
             uHeight={uHeight}
             contents={c}
-            onPick={canMount ? (u, face) => setPanel({ kind: "place", u, face }) : undefined}
-            onPlace={canMount ? (s, u, face) => setPanel({ kind: "place", u, face, device: { id: s.item.id, display: s.item.name } }) : undefined}
+            onPick={
+              canMount
+                ? (u, face) => open({ kind: "quick", mode: "add", u, face })
+                : undefined
+            }
+            onPlace={
+              canMount
+                ? (s, u, face) =>
+                    open({
+                      kind: "quick",
+                      mode: face !== s.face && u === s.bottom ? "turn" : "move",
+                      u,
+                      face,
+                      device: { id: s.item.id, display: s.item.name },
+                    })
+                : undefined
+            }
           />
         )}
       </Async>
@@ -114,7 +236,13 @@ function Rack({ rack }: { rack: ObjectView }) {
   );
 }
 
-function EditRack({ rack, onClose }: { rack: ObjectView; onClose: () => void }) {
+function EditRack({
+  rack,
+  onClose,
+}: {
+  rack: ObjectView;
+  onClose: () => void;
+}) {
   const { t } = useI18n();
   const floor = useFloorContext(useRoomOf(rack));
   return (
@@ -139,10 +267,19 @@ function Elevations({
   onPlace?: (slot: Slot, u: number, face: Face) => void;
 }) {
   const { t, tp, number } = useI18n();
-  const layout = useMemo(() => layoutRack(uHeight, contents.items), [uHeight, contents.items]);
+  const layout = useMemo(
+    () => layoutRack(uHeight, contents.items),
+    [uHeight, contents.items],
+  );
   const frontAisle = aisleOf(rack.attributes?.front_aisle);
   const rows = useMemo(
-    () => [...layout.front, ...layout.rear].filter((s) => !s.shadow).sort((a, b) => b.bottom - a.bottom || a.item.name.localeCompare(b.item.name)),
+    () =>
+      [...layout.front, ...layout.rear]
+        .filter((s) => !s.shadow)
+        .sort(
+          (a, b) =>
+            b.bottom - a.bottom || a.item.name.localeCompare(b.item.name),
+        ),
     [layout],
   );
   return (
@@ -184,7 +321,9 @@ function Elevations({
               face={face}
               slots={layout[face]}
               onPick={onPick}
-              onMove={onPlace ? (s, bottom) => onPlace(s, bottom, s.face) : undefined}
+              onMove={
+                onPlace ? (s, bottom) => onPlace(s, bottom, s.face) : undefined
+              }
             />
           </figure>
         ))}
@@ -206,10 +345,14 @@ function Elevations({
                 { caption: t("rack.front"), slots: layout.front },
                 { caption: t("rack.rear"), slots: layout.rear },
               ],
-              footer: t("export.footer", { date: new Date().toISOString().slice(0, 10) }),
+              footer: t("export.footer", {
+                date: new Date().toISOString().slice(0, 10),
+              }),
               // The same images as on screen, fetched from this origin with the session's token.
               images: await loadFaceImages(
-                [...layout.front, ...layout.rear].map(slotImage).filter((u): u is string => !!u),
+                [...layout.front, ...layout.rear]
+                  .map(slotImage)
+                  .filter((u): u is string => !!u),
               ),
             },
             format,
@@ -250,7 +393,11 @@ function Elevations({
             </thead>
             <tbody>
               {rows.map((s) => (
-                <Row key={`${s.item.id}-${s.face}`} slot={s} onPlace={onPlace} />
+                <Row
+                  key={`${s.item.id}-${s.face}`}
+                  slot={s}
+                  onPlace={onPlace}
+                />
               ))}
             </tbody>
           </table>
@@ -260,7 +407,13 @@ function Elevations({
   );
 }
 
-function Row({ slot: s, onPlace }: { slot: Slot; onPlace?: (slot: Slot, u: number, face: Face) => void }) {
+function Row({
+  slot: s,
+  onPlace,
+}: {
+  slot: Slot;
+  onPlace?: (slot: Slot, u: number, face: Face) => void;
+}) {
   const { t, number } = useI18n();
   const turnTo = otherFace(s.face);
   return (
@@ -269,24 +422,36 @@ function Row({ slot: s, onPlace }: { slot: Slot; onPlace?: (slot: Slot, u: numbe
         <ObjectLink id={s.item.id} display={s.item.name} />
       </th>
       <td data-label={t("rack.col.model")}>{s.item.typeName ?? "—"}</td>
-      <td data-label={t("rack.col.position")}>{formatRange(s.bottom, s.height)}</td>
+      <td data-label={t("rack.col.position")}>
+        {formatRange(s.bottom, s.height)}
+      </td>
       <td data-label={t("rack.col.face")}>
         {t(s.face === "front" ? "rack.front" : "rack.rear")}
         {s.item.fullDepth ? ` (${t("rack.fullDepth")})` : ""}
       </td>
-      <td data-label={t("rack.col.height")}>{t("rack.units", { units: number(s.height) })}</td>
+      <td data-label={t("rack.col.height")}>
+        {t("rack.units", { units: number(s.height) })}
+      </td>
       <td data-label={t("health.label")}>
         <HealthPill value={overallHealth(s.item)} />
       </td>
-      <td data-label={t("airflow.label")} data-airflow={s.item.airflow?.status ?? "unknown"}>
+      <td
+        data-label={t("airflow.label")}
+        data-airflow={s.item.airflow?.status ?? "unknown"}
+      >
         <AirflowPill check={s.item.airflow} />
       </td>
       <td data-label={t("rack.col.notes")}>
-        {s.issues.length === 0 && !s.item.variantUncertain ? "—" : s.issues.map((i) => t(ISSUE_TEXT[i])).join(" · ")}
+        {s.issues.length === 0 && !s.item.variantUncertain
+          ? "—"
+          : s.issues.map((i) => t(ISSUE_TEXT[i])).join(" · ")}
         {s.item.variantUncertain ? (
           <>
             {s.issues.length > 0 ? " · " : ""}
-            <Link to={`/objects/${encodeURIComponent(s.item.id)}#device-model`} data-variant-link="">
+            <Link
+              to={`/objects/${encodeURIComponent(s.item.id)}#device-model`}
+              data-variant-link=""
+            >
               {t("variant.rackLink")}
               <span className="sr-only"> ({s.item.name})</span>
             </Link>
@@ -295,7 +460,11 @@ function Row({ slot: s, onPlace }: { slot: Slot; onPlace?: (slot: Slot, u: numbe
       </td>
       {onPlace ? (
         <td data-label={t("rack.col.actions")} className="row-actions">
-          <button type="button" onClick={() => onPlace(s, s.bottom, s.face)} data-move={s.item.id}>
+          <button
+            type="button"
+            onClick={() => onPlace(s, s.bottom, s.face)}
+            data-move={s.item.id}
+          >
             {t("rack.move")}
             <span className="sr-only"> ({s.item.name})</span>
           </button>{" "}
@@ -303,7 +472,11 @@ function Row({ slot: s, onPlace }: { slot: Slot; onPlace?: (slot: Slot, u: numbe
             type="button"
             onClick={() => onPlace(s, s.bottom, turnTo)}
             data-turn={s.item.id}
-            title={t("rack.turnTitle", { face: t(turnTo === "front" ? "rack.front" : "rack.rear").toLowerCase() })}
+            title={t("rack.turnTitle", {
+              face: t(
+                turnTo === "front" ? "rack.front" : "rack.rear",
+              ).toLowerCase(),
+            })}
           >
             {t("rack.turn")}
             <span className="sr-only"> ({s.item.name})</span>

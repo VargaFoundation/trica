@@ -66,6 +66,29 @@ export function firstFit(rackU: number, heightU: number, face: Face, fullDepth: 
   return undefined;
 }
 
+/**
+ * The free position nearest to `from` for a device of `heightU` on `face`, or
+ * undefined when it fits nowhere. A tie goes to the lower unit (cables and
+ * weight sit low). `from` itself is a candidate: when it is free it is the answer.
+ */
+export function nearestFit(
+  rackU: number,
+  heightU: number,
+  face: Face,
+  fullDepth: boolean,
+  others: readonly Mounted[],
+  halfUnits: boolean,
+  from: number,
+): number | undefined {
+  const step = halfUnits ? 0.5 : 1;
+  let best: number | undefined;
+  for (let u = 1; u + heightU - 1 <= rackU + EPS; u += step) {
+    if (checkPlacement({ rackU, position: u, heightU, face, fullDepth, halfUnits, others }).overlaps.length > 0) continue;
+    if (best === undefined || Math.abs(u - from) < Math.abs(best - from) - EPS) best = u;
+  }
+  return best;
+}
+
 export type TileError = "tileMissing" | "tileWhole";
 
 export interface TileCheck {

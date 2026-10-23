@@ -19,3 +19,13 @@ beforeEach(() => {
   // The app moves focus to <main> on navigation; start every test from a clean page.
   if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
 });
+
+// jsdom has no <dialog> behaviour: showModal() and close() only flip `open`, as far as the tests need.
+if (typeof HTMLDialogElement !== "undefined") {
+  HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) {
+    this.removeAttribute("open");
+  };
+}

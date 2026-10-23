@@ -9585,6 +9585,19 @@
             }
           },
           {
+            "description": "true keeps the objects mounted in a rack now, false those mounted in none (the same as rel.mounted_in:* and -rel.mounted_in:*).",
+            "in": "query",
+            "name": "mounted",
+            "required": false,
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "description": "Page size, 1 to 1000 (default 50).",
             "in": "query",
             "name": "limit",

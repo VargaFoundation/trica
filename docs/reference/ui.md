@@ -214,7 +214,7 @@ for a caller who holds `propose` (`GET /me`); the API checks every write again.
 |---|---|
 | `/rooms` | **Add a site**, **Add a room** (in a site or building chosen from the schema's parents) |
 | `/rooms/<id>` | **Add a rack** in the room, on a floor tile (click a free tile: its X and Y are filled in); **Edit this room** (name, size, tile) |
-| `/racks/<id>` | **Place a device** (click a free unit: its U and face are filled in): a device the inventory has (search by name), or one no collector sees (a PDU, a UPS, a patch panel, a shelf: name or serial or asset tag, role, vendor, model, height); **move a device by dragging it** to another unit (its outline follows the pointer, red over another device or out of the rack; Escape cancels); **Move** and **Turn** (mount it from the other face) in the table of mounted devices: the placement form opens filled in and previews the change at once, nothing is sent before Submit; **Edit this rack** (name, height, floor tile, facing) |
+| `/racks/<id>` | **Place a device** and a click on a free unit (its U and face are filled in) open a **dialog** (ADR 0052): a search among the devices in no rack (`GET /objects?mounted=false`; an absent one is marked; a toggle adds the devices mounted in other racks, which moves them), U, face (front or rear), height when nobody says it, whether it fits, and what the engine would do, previewed as you type; **Place** opens under a fresh preview. A device that would share rack space with another is refused here and the dialog offers the nearest free U or the same U on the other face. **Open full form** (and **Declare a device no collector sees**: a PDU, a UPS, a patch panel, a shelf) opens the form below the actions, which only warns about an overlap; **move a device by dragging it** to another unit (its outline follows the pointer, red over another device or out of the rack; Escape cancels), **Move** and **Turn** (mount it from the other face) in the table of mounted devices: a compact dialog opens on the new unit and face, previews at once, nothing is sent before **Move** / **Turn**; **Edit this rack** (name, height, floor tile, facing) |
 | `/objects/<id>` of a device | **Rack placement**: where it is mounted and who said so; **Place in a rack** / **Move**, **Remove from this rack** |
 | `/objects/<id>` of a device in no rack | **Location**: the site, building or room a person placed it in and who said so; **Place in a site, building or room** / **Move to another place**, **Remove from this place** ([ADR 0058](../adr/0058-placing-devices-outside-racks.md)). A rack decides the site of a mounted device: its old places are shown as ignored and can still be withdrawn. When the places disagree on the site, a place is in another site than the rack, or a mounted device's racks are in two sites (the section then also appears for a device with nothing placed), it says so and links to the `location_conflict` discrepancies ([ADR 0061](../adr/0061-location-conflict-discrepancy.md)). The page of a site, building or room lists **Devices here**. The fleet groups such devices under their place |
 | `/objects/<id>` of a device whose chassis is not certain | **Device model** (ADR 0048): one radio button per candidate chassis, with its front painted, its name, height and depth; the chosen one's front and rear larger; the batch relates the device to that model (`instance_of`, the model by its slug). **Change the model** on a certain model for an administrator, and for the person whose declaration decides (their earlier choice is withdrawn, a colleague's is not). Needs `propose` on devices and on device models (`can_choose`) |
@@ -244,7 +244,11 @@ for a caller who holds `propose` (`GET /me`); the API checks every write again.
 - Keyboard: free units, free tiles and dragging a device are pointer shortcuts only; the **Place a
   device** and **Add a rack** buttons, and **Move** and **Turn** in the rack's table, open the same
   forms. A form opens in the page, focus moves to its title, and
-  the preview and the outcome take the focus when they arrive.
+  the preview and the outcome take the focus when they arrive. A dialog (ADR 0052) is modal: the
+  page behind is inert, the focus goes to its first field (the search, or the position), Tab stays
+  inside, **Esc** or a click on the backdrop closes it without sending anything, and the focus
+  returns to what opened it. Its outcome is a status line on the page ("Placed srv-02 at U12 in
+  r12.") or, when the change goes for approval, "Sent for approval" with the proposal's link.
 
 ### Which aisle a rack faces
 
@@ -389,8 +393,9 @@ after a warm-up render, each from a reloaded room page, under one second). The
 topology specs check every kind of link, the filters, the table as keyboard path, PNG and PDF
 downloads of the rack and of the graph (signature, size, pixels inked, no content-security-policy
 violation), axe in English and French, and the time to draw 200 devices (budget: under 8 s from the
-menu click, of which layout under 6 s). `declare.spec.ts` places a declared PDU from a free unit
-through preview to "sent for approval", refuses a position outside a rack before sending, and
+menu click, of which layout under 6 s). `declare.spec.ts` opens the placement dialog from a free
+unit (the picker lists spare-01 and not sw-a1, the dialog is modal, Esc closes it and the focus returns),
+places spare-01 through the engine preview to "sent for approval", declares a PDU in the full form, refuses a position outside a rack before sending, and
 adds a rack from a free floor tile, with axe on the open forms. `faces.spec.ts` opens srv-p1, a
 DL360 Gen9 8SFF in no rack: both faces painted, the spots of each state, the details on hover, the
 arrow keys, the unplaced disk, axe and no CSP violation, in both themes. `pages.spec.ts` also covers the three Collectors pages (the mock describes a module with two
