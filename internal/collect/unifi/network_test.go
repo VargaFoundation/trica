@@ -394,6 +394,40 @@ func TestNetworkEdgeDevicesAndPorts(t *testing.T) {
 // template is named otherwise, and when the collector names a port otherwise.
 func TestOfficePortsAreTemplatesOfTheirModel(t *testing.T) {
 	b := runNet(t, newFakeNet(t, SetNetwork))
+	checked := portsAreTemplates(t, b, nil, nil)
+	if checked["UDMPROMAX"] != 11 || checked["USPM24P"] != 26 {
+		t.Fatalf("ports checked per model %v: the UDM Pro Max has 11, the switch 26", checked)
+	}
+}
+
+// The edge set reaches the models the office does not: a USW-Ultra reporting
+// ports 1 and 8 (8 is the PoE-in port upstream names "Port 8 (PoE IN)"), a
+// device the library does not have, and the UXG Pro, which is still named by
+// role upstream and listed as blocked (#177): its ports are asserted NOT to be
+// templates, so that renaming it fails here until this line moves. The U6 LR of
+// the set produces no port (a 404 detail, an id that is not a UUID, no MAC), so
+// it cannot be checked on this set.
+func TestEdgePortsAreTemplatesOfTheirModel(t *testing.T) {
+	b := runNet(t, newFakeNet(t, SetNetworkEdge))
+	checked := portsAreTemplates(t, b, map[string]string{"UXGPRO": "#177: when the UXG Pro is renamed, move it out"},
+		map[string]bool{"USW-Edge-24": true, "XYZ-1": true})
+	want := map[string]int{"USW-Lite-8-PoE": 1, "U7PRO": 1, "USW-Ultra": 2, "UXGPRO": 2, "U6LR": 0}
+	for pn, n := range want {
+		if checked[pn] != n {
+			t.Errorf("%s: %d ports checked, want %d (all: %v)", pn, checked[pn], n, checked)
+		}
+	}
+}
+
+// portsAreTemplates looks up the model of every device that has ports and
+// checks each port name against its interface templates. A part number in
+// blocked is a known gap: its ports must NOT be templates yet. A part number in
+// missing is one the library does not have (a device the edge set invents). It
+// returns the
+// number of ports checked per part number. A device with no port is not looked
+// up, so the library need not have it.
+func portsAreTemplates(t *testing.T, b *sdk.Batch, blocked map[string]string, missing map[string]bool) map[string]int {
+	t.Helper()
 	models, err := devicetypes.Default()
 	if err != nil {
 		t.Fatal(err)
@@ -402,12 +436,18 @@ func TestOfficePortsAreTemplatesOfTheirModel(t *testing.T) {
 	checked := map[string]int{}
 	for _, d := range collecttest.Objects([]*sdk.Batch{b}, "device") {
 		pn, _ := d.Attributes["part_number"].(string)
+		ports := portsOf(b, d.Ref)
 		if pn == "" {
+			continue
+		}
+		if len(ports) == 0 {
 			continue
 		}
 		m := ix.Find("Ubiquiti", "", pn)
 		if m == nil {
-			t.Errorf("%s: no model for part number %q", d.Ref, pn)
+			if !missing[pn] {
+				t.Errorf("%s: no model for part number %q", d.Ref, pn)
+			}
 			continue
 		}
 		tmpl := map[string]bool{}
@@ -416,16 +456,19 @@ func TestOfficePortsAreTemplatesOfTheirModel(t *testing.T) {
 				tmpl[p.Name] = true
 			}
 		}
-		for _, p := range portsOf(b, d.Ref) {
-			if name := p.Identity["name"]; !tmpl[name] {
+		reason, gap := blocked[pn]
+		for _, p := range ports {
+			name := p.Identity["name"]
+			switch {
+			case gap && tmpl[name]:
+				t.Errorf("%s (%s): port %q is a template now: %s", d.Ref, pn, name, reason)
+			case !gap && !tmpl[name]:
 				t.Errorf("%s (%s): port %q is no interface template of %s", d.Ref, pn, name, m.Model.Slug)
 			}
 			checked[pn]++
 		}
 	}
-	if checked["UDMPROMAX"] != 11 || checked["USPM24P"] != 26 {
-		t.Fatalf("ports checked per model %v: the UDM Pro Max has 11, the switch 26", checked)
-	}
+	return checked
 }
 
 func portsOf(b *sdk.Batch, dev string) []*sdk.Object {

@@ -48,11 +48,20 @@ add to the overlay, with its source. The overlay is part of the embedded library
 `extra_dir` has none.
 
 The overlay can also rename interface templates (`interface_names`, old name to new, [ADR 0056](../adr/0056-growing-the-device-type-library.md)
-amended by #173). Seven models have it: the UDM, UDM Pro, UDM Pro SE, UDM Pro Max and UDR7, whose
-upstream names are `port.1` to `port.N`, and the USW Pro Max 24 and 24 PoE, whose SFP+ ports are
-`SFP+ 25` and `SFP+ 26`. The UniFi Network collector names every port `Port <idx>` ([ADR 0060](../adr/0060-unifi-network-integration-api.md)),
-so the templates of these models now carry the same names; the upstream files stay unchanged. The
-report to upstream is drafted in issue #173 and was not filed.
+amended by #173 and #177). The UniFi Network collector names every port `Port <idx>`
+([ADR 0060](../adr/0060-unifi-network-integration-api.md)). A model is renamed to match only when
+upstream's own names or labels number **every wired interface exactly once, from 1 to N** (`port.N`
+labelled `Port N - ...` on the UDM family and the UDR7, `SFP+ 25`, `SFP28 49`, `10G Port 9`,
+`Port 1 (PoE+)`): 40 models, the UDM family, the UDR7 and 35 switches and aggregation switches
+(the USW Pro, Pro Max, Pro XG, Pro HD, Enterprise, Lite, Flex, Flex 2.5G, Ultra, the aggregation
+switches, the Enterprise Campus switches and the US-16-XG). A renamed interface that upstream does
+not label keeps its upstream name as label (`Port 1 (PoE+)` becomes `Port 1`, label `Port 1 (PoE+)`),
+so the PoE hint is not lost. The upstream files stay unchanged. The rule rests on an assumption
+nothing proves yet: that `idx` is the number printed on the faceplate (the API documents it as an
+integer of at least 1 and says no more; the tech specs do not number ports; see point 9 of
+`internal/collect/unifi/testdata/README.md`). A model whose numbering repeats or skips stays as
+upstream names it, listed with its reason in `blockedPortNames` of the test (46 models, see
+Not covered). The report to upstream is drafted in issue #173 and was not filed.
 
 ## How sure a match is, and the variants a person can choose
 
@@ -347,11 +356,23 @@ library and `TestCatalogueListIsCurrent` fails when it is out of date (`go test
 - A name glued to `plus` (`DS218plus`) matches, but offers only its own model as candidate; a
   device that drops the `+` its model has loses the match; the DS218+ has no face (upstream has
   pictures, but the image budget does not allow them).
-- UniFi families whose template names still differ from the collector's `Port <idx>`: UCG-Max and
-  UCG-Fiber (`WAN`, `LAN1`), UXG (`WAN 1`, `Lan 1`), access points (`eth0`, `lan0`), USW-Pro-Max-16
-  (`GbE N`, `SFP+ 1`), the first-generation switches (`SFP 1` for port 25). They wait for a recorded
-  console to confirm the port order (finding #177). The `eth8` and `eth9` the cloud collector
-  gives the console's WAN ports are an observed name, not a template.
+- UniFi families whose template names still differ from the collector's `Port <idx>` (46 models,
+  finding #177). Each waits for a recorded console, and what it lacks is:
+  - gateways (UCG-Max and Fiber, UXG Lite, Max and Pro, UX, UX7, USG, USG-Pro-4): role names
+    (`WAN`, `LAN1`, `eth0`), no printed numbering; they need a recorded device detail and which
+    physical port was plugged in;
+  - access points (U6+, U6 Enterprise, U6 LR, U6 Lite, U6 Mesh, U7 LR, U7 Pro XGS, UAP-AC-LR,
+    Lite and nanoHD: one `eth0`, `lan0` or `Ethernet`; U6-IW and UAP-AC-Pro: an uplink to place): one
+    recorded detail per model;
+  - USW-Pro-Max-16 and 16-PoE, USW-Pro-XG-8-PoE, the first-generation switches (US-24, US-48 and
+    the 250 W and 500 W ones), USW-24, USW-24-PoE, USW-16-PoE: the numbering restarts after the RJ45
+    ports (`SFP 1`, `SFP+ 1`, `GbE 1`); they need the `idx` of the SFP ports;
+  - USW-WAN-RJ45 (an unnumbered `MGMT`), USP-PDU-Pro (`Port 21` to `24`);
+  - recorders, NAS, power, controllers, the application server (unnumbered or role names; not
+    known to be listed with ports by the Integration API), and the ES-48-Lite (an EdgeSwitch).
+
+  The `eth8` and `eth9` the cloud collector gives the console's WAN ports are an observed name,
+  not a template.
 - UniFi shortnames that the fingerprint database does not list (the USW-Flex-2.5G family, the
   CKG2-RM), and operator overlays in `extra_dir`.
 - Part numbers upstream gives to two models (HPE `P19766-B21`, `P56707-B21`, `R4U28A`; Lenovo
