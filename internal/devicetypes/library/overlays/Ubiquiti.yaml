@@ -7,6 +7,12 @@
 # without the upstream file changing. The loader checks every entry (unknown slug, other
 # manufacturer, shortname listed twice: the load fails).
 #
+# An entry may also rename interface templates (interface_names, old: new). The UniFi Network
+# application and its Integration API number a device's ports 1..N and the collector names
+# them "Port N" (ADR 0060); upstream's labels ("Port 9 - WAN 1") give the same numbers, but
+# its names are port.N on the UDM family and the UDR7, and SFP+ 25 / SFP+ 26 on the USW Pro
+# Max 24. An upstream report is drafted in issue #173 (not filed).
+#
 # Source: Ubiquiti's device fingerprint database, https://static.ui.com/fingerprint/ui/public.json
 # (700 devices, read 2026-10-23): the "shortnames" of the record whose "sku" is the model's
 # part_number. Models of the database that the library does not have are left out; so are
@@ -16,12 +22,16 @@ models:
   # Gateways
   - slug: ubiquiti-udm
     part_numbers: [UDM]
+    interface_names: {port.1: Port 1, port.2: Port 2, port.3: Port 3, port.4: Port 4, port.5: Port 5}
   - slug: ubiquiti-unifi-dream-machine-pro
     part_numbers: [UDMPRO, UDMP]
+    interface_names: {port.1: Port 1, port.2: Port 2, port.3: Port 3, port.4: Port 4, port.5: Port 5, port.6: Port 6, port.7: Port 7, port.8: Port 8, port.9: Port 9, port.10: Port 10, port.11: Port 11}
   - slug: ubiquiti-unifi-dream-machine-pro-special-edition
     part_numbers: [UDMPROSE, UDM-SE]
+    interface_names: {port.1: Port 1, port.2: Port 2, port.3: Port 3, port.4: Port 4, port.5: Port 5, port.6: Port 6, port.7: Port 7, port.8: Port 8, port.9: Port 9, port.10: Port 10, port.11: Port 11}
   - slug: ubiquiti-unifi-dream-machine-pro-max
     part_numbers: [UDMPROMAX]
+    interface_names: {port.1: Port 1, port.2: Port 2, port.3: Port 3, port.4: Port 4, port.5: Port 5, port.6: Port 6, port.7: Port 7, port.8: Port 8, port.9: Port 9, port.10: Port 10, port.11: Port 11}
   - slug: ubiquiti-unifi-cloud-gateway-ultra
     part_numbers: [UDRULT, UCG-Ultra, UDR-Pro, UDR-Ultra]
   - slug: ubiquiti-unifi-cloud-gateway-max
@@ -38,6 +48,7 @@ models:
     part_numbers: [EFG, UDMENT]
   - slug: ubiquiti-unifi-dream-router-7
     part_numbers: [UDR7]
+    interface_names: {port.1: Port 1, port.2: Port 2, port.3: Port 3, port.4: Port 4, port.5: Port 5}
   - slug: ubiquiti-unifi-express-7
     part_numbers: [UX7, UXMAX]
   - slug: ubiquiti-unifi-express-ux
@@ -53,8 +64,10 @@ models:
     part_numbers: [USPM16P]
   - slug: ubiquiti-unifi-switch-pro-max-24
     part_numbers: [USPM24]
+    interface_names: {SFP+ 25: Port 25, SFP+ 26: Port 26}
   - slug: ubiquiti-unifi-switch-pro-max-24-poe
     part_numbers: [USPM24P]
+    interface_names: {SFP+ 25: Port 25, SFP+ 26: Port 26}
   - slug: ubiquiti-unifi-switch-pro-max-48
     part_numbers: [USPM48]
   - slug: ubiquiti-unifi-switch-pro-max-48-poe

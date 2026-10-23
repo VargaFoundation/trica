@@ -85,6 +85,14 @@ rules of the loader and the matcher stood in the way:
    force the "catalogue pack" decision of the reference page. The list of the models is generated
    (`docs/reference/devicetypes-catalogue.md`, checked by `TestCatalogueListIsCurrent`) instead of
    written by hand.
+   *Amended (#173): an entry may rename interface templates of an upstream model by
+   `interface_names` (old name to new). The UDM family and the UDR7 name their ports `port.N`
+   and the USW Pro Max 24 its SFP+ ports `SFP+ 25/26`, while the UniFi Network collector names
+   every port `Port <idx>` (ADR 0060). The renames apply at once, to interfaces only, and keep
+   the type, label and `mgmt_only`; the load fails on an unknown name, an empty name, a rename
+   to itself or a duplicate result. Rejected: a variant file (its slug or name clashes with the
+   upstream copy), naming ports per model in the collector (it would copy upstream's error into
+   observations), and normalising at match time (nothing compares interfaces with templates yet).*
 
 ## Consequences
 
@@ -92,6 +100,8 @@ rules of the loader and the matcher stood in the way:
 - The Ubiquiti and Synology DiskStation models are 0 U: they are in the inventory with their
   ports and weight, but they have no place on a rack elevation (a mounted one draws as an assumed
   1 U, flagged).
+- Seven UniFi models have their interface templates renamed by the overlay (#173); other UniFi
+  families still differ from `Port <idx>`.
 - A UniFi collector must report the display name as `model` and the shortname as `part_number`.
   A name that matches neither is the case to add to the overlay.
 - Part numbers that upstream gives to two models stop matching by part number alone (the names
