@@ -154,16 +154,13 @@ describe("the firmware of a device", () => {
     expect(api.calls.some((c) => c.path === "/objects" && c.query.get("type") === "device")).toBe(false);
   });
 
-  it("has no accessibility violation, in either theme", async () => {
-    for (const theme of ["light", "dark"] as const) {
-      mockApi(routes());
-      const view = renderApp({ at: `/objects/${ID.srv01}`, theme });
-      const { rows } = await table();
-      await within(rows[2] as HTMLElement).findByText(/on 2 devices/);
-      await expectNoA11yViolations();
-      view.unmount();
-    }
-  });
+  it.each(["light", "dark"] as const)("has no accessibility violation, in the %s theme", async (theme) => {
+    mockApi(routes());
+    renderApp({ at: `/objects/${ID.srv01}`, theme });
+    const { rows } = await table();
+    await within(rows[2] as HTMLElement).findByText(/on 2 devices/);
+    await expectNoA11yViolations();
+  }, 20_000); // axe takes about 1.5 s alone and several times that with the whole suite running in parallel
 
   it("speaks French", async () => {
     mockApi(routes());
