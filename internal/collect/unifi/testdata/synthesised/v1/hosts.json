@@ -1,0 +1,53 @@
+{
+  "data": [
+    {
+      "id": "host-office-a:1",
+      "type": "console",
+      "ipAddress": "203.0.113.20",
+      "isBlocked": false,
+      "reportedState": {
+        "hostname": "office-a",
+        "name": "Office A",
+        "mac": "02:00:00:01:00:01",
+        "ip": "198.51.100.20",
+        "version": "5.0.6",
+        "state": "connected",
+        "ipAddrs": ["fe80::0:ff:fe01:1", "198.51.100.20", "192.0.2.1"],
+        "hardware": {
+          "name": "UniFi Dream Machine Pro",
+          "shortname": "UDMPRO",
+          "mac": "02:00:00:01:00:01",
+          "serialno": "02:00:00:01:00:01",
+          "firmwareVersion": "5.0.6"
+        },
+        "features": {"hasGateway": true},
+        "controllers": [
+          {"name": "network", "version": "9.0.114", "state": "active", "isInstalled": true, "isRunning": true},
+          {"name": "protect", "version": "6.2.88", "state": "active", "isInstalled": true, "isRunning": true},
+          {"name": "talk", "version": "", "state": "inactive", "isInstalled": false, "isRunning": false}
+        ],
+        "wans": [
+          {"enabled": true, "interface": "eth8", "ipv4": "198.51.100.20", "mac": "02:00:00:00:01:0b", "plugged": true, "speedType": "GbE", "type": "WAN"},
+          {"enabled": true, "interface": "eth9", "mac": "02:00:00:00:01:0c", "plugged": false, "speedType": "10G SFP+", "type": "WAN2"}
+        ]
+      }
+    },
+    {
+      "id": "host-server:1",
+      "type": "network-server",
+      "ipAddress": "203.0.113.30",
+      "isBlocked": false,
+      "reportedState": {
+        "hostname": "unifi-srv",
+        "name": "Self-hosted Network",
+        "mac": "02:00:00:00:01:50",
+        "ip": "192.0.2.50",
+        "version": "9.0.114",
+        "state": "connected"
+      }
+    }
+  ],
+  "httpStatusCode": 200,
+  "nextToken": "page-2",
+  "traceId": "00000000000000000000000000000000"
+}

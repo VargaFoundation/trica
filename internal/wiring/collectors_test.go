@@ -73,7 +73,7 @@ func TestServerListsCollectorModulesAndTheirTargets(t *testing.T) {
 	for _, m := range cat.Modules {
 		kinds = append(kinds, m.Kind+":"+m.Deployment)
 	}
-	want := "agent:agent,arista:target,kubernetes:target,maas:target,mikrotik:target,pfsense:target,redfish:target,wiringtest:target"
+	want := "agent:agent,arista:target,kubernetes:target,maas:target,mikrotik:target,pfsense:target,redfish:target,unifi:target,wiringtest:target"
 	if strings.Join(kinds, ",") != want {
 		t.Fatalf("modules\n got %v\nwant %s", kinds, want)
 	}

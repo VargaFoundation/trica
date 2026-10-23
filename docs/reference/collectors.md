@@ -15,7 +15,7 @@ a pasted secret stops the start instead of collecting nothing.
 
 | Key | Meaning |
 |---|---|
-| `kind` | The collector module: `arista`, `kubernetes`, `maas`, `mikrotik`, `pfsense` or `redfish` today. `GET /api/v1/collectors` (or the Collectors page) is the authoritative list of what this build knows. |
+| `kind` | The collector module: `arista`, `kubernetes`, `maas`, `mikrotik`, `pfsense`, `redfish` or `unifi` today. `GET /api/v1/collectors` (or the Collectors page) is the authoritative list of what this build knows. |
 | `name` | Identifies the target. The batch source is `<kind>:<name>`, which is also the key of the health board and of the logs. |
 | `address` | Where to connect; the form depends on the collector (examples below). |
 | `username` | Account name, for the collectors that use one. |
@@ -68,6 +68,15 @@ targets:
     address: http://198.51.100.30:5240
     password: file:/var/run/secrets/collect/maas-key/key
 
+  - kind: unifi                # UniFi Site Manager (cloud); password is the API key, no address
+    name: office
+    password: env:UNIFI_API_KEY          # or file:/var/run/secrets/collect/unifi-key/key
+    domain: office-a                     # LAN addresses repeat across sites (ADR 0036)
+    interval: 5m
+    options:
+      hosts: [office-a]                  # optional: consoles to read; default every console of the key
+      roles: ["UAH-DOOR=access_control"] # optional: shortname or model = device role
+
   - kind: kubernetes           # inside the cluster: the pod's service account
     name: prod
     address: in-cluster
@@ -83,6 +92,16 @@ targets:
       cluster: lab
       kubeconfig: /etc/trica/lab.kubeconfig
 ```
+
+`unifi` is the first collector that reaches an Internet service rather than a device on your
+network: it reads `https://api.ui.com` (the UniFi Site Manager API) with an API key that covers
+**every console of the UniFi account** that created it (restrict a target with `options.hosts`,
+and prefer a key from a dedicated account with the least role that sees the consoles). The server
+needs egress to `api.ui.com:443`; `HTTPS_PROXY` is honoured. A NetworkPolicy cannot name a DNS
+name: with `networkPolicy.egressTo` set, allow port 443 to the Internet (`ipBlock: 0.0.0.0/0`) or
+send the traffic through a proxy you allow. The answers carry the account's e-mail, name and
+permissions and the console's location; none of it is decoded, stored or logged
+([ADR 0057](../adr/0057-unifi-site-manager.md), [the module's README](../../internal/collect/unifi/README.md)).
 
 Every run of a target ends in one health record on the board (`GET /api/v1/health/collection`):
 the collector's own, or, when it returned an error, panicked or reported none, one made by the

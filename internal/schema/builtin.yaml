@@ -106,7 +106,7 @@ types:
       machine_id: {kind: string, identity: weak, search: true, label: {en: Machine ID, fr: Identifiant machine}, description: "Linux /etc/machine-id. Weak: a cloned image shares it until it is regenerated."}
       asset_tag: {kind: string, identity: strong, search: true, label: {en: Asset tag, fr: Étiquette d'inventaire}, description: "Asset tag."}
       base_mac: {kind: mac, identity: strong, search: true, label: {en: Base MAC, fr: MAC de base}, description: "Chassis base MAC address (LLDP chassis ID on switches)."}
-      role: {kind: enum, values: [server, switch, router, firewall, storage, pdu, ups, patch_panel, sensor, nas, kvm, other], search: true, label: {en: Role, fr: Rôle}, description: "Function of the device."}
+      role: {kind: enum, values: [server, switch, router, firewall, storage, pdu, ups, patch_panel, sensor, nas, kvm, other, access_point, access_control, camera], search: true, label: {en: Role, fr: Rôle}, description: "Function of the device: a wireless access point, an access control hub or reader and a camera are roles of their own."}
       vendor: {kind: string, search: true, label: {en: Vendor, fr: Constructeur}, description: "Manufacturer."}
       model: {kind: string, search: true, label: {en: Model, fr: Modèle}, description: "Model as reported by the device."}
       part_number: {kind: string, search: true, label: {en: Part number, fr: Référence}, description: "Manufacturer part number."}
@@ -756,6 +756,12 @@ relations:
     to: [interface, vlan, k8s_cluster, team]
     attributes:
       tagged: {kind: bool, label: {en: Tagged, fr: Étiqueté}, description: "For VLAN membership, whether frames are tagged."}
+  managed_by:
+    label: {en: is managed by, fr: est géré par}
+    inverse: {en: manages, fr: gère}
+    description: A device adopted by a controller that configures it (a UniFi console, a wireless controller). No impact is propagated - a device keeps forwarding when its controller is down.
+    from: [device]
+    to: [device]
   assigned_to:
     label: {en: is assigned to, fr: est attribuée à}
     inverse: {en: has address, fr: porte l'adresse}

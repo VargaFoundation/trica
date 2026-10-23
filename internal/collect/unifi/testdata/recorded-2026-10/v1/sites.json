@@ -1,0 +1,120 @@
+{
+  "data": [
+    {
+      "siteId": "000000000000000000000001",
+      "hostId": "000000000000000000000000000000000000000000000000000000000001:1234567890",
+      "meta": {
+        "desc": "Default",
+        "gatewayMac": "02:00:00:00:00:01",
+        "name": "default",
+        "timezone": "Europe/Paris"
+      },
+      "statistics": {
+        "counts": {
+          "criticalNotification": 0,
+          "gatewayDevice": 1,
+          "guestClient": 0,
+          "lanConfiguration": 1,
+          "offlineDevice": 0,
+          "offlineGatewayDevice": 0,
+          "offlineWifiDevice": 0,
+          "offlineWiredDevice": 0,
+          "pendingUpdateDevice": 0,
+          "totalDevice": 8,
+          "wanConfiguration": 2,
+          "wifiClient": 46,
+          "wifiConfiguration": 4,
+          "wifiDevice": 6,
+          "wiredClient": 2,
+          "wiredDevice": 1
+        },
+        "features": [
+          "TEST_AND_CONFIRM",
+          "DEVICE_AUTO_RECOVERY"
+        ],
+        "gateway": {
+          "hardwareId": "00000000-0000-4000-8000-000000000001",
+          "inspectionState": "off",
+          "ipsMode": "disabled",
+          "ipsSignature": {
+            "rulesCount": 26656,
+            "type": "ET"
+          },
+          "shortname": "UDMPROMAX"
+        },
+        "internetIssues": [
+          {
+            "index": 5975632,
+            "notReported": true
+          },
+          {
+            "index": 5975633
+          }
+        ],
+        "ispInfo": {
+          "asn": 64500,
+          "name": "Example ISP",
+          "organization": "Example ISP"
+        },
+        "percentages": {
+          "txRetry": 12.123019415807908,
+          "wanUptime": 100
+        },
+        "wanLoadBalancingMode": "FAILOVER_ONLY",
+        "wanMagic": {
+          "available": true,
+          "enabled": false,
+          "subscribed": false,
+          "updateAt": 1792690095000
+        },
+        "wans": {
+          "WAN": {
+            "externalIp": "203.0.113.10",
+            "failoverPriority": 1,
+            "ispInfo": {
+              "asn": 64500,
+              "name": "Example ISP",
+              "organization": "Example ISP"
+            },
+            "portUp": true,
+            "wanIssues": [
+              {
+                "index": 5975632,
+                "notReported": true
+              },
+              {
+                "index": 5975633
+              }
+            ],
+            "wanUptime": 100
+          },
+          "WAN2": {
+            "failoverPriority": 2,
+            "portUp": false,
+            "wanIssues": [
+              {
+                "count": 84,
+                "index": 5975548,
+                "wanDowntime": true
+              },
+              {
+                "index": 5975632,
+                "notReported": true
+              },
+              {
+                "count": 203,
+                "index": 5975633,
+                "wanDowntime": true
+              }
+            ],
+            "wanUptime": 0
+          }
+        }
+      },
+      "permission": "admin",
+      "isOwner": false
+    }
+  ],
+  "httpStatusCode": 200,
+  "traceId": "00000000000000000000000000000000"
+}

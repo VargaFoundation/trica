@@ -1,0 +1,6 @@
+{
+  "code": "unauthorized",
+  "httpStatusCode": 401,
+  "message": "unauthorized",
+  "traceId": "00000000000000000000000000000000"
+}

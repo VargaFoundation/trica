@@ -95,6 +95,11 @@ collect:
 
 For devices the cluster cannot reach, run `trica collector` next to them instead.
 
+A `unifi` target reads the UniFi Site Manager cloud API, not a device: the server pod needs egress to
+`api.ui.com:443` (an `ipBlock` of `0.0.0.0/0` on port 443 with `networkPolicy.egressTo` set, since a
+NetworkPolicy cannot name a host, or an `HTTPS_PROXY`). Its API key is a file reference like any other,
+for instance `collect.secrets: [{name: unifi-key}]` mounted at `/var/run/secrets/collect/unifi-key/key`.
+
 ## Live topology
 
 With `live.enabled`, the topology can overlay link throughput and state read by the server from a

@@ -30,6 +30,9 @@ const ROLES: Record<string, { icon: IconName; family: Family }> = {
   patch_panel: { icon: "patch_panel", family: "network" },
   sensor: { icon: "sensor", family: "other" },
   kvm: { icon: "kvm", family: "other" },
+  access_point: { icon: "router", family: "network" },
+  access_control: { icon: "firewall", family: "security" },
+  camera: { icon: "device", family: "security" },
   other: { icon: "device", family: "other" },
 };
 export const KNOWN_ROLES = Object.keys(ROLES);

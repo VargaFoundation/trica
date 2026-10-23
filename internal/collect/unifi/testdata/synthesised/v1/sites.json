@@ -1,0 +1,27 @@
+{
+  "data": [
+    {
+      "siteId": "000000000000000000000011",
+      "hostId": "host-office-a:1",
+      "statistics": {
+        "ispInfo": {"name": "Example ISP", "organization": "Example ISP", "asn": 64500},
+        "wans": {
+          "WAN": {"externalIp": "203.0.113.20", "portUp": true, "ispInfo": {"name": "Example ISP A"}},
+          "WAN2": {"portUp": false}
+        }
+      }
+    },
+    {
+      "siteId": "000000000000000000000012",
+      "hostId": "host-office-b:1",
+      "statistics": {
+        "ispInfo": {"name": "Example ISP B"},
+        "wans": {
+          "WAN": {"portUp": true}
+        }
+      }
+    }
+  ],
+  "httpStatusCode": 200,
+  "traceId": "00000000000000000000000000000000"
+}
