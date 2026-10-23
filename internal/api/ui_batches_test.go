@@ -197,9 +197,31 @@ func TestUIBatchesDeclareTheRackLayout(t *testing.T) {
 		}
 	}
 
+	e.clk.advance(time.Hour) // a placement that ends at the instant it began has no history to read
 	e.submitUI(set, "unplace", tokProposer, 200)
 	if m := e.mountsOf(e.ids["pdu"]); len(m) != 0 {
 		t.Fatalf("pdu still mounted after unplace: %+v", m)
+	}
+
+	// Put it back where it was: the tray lists it as taken out of rack-a, and the same partial
+	// placement batch (no withdrawal) mounts it again there, so the tray is empty.
+	e.clk.advance(time.Hour)
+	if got := e.removedFrom("rack-p"); len(got) != 1 || got[0].Device.ID != e.ids["pdu"] || got[0].Position == nil || *got[0].Position != 3 {
+		t.Fatalf("removed from rack-a %+v, want pdu-r14-a, last at U 3", got)
+	}
+	if p := e.previewUI(set, "putBack", tokProposer); !p.relates() {
+		t.Fatalf("preview of a put back lists no change: %+v", p.Result.Changes)
+	}
+	put := e.submitUI(set, "putBack", tokProposer, 200)
+	if put.Result.RelationsClosed != 0 {
+		t.Fatalf("put back closed %d relations, want none: it withdraws nothing", put.Result.RelationsClosed)
+	}
+	m = e.mountsOf(e.ids["pdu"])
+	if len(m) != 1 || m[e.ids["rack-p"]]["position"] != float64(3) || m[e.ids["rack-p"]]["face"] != "front" {
+		t.Fatalf("pdu mounts %+v after put back, want rack-a at U 3 front", m)
+	}
+	if got := e.removedFrom("rack-p"); len(got) != 0 {
+		t.Fatalf("removed from rack-a after the put back: %+v, want none", got)
 	}
 
 	e.submitUI(set, "renameRack", tokProposer, 200)
@@ -237,4 +259,9 @@ func TestUIBatchesRefusedByTheSchema(t *testing.T) {
 	if m := f.mountsOf(f.ids["sw"]); len(m) != 1 {
 		t.Fatalf("sw-a1 mounts %+v after a refused batch, want only its first", m)
 	}
+}
+
+func (e *env) removedFrom(rack string) []removedItem {
+	e.t.Helper()
+	return decodeItems[removedItem](e.t, e.page("/api/v1/racks/"+e.ids[rack]+"/removed", tokReader))
 }

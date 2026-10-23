@@ -26,7 +26,9 @@ import type {
   Provenance,
   QueryOf,
   TopologyMap,
+  PlacementRecord,
   RackItem,
+  RemovedItem,
   RelationLink,
   LiveTopology,
   RelationView,
@@ -72,6 +74,12 @@ export const api = {
   /** The devices mounted in a rack, with position, face, model, height and depth. */
   rackContents: (id: string, q: Paging = {}, signal?: AbortSignal) =>
     request<Page<RackItem>>(`/racks/${encodeURIComponent(id)}/contents`, { query: q, signal }),
+  /** Where a device was mounted: the current placement first, then the closed ones, newest first (ADR 0053). */
+  placementHistory: (id: string, q: Paging = {}, signal?: AbortSignal) =>
+    request<Page<PlacementRecord>>(`/objects/${encodeURIComponent(id)}/placement-history`, { query: q, signal }),
+  /** The devices taken out of a rack and not mounted since, newest first (ADR 0053). */
+  rackRemoved: (id: string, q: Paging & { since?: string } = {}, signal?: AbortSignal) =>
+    request<Page<RemovedItem>>(`/racks/${encodeURIComponent(id)}/removed`, { query: q, signal }),
   /** A measurement of the object over a range, in buckets (average, lowest, highest). */
   series: (id: string, q: QueryOf<"/objects/{id}/series">, signal?: AbortSignal) =>
     request<Series>(`/objects/${encodeURIComponent(id)}/series`, { query: q, signal }),

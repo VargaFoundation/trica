@@ -2473,3 +2473,56 @@ label.check {
 .dialog-preview ul.changes {
   margin: 0;
 }
+
+/* Putting a device back (ADR 0053): the line on the device page and the tray under the elevations. */
+.put-back p {
+  margin: 0.25rem 0;
+}
+.removed-tray ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.removed-tray li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--trica-line);
+  border-radius: var(--trica-radius-surface);
+  background: var(--trica-surface);
+}
+.removed-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+.removed-tray .sent {
+  color: var(--trica-ink-muted);
+  font-weight: 500;
+}
+.drag-handle {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  padding: 0.2rem 0.35rem;
+  color: var(--trica-ink-muted);
+  border-radius: var(--trica-radius-control);
+}
+.drag-handle:hover {
+  background: var(--trica-accent-soft);
+  color: var(--trica-accent-ink);
+}
+.removed-tray[data-dragging="true"],
+.removed-tray[data-dragging="true"] .drag-handle {
+  cursor: grabbing;
+}
+.rack-faces[data-incoming="true"] .rack-free {
+  fill: var(--trica-info-soft);
+  stroke: var(--trica-focus);
+  stroke-dasharray: 3 3;
+}

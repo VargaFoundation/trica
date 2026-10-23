@@ -36,6 +36,7 @@ const (
 	idTFull = 0xc3
 	idPDU   = 0xd1
 	idSpare = 0xd9   // a device in no rack
+	idOldSw = 0xda   // taken out of r12 at U20 (ADR 0053)
 	firstR3 = 0x1000 // devices of r48
 
 	idSiteL    = 5 // lyon-1
@@ -85,6 +86,14 @@ type inventory struct {
 	links     []link           // the network: declared, observed and deduced
 	places    map[string]place // where a part sits on its device's faces, by part id
 	modelIDs  map[string]int   // the R330 models of r22, by slug
+	past      []pastMount      // mounts that ended: what "taken out" and the placement history read
+}
+
+// pastMount is a closed mounted_in relation.
+type pastMount struct {
+	device, rack int
+	position     float64
+	face         string
 }
 
 // all lists every relation with its provenance, plain ones as declared.
@@ -140,6 +149,9 @@ func buildInventory() *inventory {
 	inv.mount(idSwA2, idRack, 39, "front", idT1U)
 	inv.mount(idSrv01, idRack, 10, "front", idTFull)
 	inv.mount(idPDU, idRack, 2, "rear", idT2U)
+	// A device taken out of r12: its mount ended, so the rack offers to put it back (ADR 0053).
+	inv.add(object(idOldSw, "device", "old-sw", idSite, idSite, obj{"hostname": "old-sw", "vendor": "example", "role": "switch", "health": "ok"}))
+	inv.past = append(inv.past, pastMount{device: idOldSw, rack: idRack, position: 20, face: "front"})
 
 	// r13: two devices overlap, one is mounted without a position.
 	inv.add(object(0x120, "device", "srv-02", idRack2, idSite, obj{"hostname": "srv-02", "role": "server", "health": "ok", "power_w": 288}))
@@ -398,6 +410,8 @@ func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		image(w, r, strings.TrimPrefix(path, "/device-types/"))
 	case strings.HasPrefix(path, "/racks/") && strings.HasSuffix(path, "/contents"):
 		a.rackContents(w, strings.TrimSuffix(strings.TrimPrefix(path, "/racks/"), "/contents"))
+	case strings.HasPrefix(path, "/racks/") && strings.HasSuffix(path, "/removed"):
+		a.rackRemoved(w, strings.TrimSuffix(strings.TrimPrefix(path, "/racks/"), "/removed"))
 	case path == "/discrepancies":
 		writeJSON(w, http.StatusOK, page([]obj{{
 			"id": 5, "kind": "value_mismatch", "fingerprint": "fp-5", "object_id": oid(idSwA1), "key": "os_version",
@@ -602,6 +616,8 @@ func (a *api) one(w http.ResponseWriter, rest string) {
 		a.candidates(w, o)
 	case "airflow":
 		a.objectAirflow(w, o)
+	case "placement-history":
+		a.placementHistory(w, id)
 	case "timeline":
 		writeJSON(w, http.StatusOK, page([]obj{{"at": t0, "object_id": id, "type": o["type"], "display": o["display"], "key": "hostname", "after": o["display"], "source": "declared:lab-file", "changeset_id": 1}}))
 	default:
@@ -643,6 +659,58 @@ func (a *api) rackContents(w http.ResponseWriter, id string) {
 			it["variant_uncertain"], it["variants"] = true, n
 		}
 		it["airflow"] = a.rackAirflow(d)
+		items = append(items, it)
+	}
+	writeJSON(w, http.StatusOK, page(items))
+}
+
+func (a *api) mountedNow(device string) bool {
+	for _, r := range a.inv.relations {
+		if r.typ == "mounted_in" && oid(r.from) == device {
+			return true
+		}
+	}
+	return false
+}
+
+func (a *api) pastRecord(p pastMount) obj {
+	rack := a.inv.byID(oid(p.rack))
+	return obj{
+		"status": "ended", "rack": obj{"id": rack["id"], "display": rack["display"], "status": "active"},
+		"position": p.position, "face": p.face, "since": t0, "until": t1, "source": "declared:lab-file",
+	}
+}
+
+// placementHistory answers GET /objects/{id}/placement-history: the closed
+// mounts of the device, newest first, plus the open one if it has one.
+func (a *api) placementHistory(w http.ResponseWriter, id string) {
+	var items []obj
+	for _, p := range a.inv.past {
+		if oid(p.device) == id {
+			items = append(items, a.pastRecord(p))
+		}
+	}
+	writeJSON(w, http.StatusOK, page(items))
+}
+
+// rackRemoved answers GET /racks/{id}/removed: the devices whose last mount
+// ended in this rack and that are mounted nowhere now.
+func (a *api) rackRemoved(w http.ResponseWriter, id string) {
+	if rack := a.inv.byID(id); rack == nil || rack["type"] != "rack" {
+		problem(w, http.StatusNotFound, "not-found", "No such rack")
+		return
+	}
+	var items []obj
+	for _, p := range a.inv.past {
+		d := oid(p.device)
+		if oid(p.rack) != id || a.mountedNow(d) {
+			continue
+		}
+		dev := a.inv.byID(d)
+		it := obj{
+			"device": obj{"id": d, "type": dev["type"], "display": dev["display"]}, "full_depth": false,
+			"position": p.position, "face": p.face, "removed_at": t1, "removed_by": "declared:lab-file", "status": "active",
+		}
 		items = append(items, it)
 	}
 	writeJSON(w, http.StatusOK, page(items))

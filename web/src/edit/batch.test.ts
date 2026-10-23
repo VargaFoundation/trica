@@ -37,6 +37,7 @@ function uiBatches() {
     moveObserved: placeDevice({ device: { id: "@sw" }, placement: { rackId: "@rack", position: 40, face: "front" }, leave: ["@rack-p"] }, AT),
     moveOwn: placeDevice({ device: { id: "@pdu" }, placement: { rackId: "@rack-p", position: 3, face: "front" }, heightU: 2, leave: ["@rack"] }, AT),
     unplace: unplaceDevice("@pdu", "@rack-p", AT),
+    putBack: placeDevice({ device: { id: "@pdu" }, placement: { rackId: "@rack-p", position: 3, face: "front" } }, AT),
     renameRack: updateObject("rack", "@rack", { name: "r14b", u_height: 48 }, [], AT),
     badFace: placeDevice({ device: { id: "@pdu" }, placement: { rackId: "@rack", position: 5, face: "side" } }, AT),
     chooseVariant: chooseModel({ deviceId: "@srv-v", slug: "acme-srv2-8sff" }, AT),
@@ -69,7 +70,7 @@ describe("the batches the forms send", () => {
 
   it("racking a device never touches its located_in: a rack wins in the engine, the place stays in the history (ADR 0058)", () => {
     const b = uiBatches();
-    for (const batch of [b.placeNewPdu, b.moveWithin, b.moveObserved, b.moveOwn, b.unplace]) {
+    for (const batch of [b.placeNewPdu, b.moveWithin, b.moveObserved, b.moveOwn, b.unplace, b.putBack]) {
       for (const r of [...(batch.relations ?? []), ...(batch.unrelations ?? [])]) expect(r.type).toBe("mounted_in");
     }
   });

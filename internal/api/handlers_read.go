@@ -504,39 +504,19 @@ func (c *call) visibleObjects(ids []string) (map[string]*store.Object, map[strin
 	return out, sites, nil
 }
 
-// hRackContents lists the devices mounted in a rack with their position, face
-// and model, in three queries whatever the number of devices (finding #42).
-func (s *Server) hRackContents(c *call) error {
-	id, err := c.idParam()
-	if err != nil {
-		return err
-	}
-	pp, err := parsePage(c.r)
-	if err != nil {
-		return err
-	}
-	rack, _, err := c.loadObject(id)
-	if err != nil {
-		return err
-	}
-	if rack.Type != "rack" {
-		return notFound("%s is a %s, not a rack", id, rack.Type)
-	}
-	rels, err := s.st.RelationsOf(c.ctx(), id, nil)
-	if err != nil {
-		return err
-	}
-	var mounts []store.Relation
-	var devices []string
-	for _, r := range redactRelations(rels) {
-		if r.Type == "mounted_in" && r.ToID == id {
-			mounts = append(mounts, r)
-			devices = append(devices, r.FromID)
-		}
+// rackItems builds what an elevation needs for the devices of these
+// mounted_in relations of rack, in three queries whatever the number of
+// devices (finding #42). A device the caller may not read is left out; the
+// order of the relations is kept.
+func (c *call) rackItems(rack *store.Object, mounts []store.Relation) ([]RackItem, error) {
+	s := c.s
+	devices := make([]string, 0, len(mounts))
+	for _, m := range mounts {
+		devices = append(devices, m.FromID)
 	}
 	models, err := s.st.CurrentRelationsFrom(c.ctx(), "instance_of", devices)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	modelOf := map[string]string{}
 	ids := append([]string(nil), devices...)
@@ -548,17 +528,17 @@ func (s *Server) hRackContents(c *call) error {
 	if s.lib != nil {
 		claims, err := s.st.RelationClaims(c.ctx(), "instance_of", devices)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		declared = declaredDevices(claims)
 	}
 	objs, sites, err := c.visibleObjects(ids)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	parts, err := c.partsHealth(devices, objs, sites)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	readable := make([]string, 0, len(devices))
 	for _, id := range devices {
@@ -568,7 +548,7 @@ func (s *Server) hRackContents(c *call) error {
 	}
 	fans, err := c.partsAirflow(readable, sites)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	frontAisle := strAttr(rack, "front_aisle")
 	items := []RackItem{}
@@ -616,6 +596,41 @@ func (s *Server) hRackContents(c *call) error {
 		check := checkView(airflow.Check(in))
 		it.Airflow = &check
 		items = append(items, it)
+	}
+	return items, nil
+}
+
+// hRackContents lists the devices mounted in a rack with their position, face
+// and model, in three queries whatever the number of devices (finding #42).
+func (s *Server) hRackContents(c *call) error {
+	id, err := c.idParam()
+	if err != nil {
+		return err
+	}
+	pp, err := parsePage(c.r)
+	if err != nil {
+		return err
+	}
+	rack, _, err := c.loadObject(id)
+	if err != nil {
+		return err
+	}
+	if rack.Type != "rack" {
+		return notFound("%s is a %s, not a rack", id, rack.Type)
+	}
+	rels, err := s.st.RelationsOf(c.ctx(), id, nil)
+	if err != nil {
+		return err
+	}
+	var mounts []store.Relation
+	for _, r := range redactRelations(rels) {
+		if r.Type == "mounted_in" && r.ToID == id {
+			mounts = append(mounts, r)
+		}
+	}
+	items, err := c.rackItems(rack, mounts)
+	if err != nil {
+		return err
 	}
 	sort.SliceStable(items, func(i, j int) bool {
 		a, b := items[i].Position, items[j].Position

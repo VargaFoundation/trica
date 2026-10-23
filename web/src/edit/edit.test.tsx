@@ -1,6 +1,12 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Batch, SchemaDoc } from "../api/types";
+import { vi } from "vitest";
+import type {
+  Batch,
+  PlacementRecord,
+  RemovedItem,
+  SchemaDoc,
+} from "../api/types";
 import { expectNoA11yViolations } from "../test/axe";
 import { page, PROPOSER, READER } from "../test/fixtures";
 import {
@@ -32,6 +38,33 @@ import {
 } from "./fixtures";
 
 const empty = page([]);
+
+/** A placement of a device in r12 that ended: what "Put back" starts from. */
+const closedIn = (
+  position: number,
+  face: "front" | "rear",
+): PlacementRecord => ({
+  rack: { id: EID.rack, type: "rack", display: "r12", status: "active" },
+  position,
+  face,
+  since: "2026-03-01T08:00:00Z",
+  until: "2026-10-20T09:30:00Z",
+  source: "user:carol",
+});
+
+/** spare-01 was taken out of r12, from U4 on the front. */
+const takenOut = page<RemovedItem>([
+  {
+    device: { id: EID.spare, type: "device", display: "spare-01" },
+    position: 4,
+    face: "front",
+    u_height: 1,
+    full_depth: false,
+    removed_at: "2026-10-20T09:30:00Z",
+    removed_by: "user:carol",
+    status: "active",
+  },
+]);
 
 function routes(
   me: Handler = PROPOSER,
@@ -75,6 +108,10 @@ function routes(
     [`GET /objects/${EID.pdu}/relations`]: pduRelations,
     [`GET /objects/${EID.srv}/relations`]: empty,
     [`GET /objects/${EID.spare}/relations`]: empty,
+    [`GET /objects/${EID.srv}/placement-history`]: empty,
+    [`GET /objects/${EID.spare}/placement-history`]: empty,
+    [`GET /objects/${EID.pdu}/placement-history`]: empty,
+    [`GET /racks/${EID.rack}/removed`]: empty,
     "POST /batches/preview": { source: "ui-tests", result: previewNewDevice },
     "POST /batches": {
       source: "ui-tests",
@@ -1101,5 +1138,234 @@ describe("rooms and racks", () => {
       }),
     ).toBeInTheDocument();
     await expectNoA11yViolations();
+  });
+});
+
+describe("putting a device back", () => {
+  it("puts a device back where it was from its page: two clicks, the old place pre-filled, nothing withdrawn", async () => {
+    const user = userEvent.setup();
+    const api = mockApi(
+      routes(PROPOSER, {
+        [`GET /objects/${EID.srv}/placement-history`]: page([
+          closedIn(4, "front"),
+        ]),
+      }),
+    );
+    renderApp({ at: `/objects/${EID.srv}` });
+    const section = await screen.findByRole("region", {
+      name: "Rack placement",
+    });
+    expect(
+      await within(section).findByText(/Last in r12 at U4, front, until/),
+    ).toBeInTheDocument();
+    await user.click(
+      within(section).getByRole("button", { name: "Put back in r12" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Put back srv-01 · r12",
+    });
+    // The position and the face are the old ones: nothing is retyped.
+    expect(await within(dialog).findByLabelText("Position (U)")).toHaveValue(4);
+    expect(within(dialog).getByRole("radio", { name: "Front" })).toBeChecked();
+    await within(dialog).findByText("The engine would:");
+    expect(api.count("POST /batches/preview")).toBe(1);
+    const sent = bodyOf(api, "POST /batches/preview");
+    expect(sent.relations).toEqual([
+      {
+        type: "mounted_in",
+        from: { type: "device", identity: { id: EID.srv } },
+        to: { type: "rack", identity: { id: EID.rack } },
+        attributes: { position: 4, face: "front" },
+      },
+    ]);
+    expect(sent.unrelations ?? []).toEqual([]);
+    expect(api.count("POST /batches")).toBe(0);
+    const confirm = within(dialog).getByRole("button", { name: "Put back" });
+    await waitFor(() => expect(confirm).toBeEnabled());
+    await user.click(confirm);
+    expect(
+      await screen.findByText("Put srv-01 back at U4 in r12."),
+    ).toBeInTheDocument();
+    expect(bodyOf(api, "POST /batches").relations).toEqual(sent.relations);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("refuses an old place that is taken now, and offers the nearest free one", async () => {
+    const user = userEvent.setup();
+    const api = mockApi(
+      routes(PROPOSER, {
+        // pdu-a is on the rear at U1: srv-01 (2 U) cannot go back to U1 rear.
+        [`GET /objects/${EID.srv}/placement-history`]: page([
+          closedIn(1, "rear"),
+        ]),
+      }),
+    );
+    renderApp({ at: `/objects/${EID.srv}` });
+    await user.click(
+      await screen.findByRole("button", { name: "Put back in r12" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Put back srv-01 · r12",
+    });
+    expect(
+      await within(dialog).findByText(/Taken by pdu-a \(U1\)/),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "Put back" }),
+    ).toBeDisabled();
+    // Past the dialog's 300 ms debounce: a refused slot sends nothing to preview.
+    await new Promise((r) => setTimeout(r, 450));
+    expect(api.count("POST /batches/preview")).toBe(0);
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "Use U2, the nearest free position",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole("button", { name: "Put back" }),
+      ).toBeEnabled(),
+    );
+    expect(
+      bodyOf(api, "POST /batches/preview").relations?.[0]?.attributes,
+    ).toEqual({ position: 2, face: "rear" });
+  });
+
+  it("offers no put back to a device that is mounted: Move starts from where it is", async () => {
+    const user = userEvent.setup();
+    mockApi(
+      routes(PROPOSER, {
+        [`GET /objects/${EID.pdu}/placement-history`]: page([
+          closedIn(9, "front"),
+        ]),
+      }),
+    );
+    renderApp({ at: `/objects/${EID.pdu}` });
+    const section = await screen.findByRole("region", {
+      name: "Rack placement",
+    });
+    await user.click(
+      await within(section).findByRole("button", {
+        name: "Move to another rack or position",
+      }),
+    );
+    expect(screen.queryByRole("button", { name: /Put back in/ })).toBeNull();
+    const panel = await screen.findByRole("region", {
+      name: "Place pdu-a in a rack",
+    });
+    // pdu-a is in r12 at U1 on the rear: the form opens there.
+    expect(await within(panel).findByLabelText("Rack")).toHaveValue(EID.rack);
+    expect(
+      await within(panel).findByLabelText("Position (lowest U)"),
+    ).toHaveValue(1);
+    expect(within(panel).getByLabelText("Face")).toHaveValue("rear");
+  });
+
+  it("lists what was taken out of the rack and puts it back from the tray, then marks a proposal as sent", async () => {
+    const user = userEvent.setup();
+    const api = mockApi(
+      routes(PROPOSER, {
+        [`GET /racks/${EID.rack}/removed`]: takenOut,
+        "POST /batches": {
+          source: "ui-tests",
+          status: "proposed",
+          result: { ...previewNewDevice, proposal_id: 7 },
+        },
+      }),
+    );
+    renderApp({ at: `/racks/${EID.rack}` });
+    const tray = await screen.findByRole("region", {
+      name: /Recently taken out of this rack/,
+    });
+    expect(within(tray).getByText(/was U4, front/)).toBeInTheDocument();
+    await user.click(
+      within(tray).getByRole("button", { name: /^Put back ?\(spare-01\)$/ }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Put back spare-01 · r12",
+    });
+    expect(await within(dialog).findByLabelText("Position (U)")).toHaveValue(4);
+    const confirm = within(dialog).getByRole("button", { name: "Put back" });
+    await waitFor(() => expect(confirm).toBeEnabled());
+    await user.click(confirm);
+    expect(
+      await within(dialog).findByText(/Sent for approval/),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
+    expect(
+      await within(tray).findByText("Sent for approval"),
+    ).toBeInTheDocument();
+    expect(within(tray).queryByRole("button", { name: /Put back/ })).toBeNull();
+    expect(api.count("POST /batches")).toBe(1);
+  });
+
+  it("refreshes the tray after an applied put back", async () => {
+    const user = userEvent.setup();
+    const api = mockApi(
+      routes(PROPOSER, { [`GET /racks/${EID.rack}/removed`]: takenOut }),
+    );
+    renderApp({ at: `/racks/${EID.rack}` });
+    const tray = await screen.findByRole("region", {
+      name: /Recently taken out of this rack/,
+    });
+    await user.click(within(tray).getByRole("button", { name: /^Put back/ }));
+    const dialog = await screen.findByRole("dialog");
+    const confirm = within(dialog).getByRole("button", { name: "Put back" });
+    await waitFor(() => expect(confirm).toBeEnabled());
+    const before = api.count(`GET /racks/${EID.rack}/removed`);
+    await user.click(confirm);
+    await waitFor(() =>
+      expect(api.count(`GET /racks/${EID.rack}/removed`)).toBeGreaterThan(
+        before,
+      ),
+    );
+  });
+
+  it("puts a device back where its handle is dropped: on a free unit of the rear, nothing sent before Put back", async () => {
+    const api = mockApi(
+      routes(PROPOSER, { [`GET /racks/${EID.rack}/removed`]: takenOut }),
+    );
+    renderApp({ at: `/racks/${EID.rack}` });
+    const tray = await screen.findByRole("region", {
+      name: /Recently taken out of this rack/,
+    });
+    await waitFor(() => expect(freeU("rear", 7)).not.toBeNull());
+    const handle = tray.querySelector(
+      `[data-handle="${EID.spare}"]`,
+    ) as Element;
+    // jsdom lays nothing out: the point is mapped to the unit by hand.
+    const at = vi.fn(() => freeU("rear", 7));
+    Object.defineProperty(document, "elementFromPoint", {
+      value: at,
+      configurable: true,
+    });
+    fireEvent(
+      handle,
+      new MouseEvent("pointerdown", {
+        bubbles: true,
+        clientX: 5,
+        clientY: 5,
+        button: 0,
+      }),
+    );
+    fireEvent(
+      window,
+      new MouseEvent("pointermove", { clientX: 60, clientY: 80 }),
+    );
+    await waitFor(() =>
+      expect(document.querySelector('[data-incoming="true"]')).not.toBeNull(),
+    );
+    fireEvent(
+      window,
+      new MouseEvent("pointerup", { clientX: 60, clientY: 80 }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Put back spare-01 · r12",
+    });
+    expect(await within(dialog).findByLabelText("Position (U)")).toHaveValue(7);
+    expect(within(dialog).getByRole("radio", { name: "Rear" })).toBeChecked();
+    expect(api.count("POST /batches")).toBe(0);
+    expect(document.querySelector('[data-incoming="true"]')).toBeNull();
+    Reflect.deleteProperty(document, "elementFromPoint");
   });
 });

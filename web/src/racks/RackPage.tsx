@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import { ApiError } from "../api/client";
 import { api } from "../api/endpoints";
@@ -28,6 +28,8 @@ import { HealthPill } from "../components/ui";
 import { RackElevation } from "./RackElevation";
 import { loadFaceImages } from "./faceImages";
 import { useRackContents, type RackContents } from "./useRack";
+import { RemovedTray } from "./RemovedTray";
+import { useRemoved } from "./useRemoved";
 import { EditPanel, useCanDeclare, useCanMount } from "../edit/EditPanel";
 import { ObjectForm } from "../edit/ObjectForm";
 import { PlaceDeviceForm } from "../edit/PlaceDeviceForm";
@@ -111,6 +113,10 @@ function Rack({ rack }: { rack: ObjectView }) {
   const [panel, setPanel] = useState<Panel>(null);
   const [done, setDone] = useState("");
   const placeButton = useRef<HTMLButtonElement>(null);
+  const removed = useRemoved(rack.id);
+  // Devices whose put back was sent for approval from this page: the tray says so.
+  const [sent, setSent] = useState<ReadonlySet<string>>(new Set());
+  const [incoming, setIncoming] = useState(false);
   const open = (p: Panel) => {
     setDone("");
     setPanel(p);
@@ -159,6 +165,10 @@ function Rack({ rack }: { rack: ObjectView }) {
           onDone={(message) => {
             setDone(message);
             setPanel(null);
+          }}
+          onProposed={() => {
+            const id = panel.mode === "putBack" ? panel.device?.id : undefined;
+            if (id) setSent((s) => new Set(s).add(id));
           }}
           onFullForm={(carry) =>
             setPanel({
@@ -212,6 +222,33 @@ function Rack({ rack }: { rack: ObjectView }) {
             rack={rack}
             uHeight={uHeight}
             contents={c}
+            incoming={incoming}
+            tray={
+              <RemovedTray
+                items={removed.data ?? []}
+                canPutBack={canMount}
+                sent={sent}
+                onDragging={setIncoming}
+                onPutBack={(it) =>
+                  open({
+                    kind: "quick",
+                    mode: "putBack",
+                    u: it.position,
+                    face: it.face,
+                    device: { id: it.id, display: it.name },
+                  })
+                }
+                onDrop={(it, u, face) =>
+                  open({
+                    kind: "quick",
+                    mode: "putBack",
+                    u,
+                    face,
+                    device: { id: it.id, display: it.name },
+                  })
+                }
+              />
+            }
             onPick={
               canMount
                 ? (u, face) => open({ kind: "quick", mode: "add", u, face })
@@ -256,12 +293,18 @@ function Elevations({
   rack,
   uHeight,
   contents,
+  incoming,
+  tray,
   onPick,
   onPlace,
 }: {
   rack: ObjectView;
   uHeight: number;
   contents: RackContents;
+  /** A device is being dragged in from the tray: the free units say they are targets. */
+  incoming?: boolean;
+  /** The "taken out" tray, under the elevations. */
+  tray?: ReactNode;
   onPick?: (u: number, face: Face) => void;
   /** Move or turn a device of this rack: the placement form, filled in with the new unit and face. */
   onPlace?: (slot: Slot, u: number, face: Face) => void;
@@ -308,7 +351,7 @@ function Elevations({
         </p>
       ) : null}
       {contents.items.length === 0 ? <p>{t("rack.empty")}</p> : null}
-      <div className="rack-faces">
+      <div className="rack-faces" data-incoming={incoming ? "true" : undefined}>
         {(["front", "rear"] as const).map((face) => (
           <figure key={face} className="rack-face">
             <figcaption>
@@ -333,6 +376,7 @@ function Elevations({
       {frontAisle ? <p className="hint">{t("aisle.legend")}</p> : null}
       {onPick ? <p className="hint">{t("edit.place.clickHint")}</p> : null}
       {onPlace ? <p className="hint">{t("rack.moveHint")}</p> : null}
+      {tray}
       <ExportButtons
         basename={`trica-rack-${fileSlug(rack.display)}`}
         title={t("rack.pageTitle", { rack: rack.display })}

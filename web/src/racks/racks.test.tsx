@@ -57,6 +57,7 @@ function rackRoutes(mounts: Mount[], rack: ObjectView = obj(ID.rack, "rack", "r1
   const routes: Record<string, Handler> = {
     ...defaultRoutes(),
     [`GET /objects/${ID.rack}`]: rack,
+    [`GET /racks/${ID.rack}/removed`]: page([]),
     [`GET /racks/${ID.rack}/contents`]: page(mounts.map((m) => rackItem(dev(m.n), m.name, m.position, m.face, m.type))),
     ...extra,
   };

@@ -280,6 +280,34 @@
       }
     ]
   },
+  "putBack": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [],
+    "relations": [
+      {
+        "type": "mounted_in",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@pdu"
+          }
+        },
+        "to": {
+          "type": "rack",
+          "identity": {
+            "id": "@rack-p"
+          }
+        },
+        "attributes": {
+          "position": 3,
+          "face": "front"
+        }
+      }
+    ]
+  },
   "renameRack": {
     "source": "ui",
     "scope": "partial",

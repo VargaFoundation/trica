@@ -19,3 +19,4 @@
 *.swp
 .DS_Store
 /web/coverage/
+/trica-e2e-server
