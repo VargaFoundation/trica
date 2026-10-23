@@ -59,6 +59,11 @@ func (e *env) mapFixture() {
 	b.Relate("contains", "fwa", "gw")
 	b.Relate("routes_via", "fwa", "gw")
 	b.Relate("routes_via", "gw", "isp")
+	// Device uplinks (ADR 0062): Lyon's firewall reaches the network through
+	// Paris's second switch, no cable between them, so the map draws it; the
+	// second switch through the first is covered by their cables, so it is not.
+	b.Relate("uplinked_to", "fwp", "swb")
+	b.Relate("uplinked_to", "swb", "swa")
 	e.apply(b)
 }
 
@@ -131,9 +136,19 @@ func TestTopologyMapLevels(t *testing.T) {
 	if up := edgeByMedium(t, m, topomap.MediumUplink); up.Uplink == nil || up.Uplink.BandwidthMbps != 1000 {
 		t.Fatalf("uplink edge = %+v", up)
 	}
+	ul := edgeByMedium(t, m, topomap.MediumUplinkedTo)
+	towardParis := "b"
+	if ul.A == ids["paris"] {
+		towardParis = "a"
+	}
+	if ul.Links != 1 || ul.Kinds.UplinkedTo != 1 || ul.Toward != towardParis || ul.Measured || ul.Oper != "unknown" || len(ul.Members) != 1 || ul.Members[0].Toward != towardParis {
+		t.Fatalf("uplinked_to edge = %+v, want one link toward Paris (%s), never measured", ul, towardParis)
+	}
 
 	// Site Paris: the room, the area outside rooms, a portal to Lyon and
 	// the two cables of the room's inside are not drawn as links to itself.
+	// The room's internal links stay 2: the uplink between its two racks'
+	// switches is covered by those cables and must not be counted.
 	m, _ = e.topo(tokAdmin, "level=site&id="+ids["paris"])
 	if m.Focus == nil || m.Focus.ID != ids["paris"] {
 		t.Fatalf("focus = %+v", m.Focus)
@@ -169,6 +184,16 @@ func TestTopologyMapLevels(t *testing.T) {
 	}
 	if r1ToR2 == nil || *r1ToR2 != 150e6 || r2ToR1 == nil || *r2ToR1 != 15e6 {
 		t.Fatalf("rack edge rates r1->r2 %v, r2->r1 %v", deref(r1ToR2), deref(r2ToR1))
+	}
+	// The covered uplink adds no edge between the racks, and the one to Lyon
+	// is a portal edge.
+	for _, ed := range m.Edges {
+		if ed.Medium == topomap.MediumUplinkedTo && (ed.A != "portal:"+ids["lyon"] && ed.B != "portal:"+ids["lyon"]) {
+			t.Fatalf("a covered uplink is drawn between the racks: %+v", ed)
+		}
+	}
+	if pe := edgeByMedium(t, m, topomap.MediumUplinkedTo); pe.Links != 1 {
+		t.Fatalf("room uplinked_to edge = %+v", pe)
 	}
 
 	// Rack R1: its devices, with the mount, and the switch link out as a portal.
@@ -297,6 +322,17 @@ func TestAuthSiteEqualsSiteIDs(t *testing.T) {
 	}
 }
 
+// flipToward swaps a and b of a toward, "both" and "" staying as they are.
+func flipToward(s string) string {
+	switch s {
+	case "a":
+		return "b"
+	case "b":
+		return "a"
+	}
+	return s
+}
+
 // TestTopologyMapRecordedForTheUI writes (TRICA_UPDATE_TOPOLOGY=1) and checks
 // the answers the UI's tests replay, so the web and the server cannot drift.
 func TestTopologyMapRecordedForTheUI(t *testing.T) {
@@ -338,9 +374,11 @@ func TestTopologyMapRecordedForTheUI(t *testing.T) {
 			if ed.A > ed.B {
 				ed.A, ed.B = ed.B, ed.A
 				ed.AToBBps, ed.BToABps = ed.BToABps, ed.AToBBps
+				ed.Toward = flipToward(ed.Toward)
 				for j := range ed.Members {
 					mb := &ed.Members[j]
 					mb.ADevice, mb.BDevice, mb.APort, mb.BPort = mb.BDevice, mb.ADevice, mb.BPort, mb.APort
+					mb.Toward = flipToward(mb.Toward)
 				}
 			}
 			ed.ID = ed.A + "~" + ed.B + "~" + ed.Medium

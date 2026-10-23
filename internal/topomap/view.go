@@ -445,6 +445,8 @@ type acc struct {
 	providers map[string]bool
 	accesses  map[string]bool
 	gwStatus  map[string]bool
+	// towardA and towardB say which ends the uplinked_to devices are on.
+	towardA, towardB bool
 }
 
 // item is one link to draw, from one place to another.
@@ -463,17 +465,37 @@ type item struct {
 	uplink   *uplinkItem
 }
 
+// devPair orders two device ids.
+func devPair(a, b string) [2]string {
+	if b < a {
+		a, b = b, a
+	}
+	return [2]string{a, b}
+}
+
 func (v *view) buildEdges() {
 	lv := v.opt.Live
+	// joined are the device pairs a port-level link the caller can read
+	// joins: an uplinked_to between them is covered (ADR 0062).
+	joined := map[[2]string]bool{}
 	for _, l := range v.ix.links {
 		if !v.readable(l.a) || !v.readable(l.b) || !v.readable(l.da) || !v.readable(l.db) {
 			continue
 		}
+		joined[devPair(l.da, l.db)] = true
 		ab, ba, m := rates(l, lv)
 		it := &item{a: v.ix.path[l.da], b: v.ix.path[l.db], medium: MediumPhysical, conf: l.rank,
 			capMbps: l.capMbps, capKnown: l.capKnown, ab: ab, ba: ba, measured: m, oper: v.ix.operOf(l, lv), kind: l.kind}
 		it.member = &MapMember{ADevice: *v.place(l.da), APort: *v.place(l.a), BDevice: *v.place(l.db), BPort: *v.place(l.b),
 			Kind: l.kind, Confidence: confOf(l.rank)}
+		v.add(it)
+	}
+	for _, u := range v.ix.devUplinks {
+		if !v.readable(u.from) || !v.readable(u.to) || joined[devPair(u.from, u.to)] {
+			continue
+		}
+		it := &item{a: v.ix.path[u.from], b: v.ix.path[u.to], medium: MediumUplinkedTo, conf: u.rank, kind: "uplinked_to", oper: "unknown"}
+		it.member = &MapMember{ADevice: *v.place(u.from), BDevice: *v.place(u.to), Kind: "uplinked_to", Confidence: confOf(u.rank), Toward: "b"}
 		v.add(it)
 	}
 	for _, t := range v.ix.tunnels {
@@ -581,12 +603,27 @@ func (v *view) add(it *item) {
 		a.e.Kinds.CabledTo++
 	case "neighbor_of":
 		a.e.Kinds.NeighborOf++
+	case "uplinked_to":
+		a.e.Kinds.UplinkedTo++
 	}
-	if it.medium == MediumPhysical {
+	if it.medium == MediumUplinkedTo {
+		if na.ID == ea.node {
+			a.towardB = true
+		} else {
+			a.towardA = true
+		}
+	}
+	if it.medium == MediumPhysical || it.medium == MediumUplinkedTo {
 		if len(a.members) < MaxMembers {
 			m := *it.member
 			if na.ID != ea.node {
 				m.ADevice, m.APort, m.BDevice, m.BPort = m.BDevice, m.BPort, m.ADevice, m.APort
+				switch m.Toward {
+				case "a":
+					m.Toward = "b"
+				case "b":
+					m.Toward = "a"
+				}
 			}
 			a.members = append(a.members, m)
 		} else {
@@ -598,7 +635,7 @@ func (v *view) add(it *item) {
 	case shared: // an access routed by two devices is counted once
 	case it.capKnown:
 		a.capacity += it.capMbps
-	case it.medium != MediumTunnel:
+	case it.medium != MediumTunnel && it.medium != MediumUplinkedTo:
 		a.e.CapacityPartial = true
 	}
 	if it.measured {
@@ -724,6 +761,14 @@ func (v *view) finish(out *TopologyMap) {
 			}
 		}
 		e.Oper = edgeOper(a.oper)
+		switch {
+		case a.towardA && a.towardB:
+			e.Toward = "both"
+		case a.towardA:
+			e.Toward = "a"
+		case a.towardB:
+			e.Toward = "b"
+		}
 		e.Members = a.members
 		if e.Members == nil {
 			e.Members = []MapMember{}

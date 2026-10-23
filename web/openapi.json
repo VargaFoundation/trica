@@ -5759,6 +5759,9 @@
           "oper": {
             "type": "string"
           },
+          "toward": {
+            "type": "string"
+          },
           "tunnel": {
             "$ref": "#/components/schemas/MapTunnel"
           },
@@ -5869,6 +5872,9 @@
           },
           "uplink": {
             "type": "integer"
+          },
+          "uplinked_to": {
+            "type": "integer"
           }
         },
         "required": [
@@ -5876,7 +5882,8 @@
           "cabled_to",
           "neighbor_of",
           "tunnel",
-          "uplink"
+          "uplink",
+          "uplinked_to"
         ],
         "type": "object"
       },
@@ -5921,6 +5928,9 @@
             "type": "string"
           },
           "kind": {
+            "type": "string"
+          },
+          "toward": {
             "type": "string"
           }
         },

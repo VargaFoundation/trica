@@ -110,7 +110,8 @@
           "cabled_to": 0,
           "neighbor_of": 0,
           "tunnel": 1,
-          "uplink": 0
+          "uplink": 0,
+          "uplinked_to": 0
         },
         "links": 1,
         "confidence": "declared",
@@ -126,6 +127,54 @@
         "members_truncated": false
       },
       {
+        "id": "<lyon>~<paris>~uplinked_to",
+        "a": "<lyon>",
+        "b": "<paris>",
+        "medium": "uplinked_to",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 0,
+          "neighbor_of": 0,
+          "tunnel": 0,
+          "uplink": 0,
+          "uplinked_to": 1
+        },
+        "links": 1,
+        "confidence": "declared",
+        "capacity_partial": false,
+        "toward": "b",
+        "oper": "unknown",
+        "measured": false,
+        "members": [
+          {
+            "a_device": {
+              "id": "<fwp>",
+              "type": "device",
+              "display": "fw-p"
+            },
+            "a_port": {
+              "id": "",
+              "type": "",
+              "display": ""
+            },
+            "b_device": {
+              "id": "<swb>",
+              "type": "device",
+              "display": "sw-r2"
+            },
+            "b_port": {
+              "id": "",
+              "type": "",
+              "display": ""
+            },
+            "kind": "uplinked_to",
+            "confidence": "declared",
+            "toward": "b"
+          }
+        ],
+        "members_truncated": false
+      },
+      {
         "id": "<paris>~internet~uplink",
         "a": "<paris>",
         "b": "internet",
@@ -135,7 +184,8 @@
           "cabled_to": 0,
           "neighbor_of": 0,
           "tunnel": 0,
-          "uplink": 1
+          "uplink": 1,
+          "uplinked_to": 0
         },
         "links": 1,
         "confidence": "declared",
@@ -315,7 +365,8 @@
           "cabled_to": 0,
           "neighbor_of": 0,
           "tunnel": 1,
-          "uplink": 0
+          "uplink": 0,
+          "uplinked_to": 0
         },
         "links": 1,
         "confidence": "declared",
@@ -340,7 +391,8 @@
           "cabled_to": 0,
           "neighbor_of": 0,
           "tunnel": 0,
-          "uplink": 1
+          "uplink": 1,
+          "uplinked_to": 0
         },
         "links": 1,
         "confidence": "declared",
@@ -366,7 +418,8 @@
           "cabled_to": 2,
           "neighbor_of": 0,
           "tunnel": 0,
-          "uplink": 0
+          "uplink": 0,
+          "uplinked_to": 0
         },
         "links": 2,
         "confidence": "declared",
@@ -577,7 +630,8 @@
           "cabled_to": 2,
           "neighbor_of": 0,
           "tunnel": 0,
-          "uplink": 0
+          "uplink": 0,
+          "uplinked_to": 0
         },
         "links": 2,
         "confidence": "declared",
@@ -650,7 +704,8 @@
           "cabled_to": 0,
           "neighbor_of": 0,
           "tunnel": 1,
-          "uplink": 0
+          "uplink": 0,
+          "uplinked_to": 0
         },
         "links": 1,
         "confidence": "declared",
@@ -675,7 +730,8 @@
           "cabled_to": 0,
           "neighbor_of": 0,
           "tunnel": 0,
-          "uplink": 1
+          "uplink": 1,
+          "uplinked_to": 0
         },
         "links": 1,
         "confidence": "declared",
@@ -689,6 +745,54 @@
           "bandwidth_mbps": 1000
         },
         "members": [],
+        "members_truncated": false
+      },
+      {
+        "id": "<r2>~portal:<lyon>~uplinked_to",
+        "a": "<r2>",
+        "b": "portal:<lyon>",
+        "medium": "uplinked_to",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 0,
+          "neighbor_of": 0,
+          "tunnel": 0,
+          "uplink": 0,
+          "uplinked_to": 1
+        },
+        "links": 1,
+        "confidence": "declared",
+        "capacity_partial": false,
+        "toward": "a",
+        "oper": "unknown",
+        "measured": false,
+        "members": [
+          {
+            "a_device": {
+              "id": "<swb>",
+              "type": "device",
+              "display": "sw-r2"
+            },
+            "a_port": {
+              "id": "",
+              "type": "",
+              "display": ""
+            },
+            "b_device": {
+              "id": "<fwp>",
+              "type": "device",
+              "display": "fw-p"
+            },
+            "b_port": {
+              "id": "",
+              "type": "",
+              "display": ""
+            },
+            "kind": "uplinked_to",
+            "confidence": "declared",
+            "toward": "a"
+          }
+        ],
         "members_truncated": false
       }
     ],
@@ -822,7 +926,8 @@
           "cabled_to": 0,
           "neighbor_of": 0,
           "tunnel": 1,
-          "uplink": 0
+          "uplink": 0,
+          "uplinked_to": 0
         },
         "links": 1,
         "confidence": "declared",
@@ -838,6 +943,54 @@
         "members_truncated": false
       },
       {
+        "id": "<room>~portal:<lyon>~uplinked_to",
+        "a": "<room>",
+        "b": "portal:<lyon>",
+        "medium": "uplinked_to",
+        "kinds": {
+          "cable": 0,
+          "cabled_to": 0,
+          "neighbor_of": 0,
+          "tunnel": 0,
+          "uplink": 0,
+          "uplinked_to": 1
+        },
+        "links": 1,
+        "confidence": "declared",
+        "capacity_partial": false,
+        "toward": "a",
+        "oper": "unknown",
+        "measured": false,
+        "members": [
+          {
+            "a_device": {
+              "id": "<swb>",
+              "type": "device",
+              "display": "sw-r2"
+            },
+            "a_port": {
+              "id": "",
+              "type": "",
+              "display": ""
+            },
+            "b_device": {
+              "id": "<fwp>",
+              "type": "device",
+              "display": "fw-p"
+            },
+            "b_port": {
+              "id": "",
+              "type": "",
+              "display": ""
+            },
+            "kind": "uplinked_to",
+            "confidence": "declared",
+            "toward": "a"
+          }
+        ],
+        "members_truncated": false
+      },
+      {
         "id": "<room>~portal:internet~uplink",
         "a": "<room>",
         "b": "portal:internet",
@@ -847,7 +1000,8 @@
           "cabled_to": 0,
           "neighbor_of": 0,
           "tunnel": 0,
-          "uplink": 1
+          "uplink": 1,
+          "uplinked_to": 0
         },
         "links": 1,
         "confidence": "declared",

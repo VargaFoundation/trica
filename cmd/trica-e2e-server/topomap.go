@@ -15,9 +15,10 @@ import (
 )
 
 // The map is served by the real topomap package over a graph built from the
-// mock inventory, so the browser tests exercise the real aggregation. Three
+// mock inventory, so the browser tests exercise the real aggregation. Four
 // things are added to what the inventory declares, only for the map: a VPN
-// tunnel from lyon-1 to paris-1, an Internet access with a bandwidth behind a
+// tunnel from lyon-1 to paris-1, a device uplink (uplinked_to) from a
+// lyon-1 switch to a paris-1 one, an Internet access with a bandwidth behind a
 // gateway of paris-1, and a NAS with no place. The 200-device synthetic
 // fabric is declared in paris-1, outside any room.
 const (
@@ -71,6 +72,9 @@ func (a *api) mapSnapshot() *graph.Snapshot {
 		}
 		rel("routes_via", oid(idSwA1), oid(idGateway), "declared", nil)
 		rel("routes_via", oid(idGateway), oid(idAccess), "declared", nil)
+		// A device uplink between the two sites (ADR 0062), with no cable
+		// between the two switches: the map draws it with an arrow.
+		rel("uplinked_to", oid(idSwL2), oid(idSwA1), "observed", nil)
 		for _, o := range a.inv.objects {
 			id, _ := o["id"].(string)
 			if o["type"] == "device" && mustHex(id) >= firstSyn && o["parent_id"] == nil {

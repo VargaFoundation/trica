@@ -14,6 +14,8 @@ func TestAllowFiltersNodesLinksAndPortals(t *testing.T) {
 	w.cable("fw-a/wan", "fw-p/wan")
 	w.add("tun", "tunnel", "", map[string]any{"peer": "10.9.0.1"})
 	w.rel("contains", "fw-a", "tun")
+	w.rel("uplinked_to", "fw-p", "sw2") // S2 to S1, no port link
+	w.rel("uplinked_to", "sw2", "sw1")  // covered by the cables when they are readable
 	siteOne := func(typ, site string) bool { return site == "S1" }
 
 	t.Run("a caller of one site sees nothing of the other", func(t *testing.T) {
@@ -46,6 +48,10 @@ func TestAllowFiltersNodesLinksAndPortals(t *testing.T) {
 		mustEdge(t, m, "S1", "S2", MediumPhysical)
 		mustEdge(t, m, "S1", "S2", MediumTunnel)
 		mustEdge(t, m, "S1", InternetID, MediumUplink)
+		mustEdge(t, m, "S1", "S2", MediumUplinkedTo)
+		if e := run(t, w, LevelRoom, "A1", nil).edge("R1", "R2", MediumUplinkedTo); e != nil {
+			t.Errorf("a covered uplink is drawn: %+v", e)
+		}
 	})
 	t.Run("a link needs both interfaces readable", func(t *testing.T) {
 		noIfaces := func(typ, site string) bool { return typ != "interface" }
@@ -58,12 +64,20 @@ func TestAllowFiltersNodesLinksAndPortals(t *testing.T) {
 		if mustNode(t, m, "R1").Counts.InternalLinks != 0 {
 			t.Errorf("internal links must not count unreadable ones")
 		}
+		// The cables are unreadable, so they cover nothing: the uplink between
+		// the same two devices is shown (both devices are readable).
+		if e := m.edge("R1", "R2", MediumUplinkedTo); e == nil || e.Links != 1 {
+			t.Errorf("an uplink not covered by a readable link must be shown: %+v", e)
+		}
 	})
 	t.Run("devices the caller cannot read are not counted", func(t *testing.T) {
 		noDevices := func(typ, site string) bool { return typ != "device" }
 		m := runAllow(t, w, LevelRoom, "A1", nil, noDevices)
 		if r := mustNode(t, m, "R1"); r.Counts.Devices != 0 || r.Health.Worst != "unknown" {
 			t.Errorf("R1 = %+v", r)
+		}
+		if e := m.edge("R1", "R2", MediumUplinkedTo); e != nil {
+			t.Errorf("an uplink needs both devices readable: %+v", e)
 		}
 		if len(m.Edges) != 0 {
 			t.Errorf("a link needs its devices readable: %+v", m.Edges)

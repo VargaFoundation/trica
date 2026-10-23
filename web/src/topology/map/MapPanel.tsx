@@ -109,6 +109,8 @@ function EdgeDetails({ edge: e, map }: { edge: MapEdge; map: TopologyMap }) {
             <Fact label={t("topology.map.panel.aToB", { a: b, b: a })} value={formatBps(e.b_to_a_bps ?? 0, locale)} />
             <Fact label={t("topology.map.panel.util")} value={e.util === undefined ? t("topology.map.panel.notMeasured") : formatUtil(e.util, locale)} />
           </>
+        ) : e.medium === "uplinked_to" ? (
+          <Fact label={t("topology.map.panel.traffic")} value={t("topology.panel.uplinkNoLive")} />
         ) : (
           <Fact label={t("topology.map.panel.traffic")} value={t("topology.map.panel.notMeasured")} />
         )}
@@ -132,12 +134,27 @@ function EdgeDetails({ edge: e, map }: { edge: MapEdge; map: TopologyMap }) {
         <>
           <h4>{t("topology.map.panel.members")}</h4>
           <ul className="iso-members">
-            {e.members.map((m, i) => (
+            {e.members.map((m, i) =>
+              m.kind === "uplinked_to" ? (
+                <li key={`uplink-${m.a_device.id}-${m.b_device.id}-${i}`}>
+                  {m.toward === "a" ? (
+                    <>
+                      <ObjectLink id={m.b_device.id} display={m.b_device.display} /> → <ObjectLink id={m.a_device.id} display={m.a_device.display} />
+                    </>
+                  ) : (
+                    <>
+                      <ObjectLink id={m.a_device.id} display={m.a_device.display} /> → <ObjectLink id={m.b_device.id} display={m.b_device.display} />
+                    </>
+                  )}{" "}
+                  · {t("topology.uplink.label")}
+                </li>
+              ) : (
               <li key={`${m.a_port.id}-${m.b_port.id}-${i}`}>
                 <ObjectLink id={m.a_device.id} display={m.a_device.display} />:<ObjectLink id={m.a_port.id} display={m.a_port.display} /> ↔ <ObjectLink id={m.b_device.id} display={m.b_device.display} />:
                 <ObjectLink id={m.b_port.id} display={m.b_port.display} />
               </li>
-            ))}
+              ),
+            )}
           </ul>
           {e.members_truncated ? <p className="hint">{t("topology.map.panel.membersMore")}</p> : null}
         </>

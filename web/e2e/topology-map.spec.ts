@@ -106,3 +106,24 @@ test("the Network view stays one tab away, and the old addresses open it", async
   await page.getByRole("tab", { name: "Map" }).click();
   await expect(page.locator(drawn)).toBeVisible();
 });
+
+test("a device uplink is drawn between places with an arrow, named in the legend and the table", async ({ page }) => {
+  await signInWithToken(page, "/topology");
+  await expect(page.locator(drawn)).toBeVisible();
+  const uplink = page.locator('.iso-edge[data-medium="uplinked_to"]');
+  await expect(uplink).toHaveCount(1);
+  await expect(uplink.locator(".iso-edge-arrow")).toHaveCount(1);
+  await expect(uplink.locator(".iso-edge-base")).toHaveAttribute("stroke-dasharray", "10 3 2 3 2 3");
+  await expect(page.locator(".iso-legend")).toContainText("Uplink: a controller names the device");
+  const row = page.locator(`tr[data-id="${(await uplink.getAttribute("data-id")) ?? ""}"]`);
+  await expect(row).toContainText("Uplink (port unknown)");
+  await row.getByRole("button").click();
+  await expect(page.locator(".iso-panel")).toContainText("nothing to measure");
+
+  // The paris-1 floor: srv-f001 to spine-01 is drawn (no cable joins them),
+  // leaf-01 to spine-01 is not (its cable already does).
+  // Already signed in: navigate, the token form is not shown again.
+  await page.goto(`/topology?level=room&id=${ID.site}`);
+  await expect(page.locator(drawn)).toHaveAttribute("data-level", "room");
+  await expect(page.locator('.iso-edge[data-medium="uplinked_to"]')).toHaveCount(1);
+});
