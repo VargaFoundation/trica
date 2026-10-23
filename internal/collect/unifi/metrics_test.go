@@ -221,15 +221,40 @@ func TestISPMetricsNotAttributed(t *testing.T) {
 			t.Errorf("warnings %v", b.Health.Warnings)
 		}
 	})
-	t.Run("a host that is not read is skipped silently", func(t *testing.T) {
+	t.Run("an entry of another host warns for the console it misses", func(t *testing.T) {
 		f := newFake(t, SetRecorded)
 		f.SetBody("/v1/isp-metrics/5m", strings.ReplaceAll(recordedMetrics(t), recHost, "host-elsewhere:9"))
 		b := runAt(t, f, f.Target(office), metricsNow)
 		absent(t, wanOf(t, b, "WAN"), seriesKeys...)
-		if len(b.Health.Warnings) != 0 {
-			t.Errorf("warnings %v", b.Health.Warnings)
+		if n := countWarned(b, "no ISP metrics for console Office A in the last 30 minutes"); n != 1 {
+			t.Errorf("%d such warnings, want 1: %v", n, b.Health.Warnings)
 		}
 	})
+	t.Run("an empty answer warns once per console and the run stays full", func(t *testing.T) {
+		f := newFake(t, SetRecorded)
+		f.SetBody("/v1/isp-metrics/5m", `{"data":[],"httpStatusCode":200,"traceId":"00000000000000000000000000000000"}`)
+		b := runAt(t, f, f.Target(office), metricsNow)
+		absent(t, wanOf(t, b, "WAN"), seriesKeys...)
+		if n := countWarned(b, "no ISP metrics for console"); n != 1 {
+			t.Errorf("%d such warnings, want 1: %v", n, b.Health.Warnings)
+		}
+		if !warned(b, "no ISP metrics for console Office A in the last 30 minutes") {
+			t.Errorf("warnings %v", b.Health.Warnings)
+		}
+		if b.Scope != sdk.ScopeFull || !b.Health.OK {
+			t.Errorf("scope %v, health ok %v", b.Scope, b.Health.OK)
+		}
+	})
+}
+
+// countWarned counts the warnings that contain sub.
+func countWarned(b *sdk.Batch, sub string) (n int) {
+	for _, w := range b.Health.Warnings {
+		if strings.Contains(w, sub) {
+			n++
+		}
+	}
+	return n
 }
 
 func TestSetMeasurements(t *testing.T) {

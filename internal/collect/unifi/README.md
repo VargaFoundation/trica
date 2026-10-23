@@ -106,7 +106,7 @@ does not depend on it.
 |---|---|
 | All the calls answer, every console connected | scope `full`, health OK |
 | The ISP metrics call fails (400, 403, 429, 5xx, malformed, timeout) | scope and health as if it had not been made, a warning `ISP metrics: ...` (with the `Retry-After`); no series for this run, so the curve has a gap. Never `partial`, so absence detection keeps working |
-| A connected console has no period in the last 30 minutes | a warning, no series for it this run |
+| A connected console has no period in the last 30 minutes, or no entry at all in the answer (empty `data`, other hosts only) | a warning, no series for it this run |
 | The metrics cannot be attributed to one WAN (none up, load balancing, another provider) | a warning, no series for it this run |
 | `options.isp_metrics: false` | no metrics call, no series, no warning |
 | The key is refused (401), the API is unreachable, `/v1/hosts` fails or is malformed, the secret cannot be read, `options.hosts` matches no console | `Failed`: at most one request, no objects, nothing withdrawn |

@@ -24,13 +24,15 @@ func (x *builder) ispMetrics() {
 	if !s.haveMetrics {
 		return
 	}
-	done := map[string]bool{} // refs that already got a reading: the first site wins
+	done := map[string]bool{}    // refs that already got a reading: the first site wins
+	visited := map[string]bool{} // hosts with an Internet access that an entry was examined for
 	for i := range s.metrics {
 		m := &s.metrics[i]
 		hid := string(m.HostID)
 		if !x.hasAccess(hid) {
 			continue // a host that is filtered out, blocked or without WAN: nothing to attach to
 		}
+		visited[hid] = true
 		label := x.hostName(hid)
 		st := x.siteOf(m)
 		if st == nil {
@@ -49,7 +51,7 @@ func (x *builder) ispMetrics() {
 		}
 		p, ok := newestPeriod(m.Periods, s.metricsFrom, s.metricsTo)
 		if !ok {
-			x.warn("no ISP metrics for console %s in the last %d minutes", label, int(metricsWindow/time.Minute))
+			x.warnNoMetrics(label)
 			continue
 		}
 		stat := st.Statistics.WANs[wanType]
@@ -70,6 +72,19 @@ func (x *builder) ispMetrics() {
 			x.warn("ISP metrics of console %s: %s is out of range, not stored", label, k)
 		}
 	}
+	// A console with an Internet access that no entry of the answer was about
+	// (an empty answer, or entries of other hosts only) has no reading either.
+	for i := range s.hosts {
+		hid := string(s.hosts[i].ID)
+		if !visited[hid] && x.hasAccess(hid) {
+			x.warnNoMetrics(hostLabel(&s.hosts[i]))
+		}
+	}
+}
+
+// warnNoMetrics warns that console label has no ISP reading in the window.
+func (x *builder) warnNoMetrics(label string) {
+	x.warn("no ISP metrics for console %s in the last %d minutes", label, int(metricsWindow/time.Minute))
 }
 
 // hasAccess reports whether an Internet access was made for host hid.
