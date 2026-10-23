@@ -63,3 +63,14 @@ have nothing left to ask, opened the whole form anyway.
 
 Keyboard placement without the pointer on the drawing (the buttons and the dialog are the keyboard
 path today), and a picker that sorts by what fits the free units.
+
+## Amendment: integration with `located_in` (ADR 0058)
+
+The dialog and the placement forms write `mounted_in` and nothing else: racking a device never
+closes or replaces a `located_in` the device has (`batch.test.ts`, "racking a device never touches
+its located_in"). The engine lets the rack win, and the old place stays in the history, shown on
+the device page as "ignored while in a rack" and withdrawable there. The device page keeps its two
+sections, "Rack placement" (this ADR) and "Location" (ADR 0058), each with its own data; the
+"devices in no rack" filter of the picker looks at `mounted_in` only, so a device placed in a room
+is still offered. If the rack is in another site than that place, the engine raises the
+`location_conflict` of ADR 0061.

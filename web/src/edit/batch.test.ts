@@ -67,6 +67,13 @@ describe("the batches the forms send", () => {
     }
   });
 
+  it("racking a device never touches its located_in: a rack wins in the engine, the place stays in the history (ADR 0058)", () => {
+    const b = uiBatches();
+    for (const batch of [b.placeNewPdu, b.moveWithin, b.moveObserved, b.moveOwn, b.unplace]) {
+      for (const r of [...(batch.relations ?? []), ...(batch.unrelations ?? [])]) expect(r.type).toBe("mounted_in");
+    }
+  });
+
   it("puts a new container in its parent, designated by id, with only its identifiers as identity", () => {
     const b = uiBatches().createRack;
     expect(b.objects).toEqual([
