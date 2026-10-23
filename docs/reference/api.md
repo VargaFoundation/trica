@@ -55,6 +55,11 @@ collector it stands for, and gets a warning instead ([ADR 0005](../adr/0005-sing
 | `POST /proposals/{id}/approve`, `.../reject` | approve | Decide a pending proposal (409 if already decided) |
 | `GET /discrepancies` | read | Declared versus observed, filters `status`, `kind`, `object`; the kinds are in [discrepancies.md](discrepancies.md) |
 | `POST /discrepancies/{id}/accept` | approve | Accept the difference, with a reason |
+| `GET /ui/themes` | admin | The console's look (ADR 0054): `{active, deployment_default, locked, builtins, themes}`; `active` and the entries name a theme by `builtin` or `sha256`; `themes` are the archives kept in the database (`sha256`, `name`, `title`, `version`, `size`, `origin` `upload` or `url`, `uploaded_by`, `uploaded_at`) |
+| `POST /ui/themes` | admin | Upload an archive: the body is the zip itself (`Content-Type: application/zip`, 2 MiB at most, else 413). Validated like any theme; 422 `Invalid theme` lists every violation. 201 when new, 200 when already kept. Does not make it active. Audited |
+| `PUT /ui/themes/active` | admin | Choose the theme: `{"builtin": "flat"}` or `{"sha256": "<64 hex>"}`. 404 when unknown, 409 `theme-locked` when the configuration is `locked`. Audited |
+| `DELETE /ui/themes/active` | admin | Forget the choice (back to the deployment default). 204; 409 when `locked`. Audited |
+| `DELETE /ui/themes/{sha256}` | admin | Delete a kept archive. 204; 409 `theme-active` for the one in force, 404 when unknown. Audited |
 | `GET/POST /saved-queries`, `GET/DELETE /saved-queries/{name}` | read / propose | Saved queries; delete by the owner, or by an `admin` |
 
 ## Writes go through the engine

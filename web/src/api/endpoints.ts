@@ -37,6 +37,9 @@ import type {
   Series,
   SeriesKeys,
   SourceHealth,
+  StoredTheme,
+  ThemeSelection,
+  ThemeState,
 } from "./types";
 
 type Paging = { limit?: number; offset?: number };
@@ -112,4 +115,11 @@ export const api = {
     request<Page<CollectorInstance>>(`/collectors/${encodeURIComponent(kind)}/instances`, { query: q, signal }),
   collectorInstance: (kind: string, name: string, signal?: AbortSignal) =>
     request<CollectorInstance>(`/collectors/${encodeURIComponent(kind)}/instances/${encodeURIComponent(name)}`, { signal }),
+  /** The console's theme: in force, built in, stored (ADR 0054). Administrators only. */
+  themes: (signal?: AbortSignal) => request<ThemeState>("/ui/themes", { signal }),
+  /** Keeps a theme archive (the zip is the body); it is validated, not selected. */
+  uploadTheme: (file: Blob) => request<StoredTheme>("/ui/themes", { method: "POST", raw: { body: file, type: "application/zip" } }),
+  activateTheme: (sel: ThemeSelection) => request<ThemeState>("/ui/themes/active", { method: "PUT", body: sel }),
+  resetTheme: () => request<undefined>("/ui/themes/active", { method: "DELETE" }),
+  deleteTheme: (sha256: string) => request<undefined>(`/ui/themes/${encodeURIComponent(sha256)}`, { method: "DELETE" }),
 };

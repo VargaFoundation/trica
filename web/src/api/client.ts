@@ -35,10 +35,12 @@ export function buildQuery(query: object | undefined): string {
 }
 
 export interface RequestOptions {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PUT" | "DELETE";
   query?: object;
   /** Sent as JSON. Only the batch calls have one: the UI writes nothing else. */
   body?: unknown;
+  /** Sent as is, with its own content type: the one upload whose body is a file (a theme archive). */
+  raw?: { body: Blob; type: string };
   signal?: AbortSignal;
 }
 
@@ -71,18 +73,21 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
     if (res.status === 401 && sent && getToken() === sent) rejectToken();
     throw new ApiError(res.status, problem);
   }
+  // 204: the call succeeded and has nothing to say (a delete, a reset).
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
 async function send(path: string, opts: RequestOptions, token: string | null): Promise<Response> {
   const headers: Record<string, string> = { Accept: "application/json, application/problem+json" };
   if (token) headers.Authorization = `Bearer ${token}`;
-  if (opts.body !== undefined) headers["Content-Type"] = "application/json";
+  if (opts.raw) headers["Content-Type"] = opts.raw.type;
+  else if (opts.body !== undefined) headers["Content-Type"] = "application/json";
   try {
     return await fetch(`${API_BASE}${path}${buildQuery(opts.query)}`, {
       method: opts.method ?? "GET",
       headers,
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      body: opts.raw ? opts.raw.body : opts.body === undefined ? undefined : JSON.stringify(opts.body),
       signal: opts.signal,
       credentials: "omit",
     });

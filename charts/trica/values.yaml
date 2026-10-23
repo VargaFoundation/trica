@@ -55,11 +55,17 @@ deviceTypes:
 # ConfigMap: either the files of the theme (theme.json, logo.svg, ...) as keys,
 # or a zip archive under archiveKey (kubectl create configmap trica-theme
 # --from-file=theme.zip). The ConfigMap is mounted read-only at /etc/trica/theme
-# and re-read every minute, without a restart.
+# and re-read every minute, without a restart. Or a zip archive downloaded once
+# from an https url, which must match sha256 (kept in the database afterwards).
+# An administrator may also choose a theme in the console (stored in PostgreSQL,
+# shared by every replica); locked: true makes this configuration always win.
 theme:
   builtin: ""
   existingConfigMap: ""
   archiveKey: ""
+  url: ""
+  sha256: ""
+  locked: false
 
 service:
   type: ClusterIP

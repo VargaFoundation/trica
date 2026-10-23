@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from "react-router";
 import { clearToken } from "../api/token";
+import { useCan } from "../hooks";
 import { LOCALES, useI18n, type Locale, type MessageKey } from "../i18n";
 import { THEMES, useTheme, type ThemePreference } from "../theme";
 import { CrumbsContext } from "./crumbs";
@@ -38,6 +39,12 @@ export const NAV: { title: MessageKey; items: Item[] }[] = [
   },
 ];
 
+/** Only administrators have it: what shapes the console itself (ADR 0054). */
+const ADMIN_NAV: { title: MessageKey; items: Item[] } = {
+  title: "nav.group.admin",
+  items: [{ to: "/admin/themes", label: "nav.themes", icon: "palette" }],
+};
+
 const SIDEBAR_KEY = "trica.sidebar";
 type Sidebar = "full" | "rail";
 
@@ -52,7 +59,7 @@ function initialSidebar(): Sidebar {
 /** The trail of a page that sets none: its section. */
 function defaultTrail(pathname: string, t: (k: MessageKey) => string): Crumb[] {
   if (pathname === "/") return [{ label: t("nav.overview") }];
-  for (const g of NAV)
+  for (const g of [...NAV, ADMIN_NAV])
     for (const it of g.items)
       if (it.to !== "/" && (pathname === it.to || pathname.startsWith(`${it.to}/`)))
         return pathname === it.to
@@ -101,6 +108,7 @@ export function Layout() {
   }, []);
   const trail = crumbs?.path === location.pathname ? crumbs.trail : defaultTrail(location.pathname, t);
   const rail = sidebar === "rail";
+  const groups = useCan("admin") ? [...NAV, ADMIN_NAV] : NAV;
 
   return (
     <CrumbsContext.Provider value={setTrail}>
@@ -119,7 +127,7 @@ export function Layout() {
               </Link>
             </div>
             <nav aria-label={t("nav.main")} className="sidebar-nav">
-              {NAV.map((g) => (
+              {groups.map((g) => (
                 <div key={g.title} className="nav-group">
                   <p className="nav-group-title" aria-hidden="true">
                     {t(g.title)}

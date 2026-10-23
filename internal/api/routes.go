@@ -31,6 +31,11 @@ type route struct {
 	Params []param
 	// Body is a zero value of the request body type, or nil.
 	Body any
+	// BodyBinary lists the media types of a request body that is not JSON (a
+	// zip archive); it is read by the handler. Exclusive with Body.
+	BodyBinary []string
+	// MaxBody bounds the request body; zero means the general limit.
+	MaxBody int64
 	// BodyOptional says the request may carry no body at all.
 	BodyOptional bool
 	// Responses are the success answers; the first is the main one.
@@ -116,6 +121,7 @@ func (s *Server) routeTable() []route {
 		tSaved  = "saved queries"
 		tOps    = "operations"
 		tColl   = "collectors"
+		tTheme  = "themes"
 	)
 	collectorKind := param{Name: "kind", In: "path", Desc: "Kind of the collector module.", Required: true,
 		Schema: map[string]any{"type": "string", "pattern": "^[a-z][a-z0-9-]*$"}}
@@ -304,6 +310,28 @@ func (s *Server) routeTable() []route {
 			Summary:   "Delete a saved query (its owner, or an administrator).",
 			Params:    []param{{Name: "name", In: "path", Desc: "Query name.", Required: true, Schema: map[string]any{"type": "string"}}},
 			Responses: []response{{Status: http.StatusNoContent, Desc: "Deleted."}}, Errors: []int{http.StatusNotFound}, H: s.hQueryDelete},
+
+		{Method: "GET", Path: "/ui/themes", ID: "getThemes", Tag: tTheme, Action: ActionAdmin,
+			Summary:   "The theme in force, the deployment default, the built-in themes and the stored archives.",
+			Responses: ok(ThemeState{}), Errors: []int{http.StatusNotFound}, H: s.hThemes},
+		{Method: "POST", Path: "/ui/themes", ID: "uploadTheme", Tag: tTheme, Action: ActionAdmin, Mutating: true, Audit: "theme.upload",
+			Summary:    "Upload a theme archive (the zip itself as the body, 2 MiB at most). It is validated and kept, not selected.",
+			BodyBinary: []string{"application/zip"}, MaxBody: MaxThemeBody,
+			Responses: []response{{Status: http.StatusCreated, Desc: "Kept.", Body: StoredTheme{}},
+				{Status: http.StatusOK, Desc: "Already kept (same bytes).", Body: StoredTheme{}}},
+			Errors: []int{http.StatusBadRequest, http.StatusNotFound, http.StatusRequestEntityTooLarge, http.StatusUnprocessableEntity}, H: s.hThemeUpload},
+		{Method: "PUT", Path: "/ui/themes/active", ID: "activateTheme", Tag: tTheme, Action: ActionAdmin, Mutating: true, Audit: "theme.activate",
+			Summary: "Select the theme for every replica: a built-in one or a stored archive. Refused when the configuration locks the theme.",
+			Body:    ThemeSelection{}, Responses: ok(ThemeState{}),
+			Errors: []int{http.StatusBadRequest, http.StatusNotFound, http.StatusConflict}, H: s.hThemeActivate},
+		{Method: "DELETE", Path: "/ui/themes/active", ID: "resetTheme", Tag: tTheme, Action: ActionAdmin, Mutating: true, Audit: "theme.reset",
+			Summary:   "Drop the selection: the deployment default is back. Refused when the configuration locks the theme.",
+			Responses: []response{{Status: http.StatusNoContent, Desc: "Reset."}}, Errors: []int{http.StatusNotFound, http.StatusConflict}, H: s.hThemeReset},
+		{Method: "DELETE", Path: "/ui/themes/{sha256}", ID: "deleteTheme", Tag: tTheme, Action: ActionAdmin, Mutating: true, Audit: "theme.delete",
+			Summary: "Delete a stored archive. The theme in force is refused.",
+			Params: []param{{Name: "sha256", In: "path", Desc: "Identity of the archive.", Required: true,
+				Schema: map[string]any{"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
+			Responses: []response{{Status: http.StatusNoContent, Desc: "Deleted."}}, Errors: []int{http.StatusBadRequest, http.StatusNotFound, http.StatusConflict}, H: s.hThemeDelete},
 	}
 }
 

@@ -69,7 +69,7 @@
             }
           }
         },
-        "description": "Batch rejected"
+        "description": "Unprocessable content"
       },
       "Problem500": {
         "content": {
@@ -8597,6 +8597,46 @@
         ],
         "type": "object"
       },
+      "StoredTheme": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "uploaded_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "uploaded_by": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "origin",
+          "sha256",
+          "size",
+          "title",
+          "uploaded_at",
+          "uploaded_by",
+          "version"
+        ],
+        "type": "object"
+      },
       "TargetConfig": {
         "properties": {
           "address": {
@@ -8661,6 +8701,76 @@
           "ca_file",
           "insecure",
           "min_version"
+        ],
+        "type": "object"
+      },
+      "ThemeRef": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "source",
+          "title",
+          "version"
+        ],
+        "type": "object"
+      },
+      "ThemeSelection": {
+        "properties": {
+          "builtin": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ThemeState": {
+        "properties": {
+          "active": {
+            "$ref": "#/components/schemas/ThemeRef"
+          },
+          "builtins": {
+            "items": {
+              "$ref": "#/components/schemas/ThemeRef"
+            },
+            "type": "array"
+          },
+          "deployment_default": {
+            "$ref": "#/components/schemas/ThemeRef"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "themes": {
+            "items": {
+              "$ref": "#/components/schemas/StoredTheme"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "active",
+          "builtins",
+          "deployment_default",
+          "locked",
+          "themes"
         ],
         "type": "object"
       },
@@ -11633,6 +11743,234 @@
         "x-trica-action": "read"
       }
     },
+    "/ui/themes": {
+      "get": {
+        "description": "Requires the \"admin\" action.",
+        "operationId": "getThemes",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThemeState"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "The theme in force, the deployment default, the built-in themes and the stored archives.",
+        "tags": [
+          "themes"
+        ],
+        "x-trica-action": "admin"
+      },
+      "post": {
+        "description": "Requires the \"admin\" action.",
+        "operationId": "uploadTheme",
+        "requestBody": {
+          "content": {
+            "application/zip": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoredTheme"
+                }
+              }
+            },
+            "description": "Already kept (same bytes)."
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoredTheme"
+                }
+              }
+            },
+            "description": "Kept."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Problem413"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem422"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "Upload a theme archive (the zip itself as the body, 2 MiB at most). It is validated and kept, not selected.",
+        "tags": [
+          "themes"
+        ],
+        "x-trica-action": "admin",
+        "x-trica-audited": true
+      }
+    },
+    "/ui/themes/active": {
+      "delete": {
+        "description": "Requires the \"admin\" action.",
+        "operationId": "resetTheme",
+        "responses": {
+          "204": {
+            "description": "Reset."
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem409"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "Drop the selection: the deployment default is back. Refused when the configuration locks the theme.",
+        "tags": [
+          "themes"
+        ],
+        "x-trica-action": "admin",
+        "x-trica-audited": true
+      },
+      "put": {
+        "description": "Requires the \"admin\" action.",
+        "operationId": "activateTheme",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThemeSelection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThemeState"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem409"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "Select the theme for every replica: a built-in one or a stored archive. Refused when the configuration locks the theme.",
+        "tags": [
+          "themes"
+        ],
+        "x-trica-action": "admin",
+        "x-trica-audited": true
+      }
+    },
+    "/ui/themes/{sha256}": {
+      "delete": {
+        "description": "Requires the \"admin\" action.",
+        "operationId": "deleteTheme",
+        "parameters": [
+          {
+            "description": "Identity of the archive.",
+            "in": "path",
+            "name": "sha256",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem409"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "Delete a stored archive. The theme in force is refused.",
+        "tags": [
+          "themes"
+        ],
+        "x-trica-action": "admin",
+        "x-trica-audited": true
+      }
+    },
     "/whohad": {
       "get": {
         "description": "Requires the \"read\" action.",
@@ -11764,6 +12102,9 @@
     },
     {
       "name": "schema"
+    },
+    {
+      "name": "themes"
     }
   ]
 }

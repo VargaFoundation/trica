@@ -3,6 +3,7 @@ package api_test
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/VargaFoundation/trica/internal/api"
@@ -54,6 +55,11 @@ func (e *env) calls(t testing.TB, proposalID, discrepancyID int64) map[string]ca
 	}
 	return map[string]callSpec{
 		"getHealthz":              {"GET", "/api/v1/healthz", ""},
+		"getThemes":               {"GET", "/api/v1/ui/themes", ""},
+		"uploadTheme":             {"POST", "/api/v1/ui/themes", "PK-not-read-by-the-fake"},
+		"activateTheme":           {"PUT", "/api/v1/ui/themes/active", `{"builtin":"flat"}`},
+		"resetTheme":              {"DELETE", "/api/v1/ui/themes/active", ""},
+		"deleteTheme":             {"DELETE", "/api/v1/ui/themes/" + strings.Repeat("a", 64), ""},
 		"getReadyz":               {"GET", "/api/v1/readyz", ""},
 		"getOpenAPI":              {"GET", "/api/v1/openapi.json", ""},
 		"getCollectionHealth":     {"GET", "/api/v1/health/collection", ""},

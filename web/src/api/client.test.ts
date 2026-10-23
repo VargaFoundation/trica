@@ -63,6 +63,24 @@ describe("request", () => {
   });
 });
 
+describe("request, beyond reading", () => {
+  it("sends a file as it is, with its own content type", async () => {
+    const api = mockApi({ "POST /ui/themes": { sha256: "x" } });
+    const file = new Blob([new Uint8Array([1, 2, 3])], { type: "application/zip" });
+    await request("/ui/themes", { method: "POST", raw: { body: file, type: "application/zip" } });
+    expect(api.calls[0]?.headers.get("Content-Type")).toBe("application/zip");
+    expect(api.calls[0]?.raw?.size).toBe(3);
+  });
+
+  it("uses PUT and DELETE, and reads 204 as nothing", async () => {
+    const api = mockApi({ "PUT /ui/themes/active": { a: 1 }, "DELETE /ui/themes/active": { status: 204, body: undefined } });
+    await expect(request("/ui/themes/active", { method: "PUT", body: { builtin: "flat" } })).resolves.toEqual({ a: 1 });
+    await expect(request("/ui/themes/active", { method: "DELETE" })).resolves.toBeUndefined();
+    expect(api.calls.map((c) => c.method)).toEqual(["PUT", "DELETE"]);
+    expect(api.calls[0]?.body).toEqual({ builtin: "flat" });
+  });
+});
+
 describe("token store", () => {
   it("keeps the token in sessionStorage, not localStorage", () => {
     setToken("  trica_x_y ");

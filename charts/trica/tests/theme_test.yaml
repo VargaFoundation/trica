@@ -90,7 +90,7 @@ tests:
       theme.existingConfigMap: trica-theme
     asserts:
       - failedTemplate:
-          errorMessage: "theme.builtin and theme.existingConfigMap are exclusive: a theme comes from one source"
+          errorMessage: "theme.builtin, theme.existingConfigMap and theme.url are exclusive: a theme comes from one source"
   - it: refuses an archiveKey with no ConfigMap
     template: templates/deployment.yaml
     set:
@@ -117,3 +117,80 @@ tests:
       theme.url: https://example.org/t.zip
     asserts:
       - failedTemplate: {}
+  - it: refuses a url and a built-in theme together
+    template: templates/deployment.yaml
+    set:
+      theme.builtin: flat
+      theme.url: https://themes.example.org/acme.zip
+      theme.sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    asserts:
+      - failedTemplate:
+          errorMessage: "theme.builtin, theme.existingConfigMap and theme.url are exclusive: a theme comes from one source"
+  - it: refuses a url without its digest
+    template: templates/deployment.yaml
+    set:
+      theme.url: https://themes.example.org/acme.zip
+    asserts:
+      - failedTemplate:
+          errorMessage: "theme.url needs theme.sha256: the digest the downloaded archive must match"
+  - it: refuses a digest without a url
+    template: templates/deployment.yaml
+    set:
+      theme.sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    asserts:
+      - failedTemplate:
+          errorMessage: "theme.sha256 goes with theme.url"
+  - it: refuses a lock with nothing to lock to
+    template: templates/deployment.yaml
+    set:
+      theme.locked: true
+    asserts:
+      - failedTemplate:
+          errorMessage: "theme.locked needs a source to lock to: theme.builtin, theme.existingConfigMap or theme.url"
+  - it: refuses a url that is not https, and a digest that is not 64 hex digits
+    template: templates/deployment.yaml
+    set:
+      theme.url: http://themes.example.org/acme.zip
+      theme.sha256: abc
+    asserts:
+      - failedTemplate: {}
+  - it: renders the url and its digest in the server configuration, with no volume
+    set:
+      theme.url: https://themes.example.org/acme.zip
+      theme.sha256: "1111111111111111111111111111111111111111111111111111111111111111"
+    asserts:
+      - matchRegex:
+          path: data["trica.yaml"]
+          pattern: "url: https://themes.example.org/acme.zip"
+        template: templates/configmap.yaml
+      - matchRegex:
+          path: data["trica.yaml"]
+          pattern: "sha256: .?1111111111111111111111111111111111111111111111111111111111111111"
+        template: templates/configmap.yaml
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: theme
+            configMap:
+              name: trica-theme
+        template: templates/deployment.yaml
+  - it: renders locked next to the theme source
+    template: templates/configmap.yaml
+    set:
+      theme.builtin: flat
+      theme.locked: true
+    asserts:
+      - matchRegex:
+          path: data["trica.yaml"]
+          pattern: "builtin: flat"
+      - matchRegex:
+          path: data["trica.yaml"]
+          pattern: "locked: true"
+  - it: does not render locked when it is not asked for
+    template: templates/configmap.yaml
+    set:
+      theme.builtin: flat
+    asserts:
+      - notMatchRegex:
+          path: data["trica.yaml"]
+          pattern: "locked"

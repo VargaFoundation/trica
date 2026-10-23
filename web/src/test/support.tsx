@@ -48,6 +48,8 @@ export interface Call {
   headers: Headers;
   /** The JSON body, parsed; undefined without one. */
   body?: unknown;
+  /** The body of a call that is not JSON (a file), as sent. */
+  raw?: Blob;
 }
 
 const isReply = (v: unknown): v is Reply => typeof v === "object" && v !== null && "status" in v && "body" in v;
@@ -79,6 +81,7 @@ export function mockApi(routes: Record<string, Handler>) {
       query: url.searchParams,
       headers: new Headers(init?.headers),
       body: typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined,
+      raw: init?.body instanceof Blob ? init.body : undefined,
     };
     calls.push(call);
     const key = `${call.method} ${call.path}`;

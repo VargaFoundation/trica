@@ -1,6 +1,6 @@
 # ADR-0054: UI themes: validated archives, two built-in looks, served before sign-in
 
-- **Status**: accepted (2026-10). Part 1 is implemented; what part 2 adds is marked **(part 2)**.
+- **Status**: accepted (2026-10). Parts 1 and 2 are implemented.
 - **Concerns**: `internal/theme` (new), `internal/web` (`/theme/...`), `internal/server`
   (`web.theme`), `internal/wiring`, `cmd/trica` (`trica theme check`), `web/src/styles`,
   `charts/trica` (`theme.*`). Extends ADR 0040 (the tokens); amends ADR 0018 (the font rule:
@@ -87,9 +87,14 @@ The constraints that shape the answer:
    its `..data` links are followed inside the directory, an escape is refused). Unknown keys,
    two sources and an unknown built-in name refuse the start. The chart's `theme.builtin` /
    `theme.existingConfigMap` / `theme.archiveKey` write it. Precedence: the configured source,
-   else the built-in `default`. **(part 2)** a theme stored in PostgreSQL and chosen by an
-   administrator, an admin API and page, `url` + `sha256` sources, `locked`, `NOTIFY` between
-   replicas; its precedence over the configuration is part 2's to define.
+   else the built-in `default`. **(part 2)** `url` + `sha256` (https, digest checked before parsing, fetched once and kept in
+   the database) joins `builtin` and `path` as a source, and `locked` makes the configured source
+   final. Otherwise an administrator's choice, stored in PostgreSQL, comes first. Full precedence:
+   `locked` configuration, the administrator's choice, the configuration, the built-in `default`.
+   Replicas follow through `pg_notify('trica_theme')` sent in the transaction of the change,
+   with the `reload` timer as the safety net. The admin API (`/api/v1/ui/themes`, `admin`
+   action, audited) and page (`/admin/themes`) upload, choose, reset and delete; deleting the
+   active theme is refused. These tables are not inventory, so the delete is real.
 
 9. **A bad theme never stops the server.** At start, a path that does not load leaves the
    built-in `default` in force; later, a refused read keeps the previous theme. The reason is
@@ -119,7 +124,7 @@ the active sidebar entry, drawn at width 0 by default, so `default` shows no cha
 - **Chained `extends`.** Cycles to detect for no use; one built-in base is enough.
 - **A signed theme.** The source is already trusted configuration; the validation exists
   because a theme is easy to get wrong, not because the operator is an adversary. A `sha256`
-  pin on a remote source is part 2.
+  pin on a remote source is part 2 (done: it is mandatory with `url`).
 - **Always drawing the active-entry bar.** Changes the default look for everybody; a token at
   width 0 keeps it unchanged.
 
@@ -138,4 +143,4 @@ the active sidebar entry, drawn at width 0 by default, so `default` shows no cha
 
 ## What this does not decide
 
-Part 2 above. Localising a theme's texts. A theme that changes layout or adds components.
+Localising a theme's texts. A theme that changes layout or adds components.

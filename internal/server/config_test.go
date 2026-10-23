@@ -180,9 +180,12 @@ live:
 
 func TestWebThemeConfig(t *testing.T) {
 	dir := t.TempDir()
+	sum := strings.Repeat("ab", 32)
 	good := map[string]string{
 		"builtin": "web: {theme: {builtin: flat}}",
 		"path":    "web: {theme: {path: " + dir + ", reload: 30s}}",
+		"url":     "web: {theme: {url: https://assets.example.net/t.zip, sha256: " + sum + "}}",
+		"locked":  "web: {theme: {builtin: flat, locked: true}}",
 	}
 	for name, yaml := range good {
 		t.Run(name, func(t *testing.T) {
@@ -199,13 +202,18 @@ func TestWebThemeConfig(t *testing.T) {
 		t.Errorf("reload defaults to %v, want 1m", c.Web.Theme.Reload)
 	}
 	bad := map[string]struct{ yaml, want string }{
-		"two sources":       {"web: {theme: {builtin: flat, path: " + dir + "}}", "not both"},
-		"no source":         {"web: {theme: {}}", "needs builtin or path"},
-		"unknown built-in":  {"web: {theme: {builtin: neon}}", "not a built-in theme"},
-		"missing path":      {"web: {theme: {path: " + dir + "/none}}", "web.theme.path"},
-		"negative reload":   {"web: {theme: {path: " + dir + ", reload: -1s}}", "negative"},
-		"unknown key":       {"web: {theme: {builtin: flat, locked: true}}", "locked"},
-		"unknown key (url)": {"web: {theme: {url: https://x/t.zip}}", "url"},
+		"two sources":      {"web: {theme: {builtin: flat, path: " + dir + "}}", "one of builtin, path and url"},
+		"no source":        {"web: {theme: {}}", "needs builtin, path or url"},
+		"locked alone":     {"web: {theme: {locked: true}}", "needs builtin, path or url"},
+		"unknown built-in": {"web: {theme: {builtin: neon}}", "not a built-in theme"},
+		"missing path":     {"web: {theme: {path: " + dir + "/none}}", "web.theme.path"},
+		"negative reload":  {"web: {theme: {path: " + dir + ", reload: -1s}}", "negative"},
+		"unknown key":      {"web: {theme: {builtin: flat, colour: red}}", "colour"},
+		"url without sha":  {"web: {theme: {url: https://x.example.net/t.zip}}", "sha256"},
+		"bad sha":          {"web: {theme: {url: https://x.example.net/t.zip, sha256: ABC}}", "sha256"},
+		"sha without url":  {"web: {theme: {builtin: flat, sha256: " + sum + "}}", "goes with"},
+		"http url":         {"web: {theme: {url: http://x.example.net/t.zip, sha256: " + sum + "}}", "https"},
+		"url credentials":  {"web: {theme: {url: https://u:p@x.example.net/t.zip, sha256: " + sum + "}}", "credentials"},
 	}
 	for name, c := range bad {
 		t.Run(name, func(t *testing.T) {

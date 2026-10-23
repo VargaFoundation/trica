@@ -170,6 +170,12 @@ contrast of its palette. `/theme/...` is public (the sign-in page is themed) and
 a validated theme references, under a sandboxing policy; the page's Content-Security-Policy is
 unchanged. A theme that fails never stops the server. See [themes](themes.md), ADR 0054.
 
+Choosing and uploading a theme (`/api/v1/ui/themes`) needs the `admin` action and is audited. An
+upload is a raw zip bounded at 2 MiB by its own limit, validated before it is stored; a remote
+theme (`web.theme.url`) is `https` only, pinned by a mandatory SHA-256 checked before parsing,
+fetched once with a timeout and a size limit, and never followed to a non-`https` address.
+`web.theme.locked` keeps the console's page from overriding the deployment's choice.
+
 ## Audit log
 
 Every mutating request (not GET, HEAD, OPTIONS) and every denied request (401, 403, 429) is
