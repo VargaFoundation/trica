@@ -43,7 +43,10 @@ of models in a simple YAML format.
    compared lower-cased without punctuation (`CRS326-24G-2S+RM` equals the slug form), a
    vendor repeated in the model name is dropped, and a few vendor spellings are aliased
    (Arista Networks, HP / HPE / Hewlett Packard Enterprise, Dell Inc. / Dell EMC,
-   Routerboard / MikroTik). A device without a vendor never matches.
+   Routerboard / MikroTik). A device without a vendor never matches. *Amended (#159, STATUS
+   row 95): a `+` is read as the word `plus`, not dropped as punctuation. `DS218` and `DS218+`
+   are two names; `DS218+`, `DS218 Plus` and the slug form `ds218-plus` are one. A name that
+   drops the `+` its model has is another name.*
    **A name that fits two different models matches none**: a wrong U height is worse than
    a missing one.
 6. **Airflow variants.** Some vendors suffix the model with `-F` / `-R` for the airflow. A

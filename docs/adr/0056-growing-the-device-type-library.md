@@ -58,9 +58,9 @@ rules of the loader and the matcher stood in the way:
    controllers, modules); no slug clash; found by its own model name (`TestEveryModelIsFoundByItsOwnName`).
    This copied 317 files at master `4a87296236ab01f624b42de578a5f7720d0255fe`, licence checked
    2026-10-23. Excluded on purpose: children and portless enclosures, Gen5 to Gen7 servers, airMAX,
-   UISP and cameras, and the four files whose name only differs by a `+` (DS218, DS218+, RS815,
-   RS815+): `norm` drops the `+`, so each pair would match neither (a `finding` proposes mapping
-   `+` to `plus`).
+   UISP and cameras. *Amended (#159): `norm` reads `+` as `plus`, and the four files whose name
+   only differs by a `+` (DS218, DS218+, RS815, RS815+) are copied at the same commit (321 files
+   at `4a87296`).*
 5. **Shortnames live in an overlay, not in variant files.**
    `library/overlays/<Vendor>.yaml` (Apache-2.0, written here) adds `part_numbers` to upstream
    models by slug; `applyOverlays` runs at the end of `Load`. A device reporting the shortname then
@@ -88,7 +88,7 @@ rules of the loader and the matcher stood in the way:
 
 ## Consequences
 
-- 519 models (from 199): HPE 128, Synology 38, Ubiquiti 101 among them.
+- 519 models (from 199; 523 since #159): HPE 128, Synology 38 (42 since #159), Ubiquiti 101 among them.
 - The Ubiquiti and Synology DiskStation models are 0 U: they are in the inventory with their
   ports and weight, but they have no place on a rack elevation (a mounted one draws as an assumed
   1 U, flagged).

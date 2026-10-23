@@ -39,7 +39,14 @@ var vendorAliases = map[string]string{
 
 var nonAlnum = regexp.MustCompile(`[^a-z0-9]+`)
 
-func norm(s string) string { return nonAlnum.ReplaceAllString(strings.ToLower(s), "") }
+// plusWord reads a "+" in a name as the word "plus" (#159): vendors write
+// DS218+ and DS218 Plus for one product and DS218 for another, and slugs
+// spell it -plus-. Dropping it as punctuation made DS218 and DS218+ one name.
+var plusWord = strings.NewReplacer("+", " plus ")
+
+func norm(s string) string {
+	return nonAlnum.ReplaceAllString(plusWord.Replace(strings.ToLower(s)), "")
+}
 
 func vendorKey(v string) string {
 	k := norm(v)

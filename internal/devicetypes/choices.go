@@ -64,9 +64,10 @@ type Choice struct {
 }
 
 // words splits a model name into lowercase alphanumeric words and drops a
-// leading vendor name ("Dell PowerEdge R330" is "poweredge r330").
+// leading vendor name ("Dell PowerEdge R330" is "poweredge r330"). A "+" is
+// the word "plus", as in norm: "DS218+" is "ds218 plus".
 func words(vendor, name string) []string {
-	ws := strings.FieldsFunc(strings.ToLower(name), func(r rune) bool {
+	ws := strings.FieldsFunc(plusWord.Replace(strings.ToLower(name)), func(r rune) bool {
 		return (r < 'a' || r > 'z') && (r < '0' || r > '9')
 	})
 	vs := map[string]bool{norm(vendor): true, vendorKey(vendor): true}

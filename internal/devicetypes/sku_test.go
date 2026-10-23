@@ -125,7 +125,7 @@ func TestEmbeddedSKUsAreUnique(t *testing.T) {
 			n++
 			// The way the index compares them: lower case, letters and digits
 			// only ("UDM-SE" and "UDMSE" are one SKU).
-			k := m.Vendor + "|" + strings.Join(regexp.MustCompile(`[a-z0-9]+`).FindAllString(strings.ToLower(pn), -1), "")
+			k := m.Vendor + "|" + devicetypes.Norm(pn)
 			if prev, dup := seen[k]; dup {
 				t.Errorf("%s lists %s, already listed by %s", m.Slug, pn, prev)
 			}
