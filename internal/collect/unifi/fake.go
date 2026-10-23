@@ -170,6 +170,26 @@ func (f *FakeSiteManager) lock(fn func()) {
 	fn()
 }
 
+// waitOrAbort holds the answer for d. When the request ends first (the client
+// gave up, or the server closes), it aborts the handler instead of returning:
+// a handler that returns without writing makes net/http send "200 OK" with an
+// empty body, which a client still reading would take for a real, empty
+// answer (a malformed one) instead of the transport failure a slow endpoint
+// stands for. Panicking with http.ErrAbortHandler closes the connection
+// without a response and without a log line.
+func waitOrAbort(r *http.Request, d time.Duration) {
+	if d <= 0 {
+		return
+	}
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C:
+	case <-r.Context().Done():
+		panic(http.ErrAbortHandler)
+	}
+}
+
 func (f *FakeSiteManager) handle(w http.ResponseWriter, r *http.Request) {
 	p := r.URL.Path
 	var (
@@ -190,13 +210,7 @@ func (f *FakeSiteManager) handle(w http.ResponseWriter, r *http.Request) {
 			delay = d
 		}
 	})
-	if delay > 0 {
-		select {
-		case <-time.After(delay):
-		case <-r.Context().Done():
-			return
-		}
-	}
+	waitOrAbort(r, delay)
 	w.Header().Set("Content-Type", "application/json")
 	switch {
 	case location != "":
