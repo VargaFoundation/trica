@@ -30,6 +30,7 @@ import {
   relationsSwA1,
   schema,
   searchSw,
+  keysOf,
   seriesOf,
   siteParis,
   srv01,
@@ -163,6 +164,9 @@ export function defaultRoutes(me: Handler = APPROVER): Record<string, Handler> {
   };
   for (const o of objects) routes[`GET /objects/${o.id}`] = o;
   for (const o of [swA1, srv01]) routes[`GET /objects/${o.id}/series`] = (c: Call) => seriesOf(o.id, c.query);
+  // swA1 has no inlet or outlet temperature, so its page asks which measurements it read.
+  routes[`GET /objects/${swA1.id}/series/keys`] = (c: Call) => keysOf(swA1.id, ["power_w"], c.query);
+  routes[`GET /objects/${srv01.id}/series/keys`] = (c: Call) => keysOf(srv01.id, ["inlet_temp_c", "outlet_temp_c", "power_w"], c.query);
   // No model, so nothing to draw: the tests of the faces declare their own.
   for (const o of [swA1, srv01]) routes[`GET /objects/${o.id}/faces`] = { faces: [], parts: [], truncated: false };
   // Nothing the library knows: no model section. The tests of the chooser declare their own.

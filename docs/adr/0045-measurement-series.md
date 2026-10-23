@@ -2,7 +2,7 @@
 
 - **Status**: accepted (2026-10)
 - **Concerns**: `internal/schema` (the `series` flag), `internal/store` (`HistoryBetween`),
-  `internal/api` (`GET /objects/{id}/series`), `web/src/charts`. Amends ADR 0041 (which said trica
+  `internal/api` (`GET /objects/{id}/series`, `GET /objects/{id}/series/keys`), `web/src/charts`. Amends ADR 0041 (which said trica
   keeps no history of measurements).
 
 ## Context
@@ -47,6 +47,13 @@ Two limits shape the reading:
   drawing is SVG in real pixels, its width following the card: the CSP forbids inline styles, so
   nothing is laid over it in percent. The pointer and the arrow keys read one bucket out in a live
   region; a sentence gives the last, lowest and highest values.
+- *Amended (#167):* the page draws a curve for every series attribute the object holds as a number
+  now or that had a reading in the last 30 days (`GET /objects/{id}/series/keys`, one call, asked
+  only when a declared series has no current value). A withdrawn measurement (the UniFi ISP metrics
+  of ADR 0059 when a run has no period, a sensor that stops answering) keeps its curve, ending in a
+  gap, with a "no current value" note. A measurement never read, or not read for 30 days, gets no
+  curve; the set does not depend on the selected range, so the card and its range buttons never
+  vanish.
 
 ## Consequences
 
@@ -56,7 +63,8 @@ Two limits shape the reading:
 - A reading is a change of value, not a sample: two equal readings an hour apart are one row valid
   for the hour. A collector that stops reporting leaves the last value open until something closes
   it (the object going absent, another source), and the curve stays flat over that time; it is not
-  a gap.
+  a gap. (A withdrawal closes the row, so the curve then shows a gap, #167; only an unclosed value
+  stays flat.)
 - The cost is the rows of one attribute of one object over the range: about 8 600 for 30 days at
   five minutes, one index range scan, folded in Go. The bound of 50 000 rows covers a year of a
   value that changes every ten minutes.

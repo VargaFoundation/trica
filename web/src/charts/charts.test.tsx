@@ -1,11 +1,11 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { SeriesPoint } from "../api/types";
-import { ID, schema, seriesOf, srv01 } from "../test/fixtures";
-import { defaultRoutes, mockApi, problem, renderApp, type Call } from "../test/support";
+import { ID, keysOf, schema, seriesOf, srv01 } from "../test/fixtures";
+import { defaultRoutes, mockApi, problem, renderApp, type Call, type Handler } from "../test/support";
 import { makeLookup } from "../hooks";
 import { bandPath, linePath, nearest, runs, scale, valueRange } from "./geometry";
-import { readRange, seriesKeys } from "./Measurements";
+import { HISTORY_SPAN, readRange, seriesKeys } from "./Measurements";
 
 const HOUR = 3_600_000;
 const pt = (h: number, avg: number, min = avg, max = avg): SeriesPoint => ({ t: new Date(Date.UTC(2026, 9, 12, h)).toISOString(), avg, min, max });
@@ -65,6 +65,14 @@ describe("which measurements get a curve", () => {
     expect(seriesKeys({ ...srv01, type: "rack" }, lookup)).toEqual([]);
   });
 
+  it("keeps a withdrawn measurement the history says was read, in schema order, and ignores the rest", () => {
+    const gone = { ...srv01, attributes: { ...srv01.attributes, power_w: undefined } };
+    expect(seriesKeys(gone, lookup, ["power_w"])).toEqual(["power_w", "inlet_temp_c", "outlet_temp_c"]);
+    expect(seriesKeys(gone, lookup, ["uptime_s", "no_such"])).toEqual(["inlet_temp_c", "outlet_temp_c"]);
+    expect(seriesKeys(gone, lookup, [])).toEqual(["inlet_temp_c", "outlet_temp_c"]);
+    expect(seriesKeys({ ...srv01, type: "rack" }, lookup, ["power_w"])).toEqual([]);
+  });
+
   it("reads the period from the address, a day unless told otherwise", () => {
     expect(readRange(null)).toBe("24h");
     expect(readRange("7d")).toBe("7d");
@@ -75,6 +83,16 @@ describe("which measurements get a curve", () => {
 
 const seriesCalls = (calls: Call[], key?: string) => calls.filter((c) => c.path === `/objects/${ID.srv01}/series` && (!key || c.query.get("key") === key));
 const span = (c: Call) => Date.parse(c.query.get("to") ?? "") - Date.parse(c.query.get("from") ?? "");
+
+const keysCalls = (calls: Call[]) => calls.filter((c) => c.path === `/objects/${ID.srv01}/series/keys`);
+
+/** srv01 with every measurement withdrawn but the history of power_w. */
+const withdrawn = (extra: Record<string, Handler> = {}) => ({
+  ...defaultRoutes(),
+  [`GET /objects/${ID.srv01}`]: { ...srv01, attributes: { ...srv01.attributes, power_w: undefined, inlet_temp_c: undefined, outlet_temp_c: undefined } },
+  [`GET /objects/${ID.srv01}/series/keys`]: (c: Call) => keysOf(ID.srv01, ["power_w"], c.query),
+  ...extra,
+});
 
 async function trends() {
   return (await screen.findByRole("heading", { name: "Trends" })).closest("section") as HTMLElement;
@@ -101,6 +119,8 @@ describe("the trends of an object", () => {
     // Only the series: uptime is a number but not a measurement over time.
     expect(seriesCalls(api.calls).map((x) => x.query.get("key")).sort()).toEqual(["inlet_temp_c", "outlet_temp_c", "power_w"]);
     expect(within(section).getByRole("button", { name: "24 h" })).toHaveAttribute("aria-pressed", "true");
+    // Every measurement is current: nothing to ask about the history.
+    expect(keysCalls(api.calls)).toHaveLength(0);
   });
 
   it("says the last, lowest and highest readings in words", async () => {
@@ -202,11 +222,51 @@ describe("the trends of an object", () => {
     expect(api.calls.some((c) => c.path.endsWith("/series"))).toBe(false);
   });
 
+  it("keeps the curve of a measurement withdrawn but read this month, with a note", async () => {
+    const api = mockApi(withdrawn());
+    renderApp({ at: `/objects/${ID.srv01}` });
+    const section = await trends();
+    const { card } = await curve("Power draw");
+    expect(within(card).getByText(/^No current value: the source no longer reports this measurement/)).toBeInTheDocument();
+    expect(within(section).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Power draw"]);
+    expect(within(section).getByRole("button", { name: "24 h" })).toBeInTheDocument();
+    const asked = keysCalls(api.calls);
+    expect(asked).toHaveLength(1);
+    expect(span(asked[0] as Call)).toBe(HISTORY_SPAN);
+    expect(Date.parse(asked[0]?.query.get("to") ?? "") % 60_000).toBe(0);
+    expect(seriesCalls(api.calls).map((x) => x.query.get("key"))).toEqual(["power_w"]);
+  });
+
+  it("asks the history over a month whatever the period shown", async () => {
+    const api = mockApi(withdrawn());
+    renderApp({ at: `/objects/${ID.srv01}?range=7d` });
+    await curve("Power draw");
+    expect(keysCalls(api.calls).map(span)).toEqual([30 * 24 * HOUR]);
+    expect(seriesCalls(api.calls, "power_w").map(span)).toEqual([7 * 24 * HOUR]);
+    expect(screen.getByRole("button", { name: "24 h" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("falls back to the current measurements when the history cannot be read", async () => {
+    mockApi(withdrawn({ [`GET /objects/${ID.srv01}`]: { ...srv01, attributes: { ...srv01.attributes, power_w: undefined } }, [`GET /objects/${ID.srv01}/series/keys`]: problem(500, "boom", "down") }));
+    renderApp({ at: `/objects/${ID.srv01}` });
+    const section = await trends();
+    await curve("Inlet temperature");
+    await curve("Outlet temperature");
+    expect(within(section).queryByRole("heading", { name: "Power draw" })).toBeNull();
+    expect(within(section).queryByRole("alert")).toBeNull();
+  });
+
   it("speaks French", async () => {
     mockApi(defaultRoutes());
     renderApp({ at: `/objects/${ID.srv01}`, locale: "fr" });
     expect(await screen.findByRole("heading", { name: "Tendances" })).toBeInTheDocument();
     expect(await screen.findByText("Dernier 405 W · plus bas 390 W · plus haut 430 W")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "7 jours" })).toBeInTheDocument();
+  });
+
+  it("says in French that a measurement has no current value", async () => {
+    mockApi(withdrawn());
+    renderApp({ at: `/objects/${ID.srv01}`, locale: "fr" });
+    expect(await screen.findByText(/^Aucune valeur actuelle : la source ne relève plus cette mesure/)).toBeInTheDocument();
   });
 });

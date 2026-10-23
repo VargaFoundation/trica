@@ -404,6 +404,29 @@ func (s *Store) HistoryBetween(ctx context.Context, id, key string, from, to tim
 	return vals, false, nil
 }
 
+// KeysWithHistory returns those of keys for which the object has at least one value
+// valid at some point of [from, to), current or closed, sorted; never nil.
+func (s *Store) KeysWithHistory(ctx context.Context, id string, keys []string, from, to time.Time) ([]string, error) {
+	rows, err := s.Pool.Query(ctx, `
+		SELECT k FROM unnest($2::text[]) AS k
+		WHERE EXISTS (SELECT 1 FROM attr_history h
+		              WHERE h.object_id = $1 AND h.key = k AND h.valid && tstzrange($3, $4))
+		ORDER BY k`, id, keys, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var k string
+		if err := rows.Scan(&k); err != nil {
+			return nil, err
+		}
+		out = append(out, k)
+	}
+	return out, rows.Err()
+}
+
 func scanValues(rows pgx.Rows) ([]Value, error) {
 	defer rows.Close()
 	var out []Value

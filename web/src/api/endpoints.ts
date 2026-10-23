@@ -32,6 +32,7 @@ import type {
   SchemaDoc,
   SearchPage,
   Series,
+  SeriesKeys,
   SourceHealth,
 } from "./types";
 
@@ -70,6 +71,9 @@ export const api = {
   /** A measurement of the object over a range, in buckets (average, lowest, highest). */
   series: (id: string, q: QueryOf<"/objects/{id}/series">, signal?: AbortSignal) =>
     request<Series>(`/objects/${encodeURIComponent(id)}/series`, { query: q, signal }),
+  /** The measurements of the object with a reading in a range, current or withdrawn (#167). */
+  seriesKeys: (id: string, q: QueryOf<"/objects/{id}/series/keys">, signal?: AbortSignal) =>
+    request<SeriesKeys>(`/objects/${encodeURIComponent(id)}/series/keys`, { query: q, signal }),
   timeline: (id: string, q: Paging = {}, signal?: AbortSignal) =>
     request<Page<Change>>(`/objects/${encodeURIComponent(id)}/timeline`, { query: q, signal }),
 

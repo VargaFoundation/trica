@@ -2,11 +2,14 @@ package api_test
 
 import (
 	"math"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/VargaFoundation/trica/internal/api"
 	"github.com/VargaFoundation/trica/internal/reconcile"
+	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/internal/store"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
@@ -119,4 +122,84 @@ func TestSeries(t *testing.T) {
 		}
 	}
 	wantStatus(t, e.get("/api/v1/objects/0a000000-0000-4000-8000-00000000ffff/series?key=power_w", tokReader), 404)
+}
+
+func TestSeriesKeys(t *testing.T) {
+	e := newEnv(t, reconcile.Policy{})
+	e.fixtures()
+	sw := e.ids["sw"]
+	start := e.clk.now()
+	b := sdk.NewBatch("redfish:sw-a1", sdk.ScopePartial)
+	b.Object("sw", "device").Identify("serial", "JPE-SW-A1").Set("power_w", 100.0).Set("inlet_temp_c", 20.0)
+	e.apply(b)
+	e.clk.advance(time.Hour)
+	b = sdk.NewBatch("redfish:sw-a1", sdk.ScopePartial)
+	b.Object("sw", "device").Identify("serial", "JPE-SW-A1").Unset("power_w")
+	e.apply(b)
+	e.clk.advance(time.Hour)
+
+	// A real withdrawal: the object no longer holds power_w.
+	var o struct {
+		Attributes map[string]any `json:"attributes"`
+	}
+	r := e.get("/api/v1/objects/"+sw, tokReader)
+	wantStatus(t, r, 200)
+	r.json(t, &o)
+	if _, ok := o.Attributes["power_w"]; ok {
+		t.Fatalf("power_w is still held: %s", r.Body)
+	}
+
+	keys := func(query string) []string {
+		t.Helper()
+		var k api.SeriesKeys
+		r := e.get("/api/v1/objects/"+sw+"/series/keys"+query, tokReader)
+		wantStatus(t, r, 200)
+		r.json(t, &k)
+		if k.Keys == nil {
+			t.Fatalf("keys is not an array: %s", r.Body)
+		}
+		return k.Keys
+	}
+	full := "?from=" + start.Format(time.RFC3339) + "&to=" + e.clk.now().Format(time.RFC3339)
+	// outlet_temp_c never had a row; os_version has history but is not a series.
+	if got := keys(full); !slices.Equal(got, []string{"inlet_temp_c", "power_w"}) {
+		t.Errorf("whole range: %v", got)
+	}
+	// The closed row of power_w ended an hour ago.
+	if got := keys("?from=" + e.clk.now().Add(-30*time.Minute).Format(time.RFC3339)); !slices.Equal(got, []string{"inlet_temp_c"}) {
+		t.Errorf("last half hour: %v", got)
+	}
+	if got := keys("?from=" + start.Add(-48*time.Hour).Format(time.RFC3339) + "&to=" + start.Add(-24*time.Hour).Format(time.RFC3339)); len(got) != 0 {
+		t.Errorf("before any reading: %v", got)
+	}
+	var k api.SeriesKeys
+	r = e.get("/api/v1/objects/"+sw+"/series/keys", tokReader)
+	wantStatus(t, r, 200)
+	r.json(t, &k)
+	if !k.To.Equal(e.clk.now()) || k.To.Sub(k.From) != 24*time.Hour || !slices.Equal(k.Keys, []string{"inlet_temp_c", "power_w"}) {
+		t.Errorf("default range: %+v", k)
+	}
+
+	for _, q := range []string{"?from=2026-03-02&to=2026-03-01", "?from=2025-01-01&to=2026-03-01", "?from=yesterday"} {
+		if r := e.get("/api/v1/objects/"+sw+"/series/keys"+q, tokReader); r.Status != 400 {
+			t.Errorf("%s: %d: %s", q, r.Status, r.Body)
+		}
+	}
+	wantStatus(t, e.get("/api/v1/objects/0a000000-0000-4000-8000-00000000ffff/series/keys", tokReader), 404)
+	r = e.get("/api/v1/objects/"+e.ids["rack-p"]+"/series/keys", tokReader)
+	wantStatus(t, r, 200)
+	if !strings.Contains(string(r.Body), `"keys":[]`) {
+		t.Errorf("a rack has no measurement: %s", r.Body)
+	}
+}
+
+func TestSeriesAttributes(t *testing.T) {
+	typ := &schema.Type{Attributes: map[string]*schema.Attribute{
+		"power_w":     {Kind: schema.Float, Series: true},
+		"uptime_s":    {Kind: schema.Int},
+		"token_level": {Kind: schema.Float, Series: true},
+	}}
+	if got := api.SeriesAttributes(typ); !slices.Equal(got, []string{"power_w"}) {
+		t.Errorf("series attributes = %v", got)
+	}
 }

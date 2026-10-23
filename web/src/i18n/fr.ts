@@ -635,6 +635,7 @@ export const fr: Record<MessageKey, string> = {
   "series.empty": "Aucun relevé sur cette période.",
   "series.summary": "Dernier {last} · plus bas {min} · plus haut {max}",
   "series.point": "{time} : {avg} (de {min} à {max})",
+  "series.noCurrent": "Aucune valeur actuelle : la source ne relève plus cette mesure. La courbe montre les relevés passés.",
   "series.truncated": "Trop de relevés sur cette période : la fin manque. Choisissez une période plus courte.",
   "firmware.summary.one": "{count} composant · {stale} de plus de deux ans · {behind} en retard sur le parc.",
   "firmware.summary.other": "{count} composants · {stale} de plus de deux ans · {behind} en retard sur le parc.",
