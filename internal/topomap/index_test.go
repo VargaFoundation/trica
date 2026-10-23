@@ -141,3 +141,39 @@ func TestAuthSiteStopsAtDepth32(t *testing.T) {
 		t.Errorf("an object 40 levels down is out of reach of the rights query, got %q", got)
 	}
 }
+
+// A device in no rack is drawn where a person placed it (located_in, ADR 0058),
+// and a rack always wins over a place; the rights see the same sites.
+func TestDeviceInPlaceByLocatedIn(t *testing.T) {
+	w := lab()
+	w.dev("ap", "", nil)
+	w.rel("located_in", "ap", "A1")
+	w.dev("ap2", "", nil)
+	w.rel("located_in", "ap2", "S2")
+	w.dev("both", "R1", nil)
+	w.rel("located_in", "both", "S2") // racked in S1, also placed in S2
+	w.dev("cabinet", "", nil)
+	w.rel("located_in", "cabinet", "A1")
+	w.rel("contains", "S2", "cabinet") // located_in wins over contains
+	ix := newIndex(w.snap())
+	for id, want := range map[string][]string{
+		"ap":      {"S1", "B1", "A1", "ap"},
+		"ap2":     {"S2", "ap2"},
+		"both":    {"S1", "B1", "A1", "RW1", "R1", "both"},
+		"cabinet": {"S1", "B1", "A1", "cabinet"},
+	} {
+		if got := ix.path[id]; !reflect.DeepEqual(got, want) {
+			t.Errorf("path[%s] = %v, want %v", id, got, want)
+		}
+	}
+	for id, want := range map[string]string{"ap": "S1", "ap2": "S2", "both": "S1", "cabinet": "S1"} {
+		if got := ix.AuthSite(id); got != want {
+			t.Errorf("AuthSite(%s) = %q, want %q", id, got, want)
+		}
+	}
+	// Two places in two sites: no site, and the rights fail closed.
+	w.rel("located_in", "ap", "S2")
+	if got := newIndex(w.snap()).AuthSite("ap"); got != "" {
+		t.Errorf("a device placed in two sites has site %q", got)
+	}
+}

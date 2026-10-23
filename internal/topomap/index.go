@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/VargaFoundation/trica/internal/graph"
+	"github.com/VargaFoundation/trica/internal/place"
 )
 
 // maxDepth bounds every walk up the parents, like the rights query does.
@@ -106,9 +107,10 @@ func edgeNum(e graph.Edge, key string) (float64, bool) {
 }
 
 // AuthSite returns the site the rights see id in: the same answer as the
-// rights query (internal/api siteIDs), computed from the snapshot. Following
-// the parents and the current mounted_in relations, the object is in the one
-// site it reaches; none or two different sites give "", which fails closed.
+// rights query (internal/api siteIDs), computed from the snapshot by the same
+// rule (place.Graph, ADR 0058): the parents, the current mounted_in relations
+// and, for a device in no rack, its current located_in. The object is in the
+// one site it reaches; none or two different sites give "", which fails closed.
 // The wider placement used to draw the map is never used for rights.
 func (ix *Index) AuthSite(id string) string {
 	if v, ok := ix.auth.Load(id); ok {
@@ -120,50 +122,29 @@ func (ix *Index) AuthSite(id string) string {
 }
 
 func (ix *Index) authSite(id string) string {
-	if ix.Snap.Nodes[id] == nil {
-		return ""
-	}
-	type item struct {
-		id    string
-		depth int
-	}
-	seen := map[string]bool{id: true}
-	queue := []item{{id, 0}}
-	sites := map[string]bool{}
-	for len(queue) > 0 {
-		it := queue[0]
-		queue = queue[1:]
-		n := ix.Snap.Nodes[it.id]
-		if n.Type == "site" {
-			sites[n.ID] = true
-			continue
-		}
-		if it.depth >= maxDepth {
-			continue
-		}
-		var next []string
-		if n.ParentID != "" && ix.Snap.Nodes[n.ParentID] != nil {
-			next = append(next, n.ParentID)
-		}
-		for _, e := range ix.Snap.Out[it.id] {
-			if e.Type == "mounted_in" {
-				next = append(next, e.To)
+	return place.Graph{
+		Type: func(id string) string {
+			if n := ix.Snap.Nodes[id]; n != nil {
+				return n.Type
 			}
-		}
-		for _, t := range next {
-			if !seen[t] {
-				seen[t] = true
-				queue = append(queue, item{t, it.depth + 1})
+			return ""
+		},
+		Parent: func(id string) string {
+			if n := ix.Snap.Nodes[id]; n != nil {
+				return n.ParentID
 			}
-		}
-	}
-	if len(sites) != 1 {
-		return ""
-	}
-	for s := range sites {
-		return s
-	}
-	return ""
+			return ""
+		},
+		Targets: func(id, relType string) []string {
+			var out []string
+			for _, e := range ix.Snap.Out[id] {
+				if e.Type == relType {
+					out = append(out, e.To)
+				}
+			}
+			return out
+		},
+	}.Site(id)
 }
 
 // locPath returns the ids from the site down to location id, nil when the
@@ -215,12 +196,18 @@ func newIndex(snap *graph.Snapshot) *Index {
 }
 
 // placeDevice finds where a device is: the rack it is mounted in (the most
-// trusted claim, then the lowest id, when several), else the location that
-// contains it, else nowhere.
+// trusted claim, then the lowest id, when several); when it is mounted in no
+// rack, the site, building or room it is located_in (ADR 0058: a rack always
+// wins), else the location that contains it, else its parent, else nowhere.
 func (ix *Index) placeDevice(d *graph.Node) []string {
 	best, bestRank, n := "", 0, 0
+	racked := false
 	for _, e := range ix.Snap.Out[d.ID] {
-		if e.Type != "mounted_in" || ix.path[e.To] == nil {
+		if e.Type != "mounted_in" {
+			continue
+		}
+		racked = true
+		if ix.path[e.To] == nil {
 			continue
 		}
 		n++
@@ -236,7 +223,17 @@ func (ix *Index) placeDevice(d *graph.Node) []string {
 		return appendPath(ix.path[best], d.ID)
 	}
 	var in string
+	if !racked {
+		for _, e := range ix.Snap.Out[d.ID] {
+			if e.Type == place.LocatedIn && ix.path[e.To] != nil && (in == "" || e.To < in) {
+				in = e.To
+			}
+		}
+	}
 	for _, e := range ix.Snap.In[d.ID] {
+		if in != "" {
+			break
+		}
 		if e.Type == "contains" && ix.path[e.From] != nil && locationTypes[ix.Snap.Nodes[e.From].Type] {
 			if in == "" || e.From < in {
 				in = e.From

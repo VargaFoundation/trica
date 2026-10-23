@@ -25,7 +25,7 @@ tunnels, uplinks); nothing combined the two, and the live overlay (ADR 0041) is 
    server answers nodes and edges; the browser never aggregates. A level never lists more than 500
    nodes or 2000 edges (`truncated`).
 2. **A device is in the place it is mounted in** (`mounted_in`, strongest confidence, then lowest
-   rack id; ambiguity is counted in `notes`), else the location that `contains` it, else its parent
+   rack id; ambiguity is counted in `notes`), else, for a device in no rack, the site, building or room it is `located_in` (ADR 0058: the rack wins), else the location that `contains` it, else its parent
    chain, else unplaced. A link belongs to the owner devices of its two ports.
 3. **A link is drawn between the children of the lowest common ancestor.** What is outside the
    level is a *portal* node standing for the place where it lands (`portal:<id>`, or `portal:internet`);
@@ -49,7 +49,7 @@ tunnels, uplinks); nothing combined the two, and the live overlay (ADR 0041) is 
    device that `routes_via` a gateway or an Internet access gives an uplink (a gateway is folded into
    the access it routes via). Tunnels and uplinks have no measured rate.
 8. **Rights are the existing ones, applied in memory.** `Index.AuthSite` reproduces the SQL
-   `siteIDs` (parents plus current `mounted_in`, stopping at a site, depth 32, two sites fail closed;
+   `siteIDs` (`place.Graph`, ADR 0058: parents, current `mounted_in` and, for a device in no rack, its `located_in`, stopping at a site, depth 32, two sites fail closed;
    `TestAuthSiteEqualsSiteIDs` runs both on the same data). A node is listed only if the caller reads
    its type in its site; a link needs both ports and both owner devices; tunnels, gateways and
    Internet accesses have no site, so the Internet and uplinks go only to a caller who reads them
@@ -78,3 +78,14 @@ tunnels, uplinks); nothing combined the two, and the live overlay (ADR 0041) is 
 - The web page (a later PR) draws this payload and nothing else; its test data is recorded from the
   server (`TestTopologyMapRecordedForTheUI`).
 - Not covered: a measured rate for tunnels and uplinks, a view per VLAN, path highlighting.
+
+## Amendment: integration with `located_in` (ADR 0058) and `uplinked_to` (ADR 0062)
+
+- The rights walk is no longer a Go copy of the SQL: `internal/place` holds both, `place.Sites`
+  over PostgreSQL and `place.Graph.Site` over the snapshot, and `Index.AuthSite` calls the latter.
+  A test proves they agree on a world with a placed access point, a racked device also
+  `located_in` elsewhere and a device placed in two sites.
+- A device in no rack is drawn in the place it is `located_in`; a rack, even one outside any site,
+  always takes precedence, as for the rights.
+- `uplinked_to` (the device-level line of ADR 0062) is not drawn on the map yet; it is tracked
+  in a follow-up issue.

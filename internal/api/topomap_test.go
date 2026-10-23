@@ -243,6 +243,30 @@ func TestTopologyMapSiteLimitedCaller(t *testing.T) {
 func TestAuthSiteEqualsSiteIDs(t *testing.T) {
 	e := newEnv(t, reconcile.Policy{})
 	e.mapFixture()
+	// Devices placed by a person (located_in, ADR 0058): an access point in a
+	// room, a racked device also placed in another site (the rack wins), a
+	// device placed in a building of one site and in another site by a second
+	// source (two sites: none), and the NAS placed in Lyon.
+	b := sdk.NewBatch("declaration:places", sdk.ScopePartial)
+	b.Confidence = sdk.Declared
+	b.Object("paris", "site").Identify("code", "PAR1")
+	b.Object("room", "room").Identify("name", "A1").In("paris")
+	b.Object("lyon", "site").Identify("code", "LYO1")
+	b.Object("ap", "device").Identify("name", "ap-1").Set("role", "access_point")
+	b.Relate("located_in", "ap", "room")
+	b.Object("swa", "device").Identify("name", "sw-r1").Set("role", "switch")
+	b.Relate("located_in", "swa", "lyon")
+	b.Object("nas", "device").Identify("name", "nas-1").Set("role", "storage")
+	b.Relate("located_in", "nas", "lyon")
+	b.Object("cam", "device").Identify("name", "cam-1").Set("role", "camera")
+	b.Relate("located_in", "cam", "room")
+	e.apply(b)
+	b = sdk.NewBatch("declaration:places-2", sdk.ScopePartial)
+	b.Confidence = sdk.Declared
+	b.Object("lyon", "site").Identify("code", "LYO1")
+	b.Object("cam", "device").Identify("name", "cam-1").Set("role", "camera")
+	b.Relate("located_in", "cam", "lyon")
+	e.apply(b)
 	snap, err := e.eng.Store.AllObjects(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -263,6 +287,12 @@ func TestAuthSiteEqualsSiteIDs(t *testing.T) {
 	for _, id := range all {
 		if got := ix.AuthSite(id); got != sql[id] {
 			t.Errorf("AuthSite(%s) = %q, SQL = %q", id, got, sql[id])
+		}
+	}
+	// The worlds above must exercise the rule, not agree on emptiness.
+	for ref, want := range map[string]string{"ap": "paris", "swa": "paris", "nas": "lyon", "cam": ""} {
+		if sql[e.ids[ref]] != e.ids[want] {
+			t.Errorf("site of %s = %q, want %q (%s)", ref, sql[e.ids[ref]], e.ids[want], want)
 		}
 	}
 }
