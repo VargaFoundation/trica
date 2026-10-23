@@ -103,6 +103,8 @@ describe("a collector module", () => {
     renderApp({ at: "/collectors/unifi" });
     const row = (await screen.findByText("key_file")).closest("tr") as HTMLElement;
     expect(row.querySelector('td[data-label="Type"]')).toHaveTextContent("reference (file: or env:)");
+    const mapRow = (await screen.findByText("vids")).closest("tr") as HTMLElement;
+    expect(mapRow.querySelector('td[data-label="Type"]')).toHaveTextContent("map (name to value) (integer)");
     expect(screen.getByText("Ubiquiti UniFi", { selector: "h1" })).toBeInTheDocument();
     expect(await screen.findByText("No instance is configured or has reported yet.")).toBeInTheDocument();
   });

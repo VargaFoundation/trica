@@ -830,6 +830,7 @@ export const fr: Record<MessageKey, string> = {
   "collectors.optionType.integer": "entier",
   "collectors.optionType.duration": "durée",
   "collectors.optionType.list": "liste",
+  "collectors.optionType.map": "table (nom vers valeur)",
   "collectors.optionType.secret_reference": "référence (file: ou env:)",
   "collectors.unregistered": "Sources d'autres collecteurs",
   "collectors.unregisteredIntro": "Ces sources ont rapporté, mais aucun module de ce serveur ne les décrit : un collecteur écrit avec le SDK, ou d'une autre version.",

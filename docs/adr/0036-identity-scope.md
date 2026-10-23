@@ -49,6 +49,8 @@ all, and a weak identity would also merge two sites' addresses that have no pare
 - Only the built-in types are stamped by the agent and the runner: they do not read the
   server's custom schema, so a custom type given an `identity_scope` gets its domain only from
   the source itself.
+- VLANs are not scoped by this mechanism: their layer-2 domain is a collector option
+  ([ADR 0050](0050-vlan-layer2-domain.md)).
 - No collector reads VRFs from the equipment yet (Arista, MikroTik, pfSense): their domain is
   the target's, one per target. A device carrying several VRFs needs that work.
 - A prefix's occupancy, described by the schema but not computed yet, will have to count only

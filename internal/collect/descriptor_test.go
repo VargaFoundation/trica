@@ -103,13 +103,15 @@ func TestRegisterRefusesAnIncompleteDescriptor(t *testing.T) {
 }
 
 type sampleOptions struct {
-	Name     string        `yaml:"name" doc:"A string." default:"x"`
-	On       bool          `yaml:"on" doc:"A boolean."`
-	Count    *int          `yaml:"count" doc:"An integer, optional."`
-	Wide     int64         `yaml:"wide" doc:"Another integer."`
-	Every    time.Duration `yaml:"every" doc:"A duration."`
-	Skip     []string      `yaml:"skip" doc:"A list." enum:"a,b"`
-	TokenRef Secret        `yaml:"token_file" doc:"A reference."`
+	Name     string            `yaml:"name" doc:"A string." default:"x"`
+	On       bool              `yaml:"on" doc:"A boolean."`
+	Count    *int              `yaml:"count" doc:"An integer, optional."`
+	Wide     int64             `yaml:"wide" doc:"Another integer."`
+	Every    time.Duration     `yaml:"every" doc:"A duration."`
+	Skip     []string          `yaml:"skip" doc:"A list." enum:"a,b"`
+	TokenRef Secret            `yaml:"token_file" doc:"A reference."`
+	Names    map[string]string `yaml:"names" doc:"A text map."`
+	Vids     map[string]int    `yaml:"vids" doc:"An integer map."`
 }
 
 func TestOptionFields(t *testing.T) {
@@ -127,6 +129,8 @@ func TestOptionFields(t *testing.T) {
 		{Name: "every", Kind: OptionDuration, Description: "A duration."},
 		{Name: "skip", Kind: OptionList, Values: []string{"a", "b"}, Description: "A list."},
 		{Name: "token_file", Kind: OptionSecretReference, Description: "A reference."},
+		{Name: "names", Kind: OptionMap, ValueKind: OptionString, Description: "A text map."},
+		{Name: "vids", Kind: OptionMap, ValueKind: OptionInteger, Description: "An integer map."},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v\nwant %+v", got, want)
@@ -152,8 +156,14 @@ func TestOptionFields(t *testing.T) {
 		"skipped yaml": struct {
 			A string `yaml:"-" doc:"a"`
 		}{},
-		"a map": struct {
-			A map[string]string `yaml:"a" doc:"a"`
+		"a map with int keys": struct {
+			A map[int]string `yaml:"a" doc:"a"`
+		}{},
+		"a map of lists": struct {
+			A map[string][]string `yaml:"a" doc:"a"`
+		}{},
+		"a map of structs": struct {
+			A map[string]struct{ B string } `yaml:"a" doc:"a"`
 		}{},
 		"a list of ints": struct {
 			A []int `yaml:"a" doc:"a"`

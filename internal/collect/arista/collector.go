@@ -30,7 +30,7 @@ const DefaultMaxEdgeMACs = 4
 
 // DefaultVLANDomain is the layer-2 domain VLANs are filed under when the
 // vlan_domain option is not set.
-const DefaultVLANDomain = "default"
+const DefaultVLANDomain = collect.DefaultVLANDomain
 
 // Descriptor is what the module says about itself (ADR 0055).
 var Descriptor = collect.Descriptor{
@@ -90,10 +90,7 @@ func New(t collect.Target) (sdk.Collector, error) {
 	if maxEdge < 0 {
 		return nil, fmt.Errorf("target %s: options: max_edge_macs must not be negative", t.Source())
 	}
-	domain := strings.TrimSpace(opts.VLANDomain)
-	if domain == "" {
-		domain = DefaultVLANDomain
-	}
+	domain := collect.VLANDomain(opts.VLANDomain)
 	endpoint, err := endpointURL(t.Address)
 	if err != nil {
 		return nil, fmt.Errorf("target %s: %w", t.Source(), err)

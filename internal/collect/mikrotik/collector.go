@@ -98,7 +98,7 @@ func New(t collect.Target) (sdk.Collector, error) {
 	if err := t.DecodeOptions(&o); err != nil {
 		return nil, err
 	}
-	cfg := config{target: t, opts: o, maxEdgeMACs: DefaultMaxEdgeMACs, domain: "default", skip: map[string]bool{}}
+	cfg := config{target: t, opts: o, maxEdgeMACs: DefaultMaxEdgeMACs, domain: collect.DefaultVLANDomain, skip: map[string]bool{}}
 	if strings.TrimSpace(t.Address) == "" {
 		return nil, fmt.Errorf("target %s: address is required", t.Source())
 	}
@@ -111,9 +111,7 @@ func New(t collect.Target) (sdk.Collector, error) {
 		}
 		cfg.maxEdgeMACs = *o.MaxEdgeMACs
 	}
-	if d := strings.TrimSpace(o.VLANDomain); d != "" {
-		cfg.domain = d
-	}
+	cfg.domain = collect.VLANDomain(o.VLANDomain)
 	switch o.Role {
 	case "", "switch", "router":
 	default:

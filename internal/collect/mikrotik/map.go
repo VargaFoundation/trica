@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/VargaFoundation/trica/internal/collect"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -402,7 +403,7 @@ func parseVIDs(s string) ([]int, error) {
 // vlan returns the ref of the VLAN object for vid, creating it.
 func (m *mapper) vlan(vid int, name string) string {
 	ref := "vlan:" + strconv.Itoa(vid)
-	o := m.b.Object(ref, "vlan").Identify("key", m.cfg.domain+":"+strconv.Itoa(vid)).
+	o := m.b.Object(ref, "vlan").Identify("key", collect.VLANKey(m.cfg.domain, vid)).
 		Set("vid", vid).Set("domain", m.cfg.domain)
 	if _, has := o.Attributes["name"]; !has {
 		o.Set("name", name)

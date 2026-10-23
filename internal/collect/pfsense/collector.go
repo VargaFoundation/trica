@@ -60,6 +60,10 @@ type Options struct {
 	BasePath string `yaml:"base_path" default:"/api/v2" doc:"API prefix; change it only behind a reverse proxy that rewrites it."`
 	// Skip lists sections not to collect: firewall_rules, nat, vpn, routes.
 	Skip []string `yaml:"skip" enum:"firewall_rules,nat,vpn,routes" doc:"Sections not to collect, typically because the API key user lacks the read privilege."`
+	// VLANDomain is the layer-2 domain the firewall's VLANs belong to
+	// ("<domain>:<vid>"). Default "default", the domain the switches use, so
+	// that a VLAN seen by the firewall and by a switch is one object.
+	VLANDomain string `yaml:"vlan_domain" default:"default" doc:"Layer-2 domain the firewall VLANs belong to; the default is the domain the switches use, so a VLAN seen by both is one object."`
 }
 
 type collector struct {
@@ -67,6 +71,8 @@ type collector struct {
 	opts Options
 	base *url.URL
 	host string // host part of the address, the management IP when it is one
+	// vlanDomain is the resolved vlan_domain option.
+	vlanDomain string
 }
 
 // New builds a pfSense collector for t. It checks everything that can be
@@ -83,7 +89,7 @@ func New(t collect.Target) (sdk.Collector, error) {
 	if _, err := t.HTTPClient(); err != nil {
 		return nil, err
 	}
-	return &collector{t: t, opts: opts, base: base, host: host}, nil
+	return &collector{t: t, opts: opts, base: base, host: host, vlanDomain: collect.VLANDomain(opts.VLANDomain)}, nil
 }
 
 // parseAddress turns "fw.example:8443", "192.0.2.1" or "https://fw/" into the

@@ -20,12 +20,14 @@ tests assert that the fake server only ever saw `GET`s.
   timeout: 60s
   options:
     assume_full_visibility: false         # see "Read-only access" below
+    vlan_domains: {fabric-0: default}     # fabric name -> layer-2 domain of its VLANs
 ```
 
 | Field | Meaning |
 |---|---|
 | `address` | `http(s)://host[:port]` of the region controller, without `/MAAS`. |
 | `password` | Secret reference to the API key (`env:NAME` or `file:path`). The `username` field is not used. |
+| `options.vlan_domains` | Maps a fabric name to the layer-2 domain its VLANs are filed under (`<domain>:<vid>`). A fabric that is not listed is its own domain, named after the fabric. Map the fabric that is the switches' network to `default` (or the `vlan_domain` they use) so MAAS and the switches report one VLAN object ([ADR 0050](../../../docs/adr/0050-vlan-layer2-domain.md)). |
 | `options.assume_full_visibility` | Declares that a non-administrator key sees every machine (default `false`). Unknown options are rejected. |
 
 Authentication is OAuth 1.0a with the PLAINTEXT signature method, the only one
@@ -67,7 +69,7 @@ A run issues five `GET` requests and emits one batch with source `maas:<name>`.
 | `links[].ip_address` | `ip_address` (strong `address`, `prefix_length`) and `assigned_to` ip to interface | Addresses on no known interface hang on the device. |
 | `blockdevice_set[]` (physical) | `disk` (child of the device) | Identity `name` + `serial`; `model`, `capacity_bytes`, `firmware_version`, `media`, `protocol`. RAID/LVM/bcache layers are skipped, and so are the units an HPE Smart Array presents (see below). |
 | `subnets/` | `prefix` (strong `prefix`) | `description` from the subnet name/description, `gateway`, `vlan` (tag, if not 0), `assigned_to` prefix to VLAN. |
-| `fabrics/` vlans | `vlan` (strong `key` = `<fabric>:<vid>`) | `vid`, `name`, `domain` = fabric name, `mtu` (**new**), `dhcp_on` (**new**). VID 0 (untagged) is kept: it is a real VLAN of the fabric. |
+| `fabrics/` vlans | `vlan` (strong `key` = `<domain>:<vid>`, the domain being the fabric unless `vlan_domains` maps it) | `vid`, `name`, `domain`, `mtu` (**new**), `dhcp_on` (**new**). VID 0 (untagged) is kept: it is a real VLAN of the fabric. |
 
 ### Placeholder values
 

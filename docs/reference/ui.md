@@ -119,7 +119,9 @@ The schema has no `connected_to` or `link` relation; the page reads what it has 
   two devices of the same class (and level) are one line, labelled with their count.
 - **Filters** (address: `site`, `rack`, `vlan`, `classes`): a link is kept if at least one end
   matches; the last class cannot be unticked; a value in the address that matches nothing is
-  ignored.
+  ignored. A VLAN is listed by its VID and its name when it has one (`201 MGMT`); two VLANs that
+  would read alike (the same VID in two layer-2 domains) get their domain added (`201 MGMT (lab)`),
+  so no two entries are the same ([ADR 0050](../adr/0050-vlan-layer2-domain.md)).
 - **Keyboard**: the canvas takes no focus; the table below it lists every link with links to both
   devices, both ports and the cable, and a "Show" button that opens the same details as a click on
   the line (focus moves to them).

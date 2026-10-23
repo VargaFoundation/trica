@@ -83,11 +83,13 @@ type CollectorCredential struct {
 
 // CollectorOption documents one key of a target's options block.
 type CollectorOption struct {
-	Name        string   `json:"name"`
-	Type        string   `json:"type"`
-	Default     string   `json:"default,omitempty"`
-	Values      []string `json:"values,omitempty"`
-	Description string   `json:"description"`
+	Name    string   `json:"name"`
+	Type    string   `json:"type"`
+	Default string   `json:"default,omitempty"`
+	Values  []string `json:"values,omitempty"`
+	// ValueKind is the kind of the values of a "map" option (string or integer).
+	ValueKind   string `json:"value_kind,omitempty"`
+	Description string `json:"description"`
 }
 
 // CollectorCounts counts the instances of a module by status.
@@ -358,7 +360,7 @@ func (s *Server) moduleView(d collect.Descriptor, insts []CollectorInstance) Col
 	}
 	fields, _ := d.OptionFields() // validated at registration
 	for _, f := range fields {
-		m.Options = append(m.Options, CollectorOption{Name: f.Name, Type: string(f.Kind), Default: f.Default, Values: f.Values, Description: f.Description})
+		m.Options = append(m.Options, CollectorOption{Name: f.Name, Type: string(f.Kind), Default: f.Default, Values: f.Values, ValueKind: string(f.ValueKind), Description: f.Description})
 	}
 	m.Counts.Instances = len(insts)
 	for _, in := range insts {

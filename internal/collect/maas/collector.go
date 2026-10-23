@@ -12,7 +12,6 @@ import (
 	"net/netip"
 	"net/url"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -53,6 +52,11 @@ type Options struct {
 	// administrator's batch is partial, so that machines it cannot see are not
 	// reported as gone.
 	AssumeFullVisibility bool `yaml:"assume_full_visibility" default:"false" doc:"Declares that a non-administrator API key sees every machine; without it such a batch is partial, so machines it cannot see are not reported as gone."`
+	// VLANDomains maps a MAAS fabric name to the layer-2 domain its VLANs are
+	// filed under ("<domain>:<vid>"). A fabric that is not listed is its own
+	// domain, named after the fabric. Map a fabric to "default" when it is the
+	// network the switches and the firewall report under that name.
+	VLANDomains map[string]string `yaml:"vlan_domains" doc:"Maps a MAAS fabric name to the layer-2 domain its VLANs are filed under; a fabric not listed is its own domain."`
 }
 
 // Collector reads one MAAS region controller.
@@ -145,7 +149,7 @@ func (c *Collector) Collect(parent context.Context, emit sdk.Emitter) error {
 			"so this batch is partial and withdraws nothing (set options.assume_full_visibility if the key does see every machine)", who.Username))
 	}
 
-	bd := &builder{b: sdk.NewBatch(c.target.Source(), sdk.ScopeFull)}
+	bd := &builder{b: sdk.NewBatch(c.target.Source(), sdk.ScopeFull), domains: c.opts.VLANDomains}
 	for _, f := range fabrics {
 		for i := range f.VLANs {
 			v := f.VLANs[i]
@@ -178,25 +182,37 @@ func (c *Collector) Collect(parent context.Context, emit sdk.Emitter) error {
 type builder struct {
 	b        *sdk.Batch
 	warnings []string
+	domains  map[string]string // Options.VLANDomains
 }
 
 func (bd *builder) warn(format string, args ...any) {
 	bd.warnings = append(bd.warnings, fmt.Sprintf(format, args...))
 }
 
-// vlanKey is the identity of a VLAN: the fabric (MAAS's layer-2 domain) and the
-// VLAN ID, which is only unique inside its fabric. VID 0 is MAAS's "untagged"
-// VLAN of the fabric.
-func vlanKey(v *vlanInfo) (string, bool) {
-	if v == nil || strings.TrimSpace(v.Fabric) == "" {
-		return "", false
+// vlanDomain is the layer-2 domain of a fabric: the operator's mapping
+// (Options.VLANDomains) when it names one, the fabric's own name otherwise.
+func (bd *builder) vlanDomain(fabric string) string {
+	fabric = strings.TrimSpace(fabric)
+	if d := strings.TrimSpace(bd.domains[fabric]); d != "" {
+		return d
 	}
-	return strings.TrimSpace(v.Fabric) + ":" + strconv.FormatInt(int64(v.VID), 10), true
+	return fabric
+}
+
+// vlanKey is the identity of a VLAN: its layer-2 domain (the fabric, unless
+// mapped) and the VLAN ID, which is only unique inside its fabric. VID 0 is
+// MAAS's "untagged" VLAN of the fabric.
+func (bd *builder) vlanKey(v *vlanInfo) (domain, key string, ok bool) {
+	if v == nil || strings.TrimSpace(v.Fabric) == "" {
+		return "", "", false
+	}
+	domain = bd.vlanDomain(v.Fabric)
+	return domain, collect.VLANKey(domain, int(v.VID)), true
 }
 
 // vlan returns the ref of the VLAN object, creating it on first sight.
 func (bd *builder) vlan(v *vlanInfo) string {
-	key, ok := vlanKey(v)
+	domain, key, ok := bd.vlanKey(v)
 	if !ok {
 		return ""
 	}
@@ -208,7 +224,7 @@ func (bd *builder) vlan(v *vlanInfo) string {
 		Identify("key", key).
 		Set("vid", int64(v.VID)).
 		Set("name", strings.TrimSpace(v.Name)).
-		Set("domain", strings.TrimSpace(v.Fabric)).
+		Set("domain", domain).
 		Set("mtu", positive(v.MTU)).
 		Set("dhcp_on", v.DHCPOn)
 	return ref

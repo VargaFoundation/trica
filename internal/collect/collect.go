@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -308,4 +309,25 @@ func Succeeded(b *sdk.Batch, t Target, kind, version string, started time.Time, 
 // Context bounds one run by the target's timeout.
 func Context(ctx context.Context, t Target) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(ctx, t.EffectiveTimeout())
+}
+
+// DefaultVLANDomain is the layer-2 domain VLANs are filed under when a target
+// does not name one (ADR 0050).
+const DefaultVLANDomain = "default"
+
+// VLANDomain resolves a vlan_domain option: surrounding spaces are trimmed and
+// an empty value means DefaultVLANDomain. The case is kept, a domain is a name
+// the operator chose.
+func VLANDomain(opt string) string {
+	if d := strings.TrimSpace(opt); d != "" {
+		return d
+	}
+	return DefaultVLANDomain
+}
+
+// VLANKey is the identity of a VLAN: its layer-2 domain and its VLAN ID, which
+// is only unique inside the domain. Every collector that reports VLANs builds
+// the key here, so that the same VLAN seen by two sources is one object.
+func VLANKey(domain string, vid int) string {
+	return domain + ":" + strconv.Itoa(vid)
 }

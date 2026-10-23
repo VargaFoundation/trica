@@ -186,3 +186,35 @@ func TestFailedAndSucceeded(t *testing.T) {
 		t.Fatal("no deadline")
 	}
 }
+
+func TestVLANDomainAndKey(t *testing.T) {
+	domains := []struct{ in, want string }{
+		{"", DefaultVLANDomain},
+		{"   ", DefaultVLANDomain},
+		{"default", "default"},
+		{" dc1 ", "dc1"},
+		{"DC1", "DC1"},
+	}
+	for _, c := range domains {
+		if got := VLANDomain(c.in); got != c.want {
+			t.Errorf("VLANDomain(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+	if DefaultVLANDomain != "default" {
+		t.Errorf("DefaultVLANDomain = %q: switches already file their VLANs under \"default\"", DefaultVLANDomain)
+	}
+	keys := []struct {
+		domain string
+		vid    int
+		want   string
+	}{
+		{"default", 20, "default:20"},
+		{"dc1", 4094, "dc1:4094"},
+		{"fabric-0", 0, "fabric-0:0"},
+	}
+	for _, c := range keys {
+		if got := VLANKey(c.domain, c.vid); got != c.want {
+			t.Errorf("VLANKey(%q, %d) = %q, want %q", c.domain, c.vid, got, c.want)
+		}
+	}
+}

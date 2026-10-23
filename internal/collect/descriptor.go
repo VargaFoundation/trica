@@ -147,20 +147,26 @@ func (d Descriptor) Validate(hasFactory bool) error {
 type OptionKind string
 
 const (
-	OptionString          OptionKind = "string"
-	OptionBoolean         OptionKind = "boolean"
-	OptionInteger         OptionKind = "integer"
-	OptionDuration        OptionKind = "duration"
-	OptionList            OptionKind = "list"
+	OptionString   OptionKind = "string"
+	OptionBoolean  OptionKind = "boolean"
+	OptionInteger  OptionKind = "integer"
+	OptionDuration OptionKind = "duration"
+	OptionList     OptionKind = "list"
+	// OptionMap is a map from text keys to text or integer values; the value
+	// kind is in OptionField.ValueKind.
+	OptionMap             OptionKind = "map"
 	OptionSecretReference OptionKind = "secret_reference"
 )
 
 // OptionField documents one key of a target's `options:` block.
 type OptionField struct {
-	Name        string
-	Kind        OptionKind
-	Default     string
-	Values      []string
+	Name    string
+	Kind    OptionKind
+	Default string
+	Values  []string
+	// ValueKind is the kind of the values of an OptionMap option (OptionString
+	// or OptionInteger), empty for every other kind.
+	ValueKind   OptionKind
 	Description string
 }
 
@@ -206,6 +212,13 @@ func (d Descriptor) OptionFields() ([]OptionField, error) {
 		if enum := f.Tag.Get("enum"); enum != "" {
 			of.Values = strings.Split(enum, ",")
 		}
+		if kind == OptionMap {
+			vt := f.Type
+			for vt.Kind() == reflect.Pointer {
+				vt = vt.Elem()
+			}
+			of.ValueKind, _ = optionKind(vt.Elem())
+		}
 		out = append(out, of)
 	}
 	return out, nil
@@ -232,6 +245,14 @@ func optionKind(t reflect.Type) (OptionKind, error) {
 	case reflect.Slice:
 		if t.Elem().Kind() == reflect.String {
 			return OptionList, nil
+		}
+	case reflect.Map:
+		// Text keys, text or integer values: what a YAML mapping of scalars
+		// decodes into. Maps of lists or structs have no kind.
+		if t.Key().Kind() == reflect.String {
+			if vk, err := optionKind(t.Elem()); err == nil && (vk == OptionString || vk == OptionInteger) {
+				return OptionMap, nil
+			}
 		}
 	}
 	return "", fmt.Errorf("type %s has no option kind", t)

@@ -161,8 +161,8 @@ func TestVersion272(t *testing.T) {
 	}
 
 	// VLAN.
-	v := obj(t, b, "vlan", "key", "site-a:20")
-	attrs(t, v, map[string]any{"vid": 20, "name": "IoT devices", "domain": site})
+	v := obj(t, b, "vlan", "key", "default:20")
+	attrs(t, v, map[string]any{"vid": 20, "name": "IoT devices", "domain": "default"})
 	if r := requireRel(t, b, "member_of", vl.Ref, v.Ref); r.Attributes["tagged"] != true {
 		t.Errorf("vlan membership %v", r.Attributes)
 	}
@@ -567,6 +567,31 @@ func TestOptionsBasePath(t *testing.T) {
 	}
 }
 
+// TestOptionsVLANDomain: VLANs are filed under the vlan_domain option, the
+// shared default when it is unset (never the target name), so that the firewall
+// and the switches of a network report one VLAN object (ADR 0050).
+func TestOptionsVLANDomain(t *testing.T) {
+	for _, tc := range []struct{ name, opts, key, domain string }{
+		{"default", "", "default:20", "default"},
+		{"named", "vlan_domain: lab\n", "lab:20", "lab"},
+		{"blank", "vlan_domain: \"  \"\n", "default:20", "default"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFake(t, Version272)
+			tg := f.Target(site)
+			if tc.opts != "" {
+				tg.Options = optionsNode(t, tc.opts)
+			}
+			b := collecttest.Run(t, newCollector(t, tg))[0]
+			v := obj(t, b, "vlan", "key", tc.key)
+			attrs(t, v, map[string]any{"vid": 20, "domain": tc.domain})
+			if n := len(collecttest.Objects([]*sdk.Batch{b}, "vlan")); n != 1 {
+				t.Errorf("%d vlans, want 1", n)
+			}
+		})
+	}
+}
+
 func optionsNode(t *testing.T, doc string) yaml.Node {
 	t.Helper()
 	var w struct {
@@ -691,7 +716,7 @@ func TestVlanWithoutVlanIf(t *testing.T) {
 	  {"if":"vtnet1","tag":99999,"vlanif":"vtnet1.99999"},
 	  {"descr":"nothing to identify it"}]}`)
 	b := runOne(t, f)
-	attrs(t, obj(t, b, "vlan", "key", "site-a:30"), map[string]any{"vid": 30, "name": "Guests"})
+	attrs(t, obj(t, b, "vlan", "key", "default:30"), map[string]any{"vid": 30, "name": "Guests"})
 	g := obj(t, b, "interface", "name", "vtnet1.30")
 	attrs(t, g, map[string]any{"kind": "vlan", "description": "Guests"})
 	// The tag is out of range: the interface exists, the VLAN object does not.

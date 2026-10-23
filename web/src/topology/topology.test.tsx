@@ -5,7 +5,7 @@ import type { RelationLink } from "../api/types";
 import { expectNoA11yViolations } from "../test/axe";
 import { page, READER } from "../test/fixtures";
 import { defaultRoutes, mockApi, problem, renderApp, type Call, type Handler } from "../test/support";
-import { A1E1, A1E2, CABLE1, DEVICES, T, rel, sampleContext, sampleLinks } from "./fixtures";
+import { A1E1, A1E2, CABLE1, DEVICES, T, end, rel, sampleContext, sampleLinks } from "./fixtures";
 import { graphEnv } from "./graph";
 import { MAX_PAGES, readAll } from "./useTopology";
 
@@ -33,9 +33,11 @@ interface Setup {
   links?: RelationLink[];
   context?: RelationLink[];
   truncated?: boolean;
+  /** The VLAN objects "GET /objects?type=vlan" returns. */
+  vlans?: unknown[];
 }
 
-function routes({ links = sampleLinks(), context = sampleContext(), truncated }: Setup = {}): Record<string, Handler> {
+function routes({ links = sampleLinks(), context = sampleContext(), truncated, vlans = [] }: Setup = {}): Record<string, Handler> {
   return {
     ...defaultRoutes(READER),
     "GET /relations": (c: Call) => {
@@ -49,6 +51,8 @@ function routes({ links = sampleLinks(), context = sampleContext(), truncated }:
           return page(DEVICES.map((d) => obj(d.id, "device", d.name, { site_id: d.siteId, attributes: { role: d.role } })), { limit: 1000 });
         case "site":
           return page([obj(T.paris, "site", "paris-1"), obj(T.lyon, "site", "lyon-1")], { limit: 1000 });
+        case "vlan":
+          return page(vlans, { limit: 1000 });
         default:
           return page([], { limit: 1000 });
       }
@@ -180,6 +184,20 @@ describe("filters", () => {
     expect(options("Site")).toEqual(["All", "lyon-1", "paris-1"]);
     expect(options("Rack")).toEqual(["All", "lyon-1", "paris-1"]);
     expect(options("VLAN")).toEqual(["All", "VLAN 10", "VLAN 20"]);
+  });
+
+  it("tells two VLANs of the same VID apart in the filter", async () => {
+    const twin = "p-vlan-10-lab";
+    await open({
+      context: [...sampleContext(), rel("member_of", A1E1, end(twin, "vlan", "VLAN 10"), { confidence: "declared" })],
+      vlans: [
+        obj(T.vlan10, "vlan", "VLAN 10", { attributes: { vid: 10, name: "MGMT", domain: "default" } }),
+        obj(twin, "vlan", "VLAN 10", { attributes: { vid: 10, name: "MGMT", domain: "lab" } }),
+        obj(T.vlan20, "vlan", "VLAN 20", { attributes: { vid: 20, name: "", domain: "default" } }),
+      ],
+    });
+    const options = within(screen.getByRole("combobox", { name: "VLAN" })).getAllByRole("option").map((o) => o.textContent);
+    expect(options).toEqual(["All", "VLAN 10 MGMT (default)", "VLAN 10 MGMT (lab)", "VLAN 20"]);
   });
 
   it("hides a class when its box is cleared, and does not let the last one be cleared", async () => {
