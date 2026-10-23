@@ -559,7 +559,7 @@ func (s *Server) hRackContents(c *call) error {
 			in.Model = s.modelAirflow(t)
 			attrs := redactMap(t.Attrs)
 			it.Model = &ObjectRef{ID: t.ID, Type: t.Type, Display: t.Display}
-			it.UHeight = number(attrs["u_height"])
+			it.UHeight = positive(number(attrs["u_height"]))
 			it.FullDepth = attrs["full_depth"] == true
 			it.ModelName, _ = attrs["model"].(string)
 			slug, _ := attrs["slug"].(string)
@@ -567,7 +567,7 @@ func (s *Server) hRackContents(c *call) error {
 			// A model a person just chose may not be described yet (the
 			// library's next pass does it): the library says its height.
 			if lm := s.libraryModel(slug); lm != nil && it.UHeight == nil {
-				it.UHeight, it.FullDepth = &lm.UHeight, lm.FullDepth
+				it.UHeight, it.FullDepth = positive(&lm.UHeight), lm.FullDepth
 				if it.ModelName == "" {
 					it.ModelName = lm.Model
 				}
@@ -581,9 +581,10 @@ func (s *Server) hRackContents(c *call) error {
 		it.Health, _ = da["health"].(string)
 		it.PartsHealth = parts[d.ID]
 		// A device nobody knows the model of (a PDU, a shelf) can carry its
-		// own height; the model's wins when it has one.
+		// own height; the model's wins when it has one. A model of height 0
+		// (a desktop NAS, a wall access point: ADR 0056) has none.
 		if it.UHeight == nil {
-			it.UHeight = number(redactMap(d.Attrs)["u_height"])
+			it.UHeight = positive(number(redactMap(d.Attrs)["u_height"]))
 		}
 		check := checkView(airflow.Check(in))
 		it.Airflow = &check
@@ -636,6 +637,16 @@ func (c *call) partsHealth(devices []string, objs map[string]*store.Object, site
 }
 
 // number reads a JSON number attribute; anything else is unknown.
+// positive returns f, or nil when it is nil or not above 0: a height of 0 U
+// means "occupies no rack unit", which a rack elevation cannot draw, so the
+// device's own height (or none) applies instead.
+func positive(f *float64) *float64 {
+	if f == nil || *f <= 0 {
+		return nil
+	}
+	return f
+}
+
 func number(v any) *float64 {
 	switch n := v.(type) {
 	case float64:

@@ -46,7 +46,10 @@ type Model struct {
 	// the generic model itself, are what a person chooses among when the
 	// device does not say which chassis it is. Without it the variants are
 	// found by name (see Index.Choices).
-	VariantOf string  `json:"variant_of,omitempty"`
+	VariantOf string `json:"variant_of,omitempty"`
+	// UHeight is the rack height in U. 0 means the model occupies no rack
+	// unit (a desktop NAS, a wall access point, a vertical PDU), the upstream
+	// meaning (ADR 0056).
 	UHeight   float64 `json:"u_height"`
 	FullDepth bool    `json:"full_depth"`
 	// Airflow uses the trica schema spelling (front_to_rear).
@@ -181,8 +184,8 @@ func Parse(data []byte, origin, path string) (*Model, error) {
 	case m.VariantOf == m.Slug:
 		return fail("variant_of names the model itself")
 	}
-	if r.UHeight == nil || *r.UHeight <= 0 || *r.UHeight > 100 || math.IsNaN(*r.UHeight) {
-		return fail("u_height is required and must be in (0, 100]")
+	if r.UHeight == nil || math.IsNaN(*r.UHeight) || *r.UHeight < 0 || *r.UHeight > 100 {
+		return fail("u_height is required and must be in [0, 100] (0: occupies no rack unit)")
 	}
 	for k, v := range map[string]any{"front_image": r.FrontImage, "rear_image": r.RearImage} {
 		if _, ok := v.(bool); v != nil && !ok {
@@ -254,6 +257,9 @@ func Parse(data []byte, origin, path string) (*Model, error) {
 	}
 	return m, nil
 }
+
+// Racked reports whether the model occupies rack units (u_height above 0).
+func (m *Model) Racked() bool { return m.UHeight > 0 }
 
 // PSUCount is the number of power ports (power supply slots).
 func (m *Model) PSUCount() int {

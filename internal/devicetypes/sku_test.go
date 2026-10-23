@@ -123,7 +123,9 @@ func TestEmbeddedSKUsAreUnique(t *testing.T) {
 	for _, m := range models {
 		for _, pn := range m.PartNumbers {
 			n++
-			k := m.Vendor + "|" + strings.ToLower(pn)
+			// The way the index compares them: lower case, letters and digits
+			// only ("UDM-SE" and "UDMSE" are one SKU).
+			k := m.Vendor + "|" + strings.Join(regexp.MustCompile(`[a-z0-9]+`).FindAllString(strings.ToLower(pn), -1), "")
 			if prev, dup := seen[k]; dup {
 				t.Errorf("%s lists %s, already listed by %s", m.Slug, pn, prev)
 			}

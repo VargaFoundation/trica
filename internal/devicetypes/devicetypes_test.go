@@ -38,15 +38,17 @@ func TestEmbeddedLibraryLoadsAndIsValid(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(models) < 20 {
-		t.Fatalf("library holds %d models, want at least 20", len(models))
+	// ADR 0056 doubled the 199 models the library held before it.
+	if len(models) < 398 {
+		t.Fatalf("library holds %d models, want at least 398 (twice the 199 before ADR 0056)", len(models))
 	}
 	origins := map[string]int{}
 	vendors := map[string]bool{}
 	for _, m := range models {
 		origins[m.Origin]++
 		vendors[m.Vendor] = true
-		if m.UHeight <= 0 || m.Slug == "" || m.Model == "" {
+		// 0 U is a height (desktop, wall, ceiling): ADR 0056.
+		if m.UHeight < 0 || m.Slug == "" || m.Model == "" {
 			t.Errorf("%s: incomplete model %+v", m.Path, m)
 		}
 		if len(m.Ports) == 0 {
@@ -56,7 +58,7 @@ func TestEmbeddedLibraryLoadsAndIsValid(t *testing.T) {
 	if origins[devicetypes.OriginUpstream] == 0 || origins[devicetypes.OriginLocal] == 0 {
 		t.Errorf("origins %v: want upstream and local models", origins)
 	}
-	for _, v := range []string{"Arista", "MikroTik", "HPE", "Dell", "Netgate", "Generic"} {
+	for _, v := range []string{"Arista", "MikroTik", "HPE", "Dell", "Netgate", "Generic", "Ubiquiti", "Synology"} {
 		if !vendors[v] {
 			t.Errorf("no %s model", v)
 		}
@@ -69,7 +71,8 @@ func TestParseRejectsInvalidFiles(t *testing.T) {
 		"no model":          "manufacturer: V\nslug: a\nu_height: 1\n",
 		"bad slug":          "manufacturer: V\nmodel: A\nslug: Bad Slug\nu_height: 1\n",
 		"no u_height":       "manufacturer: V\nmodel: A\nslug: a\n",
-		"zero u_height":     "manufacturer: V\nmodel: A\nslug: a\nu_height: 0\n",
+		"negative u_height": "manufacturer: V\nmodel: A\nslug: a\nu_height: -1\n",
+		"NaN u_height":      "manufacturer: V\nmodel: A\nslug: a\nu_height: .nan\n",
 		"huge u_height":     "manufacturer: V\nmodel: A\nslug: a\nu_height: 500\n",
 		"unknown airflow":   minimal + "airflow: sideways\n",
 		"unknown unit":      minimal + "weight: 3\nweight_unit: stone\n",
@@ -88,6 +91,18 @@ func TestParseRejectsInvalidFiles(t *testing.T) {
 	// The same port name in two groups is fine.
 	if _, err := devicetypes.Parse([]byte(minimal+"interfaces:\n  - name: x\nconsole-ports:\n  - name: x\n"), "t", "x.yaml"); err != nil {
 		t.Errorf("same name in two groups refused: %v", err)
+	}
+}
+
+// u_height 0 is what upstream writes for a desktop, wall or ceiling model: the
+// model occupies no rack unit (ADR 0056). It is a value, not a missing one.
+func TestParseAcceptsZeroU(t *testing.T) {
+	m := mustParse(t, "manufacturer: V\nmodel: A\nslug: a\nu_height: 0\n")
+	if m.UHeight != 0 || m.Racked() {
+		t.Fatalf("u_height 0 gave %v, racked %v, want 0 and not racked", m.UHeight, m.Racked())
+	}
+	if m := mustParse(t, minimal); !m.Racked() {
+		t.Fatal("a 1 U model is not racked")
 	}
 }
 

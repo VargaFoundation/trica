@@ -1,0 +1,29 @@
+---
+# Written by the trica project (Apache-2.0), ADR 0056. Upstream has the RS3617RPxs only.
+#
+# Synology DS3617xs, from the Synology DS3617xs data sheet (read 2026-10-23):
+# https://cndl.synology.cn/download/Document/Hardware/DataSheet/DiskStation/17-year/DS3617xs/enu/Synology_DS3617xs_Data_Sheet_enu.pdf
+# 12-bay desktop unit (3.5in or 2.5in SATA), 4 x 1GbE RJ-45, 2 x USB 3.0, 2 expansion
+# ports (DX1215), one PCIe 3.0 x8 slot, 270 x 300 x 340 mm, 9.8 kg, 2 x 120 mm system
+# fans, 100-240 V AC single phase. The data sheet states neither the airflow nor the
+# power inlet type, so the file leaves them out. It occupies no rack unit (u_height 0).
+manufacturer: Synology
+model: DS3617xs
+slug: synology-ds3617xs
+part_number: DS3617xs
+u_height: 0
+is_full_depth: false
+weight: 9.8
+weight_unit: kg
+comments: '[DS3617xs Data Sheet](https://cndl.synology.cn/download/Document/Hardware/DataSheet/DiskStation/17-year/DS3617xs/enu/Synology_DS3617xs_Data_Sheet_enu.pdf)'
+power-ports:
+  - name: Power
+interfaces:
+  - name: LAN 1
+    type: 1000base-t
+  - name: LAN 2
+    type: 1000base-t
+  - name: LAN 3
+    type: 1000base-t
+  - name: LAN 4
+    type: 1000base-t

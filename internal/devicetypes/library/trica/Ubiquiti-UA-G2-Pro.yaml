@@ -1,0 +1,24 @@
+---
+# Written by the trica project (Apache-2.0), ADR 0056. Not in upstream.
+#
+# UniFi Access G2 Reader Pro, from the Ubiquiti tech specs
+# (https://techspecs.ui.com/unifi/door-access/ua-g2-pro, read 2026-10-23):
+# "G2 Reader Pro", SKU UA-G2-Pro; 160 x 40.4 x 40.55 mm, 136 g, wall or gang-box mount;
+# one 10/100/1000 RJ-45 with PoE, 6 W. The tech specs give no port name: "Port 1" is
+# trica's. part_numbers holds the code of the UniFi device fingerprint database
+# (https://static.ui.com/fingerprint/ui/public.json). No rack unit (u_height 0).
+manufacturer: Ubiquiti
+model: G2 Reader Pro
+slug: ubiquiti-ua-g2-pro
+part_number: UA-G2-Pro
+part_numbers:
+  - UA-G2-PRO
+u_height: 0
+is_full_depth: false
+airflow: passive
+weight: 136
+weight_unit: g
+comments: '[UA-G2-Pro Techspecs](https://techspecs.ui.com/unifi/door-access/ua-g2-pro)'
+interfaces:
+  - name: Port 1
+    type: 1000base-t

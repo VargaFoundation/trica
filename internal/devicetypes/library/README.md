@@ -7,13 +7,19 @@ operator's guide: [docs/reference/devicetypes.md](../../../docs/reference/device
 | Directory | What | Origin and licence |
 |---|---|---|
 | `<Vendor>/` (`APC`, `Arista`, `Cisco`, `Dell`, `Eaton`, `Fortinet`, `Fujitsu`, `HPE`, `Juniper`, `Lenovo`, `MikroTik`, `Netgate`, `QNAP`, `Supermicro`, `Synology`, `Ubiquiti`) | Model files, copied unchanged | [netbox-community/devicetype-library](https://github.com/netbox-community/devicetype-library), `device-types/<Vendor>/`, CC0-1.0 |
-| `trica/` | Model files written by this project (among them `DCS-7280SE-64-F` / `-R`, from the Arista 7280E data sheet: upstream has the -68 and -72 only; the chassis variants of the catalogue, ADR 0043; the NetApp DS4246 and DS2246 shelves) | Apache-2.0, origin `trica` |
+| `trica/` | Model files written by this project (among them `DCS-7280SE-64-F` / `-R`, from the Arista 7280E data sheet: upstream has the -68 and -72 only; the chassis variants of the catalogue, ADR 0043; the NetApp DS4246 and DS2246 shelves; ADR 0056: `Synology-DS3617xs` from the [DS3617xs data sheet](https://cndl.synology.cn/download/Document/Hardware/DataSheet/DiskStation/17-year/DS3617xs/enu/Synology_DS3617xs_Data_Sheet_enu.pdf), `Ubiquiti-UA-Hub-Door` from the [UA-Hub-Door tech specs](https://techspecs.ui.com/unifi/door-access/ua-hub-door) and `Ubiquiti-UA-G2-Pro` from the [UA-G2-Pro tech specs](https://techspecs.ui.com/unifi/door-access/ua-g2-pro), all read on 2026-10-23, with the source in each file) | Apache-2.0, origin `trica` |
+| `overlays/` | `Ubiquiti.yaml`: the shortnames a UniFi controller reports (`USPM24P`...), added as `part_numbers` to upstream models by slug (ADR 0056); the source is Ubiquiti's [device fingerprint database](https://static.ui.com/fingerprint/ui/public.json), read 2026-10-23 | Apache-2.0, origin `trica` |
+| `upstream.tsv` | The manifest of the vendor directories: one line per file, `path`, upstream commit, git blob; `TestUpstreamFilesAreUnchanged` proves the files are the upstream ones | Apache-2.0, written by `scripts/devicetype-library/fetch.sh` |
 | `elevation-images/<Vendor>/` | Face images, `<slug>.<front\|rear>.<png\|jpg\|jpeg\|webp>` | see below |
 | `drawings/<Vendor>/` | SVG sources of the faces this project drew, `<slug>.<face>.svg` | **CC0-1.0**, see below |
 
 `Arista/DCS-7050SX-64-F.yaml` and `-R.yaml` and `Dell/PowerEdge-R330.yaml` were copied at master
 `37f5f02`, the models the catalogue added (docs/reference/devicetypes.md, "Catalogue") at
-`9510b3c`, the other upstream model files at `565a9ba` (see `NOTICE`).
+`9510b3c`, the other upstream model files at `565a9ba` (see `NOTICE`). The 317 models of ADR 0056
+were copied at master `4a87296236ab01f624b42de578a5f7720d0255fe` (CC0-1.0, licence checked
+2026-10-23), unchanged, by `scripts/devicetype-library/fetch.sh` from the list in
+`scripts/devicetype-library/selection.txt`; the commit and the git blob of every file of a vendor
+directory, those copies included, are in `upstream.tsv`.
 
 ## Images
 
@@ -151,6 +157,32 @@ recompressed to a 256-colour palette (pngquant), JPEG at quality 85 without meta
 | `Ubiquiti/ubiquiti-unifi-switch-48-pro-poe-gen2.rear.png` | 1170 × 115, 152 630 B | 1000 × 98, 25 203 B |
 | `Ubiquiti/ubiquiti-unifi-switch-aggregation.front.png` | 1115 × 110, 91 526 B | 1000 × 99, 35 396 B |
 
+
+### UniFi gateway and switch photographs (ADR 0056)
+
+Ten files from `elevation-images/Ubiquiti/` of netbox-community/devicetype-library, master at
+`4a87296236ab01f624b42de578a5f7720d0255fe`, licence **CC0-1.0** (checked on 2026-10-23 through the
+GitHub licence API): the faces of the rack-mounted UniFi gateways and of the USW Pro Max 24 PoE,
+the models of ADR 0056 that sit in a rack. Same treatment (scaled down to at most 1000 pixels wide
+with Lanczos, reduced to a 256-colour palette with ImageMagick, since `pngquant` was not
+available in the throwaway container). The upstream picture of the UDM Pro Max is a 1500 x 1500
+render of the unit on a white square with its reflection: it was also **cropped to the unit**
+(trimmed, then cut at the bottom edge of the chassis), because the web stretches a face to the U
+box. The other models of ADR 0056 have no face here; their upstream pictures would not fit the
+budget (docs/reference/devicetypes.md, "Size").
+
+| File | Upstream size | Here |
+|---|---|---|
+| `Ubiquiti/ubiquiti-enterprise-fortress-gateway.front.png` | 1166 × 115, 172 293 B | 1000 × 99, 32 719 B |
+| `Ubiquiti/ubiquiti-enterprise-fortress-gateway.rear.png` | 1168 × 117, 195 697 B | 1000 × 100, 44 108 B |
+| `Ubiquiti/ubiquiti-unifi-dream-machine-pro-max.front.png` | 1500 × 1500, 459 292 B | 1000 × 99, 36 545 B |
+| `Ubiquiti/ubiquiti-unifi-dream-machine-pro-max.rear.png` | 1500 × 1500, 463 500 B | 1000 × 99, 35 005 B |
+| `Ubiquiti/ubiquiti-unifi-dream-machine-pro-special-edition.front.png` | 1164 × 115, 161 527 B | 1000 × 99, 35 105 B |
+| `Ubiquiti/ubiquiti-unifi-dream-machine-pro-special-edition.rear.png` | 1163 × 116, 167 584 B | 1000 × 100, 36 528 B |
+| `Ubiquiti/ubiquiti-unifi-dream-machine-pro.front.png` | 1065 × 106, 66 565 B | 1000 × 100, 41 993 B |
+| `Ubiquiti/ubiquiti-unifi-dream-machine-pro.rear.png` | 1258 × 128, 83 574 B | 1000 × 102, 42 378 B |
+| `Ubiquiti/ubiquiti-unifi-switch-pro-max-24-poe.front.png` | 1167 × 117, 190 849 B | 1000 × 100, 44 017 B |
+| `Ubiquiti/ubiquiti-unifi-switch-pro-max-24-poe.rear.png` | 1168 × 117, 172 150 B | 1000 × 100, 33 581 B |
 
 ## Faces drawn by the project
 

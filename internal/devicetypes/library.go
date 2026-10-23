@@ -12,7 +12,8 @@ import (
 
 // The vendored library. Directories named after a manufacturer hold files
 // copied unchanged from netbox-community/devicetype-library (CC0-1.0);
-// the directory "trica" holds models written by this project, and
+// the directory "trica" holds models written by this project, "overlays" the
+// shortnames this project adds to upstream models (ADR 0056), and
 // "elevation-images" the face illustrations (see library/README.md).
 //
 //go:embed library
@@ -25,12 +26,19 @@ const localDir = "trica"
 // The first invalid file fails the load: a half-loaded library would silently
 // miss devices. Slugs must be unique. Images are not read: see Open.
 func Load(fsys fs.FS, root string) ([]*Model, error) {
-	return loadModels(fsys, root, func(p string) string {
+	models, err := loadModels(fsys, root, func(p string) string {
 		if strings.HasPrefix(p, path.Join(root, localDir)+"/") {
 			return OriginLocal
 		}
 		return OriginUpstream
 	})
+	if err != nil {
+		return nil, err
+	}
+	if err := applyOverlays(fsys, root, models); err != nil {
+		return nil, err
+	}
+	return models, nil
 }
 
 func loadModels(fsys fs.FS, root string, originOf func(string) string) ([]*Model, error) {
@@ -40,7 +48,7 @@ func loadModels(fsys fs.FS, root string, originOf func(string) string) ([]*Model
 		if err != nil {
 			return err
 		}
-		if p != root && (strings.HasPrefix(d.Name(), ".") || (d.IsDir() && (d.Name() == ImageDir || d.Name() == DrawingDir || d.Name() == LayoutDir))) {
+		if p != root && (strings.HasPrefix(d.Name(), ".") || (d.IsDir() && (d.Name() == ImageDir || d.Name() == DrawingDir || d.Name() == LayoutDir || d.Name() == OverlayDir))) {
 			// Hidden entries are skipped: a Kubernetes volume holds its files
 			// twice, under a hidden ..<timestamp> directory and as links.
 			if d.IsDir() {

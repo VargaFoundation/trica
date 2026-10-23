@@ -46,6 +46,13 @@ func TestChoicesOfTheEmbeddedLibrary(t *testing.T) {
 			[]string{"arista-dcs-7050sx3-48yc8-f"}},
 		{"mounting suffix, one model", "MikroTik", "CRS354-48G-4S+2Q+", "", true, devicetypes.ByMounting, "mikrotik-crs354-48g-4s-plus-2q-plus-rm",
 			[]string{"mikrotik-crs354-48g-4s-plus-2q-plus-rm"}},
+		// Longer-named siblings do not make a match uncertain, only a
+		// variant_of does (ADR 0056): the U7 Pro Max and the U7 Pro Wall
+		// extend the U7 Pro's name; the DL385 Gen10 Plus v2 the DL385 Gen10's.
+		{"u7 pro: certain although longer names extend it", "Ubiquiti", "U7 Pro", "", true, devicetypes.ByModel, "ubiquiti-u7-pro",
+			[]string{"ubiquiti-u7-pro", "ubiquiti-u7-pro-max", "ubiquiti-u7-pro-wall"}},
+		{"dl385 gen10: certain although the Plus v2 extends it", "HPE", "ProLiant DL385 Gen10", "", true, devicetypes.ByModel, "hpe-proliant-dl385-gen10",
+			[]string{"hpe-proliant-dl385-gen10", "hpe-proliant-dl385-gen10-plus-v2"}},
 		{"unknown", "Acme", "Mystery box", "", false, devicetypes.UncertainNone, "", nil},
 		{"no vendor, no guess", "", "PowerEdge R330", "", false, devicetypes.UncertainNone, "", nil},
 	}

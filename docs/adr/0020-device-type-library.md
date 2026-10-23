@@ -12,6 +12,9 @@ of models in a simple YAML format.
 
 ## Decision
 
+> Amended by [ADR 0056](0056-growing-the-device-type-library.md): `u_height` may be 0 ("occupies
+> no rack unit"), as upstream writes it for desktop and wall devices; the vendored subset grew.
+
 1. **Format.** The library reads that format as is: `manufacturer`, `model`, `slug`,
    `part_number`, `u_height`, `is_full_depth`, `airflow`, `weight` + `weight_unit`, and the
    port lists (`interfaces`, `console-ports`, `console-server-ports`, `power-ports`,

@@ -34,6 +34,7 @@ var testLibrary = libIndex{devicetypes.NewIndex([]*devicetypes.Model{
 	{Slug: "acme-srv2-8sff", Vendor: "Acme", Model: "SRV-2 8SFF", UHeight: 1, FullDepth: true, VariantOf: "acme-srv2"},
 	{Slug: "acme-srv2-12lff", Vendor: "Acme", Model: "SRV-2 12LFF", UHeight: 2, PartNumbers: []string{"SKU-12"}, VariantOf: "acme-srv2"},
 	{Slug: "acme-srv2-12lff-nvme", Vendor: "Acme", Model: "SRV-2 12LFF NVMe", UHeight: 2, VariantOf: "acme-srv2-12lff"},
+	{Slug: "acme-desk-nas", Vendor: "Acme", Model: "DeskNAS", UHeight: 0},
 })}
 
 func init() {

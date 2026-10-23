@@ -29,7 +29,10 @@ trica embeds, unchanged, device model files from:
     "elevation-images", "drawings" and "layouts"); Arista/DCS-7050SX-64-F.yaml, -R.yaml and
     Dell/PowerEdge-R330.yaml copied at master 37f5f02c27eedf60767594174598daec5b9e2bee;
     the models added by the catalogue (docs/reference/devicetypes.md, "Catalogue")
-    copied at master 9510b3cc3c9fca781ec09b61ef5ca2f3a00cdb39, licence checked 2026-10-19
+    copied at master 9510b3cc3c9fca781ec09b61ef5ca2f3a00cdb39, licence checked 2026-10-19;
+    the models added by ADR 0056 copied at master 4a87296236ab01f624b42de578a5f7720d0255fe,
+    licence checked 2026-10-23, each file and its git blob listed in
+    internal/devicetypes/library/upstream.tsv
 
 and device face images from the same repository, scaled down and recompressed
 (CC0 allows it; the list and the changes are in
@@ -37,11 +40,14 @@ internal/devicetypes/library/README.md):
 
   netbox-community/devicetype-library   CC0-1.0 (public domain dedication)
     licence checked 2026-10-17, master at 37f5f02c27eedf60767594174598daec5b9e2bee,
-    and 2026-10-19, master at 9510b3cc3c9fca781ec09b61ef5ca2f3a00cdb39 (the catalogue)
+    2026-10-19, master at 9510b3cc3c9fca781ec09b61ef5ca2f3a00cdb39 (the catalogue), and
+    2026-10-23, master at 4a87296236ab01f624b42de578a5f7720d0255fe (ten UniFi faces, ADR 0056;
+    the UDM Pro Max one also cropped)
     files: internal/devicetypes/library/elevation-images/ (those without a source
     in internal/devicetypes/library/drawings/)
 
-The models in internal/devicetypes/library/trica/ are written by this project.
+The models in internal/devicetypes/library/trica/ and the overlays in
+internal/devicetypes/library/overlays/ are written by this project.
 
 The device face drawings in internal/devicetypes/library/drawings/, and the PNG
 files generated from them in internal/devicetypes/library/elevation-images/
