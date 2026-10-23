@@ -80,7 +80,9 @@ value changes.
    not `partial`: a permanently failing endpoint (the key's role, an API change) would make every run
    partial for ever and switch off absence detection for every device. This is a third outcome class
    next to ADR 0057 item 9 (a failed call that leaves a partial run) and a failed run. When a connected
-   console has no period in the window, a warning says so.
+   console has no period in the window, a warning says so. *Amended (#175): the warning also covers a
+   console with an Internet access that no entry of the answer is about (empty `data`, or entries of
+   other hosts only); it is given once per console and only when the call was made and succeeded.*
 7. **`options.isp_metrics`, default `true`**; `false` makes no such call.
 8. **The read-only scan gets stricter, `/ea/` stays forbidden.** `TestOnlyGETIsBuilt` now also refuses
    any string that starts with `/v1/` and has something after it unless it is one of `/v1/hosts`,
