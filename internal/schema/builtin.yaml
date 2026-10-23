@@ -410,6 +410,10 @@ types:
       bandwidth_mbps: {kind: int, unit: Mb/s, label: {en: Contracted bandwidth, fr: Débit souscrit}, description: "Contracted bandwidth."}
       public_ips: {kind: list, search: true, label: {en: Public addresses, fr: Adresses publiques}, description: "Public addresses or ranges."}
       status: {kind: enum, values: [online, offline, degraded, unknown], label: {en: Status, fr: État}, description: "Current state."}
+      latency_ms: {kind: float, series: true, unit: ms, label: {en: Latency, fr: Latence}, description: "Last measured average latency to the provider."}
+      latency_max_ms: {kind: float, series: true, unit: ms, label: {en: Maximum latency, fr: Latence maximale}, description: "Last measured maximum latency to the provider."}
+      loss_pct: {kind: float, series: true, unit: "%", label: {en: Loss, fr: Perte}, description: "Last measured packet loss."}
+      uptime_pct: {kind: float, series: true, unit: "%", label: {en: Availability, fr: Disponibilité}, description: "Last measured availability of the uplink."}
   tunnel:
     layer: network
     label: {en: Tunnel, fr: Tunnel}

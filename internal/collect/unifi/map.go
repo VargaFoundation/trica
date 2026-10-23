@@ -20,6 +20,10 @@ type snapshot struct {
 	// told from "statistics not read".
 	haveSites   bool
 	haveDevices bool
+	// The ISP metrics of the window [metricsFrom, metricsTo].
+	metrics                []metricSite
+	haveMetrics            bool
+	metricsFrom, metricsTo time.Time
 }
 
 // result is what build reports besides the objects of the batch.
@@ -39,6 +43,9 @@ type builder struct {
 	s    *snapshot
 	res  result
 	rels map[string]bool
+	// access maps host id + NUL + WAN type to the ref of the internet access
+	// made for that WAN, where the ISP metrics are attached.
+	access map[string]string
 }
 
 // build turns a snapshot into objects and relations of b.
@@ -48,7 +55,7 @@ type builder struct {
 // every entry has; the console is the same physical device in /v1/hosts and
 // in /v1/devices and is merged by MAC.
 func (c *collector) build(b *sdk.Batch, s *snapshot) result {
-	x := &builder{c: c, b: b, s: s, rels: map[string]bool{}}
+	x := &builder{c: c, b: b, s: s, rels: map[string]bool{}, access: map[string]string{}}
 
 	devices := map[string][]device{} // host id -> its devices
 	for _, g := range s.groups {
@@ -92,6 +99,7 @@ func (c *collector) build(b *sdk.Batch, s *snapshot) result {
 	if consoles == 1 {
 		x.res.version = version
 	}
+	x.ispMetrics()
 	return x.res
 }
 
@@ -305,6 +313,7 @@ func (x *builder) wans(h *host, consoleRef string) {
 				fallbackUsed = true
 			}
 		}
+		x.access[string(h.ID)+"\x00"+string(w.Type)] = ia.Ref
 		x.relate("routes_via", consoleRef, ia.Ref)
 	}
 }

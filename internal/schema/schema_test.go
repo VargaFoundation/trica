@@ -230,3 +230,23 @@ func TestRoomSaysTheSizeOfItsFloorTile(t *testing.T) {
 		}
 	}
 }
+
+// The ISP metrics of an Internet access are series (ADR 0059): without the
+// flag the engine would store them as plain attributes and nothing would be
+// drawn as a curve.
+func TestInternetAccessMeasurements(t *testing.T) {
+	ty, err := Builtin().Type("internet_access")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for key, unit := range map[string]string{"latency_ms": "ms", "latency_max_ms": "ms", "loss_pct": "%", "uptime_pct": "%"} {
+		a, ok := ty.Attributes[key]
+		if !ok {
+			t.Errorf("internet_access.%s is not declared", key)
+			continue
+		}
+		if a.Kind != Float || !a.Series || a.Unit != unit {
+			t.Errorf("internet_access.%s: kind %s, series %v, unit %q; want float, series, %q", key, a.Kind, a.Series, a.Unit, unit)
+		}
+	}
+}

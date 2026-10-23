@@ -4,7 +4,7 @@
 // It is a cloud collector: it sees what the vendor's cloud knows of a
 // console (hardware, versions, WAN ports, addresses, the devices it manages
 // and their state), not the console's local configuration. It only issues
-// GET requests to /v1/hosts, /v1/sites and /v1/devices, authenticated by an
+// GET requests to /v1/hosts, /v1/sites, /v1/devices and /v1/isp-metrics/5m, authenticated by an
 // API key that goes in the X-API-KEY header and nowhere else. The answers
 // carry personal data; the decode structs of types.go leave it out. See
 // README.md for the mapping, the key to create and what is left out.
@@ -36,15 +36,15 @@ var Descriptor = collect.Descriptor{
 	Title:      "UniFi Site Manager",
 	Vendors:    []string{"Ubiquiti"},
 	Protocol:   "UniFi Site Manager API v1: JSON over HTTPS, X-API-KEY",
-	Summary:    schema.Label{EN: "UniFi consoles and the devices they manage (access points, switches, readers, cameras) through the Site Manager cloud API: models, firmware, health, WAN ports, addresses and Internet accesses.", FR: "Consoles UniFi et équipements qu'elles gèrent (bornes Wi-Fi, commutateurs, contrôle d'accès, caméras) par l'API cloud Site Manager : modèles, firmware, santé, ports WAN, adresses et accès Internet."},
+	Summary:    schema.Label{EN: "UniFi consoles and the devices they manage (access points, switches, readers, cameras) through the Site Manager cloud API: models, firmware, health, WAN ports, addresses and Internet accesses, with the ISP latency, loss and uptime of the active one.", FR: "Consoles UniFi et équipements qu'elles gèrent (bornes Wi-Fi, commutateurs, contrôle d'accès, caméras) par l'API cloud Site Manager : modèles, firmware, santé, ports WAN, adresses et accès Internet, avec la latence, la perte et la disponibilité de l'opérateur sur celui qui est actif."},
 	Deployment: collect.DeploymentTarget,
 	Collects:   []string{"device", "interface", "internet_access", "ip_address", "software"},
-	ReadOnly:   "The client has one method, GET, on three endpoints (/v1/hosts, /v1/sites, /v1/devices); redirects are never followed and the key goes in one header, so it cannot leave the configured address.",
+	ReadOnly:   "The client has one method, GET, on four endpoints (/v1/hosts, /v1/sites, /v1/devices, /v1/isp-metrics/5m bounded to the last 30 minutes); redirects are never followed and the key goes in one header, so it cannot leave the configured address.",
 	Address:    "empty for https://api.ui.com, or the https base URL of the API.",
 	Username:   collect.Credential{Use: collect.UseUnused},
 	Secret:     collect.Credential{Use: collect.UseRequired, Meaning: "Site Manager API key"},
 	Options:    Options{},
-	Tested:     []string{"Site Manager API v1, UDM Pro Max UniFi OS 5.1 (recorded)", "Site Manager API v1, several consoles and pages (synthesised)"},
+	Tested:     []string{"Site Manager API v1, UDM Pro Max UniFi OS 5.1 (recorded)", "Site Manager API v1 ISP metrics 5m (recorded)", "Site Manager API v1, several consoles and pages (synthesised)"},
 	Evidence:   collect.EvidenceRecorded,
 	Docs:       "internal/collect/unifi/README.md",
 }
@@ -57,7 +57,12 @@ type Options struct {
 	Hosts []string `yaml:"hosts" doc:"Consoles to read, by host name, console name or host id (case-insensitive); empty reads every console the API key can see."`
 	// Roles overrides the device role of a model.
 	Roles []string `yaml:"roles" doc:"Device role overrides, one 'shortname-or-model=role' per entry (UAH-DOOR=access_control); the role is a value of the schema's device role."`
+	// ISPMetrics turns the ISP metrics call off; nil means on.
+	ISPMetrics *bool `yaml:"isp_metrics" default:"true" doc:"Read each site's ISP metrics (latency, packet loss, uptime) every run and keep the newest as measurements of the active Internet access; false makes no such call."`
 }
+
+// ispMetrics reports whether the ISP metrics are read (the default).
+func (o Options) ispMetrics() bool { return o.ISPMetrics == nil || *o.ISPMetrics }
 
 type collector struct {
 	t     collect.Target
@@ -132,7 +137,14 @@ const (
 	epHosts   = "/v1/hosts"
 	epSites   = "/v1/sites"
 	epDevices = "/v1/devices"
+	// epISPMetrics is read once per run, bounded to metricsWindow: for the 5m
+	// metrics the API otherwise only accepts a 24 hour duration (ADR 0059).
+	epISPMetrics = "/v1/isp-metrics/5m"
 )
+
+// metricsWindow is how far back the ISP metrics are asked: a few periods, so
+// that a period the API publishes late is still seen.
+const metricsWindow = 30 * time.Minute
 
 // Collect implements sdk.Collector: one run, one batch.
 func (c *collector) Collect(ctx context.Context, emit sdk.Emitter) error {
@@ -155,7 +167,7 @@ func (c *collector) Collect(ctx context.Context, emit sdk.Emitter) error {
 		return fail(err)
 	}
 	observed := c.now().UTC()
-	snap, errs, warnings, err := c.gather(rctx, newClient(hc, c.base, apiKey))
+	snap, errs, warnings, err := c.gather(rctx, newClient(hc, c.base, apiKey), observed)
 	if err != nil {
 		return fail(err)
 	}
@@ -175,11 +187,12 @@ func (c *collector) Collect(ctx context.Context, emit sdk.Emitter) error {
 	return emit.Emit(ctx, b)
 }
 
-// gather reads the three endpoints. The returned error is a total failure:
+// gather reads the endpoints. The returned error is a total failure:
 // the hosts could not be read (the key is refused, the API is unreachable),
-// and nothing else was asked. errs are failures of the other two calls, which
-// leave a partial run; warnings are for the operator.
-func (c *collector) gather(ctx context.Context, cl *client) (s *snapshot, errs, warnings []string, err error) {
+// and nothing else was asked. errs are failures of the sites and devices
+// calls, which leave a partial run; warnings are for the operator, and are
+// all a failed ISP metrics call produces (ADR 0059).
+func (c *collector) gather(ctx context.Context, cl *client, now time.Time) (s *snapshot, errs, warnings []string, err error) {
 	// The first call doubles as the reachability and credentials probe.
 	hosts, err := listAll[host](ctx, cl, epHosts, nil)
 	if err != nil {
@@ -215,7 +228,35 @@ func (c *collector) gather(ctx context.Context, cl *client) (s *snapshot, errs, 
 	} else {
 		s.haveDevices = true
 	}
+	if c.opts.ispMetrics() && s.haveSites {
+		if w := c.gatherMetrics(ctx, cl, s, now); w != "" {
+			warnings = append(warnings, w)
+		}
+	}
 	return s, errs, warnings, nil
+}
+
+// gatherMetrics reads the ISP metrics of the last metricsWindow. It never
+// fails the run: a permanently failing endpoint (the key's role, an API
+// change) would otherwise make every run partial and switch off absence
+// detection for every device. The warning it returns is the whole outcome.
+func (c *collector) gatherMetrics(ctx context.Context, cl *client, s *snapshot, now time.Time) string {
+	from := now.Add(-metricsWindow)
+	metrics, err := listAll[metricSite](ctx, cl, epISPMetrics, metricsQuery(from, now))
+	if err != nil {
+		return "ISP metrics: " + err.Error()
+	}
+	s.metrics, s.haveMetrics, s.metricsFrom, s.metricsTo = metrics, true, from, now
+	return ""
+}
+
+// metricsQuery is the bounded window: begin and end, RFC 3339 in UTC to the
+// second, and no duration.
+func metricsQuery(from, to time.Time) url.Values {
+	q := url.Values{}
+	q.Set("beginTimestamp", from.UTC().Format(time.RFC3339))
+	q.Set("endTimestamp", to.UTC().Format(time.RFC3339))
+	return q
 }
 
 // selectHosts applies options.hosts, and warns about a name that matches

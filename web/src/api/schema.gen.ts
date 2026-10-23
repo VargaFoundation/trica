@@ -1821,6 +1821,21 @@ export interface components {
              */
             bandwidth_mbps?: number;
             /**
+             * Maximum latency
+             * @description Last measured maximum latency to the provider.
+             */
+            latency_max_ms?: number;
+            /**
+             * Latency
+             * @description Last measured average latency to the provider.
+             */
+            latency_ms?: number;
+            /**
+             * Loss
+             * @description Last measured packet loss.
+             */
+            loss_pct?: number;
+            /**
              * Name
              * @description Uplink name.
              */
@@ -1841,6 +1856,11 @@ export interface components {
              * @enum {string}
              */
             status?: "online" | "offline" | "degraded" | "unknown";
+            /**
+             * Availability
+             * @description Last measured availability of the uplink.
+             */
+            uptime_pct?: number;
         } & {
             [key: string]: unknown;
         };

@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -41,12 +42,15 @@ func TestOnlyGETIsBuilt(t *testing.T) {
 	}
 }
 
+// allowedPaths are the only /v1/ paths the package may name (ADR 0057, 0059).
+var allowedPaths = []string{"/v1/hosts", "/v1/sites", "/v1/devices", "/v1/isp-metrics/5m"}
+
 type problem struct {
 	pos token.Pos
 	msg string
 }
 
-// readOnlyProblems lists what in f could write or leave the three endpoints.
+// readOnlyProblems lists what in f could write or leave the four endpoints.
 func readOnlyProblems(f *ast.File) []problem {
 	var out []problem
 	ast.Inspect(f, func(n ast.Node) bool {
@@ -80,6 +84,11 @@ func readOnlyProblems(f *ast.File) []problem {
 						out = append(out, problem{n.Pos(), "string " + n.Value + " reaches " + bad})
 					}
 				}
+				// Under /v1/ only the four endpoints of the collector exist:
+				// not the 1h metrics, not a query path, not a new one.
+				if rest, ok := strings.CutPrefix(s, "/v1/"); ok && rest != "" && !slices.Contains(allowedPaths, s) {
+					out = append(out, problem{n.Pos(), "string " + n.Value + " is not one of the endpoints " + strings.Join(allowedPaths, ", ")})
+				}
 			}
 		}
 		return true
@@ -107,6 +116,9 @@ func TestReadOnlyScanCatchesWrites(t *testing.T) {
 		"MethodPost":      `package p; import "net/http"; var m = http.MethodPost`,
 		"connector":       `package p; var u = "/v1/connector/consoles/x/proxy"`,
 		"early access":    `package p; var u = "/ea/isp-metrics"`,
+		"metrics query":   `package p; var u = "/v1/isp-metrics/5m/query"`,
+		"1h metrics":      `package p; var u = "/v1/isp-metrics/1h"`,
+		"another path":    `package p; var u = "/v1/anything"`,
 	} {
 		f, err := parser.ParseFile(token.NewFileSet(), "x.go", src, 0)
 		if err != nil {
@@ -122,6 +134,13 @@ func TestReadOnlyScanCatchesWrites(t *testing.T) {
 	}
 	if p := readOnlyProblems(good); len(p) != 0 {
 		t.Errorf("a GET is reported: %v", p)
+	}
+	endpoints, err := parser.ParseFile(token.NewFileSet(), "x.go", `package p; var u = []string{"/v1/hosts", "/v1/sites", "/v1/devices", "/v1/isp-metrics/5m", "/v1/"}`, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p := readOnlyProblems(endpoints); len(p) != 0 {
+		t.Errorf("the collector's own endpoints are reported: %v", p)
 	}
 	if _, err := os.Stat("client.go"); err != nil {
 		t.Fatal(err)

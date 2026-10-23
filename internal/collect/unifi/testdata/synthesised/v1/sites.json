@@ -5,9 +5,10 @@
       "hostId": "host-office-a:1",
       "statistics": {
         "ispInfo": {"name": "Example ISP", "organization": "Example ISP", "asn": 64500},
+        "wanLoadBalancingMode": "FAILOVER_ONLY",
         "wans": {
-          "WAN": {"externalIp": "203.0.113.20", "portUp": true, "ispInfo": {"name": "Example ISP A"}},
-          "WAN2": {"portUp": false}
+          "WAN": {"externalIp": "203.0.113.20", "failoverPriority": 1, "portUp": true, "ispInfo": {"name": "Example ISP A"}},
+          "WAN2": {"failoverPriority": 2, "portUp": false}
         }
       }
     },
@@ -16,8 +17,9 @@
       "hostId": "host-office-b:1",
       "statistics": {
         "ispInfo": {"name": "Example ISP B"},
+        "wanLoadBalancingMode": "FAILOVER_ONLY",
         "wans": {
-          "WAN": {"portUp": true}
+          "WAN": {"failoverPriority": 1, "portUp": true}
         }
       }
     }

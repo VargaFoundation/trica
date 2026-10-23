@@ -1,0 +1,26 @@
+{
+  "data": [
+    {
+      "metricType": "5m",
+      "hostId": "host-office-a:1",
+      "siteId": "000000000000000000000011",
+      "periods": [
+        {"metricTime": "2026-10-23T08:30:00Z", "data": {"wan": {"avgLatency": 11, "maxLatency": 20, "packetLoss": 0, "uptime": 100, "ispName": "Example ISP A", "download_kbps": 0, "upload_kbps": 0}}},
+        {"metricTime": "2026-10-23T08:40:00Z", "data": {"wan": {"avgLatency": 12.5, "maxLatency": 30, "packetLoss": 0.5, "uptime": 100, "ispName": "Example ISP A"}}},
+        {"metricTime": "2026-10-23T08:45:00Z", "data": {"wan": {"avgLatency": null, "maxLatency": "41", "packetLoss": "x", "uptime": 99.9, "ispName": "Example ISP A"}}},
+        {"metricTime": "2026-10-23T08:55:00Z", "data": {}},
+        {"metricTime": "2026-10-23T09:05:00Z", "data": {"wan": {"avgLatency": 999, "maxLatency": 999, "packetLoss": 0, "uptime": 100, "ispName": "Example ISP A"}}}
+      ]
+    },
+    {
+      "metricType": "5m",
+      "hostId": "host-office-b:1",
+      "siteId": "000000000000000000000012",
+      "periods": [
+        {"metricTime": "2026-10-23T02:00:00Z", "data": {"wan": {"avgLatency": 8, "maxLatency": 9, "packetLoss": 0, "uptime": 100, "ispName": "Example ISP B"}}}
+      ]
+    }
+  ],
+  "httpStatusCode": 200,
+  "traceId": "00000000000000000000000000000000"
+}
