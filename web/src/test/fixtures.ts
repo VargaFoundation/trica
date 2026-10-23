@@ -371,6 +371,47 @@ export const discrepancyMismatch: Discrepancy = {
   last_seen: "2026-10-12T06:30:00Z",
 };
 
+const SITE_B = "0a000000-0000-4000-8000-0000000000c2";
+const ROOM_A = "0a000000-0000-4000-8000-0000000000d1";
+const ROOM_B = "0a000000-0000-4000-8000-0000000000d2";
+
+/** An access point placed in two sites by two people (ADR 0061, reason "sites"). */
+export const discrepancyLocation: Discrepancy = {
+  id: 6,
+  kind: "location_conflict",
+  fingerprint: "location_conflict:ap:1",
+  object_id: ID.srv01,
+  key: "located_in",
+  details: {
+    reason: "sites",
+    sites: [ID.site, SITE_B],
+    places: [
+      { place_id: ROOM_A, place_type: "room", site_id: ID.site, sources: ["user:carol"] },
+      { place_id: ROOM_B, place_type: "room", site_id: SITE_B, sources: ["user:dan", "declaration:lab"] },
+    ],
+  },
+  status: "open",
+  opened_at: "2026-10-01T02:00:00Z",
+  last_seen: "2026-10-12T06:30:00Z",
+};
+
+/** A device mounted in a rack of one site and placed in another (reason "rack"). */
+export const discrepancyLocationRack: Discrepancy = {
+  ...discrepancyLocation,
+  id: 7,
+  fingerprint: "location_conflict:sw:2",
+  object_id: ID.swA1,
+  details: {
+    reason: "rack",
+    sites: [ID.site, SITE_B],
+    rack_id: ID.rack,
+    rack_site_id: ID.site,
+    places: [{ place_id: ROOM_B, place_type: "room", site_id: SITE_B, sources: ["user:dan"] }],
+  },
+};
+
+export const locationConflictIDs = { siteB: SITE_B, roomA: ROOM_A, roomB: ROOM_B };
+
 export const healthOk: SourceHealth = {
   source: "arista:eos",
   module: "arista",

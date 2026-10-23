@@ -16,7 +16,8 @@ import (
 // Kinds: value_mismatch (declared and observed values differ),
 // unresolved_neighbor (an LLDP neighbour no collector reports),
 // unresolved_reference, cable_not_observed (documented, no LLDP),
-// cable_not_declared (seen in LLDP, not documented), cable_conflict.
+// cable_not_declared (seen in LLDP, not documented), cable_conflict,
+// location_conflict (the places of a device disagree on the site, ADR 0061).
 type Discrepancy struct {
 	ID          int64           `json:"id"`
 	Kind        string          `json:"kind"`
@@ -73,6 +74,18 @@ func OpenDiscrepancy(ctx context.Context, tx pgx.Tx, d Discrepancy, now time.Tim
 func ResolveDiscrepancy(ctx context.Context, tx pgx.Tx, fingerprint, by string, now time.Time) error {
 	_, err := tx.Exec(ctx, `UPDATE discrepancies SET status = 'resolved', closed_at = $2, closed_by = $3 WHERE fingerprint = $1 AND status = 'open'`,
 		fingerprint, now, by)
+	return err
+}
+
+// KindLocationConflict is raised by the engine when the places of a device
+// disagree on the site (ADR 0061).
+const KindLocationConflict = "location_conflict"
+
+// ResolveOthers closes the open discrepancies of kind on objectID except the
+// one with fingerprint keep ("" closes them all).
+func ResolveOthers(ctx context.Context, tx pgx.Tx, kind, objectID, keep, by string, now time.Time) error {
+	_, err := tx.Exec(ctx, `UPDATE discrepancies SET status = 'resolved', closed_at = $4, closed_by = $5
+		WHERE kind = $1 AND object_id = $2 AND status = 'open' AND fingerprint <> $3`, kind, objectID, keep, now, by)
 	return err
 }
 

@@ -2,11 +2,15 @@
 // "Location" section, and the "Devices here" list of a site, building or room.
 // A rack decides a device's site whatever a place says: a device that is mounted
 // shows its old places as ignored, and they can still be withdrawn.
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { Link } from "react-router";
+import { api } from "../api/endpoints";
 import type { ObjectView } from "../api/types";
 import { Async } from "../components/Async";
 import { ObjectLink } from "../components/ObjectLink";
 import { useMe } from "../hooks";
+import { locationConflictOf } from "../discrepancies";
 import { useI18n } from "../i18n";
 import { BatchReview } from "./BatchReview";
 import { callerSource, unlocateDevice } from "./batch";
@@ -23,6 +27,13 @@ export function DeviceLocation({ device }: { device: ObjectView }) {
   const source = callerSource(useMe().data);
   const relations = useObjectRelations(device.id);
   const [open, setOpen] = useState<Open>(null);
+  // The engine opens a location_conflict when the places disagree on the site (ADR 0061).
+  const conflict = useQuery({
+    queryKey: ["discrepancies", "open", "location_conflict", device.id],
+    queryFn: ({ signal }) => api.discrepancies({ status: "open", kind: "location_conflict", object: device.id, limit: 1 }, signal),
+    staleTime: 15_000,
+  });
+  const reason = locationConflictOf(conflict.data?.items[0]?.details)?.reason;
   return (
     <Async query={relations}>
       {(page) => {
@@ -34,6 +45,12 @@ export function DeviceLocation({ device }: { device: ObjectView }) {
           <section aria-labelledby="location-h" className="placement">
             <h2 id="location-h">{t("edit.location.title")}</h2>
             {mounted ? <p role="note">{t("edit.location.overriddenByRack")}</p> : null}
+            {reason ? (
+              <p role="note" data-conflict={reason}>
+                {reason === "rack" ? t("edit.location.conflictRack") : t("edit.location.conflictSites")}{" "}
+                <Link to="/discrepancies?kind=location_conflict">{t("edit.location.conflictLink")}</Link>
+              </p>
+            ) : null}
             {places.length === 0 ? (
               <p>{t("edit.location.none")}</p>
             ) : (

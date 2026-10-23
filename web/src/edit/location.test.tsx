@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Batch, RelationView } from "../api/types";
 import { expectNoA11yViolations } from "../test/axe";
-import { page, PROPOSER, READER } from "../test/fixtures";
+import { discrepancyLocation, discrepancyLocationRack, page, PROPOSER, READER } from "../test/fixtures";
 import { defaultRoutes, mockApi, renderApp, type Call, type Handler } from "../test/support";
 import { EID, emptyResult, obj, physicalSchema, rack2, room, site, sw, swRelations } from "./fixtures";
 import { placeGroups } from "./PlaceInForm";
@@ -158,6 +158,45 @@ describe("a device in a rack", () => {
     await screen.findByRole("heading", { level: 1, name: "sw-a1" });
     await screen.findByRole("heading", { level: 2, name: "Rack placement" });
     expect(screen.queryByRole("heading", { level: 2, name: "Location" })).toBeNull();
+  });
+});
+
+describe("a device whose places disagree on the site", () => {
+  const places = page([placedIn(5, { id: ID.roomB, type: "room", display: "salle-b" }, "user:carol")]);
+  const sites = { ...discrepancyLocation, object_id: ID.ap };
+  const rack = { ...discrepancyLocationRack, object_id: ID.ap };
+
+  it("says so in its Location section, and links to the conflicts", async () => {
+    const api = mockApi(routes(PROPOSER, { [`GET /objects/${ID.ap}/relations`]: places, "GET /discrepancies": page([sites]) }));
+    renderApp({ at: `/objects/${ID.ap}` });
+    const section = (await screen.findByRole("heading", { level: 2, name: "Location" })).closest("section") as HTMLElement;
+    const note = await within(section).findByText(/in different sites: it has no site until they agree/);
+    expect(within(note.closest("p") as HTMLElement).getByRole("link", { name: "See the location conflicts" })).toHaveAttribute("href", "/discrepancies?kind=location_conflict");
+    const q = api.calls.find((c) => c.path === "/discrepancies")?.query;
+    expect(q?.get("kind")).toBe("location_conflict");
+    expect(q?.get("object")).toBe(ID.ap);
+    expect(q?.get("status")).toBe("open");
+    await expectNoA11yViolations();
+  });
+
+  it("says it in French", async () => {
+    mockApi(routes(PROPOSER, { [`GET /objects/${ID.ap}/relations`]: places, "GET /discrepancies": page([sites]) }));
+    renderApp({ at: `/objects/${ID.ap}`, locale: "fr" });
+    expect(await screen.findByText(/dans des sites différents : il n'a pas de site/)).toBeInTheDocument();
+  });
+
+  it("says the rack decides when a place is in another site than the rack", async () => {
+    mockApi(routes(PROPOSER, { [`GET /objects/${ID.ap}/relations`]: places, "GET /discrepancies": page([rack]) }));
+    renderApp({ at: `/objects/${ID.ap}` });
+    expect(await screen.findByText(/in another site than its rack: the rack decides/)).toBeInTheDocument();
+  });
+
+  it("says nothing when no conflict is open", async () => {
+    mockApi(routes(PROPOSER, { [`GET /objects/${ID.ap}/relations`]: places, "GET /discrepancies": page([]) }));
+    renderApp({ at: `/objects/${ID.ap}` });
+    await screen.findByRole("heading", { level: 2, name: "Location" });
+    await waitFor(() => expect(screen.queryByText(/it has no site until they agree/)).toBeNull());
+    expect(screen.queryByRole("link", { name: "See the location conflicts" })).toBeNull();
   });
 });
 

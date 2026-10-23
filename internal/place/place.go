@@ -7,6 +7,9 @@
 // in no rack, in the site of the site, building or room a person placed it in
 // (located_in). A rack always wins over a place. An object with no site, or
 // with two different sites, has none: site-restricted grants fail closed.
+//
+// Conflicts states the same rule the other way round: it says which devices
+// have places that disagree on the site, and why (ADR 0061).
 package place
 
 import (

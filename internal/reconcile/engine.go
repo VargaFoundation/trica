@@ -217,6 +217,9 @@ type run struct {
 	touchedAttrs map[string]map[string]bool
 	touchedRels  map[relKey]bool
 	touched      map[string]bool
+	// moved: objects whose parent changed in this batch (a room under another
+	// site): the devices placed under them are checked again.
+	moved map[string]bool
 }
 
 type relKey struct{ Type, From, To string }
@@ -250,6 +253,7 @@ func (e *Engine) apply(ctx context.Context, tx pgx.Tx, b *sdk.Batch, author, rea
 		e: e, tx: tx, reg: reg, b: b, now: e.now(), author: author,
 		res: &Result{Objects: map[string]string{}}, ids: map[string]string{}, types: map[string]string{},
 		touchedAttrs: map[string]map[string]bool{}, touchedRels: map[relKey]bool{}, touched: map[string]bool{},
+		moved: map[string]bool{},
 	}
 	r.seen = b.ObservedAt.UTC().Truncate(time.Microsecond)
 	if r.seen.IsZero() || r.seen.After(r.now) {
@@ -266,7 +270,7 @@ func (e *Engine) apply(ctx context.Context, tx pgx.Tx, b *sdk.Batch, author, rea
 		return nil, err
 	}
 	r.res.ChangesetID = r.cs
-	steps := []func(context.Context) error{r.resolveObjects, r.writeClaims, r.writeRelationClaims, r.resolveAttributes, r.resolveRelations, r.writeHealth}
+	steps := []func(context.Context) error{r.resolveObjects, r.writeClaims, r.writeRelationClaims, r.resolveAttributes, r.resolveRelations, r.checkPlacements, r.writeHealth}
 	for _, step := range steps {
 		if err := step(ctx); err != nil {
 			return nil, err
@@ -592,6 +596,7 @@ func (r *run) refreshObject(ctx context.Context, id, parentID string, observed b
 		if curParent != nil {
 			before = *curParent
 		}
+		r.moved[id] = true
 		r.record(PlannedChange{Op: "move", ObjectID: id, Key: "_parent", Before: before, After: parentID})
 		return r.setSystem(ctx, id, "_parent", parentID, conf)
 	}

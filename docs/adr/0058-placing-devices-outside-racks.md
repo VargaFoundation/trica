@@ -88,7 +88,8 @@ down from the site). Any new way to place an object has to enter both, and keep 
   cover the new SQL.
 - A device whose sources disagree about the site (two people, two rooms of two sites) has no site:
   site-limited readers lose it and `site:` finds it under both sites (the same already holds for
-  `mounted_in`). Nothing says so beyond that; a `location_conflict` discrepancy is a follow-up (#169).
+  `mounted_in`). The engine now says so with a `location_conflict` discrepancy, for this case and
+  for a place in another site than the device's rack ([ADR 0061](0061-location-conflict-discrepancy.md), #169).
 - `objectAt` on a past date still uses today's site.
 - Export and import carry `located_in` as any relation; an import is `declared`, so it round-trips.
 - **PR #150 (topology map)** has its own Go copy of the rule (`internal/topomap/index.go`,

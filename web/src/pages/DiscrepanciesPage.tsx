@@ -8,7 +8,9 @@ import { Status } from "../components/Badge";
 import { ObjectLink } from "../components/ObjectLink";
 import { Pager, PAGE_SIZE, useOffset } from "../components/Pager";
 import { Empty, Time } from "../components/Time";
+import { LocationConflict } from "../components/LocationConflict";
 import { Value } from "../components/Value";
+import { DISCREPANCY_KINDS, isKnownKind, kindLabel, locationConflictOf } from "../discrepancies";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../usePageTitle";
 
@@ -58,7 +60,15 @@ export function DiscrepanciesPage() {
         </label>
         <label>
           {t("discrepancies.filterKind")}
-          <input name="kind" defaultValue={kind} placeholder="value_mismatch" autoComplete="off" spellCheck={false} />
+          <select name="kind" defaultValue={kind}>
+            <option value="">{t("discrepancies.allKinds")}</option>
+            {DISCREPANCY_KINDS.map((k) => (
+              <option key={k} value={k}>
+                {kindLabel(t, k)}
+              </option>
+            ))}
+            {kind !== "" && !isKnownKind(kind) ? <option value={kind}>{kind}</option> : null}
+          </select>
         </label>
         <button type="submit">{t("filter.apply")}</button>
       </form>
@@ -86,12 +96,13 @@ export function DiscrepanciesPage() {
                   {page.items.map((d) => (
                     <tr key={d.id}>
                       <th scope="row" data-label={t("discrepancies.kind")}>
+                        {isKnownKind(d.kind) ? <div>{kindLabel(t, d.kind)}</div> : null}
                         <code>{d.kind}</code>
                       </th>
                       <td data-label={t("discrepancies.object")}>{d.object_id ? <ObjectLink id={d.object_id} /> : <Empty />}</td>
                       <td data-label={t("discrepancies.key")}>{d.key ? <code>{d.key}</code> : <Empty />}</td>
                       <td data-label={t("discrepancies.declared")}>
-                        <Value value={d.declared} />
+                        <Declared kind={d.kind} declared={d.declared} details={d.details} />
                       </td>
                       <td data-label={t("discrepancies.observed")}>
                         <Value value={d.observed} />
@@ -117,4 +128,10 @@ export function DiscrepanciesPage() {
       </Async>
     </>
   );
+}
+
+/** What was declared: a value, or, for a location conflict, the places that disagree. */
+function Declared({ kind, declared, details }: { kind: string; declared: unknown; details: unknown }) {
+  const conflict = kind === "location_conflict" ? locationConflictOf(details) : null;
+  return conflict ? <LocationConflict details={conflict} /> : <Value value={declared} />;
 }
