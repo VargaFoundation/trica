@@ -46,6 +46,9 @@ the view usable at a glance. ADR 0020 left images out. Three constraints shape t
    among the device's parts **the caller may read** (one recursive query, three levels; absent
    parts and unknown values do not count). The `device_type` object also carries the library path
    in `front_image` / `rear_image` (declared, like the rest of the library's values).
+   *Amended (#134, STATUS row 115): the image is the device's, not the rack face's: its front on the
+   face it is mounted from, its rear on the other face of a full-depth device, none behind a shallow
+   one (NetBox's convention, ADR 0049; `slotImage`, #146).*
 5. **The page fetches the bytes with the token, decodes them with `createImageBitmap` and paints
    them on a canvas inside the SVG** (`foreignObject`). No URL is ever made of the bytes, so the
    CSP is unchanged. Only paths matching `/api/v1/device-types/<slug>/<face>` are ever fetched
