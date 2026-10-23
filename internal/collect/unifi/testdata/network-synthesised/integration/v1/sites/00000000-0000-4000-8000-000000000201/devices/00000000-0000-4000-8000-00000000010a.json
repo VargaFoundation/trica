@@ -1,0 +1,350 @@
+{
+  "id": "00000000-0000-4000-8000-00000000010a",
+  "macAddress": "02:00:00:00:00:0a",
+  "ipAddress": "192.0.2.19",
+  "name": "sw-01",
+  "model": "USPM24P",
+  "supported": true,
+  "state": "ONLINE",
+  "firmwareVersion": "7.5.15",
+  "firmwareUpdatable": false,
+  "configurationId": "00000000-0000-4000-8000-000000000f00",
+  "adoptedAt": "2026-01-10T09:00:00Z",
+  "provisionedAt": "2026-01-10T09:05:00Z",
+  "features": {
+    "switching": {}
+  },
+  "interfaces": {
+    "ports": [
+      {
+        "idx": 1,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 1000,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3at",
+          "state": "UP",
+          "type": "2"
+        }
+      },
+      {
+        "idx": 2,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3at",
+          "state": "DOWN",
+          "type": "2"
+        }
+      },
+      {
+        "idx": 3,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3at",
+          "state": "DOWN",
+          "type": "2"
+        }
+      },
+      {
+        "idx": 4,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3at",
+          "state": "DOWN",
+          "type": "2"
+        }
+      },
+      {
+        "idx": 5,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3at",
+          "state": "DOWN",
+          "type": "2"
+        }
+      },
+      {
+        "idx": 6,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3at",
+          "state": "DOWN",
+          "type": "2"
+        }
+      },
+      {
+        "idx": 7,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3at",
+          "state": "DOWN",
+          "type": "2"
+        }
+      },
+      {
+        "idx": 8,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3at",
+          "state": "DOWN",
+          "type": "2"
+        }
+      },
+      {
+        "idx": 9,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 1000,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "UP",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 10,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "DOWN",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 11,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "DOWN",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 12,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "DOWN",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 13,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "DOWN",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 14,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "DOWN",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 15,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "DOWN",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 16,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "DOWN",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 17,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 2500,
+        "speedMbps": 2500,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "UP",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 18,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 2500,
+        "speedMbps": 2500,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "UP",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 19,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 2500,
+        "speedMbps": 2500,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "UP",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 20,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 2500,
+        "speedMbps": 2500,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "UP",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 21,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 2500,
+        "speedMbps": 2500,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "UP",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 22,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 2500,
+        "speedMbps": 2500,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "UP",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 23,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 2500,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": false,
+          "standard": "802.3bt",
+          "state": "DOWN",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 24,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 2500,
+        "speedMbps": 0,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "DOWN",
+          "type": "3"
+        }
+      },
+      {
+        "idx": 25,
+        "state": "UP",
+        "connector": "SFPPLUS",
+        "maxSpeedMbps": 10000,
+        "speedMbps": 10000
+      },
+      {
+        "idx": 26,
+        "state": "DOWN",
+        "connector": "SFPPLUS",
+        "maxSpeedMbps": 10000,
+        "speedMbps": 0
+      }
+    ]
+  },
+  "uplink": {
+    "deviceId": "00000000-0000-4000-8000-000000000101"
+  }
+}

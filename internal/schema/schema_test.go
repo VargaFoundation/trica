@@ -204,6 +204,9 @@ func TestAllows(t *testing.T) {
 	if r.Relations["managed_by"].Impact != "" {
 		t.Errorf("managed_by carries impact %q: a device keeps forwarding when its controller is down", r.Relations["managed_by"].Impact)
 	}
+	if up := r.Relations["uplinked_to"]; !up.Allows("device", "device") || up.Allows("interface", "device") || up.Allows("device", "interface") || up.Impact != "to_from" {
+		t.Errorf("uplinked_to must go from a device to a device with impact to_from: %+v", up)
+	}
 	if !r.Types["interface"].AllowsParent("device") || r.Types["interface"].AllowsParent("rack") {
 		t.Error("interface parents")
 	}

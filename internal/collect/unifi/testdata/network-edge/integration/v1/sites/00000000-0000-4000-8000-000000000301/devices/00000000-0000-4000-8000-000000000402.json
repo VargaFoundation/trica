@@ -1,0 +1,80 @@
+{
+  "id": "00000000-0000-4000-8000-000000000402",
+  "macAddress": "02:00:00:01:00:02",
+  "ipAddress": "192.0.2.102",
+  "name": "sw-edge",
+  "model": "USW-Edge-24",
+  "supported": true,
+  "state": "ONLINE",
+  "firmwareVersion": "7.0.1",
+  "firmwareUpdatable": false,
+  "configurationId": "00000000-0000-4000-8000-000000000f00",
+  "adoptedAt": "2026-01-10T09:00:00Z",
+  "provisionedAt": "2026-01-10T09:05:00Z",
+  "features": {
+    "switching": {}
+  },
+  "interfaces": {
+    "ports": [
+      {
+        "idx": 1,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 1000,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3bt",
+          "state": "LIMITED",
+          "type": "4"
+        }
+      },
+      {
+        "idx": 2,
+        "state": "UNKNOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3af",
+          "state": "UNKNOWN",
+          "type": "1"
+        }
+      },
+      {
+        "idx": 3,
+        "state": "UP",
+        "connector": "SFP28",
+        "maxSpeedMbps": 25000,
+        "speedMbps": 25000
+      },
+      {
+        "idx": 4,
+        "state": "DOWN",
+        "connector": "QSFP28",
+        "maxSpeedMbps": 100000
+      },
+      {
+        "idx": 5,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "poe": {
+          "enabled": false,
+          "standard": "802.3at",
+          "state": "DOWN",
+          "type": "2"
+        }
+      },
+      {
+        "idx": 6,
+        "state": "DOWN",
+        "connector": "SFP",
+        "maxSpeedMbps": 1000
+      }
+    ]
+  },
+  "uplink": {
+    "deviceId": "00000000-0000-4000-8000-000000000401"
+  }
+}

@@ -1,0 +1,181 @@
+{
+  "offset": 0,
+  "limit": 25,
+  "count": 10,
+  "totalCount": 10,
+  "data": [
+    {
+      "id": "00000000-0000-4000-8000-000000000101",
+      "macAddress": "02:00:00:00:00:01",
+      "ipAddress": "192.0.2.1",
+      "name": "Office A",
+      "model": "UDMPROMAX",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "5.1.33",
+      "firmwareUpdatable": false,
+      "features": [
+        "switching",
+        "gateway"
+      ],
+      "interfaces": [
+        "ports"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000102",
+      "macAddress": "02:00:00:00:00:02",
+      "ipAddress": "192.0.2.11",
+      "name": "ap-01",
+      "model": "U7PRO",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "8.7.11",
+      "firmwareUpdatable": false,
+      "features": [
+        "accessPoint"
+      ],
+      "interfaces": [
+        "ports",
+        "radios"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000103",
+      "macAddress": "02:00:00:00:00:03",
+      "ipAddress": "192.0.2.12",
+      "name": "ap-02",
+      "model": "U7PRO",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "8.7.11",
+      "firmwareUpdatable": false,
+      "features": [
+        "accessPoint"
+      ],
+      "interfaces": [
+        "ports",
+        "radios"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000104",
+      "macAddress": "02:00:00:00:00:04",
+      "ipAddress": "192.0.2.13",
+      "name": "ap-03",
+      "model": "U7PRO",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "8.7.11",
+      "firmwareUpdatable": false,
+      "features": [
+        "accessPoint"
+      ],
+      "interfaces": [
+        "ports",
+        "radios"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000105",
+      "macAddress": "02:00:00:00:00:05",
+      "ipAddress": "192.0.2.14",
+      "name": "ap-04",
+      "model": "U7PRO",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "8.7.11",
+      "firmwareUpdatable": false,
+      "features": [
+        "accessPoint"
+      ],
+      "interfaces": [
+        "ports",
+        "radios"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000106",
+      "macAddress": "02:00:00:00:00:06",
+      "ipAddress": "192.0.2.15",
+      "name": "ap-05",
+      "model": "U7PRO",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "8.7.11",
+      "firmwareUpdatable": false,
+      "features": [
+        "accessPoint"
+      ],
+      "interfaces": [
+        "ports",
+        "radios"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000107",
+      "macAddress": "02:00:00:00:00:07",
+      "ipAddress": "192.0.2.16",
+      "name": "ap-06",
+      "model": "U7PRO",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "8.7.11",
+      "firmwareUpdatable": false,
+      "features": [
+        "accessPoint"
+      ],
+      "interfaces": [
+        "ports",
+        "radios"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000108",
+      "macAddress": "02:00:00:00:00:08",
+      "ipAddress": "192.0.2.17",
+      "name": "door-hub-01",
+      "model": "UAH-DOOR",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "4.13.9.0",
+      "firmwareUpdatable": false,
+      "features": [],
+      "interfaces": [
+        "ports"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000109",
+      "macAddress": "02:00:00:00:00:09",
+      "ipAddress": "192.0.2.18",
+      "name": "reader-01",
+      "model": "UA-G2-PRO",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "1.14.17.0",
+      "firmwareUpdatable": false,
+      "features": [],
+      "interfaces": [
+        "ports"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-00000000010a",
+      "macAddress": "02:00:00:00:00:0a",
+      "ipAddress": "192.0.2.19",
+      "name": "sw-01",
+      "model": "USPM24P",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "7.5.15",
+      "firmwareUpdatable": false,
+      "features": [
+        "switching"
+      ],
+      "interfaces": [
+        "ports"
+      ]
+    }
+  ]
+}

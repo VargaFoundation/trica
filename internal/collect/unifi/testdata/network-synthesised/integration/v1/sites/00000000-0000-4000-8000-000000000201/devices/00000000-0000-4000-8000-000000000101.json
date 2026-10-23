@@ -1,0 +1,98 @@
+{
+  "id": "00000000-0000-4000-8000-000000000101",
+  "macAddress": "02:00:00:00:00:01",
+  "ipAddress": "192.0.2.1",
+  "name": "Office A",
+  "model": "UDMPROMAX",
+  "supported": true,
+  "state": "ONLINE",
+  "firmwareVersion": "5.1.33",
+  "firmwareUpdatable": false,
+  "configurationId": "00000000-0000-4000-8000-000000000f00",
+  "adoptedAt": "2026-01-10T09:00:00Z",
+  "provisionedAt": "2026-01-10T09:05:00Z",
+  "features": {
+    "switching": {}
+  },
+  "interfaces": {
+    "ports": [
+      {
+        "idx": 1,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0
+      },
+      {
+        "idx": 2,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0
+      },
+      {
+        "idx": 3,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0
+      },
+      {
+        "idx": 4,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0
+      },
+      {
+        "idx": 5,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0
+      },
+      {
+        "idx": 6,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0
+      },
+      {
+        "idx": 7,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0
+      },
+      {
+        "idx": 8,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 0
+      },
+      {
+        "idx": 9,
+        "state": "DOWN",
+        "connector": "RJ45",
+        "maxSpeedMbps": 2500,
+        "speedMbps": 0
+      },
+      {
+        "idx": 10,
+        "state": "UP",
+        "connector": "SFPPLUS",
+        "maxSpeedMbps": 10000,
+        "speedMbps": 10000
+      },
+      {
+        "idx": 11,
+        "state": "UP",
+        "connector": "SFPPLUS",
+        "maxSpeedMbps": 10000,
+        "speedMbps": 10000
+      }
+    ]
+  }
+}

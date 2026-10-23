@@ -280,6 +280,10 @@ types:
       mac: {kind: mac, search: true, label: {en: MAC, fr: MAC}, description: "MAC address."}
       description: {kind: text, search: true, label: {en: Description, fr: Description}, description: "Configured description."}
       speed_mbps: {kind: int, unit: Mb/s, label: {en: Speed, fr: Débit}, description: "Negotiated speed."}
+      max_speed_mbps: {kind: int, unit: Mb/s, label: {en: Max speed, fr: Débit maximal}, description: "Fastest speed the port supports."}
+      connector: {kind: string, label: {en: Connector, fr: Connecteur}, description: "Physical connector of the port: RJ45, SFP, SFP+, SFP28, QSFP28."}
+      poe_status: {kind: enum, values: [delivering, idle, limited, disabled, unknown], label: {en: PoE, fr: PoE}, description: "Power over Ethernet the port supplies: delivering power, enabled with nothing to power, limited by the power budget, disabled. Absent on a port that has no PoE."}
+      poe_standard: {kind: string, label: {en: PoE standard, fr: Norme PoE}, description: "IEEE standard of the port's PoE: 802.3af, 802.3at or 802.3bt."}
       duplex: {kind: enum, values: [full, half, unknown], label: {en: Duplex, fr: Duplex}, description: "Negotiated duplex."}
       mtu: {kind: int, label: {en: MTU, fr: MTU}, description: "MTU."}
       admin_status: {kind: enum, values: [up, down, unknown], label: {en: Admin status, fr: État administratif}, description: "Configured state."}
@@ -766,6 +770,13 @@ relations:
     to: [interface, vlan, k8s_cluster, team]
     attributes:
       tagged: {kind: bool, label: {en: Tagged, fr: Étiqueté}, description: "For VLAN membership, whether frames are tagged."}
+  uplinked_to:
+    label: {en: is uplinked to, fr: remonte vers}
+    inverse: {en: is the uplink of, fr: est la remontée de}
+    description: The device a device reaches the rest of the network through, as a controller says it, without naming the ports. If the uplink device fails, this one is cut off. A cable between two ports is cabled_to.
+    from: [device]
+    to: [device]
+    impact: to_from
   managed_by:
     label: {en: is managed by, fr: est géré par}
     inverse: {en: manages, fr: gère}

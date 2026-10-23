@@ -20,7 +20,7 @@ func TestErrorMessagesDoNotEchoTheKey(t *testing.T) {
 	}))
 	defer srv.Close()
 	base, _ := url.Parse(srv.URL)
-	cl := newClient(srv.Client(), base, key)
+	cl := newClient(srv.Client(), base, key, APISiteManager)
 	_, err := cl.get(context.Background(), "/v1/hosts", nil)
 	if err == nil || !strings.Contains(err.Error(), "bad key [redacted]") || strings.Contains(err.Error(), key) {
 		t.Fatalf("error %v", err)
@@ -48,7 +48,7 @@ func TestResponseTooLarge(t *testing.T) {
 	}))
 	defer srv.Close()
 	base, _ := url.Parse(srv.URL)
-	_, err := newClient(srv.Client(), base, "k").get(context.Background(), "/v1/hosts", nil)
+	_, err := newClient(srv.Client(), base, "k", APISiteManager).get(context.Background(), "/v1/hosts", nil)
 	if err == nil || kindOf(err) != errMalformed || !strings.Contains(err.Error(), "too large") {
 		t.Fatalf("error %v", err)
 	}
@@ -76,7 +76,7 @@ func TestListQueryIsNotShared(t *testing.T) {
 	defer srv.Close()
 	base, _ := url.Parse(srv.URL)
 	q := url.Values{"hostIds[]": {"h1"}}
-	hosts, err := listAll[host](context.Background(), newClient(srv.Client(), base, "k"), "/v1/hosts", q)
+	hosts, err := listAll[host](context.Background(), newClient(srv.Client(), base, "k", APISiteManager), "/v1/hosts", q)
 	if err != nil || len(hosts) != 2 || hosts[0].ID != "a" || hosts[1].ID != "b" {
 		t.Fatalf("%v, %v", hosts, err)
 	}
@@ -94,7 +94,7 @@ func TestListDecodeFailure(t *testing.T) {
 	}))
 	defer srv.Close()
 	base, _ := url.Parse(srv.URL)
-	_, err := listAll[host](context.Background(), newClient(srv.Client(), base, "k"), "/v1/hosts", nil)
+	_, err := listAll[host](context.Background(), newClient(srv.Client(), base, "k", APISiteManager), "/v1/hosts", nil)
 	if err == nil || kindOf(err) != errMalformed {
 		t.Fatalf("error %v", err)
 	}
@@ -102,7 +102,7 @@ func TestListDecodeFailure(t *testing.T) {
 	srv2 := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte(`{"data":null}`)) }))
 	defer srv2.Close()
 	base2, _ := url.Parse(srv2.URL)
-	if hosts, err := listAll[host](context.Background(), newClient(srv2.Client(), base2, "k"), "/v1/hosts", nil); err != nil || len(hosts) != 0 {
+	if hosts, err := listAll[host](context.Background(), newClient(srv2.Client(), base2, "k", APISiteManager), "/v1/hosts", nil); err != nil || len(hosts) != 0 {
 		t.Errorf("%v, %v", hosts, err)
 	}
 }
@@ -118,7 +118,7 @@ func TestSlowServerHitsTimeout(t *testing.T) {
 	base, _ := url.Parse(srv.URL)
 	hc := srv.Client()
 	hc.Timeout = 100 * time.Millisecond
-	_, err := newClient(hc, base, "k").get(context.Background(), "/v1/hosts", nil)
+	_, err := newClient(hc, base, "k", APISiteManager).get(context.Background(), "/v1/hosts", nil)
 	if err == nil || kindOf(err) != errTransport {
 		t.Fatalf("error %v", err)
 	}

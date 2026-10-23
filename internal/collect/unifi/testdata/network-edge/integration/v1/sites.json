@@ -1,0 +1,23 @@
+{
+  "offset": 0,
+  "limit": 25,
+  "count": 3,
+  "totalCount": 3,
+  "data": [
+    {
+      "id": "00000000-0000-4000-8000-000000000301",
+      "internalReference": "default",
+      "name": "Default"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000302",
+      "internalReference": "lab",
+      "name": "Lab"
+    },
+    {
+      "id": "not-a-uuid",
+      "internalReference": "broken",
+      "name": "Broken"
+    }
+  ]
+}

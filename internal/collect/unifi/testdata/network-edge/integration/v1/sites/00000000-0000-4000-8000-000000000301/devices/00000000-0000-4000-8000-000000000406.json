@@ -1,0 +1,31 @@
+{
+  "id": "00000000-0000-4000-8000-000000000406",
+  "macAddress": "02-00-00-01-00-07",
+  "ipAddress": "192.0.2.106",
+  "name": "dash-mac",
+  "model": "USW-Lite-8-PoE",
+  "supported": true,
+  "state": "UPDATING",
+  "firmwareVersion": "6.6.65",
+  "firmwareUpdatable": false,
+  "configurationId": "00000000-0000-4000-8000-000000000f00",
+  "adoptedAt": "2026-01-10T09:00:00Z",
+  "provisionedAt": "2026-01-10T09:05:00Z",
+  "features": {
+    "switching": {}
+  },
+  "interfaces": {
+    "ports": [
+      {
+        "idx": 1,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 1000
+      }
+    ]
+  },
+  "uplink": {
+    "deviceId": "00000000-0000-4000-8000-00000000ffff"
+  }
+}
