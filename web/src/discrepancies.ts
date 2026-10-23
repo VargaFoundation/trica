@@ -33,12 +33,20 @@ export interface ConflictPlace {
   sources: string[];
 }
 
+/** One mounting of a "racks" conflict: ids and sources only. */
+export interface ConflictMount {
+  rack_id: string;
+  site_id?: string;
+  sources: string[];
+}
+
 export interface LocationConflictDetails {
-  reason: "sites" | "rack";
+  reason: "sites" | "rack" | "racks";
   sites: string[];
   places: ConflictPlace[];
   rack_id?: string;
   rack_site_id?: string;
+  racks?: ConflictMount[];
 }
 
 const isStrings = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === "string");
@@ -47,7 +55,7 @@ const isStrings = (v: unknown): v is string[] => Array.isArray(v) && v.every((x)
 export function locationConflictOf(details: unknown): LocationConflictDetails | null {
   if (typeof details !== "object" || details === null) return null;
   const d = details as Record<string, unknown>;
-  if (d.reason !== "sites" && d.reason !== "rack") return null;
+  if (d.reason !== "sites" && d.reason !== "rack" && d.reason !== "racks") return null;
   if (!isStrings(d.sites) || !Array.isArray(d.places)) return null;
   const places: ConflictPlace[] = [];
   for (const p of d.places) {
@@ -59,5 +67,17 @@ export function locationConflictOf(details: unknown): LocationConflictDetails | 
   }
   if (d.rack_id !== undefined && typeof d.rack_id !== "string") return null;
   if (d.rack_site_id !== undefined && typeof d.rack_site_id !== "string") return null;
-  return { reason: d.reason, sites: d.sites, places, rack_id: d.rack_id, rack_site_id: d.rack_site_id };
+  let racks: ConflictMount[] | undefined;
+  if (d.racks !== undefined || d.reason === "racks") {
+    if (!Array.isArray(d.racks)) return null;
+    racks = [];
+    for (const m of d.racks) {
+      if (typeof m !== "object" || m === null) return null;
+      const q = m as Record<string, unknown>;
+      if (typeof q.rack_id !== "string" || !isStrings(q.sources)) return null;
+      if (q.site_id !== undefined && typeof q.site_id !== "string") return null;
+      racks.push({ rack_id: q.rack_id, site_id: q.site_id, sources: q.sources });
+    }
+  }
+  return { reason: d.reason, sites: d.sites, places, rack_id: d.rack_id, rack_site_id: d.rack_site_id, racks };
 }

@@ -14,6 +14,9 @@ const (
 	// ReasonRack: the device is mounted in a rack of one site and a place says
 	// another site. The rack wins, but a declaration is false.
 	ReasonRack = "rack"
+	// ReasonRacks: the device is mounted in racks of two or more sites. It has
+	// no site.
+	ReasonRacks = "racks"
 )
 
 // Placement is one open located_in of a device and the site it leads to.
@@ -24,19 +27,27 @@ type Placement struct {
 	Sources   []string `json:"sources"`           // rel_claims sources, sorted
 }
 
+// Mount is one open mounted_in of a device and the site its rack is in.
+type Mount struct {
+	RackID  string   `json:"rack_id"`
+	SiteID  string   `json:"site_id,omitempty"` // "" when the rack is in no site
+	Sources []string `json:"sources"`           // rel_claims sources, sorted
+}
+
 // Conflict says why the placements of a device disagree on the site.
 type Conflict struct {
 	Reason     string      `json:"reason"`
-	Sites      []string    `json:"sites"`  // distinct sites involved, sorted (the rack's included)
-	Places     []Placement `json:"places"` // sorted by PlaceID
+	Sites      []string    `json:"sites"`           // distinct sites involved, sorted (the rack's included)
+	Places     []Placement `json:"places"`          // sorted by PlaceID, never null
+	Racks      []Mount     `json:"racks,omitempty"` // only for ReasonRacks, sorted by RackID
 	RackID     string      `json:"rack_id,omitempty"`
 	RackSiteID string      `json:"rack_site_id,omitempty"`
 }
 
 // Conflicts returns, for the devices among ids whose open placements disagree
 // on the site, why. A device whose places agree, or that has none, is absent.
-// Racks in two different sites are not a conflict here: that ambiguity is the
-// one of mounted_in itself, and Sites already fails closed on it.
+// A device mounted in racks of two different sites is one too (reason racks),
+// even when it has no place: Sites fails closed on it.
 func Conflicts(ctx context.Context, q Querier, ids []string) (map[string]Conflict, error) {
 	out := map[string]Conflict{}
 	if len(ids) == 0 {
@@ -67,38 +78,53 @@ func Conflicts(ctx context.Context, q Querier, ids []string) (map[string]Conflic
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	rows, err = q.Query(ctx, fmt.Sprintf(`SELECT from_id::text, to_id::text FROM relations
-		WHERE type = '%s' AND upper_inf(valid) AND from_id = ANY($1::uuid[])`, MountedIn), ids)
+	rows, err = q.Query(ctx, fmt.Sprintf(`
+		SELECT r.from_id::text, r.to_id::text,
+			coalesce(array_agg(c.source ORDER BY c.source) FILTER (WHERE c.source IS NOT NULL), '{}')
+		FROM relations r
+		LEFT JOIN rel_claims c ON c.type = r.type AND c.from_id = r.from_id AND c.to_id = r.to_id
+		WHERE r.type = '%s' AND upper_inf(r.valid) AND r.from_id = ANY($1::uuid[])
+		GROUP BY r.from_id, r.to_id`, MountedIn), ids)
 	if err != nil {
 		return nil, err
 	}
-	racks := map[string][]string{}
+	mounts := map[string][]Mount{}
 	for rows.Next() {
-		var from, to string
-		if err := rows.Scan(&from, &to); err != nil {
+		var from string
+		var m Mount
+		if err := rows.Scan(&from, &m.RackID, &m.Sources); err != nil {
 			rows.Close()
 			return nil, err
 		}
-		racks[from] = append(racks[from], to)
+		mounts[from] = append(mounts[from], m)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	var ends []string
-	for _, ps := range places {
+	devs := map[string]bool{}
+	for dev, ps := range places {
+		devs[dev] = true
 		for _, p := range ps {
 			ends = append(ends, p.PlaceID)
 		}
 	}
-	for _, rs := range racks {
-		ends = append(ends, rs...)
+	for dev, ms := range mounts {
+		devs[dev] = true
+		for _, m := range ms {
+			ends = append(ends, m.RackID)
+		}
 	}
 	sites, err := Sites(ctx, q, ends)
 	if err != nil {
 		return nil, err
 	}
-	for dev, ps := range places {
+	for dev := range devs {
+		ps := places[dev]
+		if ps == nil {
+			ps = []Placement{}
+		}
 		sort.Slice(ps, func(i, j int) bool { return ps[i].PlaceID < ps[j].PlaceID })
 		set := map[string]bool{}
 		for i := range ps {
@@ -107,13 +133,27 @@ func Conflicts(ctx context.Context, q Querier, ids []string) (map[string]Conflic
 				set[ps[i].SiteID] = true
 			}
 		}
-		if rs := racks[dev]; len(rs) > 0 {
-			rackID, rackSite, ok := soleRackSite(rs, sites)
-			if !ok || len(set) == 0 || (len(set) == 1 && set[rackSite]) {
-				continue
+		if ms := mounts[dev]; len(ms) > 0 {
+			sort.Slice(ms, func(i, j int) bool { return ms[i].RackID < ms[j].RackID })
+			rackSites := map[string]bool{}
+			rackID, rackSite := "", ""
+			for i := range ms {
+				ms[i].SiteID = sites[ms[i].RackID]
+				if ms[i].SiteID == "" {
+					continue
+				}
+				rackSites[ms[i].SiteID] = true
+				if rackID == "" {
+					rackID, rackSite = ms[i].RackID, ms[i].SiteID
+				}
 			}
-			set[rackSite] = true
-			out[dev] = Conflict{Reason: ReasonRack, Sites: sortedKeys(set), Places: ps, RackID: rackID, RackSiteID: rackSite}
+			switch {
+			case len(rackSites) >= 2:
+				out[dev] = Conflict{Reason: ReasonRacks, Sites: sortedKeys(rackSites), Places: ps, Racks: ms}
+			case len(rackSites) == 1 && len(set) > 0 && (len(set) != 1 || !set[rackSite]):
+				set[rackSite] = true
+				out[dev] = Conflict{Reason: ReasonRack, Sites: sortedKeys(set), Places: ps, RackID: rackID, RackSiteID: rackSite}
+			}
 			continue
 		}
 		if len(set) >= 2 {
@@ -121,25 +161,6 @@ func Conflicts(ctx context.Context, q Querier, ids []string) (map[string]Conflic
 		}
 	}
 	return out, nil
-}
-
-// soleRackSite returns the site of the racks when they all lead to one, and
-// the first of them (by id).
-func soleRackSite(racks []string, sites map[string]string) (rackID, site string, ok bool) {
-	sort.Strings(racks)
-	for _, rk := range racks {
-		s := sites[rk]
-		if s == "" {
-			continue
-		}
-		if site != "" && s != site {
-			return "", "", false
-		}
-		if site == "" {
-			rackID, site = rk, s
-		}
-	}
-	return rackID, site, site != ""
 }
 
 func sortedKeys(m map[string]bool) []string {

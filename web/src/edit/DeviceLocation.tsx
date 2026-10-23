@@ -39,15 +39,16 @@ export function DeviceLocation({ device }: { device: ObjectView }) {
       {(page) => {
         const places = currentPlaces(page.items);
         const mounted = isMounted(page.items);
-        // A mounted device with nothing placed has nothing to say here: its rack does.
-        if (mounted && places.length === 0) return null;
+        // A mounted device with nothing placed has nothing to say here: its rack does,
+        // unless its racks are in two sites and it has none.
+        if (mounted && places.length === 0 && reason !== "racks") return null;
         return (
           <section aria-labelledby="location-h" className="placement">
             <h2 id="location-h">{t("edit.location.title")}</h2>
-            {mounted ? <p role="note">{t("edit.location.overriddenByRack")}</p> : null}
+            {mounted && places.length > 0 ? <p role="note">{t("edit.location.overriddenByRack")}</p> : null}
             {reason ? (
               <p role="note" data-conflict={reason}>
-                {reason === "rack" ? t("edit.location.conflictRack") : t("edit.location.conflictSites")}{" "}
+                {reason === "rack" ? t("edit.location.conflictRack") : reason === "racks" ? t("edit.location.conflictRacks") : t("edit.location.conflictSites")}{" "}
                 <Link to="/discrepancies?kind=location_conflict">{t("edit.location.conflictLink")}</Link>
               </p>
             ) : null}

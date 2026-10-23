@@ -19,6 +19,26 @@ export function LocationConflict({ details }: { details: LocationConflictDetails
           : <span className="muted">{t("discrepancies.location.rackWins")}</span>
         </li>
       ) : null}
+      {details.reason === "racks" ? (
+        <>
+          <li data-racks className="muted">
+            {t("discrepancies.location.racks")}
+          </li>
+          {(details.racks ?? []).map((m) => (
+            <li key={m.rack_id} data-rack={m.rack_id}>
+              {t("discrepancies.location.rack")} <ObjectLink id={m.rack_id} />{" "}
+              {m.site_id ? (
+                <>
+                  {t("discrepancies.location.inSite")} <ObjectLink id={m.site_id} />
+                </>
+              ) : (
+                <span className="muted">{t("discrepancies.location.noSite")}</span>
+              )}{" "}
+              <span className="muted">({m.sources.join(", ")})</span>
+            </li>
+          ))}
+        </>
+      ) : null}
       {details.places.map((p) => (
         <li key={p.place_id} data-place={p.place_id}>
           <ObjectLink id={p.place_id} />{" "}

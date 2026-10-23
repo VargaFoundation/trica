@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Batch, RelationView } from "../api/types";
 import { expectNoA11yViolations } from "../test/axe";
-import { discrepancyLocation, discrepancyLocationRack, page, PROPOSER, READER } from "../test/fixtures";
+import { discrepancyLocation, discrepancyLocationRack, discrepancyLocationRacks, page, PROPOSER, READER } from "../test/fixtures";
 import { defaultRoutes, mockApi, renderApp, type Call, type Handler } from "../test/support";
 import { EID, emptyResult, obj, physicalSchema, rack2, room, site, sw, swRelations } from "./fixtures";
 import { placeGroups } from "./PlaceInForm";
@@ -158,6 +158,23 @@ describe("a device in a rack", () => {
     await screen.findByRole("heading", { level: 1, name: "sw-a1" });
     await screen.findByRole("heading", { level: 2, name: "Rack placement" });
     expect(screen.queryByRole("heading", { level: 2, name: "Location" })).toBeNull();
+  });
+});
+
+describe("a device mounted in racks of two sites", () => {
+  it("says it has no site, even with nothing placed", async () => {
+    mockApi(
+      routes(PROPOSER, {
+        [`GET /objects/${EID.sw}/relations`]: swRelations,
+        "GET /discrepancies": page([{ ...discrepancyLocationRacks, object_id: EID.sw }]),
+      }),
+    );
+    renderApp({ at: `/objects/${EID.sw}` });
+    const section = (await screen.findByRole("heading", { level: 2, name: "Location" })).closest("section") as HTMLElement;
+    const note = await within(section).findByText(/mounted in racks of different sites/);
+    expect(within(note.closest("p") as HTMLElement).getByRole("link", { name: "See the location conflicts" })).toHaveAttribute("href", "/discrepancies?kind=location_conflict");
+    expect(screen.queryByText(/the rack decides its site/)).toBeNull();
+    await expectNoA11yViolations();
   });
 });
 

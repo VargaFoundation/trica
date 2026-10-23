@@ -17,7 +17,7 @@ import (
 // unresolved_neighbor (an LLDP neighbour no collector reports),
 // unresolved_reference, cable_not_observed (documented, no LLDP),
 // cable_not_declared (seen in LLDP, not documented), cable_conflict,
-// location_conflict (the places of a device disagree on the site, ADR 0061).
+// location_conflict (the places of a device disagree on the site, or its racks are in two sites, ADR 0061).
 type Discrepancy struct {
 	ID          int64           `json:"id"`
 	Kind        string          `json:"kind"`
@@ -78,7 +78,7 @@ func ResolveDiscrepancy(ctx context.Context, tx pgx.Tx, fingerprint, by string, 
 }
 
 // KindLocationConflict is raised by the engine when the places of a device
-// disagree on the site (ADR 0061).
+// disagree on the site, or its racks are in two sites (ADR 0061).
 const KindLocationConflict = "location_conflict"
 
 // ResolveOthers closes the open discrepancies of kind on objectID except the

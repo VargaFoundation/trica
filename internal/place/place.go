@@ -9,7 +9,7 @@
 // with two different sites, has none: site-restricted grants fail closed.
 //
 // Conflicts states the same rule the other way round: it says which devices
-// have places that disagree on the site, and why (ADR 0061).
+// have places that disagree on the site, or racks in two sites, and why (ADR 0061).
 package place
 
 import (

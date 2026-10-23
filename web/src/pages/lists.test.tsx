@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { discrepancyLocation, discrepancyLocationRack, discrepancyMismatch, healthFailing, healthOk, ID, locationConflictIDs, page } from "../test/fixtures";
+import { discrepancyLocation, discrepancyLocationRack, discrepancyLocationRacks, discrepancyMismatch, healthFailing, healthOk, ID, locationConflictIDs, page } from "../test/fixtures";
 import { defaultRoutes, mockApi, problem, renderApp } from "../test/support";
 
 describe("discrepancies", () => {
@@ -76,6 +76,26 @@ describe("discrepancies", () => {
     expect(rackDeclared).toHaveTextContent("Mounted in");
     expect(rackDeclared).toHaveTextContent("the rack decides the site");
     expect(within(rackDeclared).getAllByRole("link")[0]).toHaveAttribute("href", `/objects/${ID.rack}`);
+  });
+
+  it("a racks conflict lists the racks, their sites and who said so", async () => {
+    mockApi({ ...defaultRoutes(), "GET /discrepancies": page([discrepancyLocationRacks]) });
+    renderApp({ at: "/discrepancies?kind=location_conflict" });
+    const row = (await screen.findByText("location_conflict")).closest("tr") as HTMLElement;
+    const declared = row.querySelector('td[data-label="Declared"]') as HTMLElement;
+    expect(declared).toHaveTextContent("racks of different sites");
+    expect(declared).toHaveTextContent("(user:dan)");
+    const hrefs = within(declared).getAllByRole("link").map((a) => a.getAttribute("href"));
+    expect(hrefs).toEqual(
+      expect.arrayContaining([`/objects/${ID.rack}`, `/objects/${locationConflictIDs.rackB}`, `/objects/${ID.site}`, `/objects/${locationConflictIDs.siteB}`]),
+    );
+  });
+
+  it("lists the racks in French", async () => {
+    mockApi({ ...defaultRoutes(), "GET /discrepancies": page([discrepancyLocationRacks]) });
+    renderApp({ at: "/discrepancies", locale: "fr" });
+    const row = (await screen.findByText("location_conflict")).closest("tr") as HTMLElement;
+    expect(within(row).getByText(/baies de sites différents/)).toBeInTheDocument();
   });
 
   it("falls back to the plain value when the details are not what the engine writes", async () => {

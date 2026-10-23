@@ -1,6 +1,6 @@
 # ADR-0061: a `location_conflict` discrepancy when the places of a device disagree on the site
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10), amended (2026-10, #180)
 - **Concerns**: `internal/place` (`Conflicts`, `PlacedUnder`), `internal/reconcile` (the step
   `checkPlacements`, `ResolveOthers`), `web/src/pages/DiscrepanciesPage.tsx`,
   `web/src/edit/DeviceLocation.tsx`, `docs/reference/discrepancies.md` (new). Amends ADR 0058
@@ -21,11 +21,14 @@ A second, quieter case: a device mounted in a rack of site X and placed in a roo
 
 ## Decision
 
-1. **One kind, `location_conflict`, two reasons.** `reason: "sites"`: two or more open places lead
+1. **One kind, `location_conflict`, three reasons.** `reason: "sites"`: two or more open places lead
    to two or more distinct sites and the device is in no rack; it has no site. `reason: "rack"`: the
    device has an open `mounted_in` to racks of exactly one site S and a place leads to another known
    site; the rack wins, S is the site, a declaration is false. Same site, or a place that leads to no
-   site, is not a conflict. One kind because the filter, the label and the fix (withdraw the stale
+   site, is not a conflict. `reason: "racks"` (amended, #180): the device has open `mounted_in` to racks
+of two or more distinct known sites; it has no site (`place.Sites` fails closed), whatever its places
+say, and `racks` wins over the other two reasons. A rack in no site next to a rack in X is not a
+conflict (`Sites` gives X). One kind because the filter, the label and the fix (withdraw the stale
    place) are the same; the reason tells them apart.
 2. **The check runs in the engine**, as a step `checkPlacements` between `resolveRelations` and
    `writeHealth`, in the transaction of the batch that changed the places. The conflict opens and
@@ -40,20 +43,22 @@ A second, quieter case: a device mounted in a rack of site X and placed in a roo
    (no release carries `located_in`).
 4. **The rule stays in `internal/place`.** `place.Conflicts` states the disagreement next to
    `place.Sites`, and a test checks over a whole inventory that they agree (`sites` conflict means no
-   site, `rack` conflict means the rack's site).
+   site, `rack` conflict means the rack's site, `racks` conflict means no site).
 5. **Fingerprint** `location_conflict:<device>:<hash(reason|sorted sites)>`. Places changing inside
    the same sites refresh the details of the same row. A new site or a new reason is a new
    fingerprint: the engine resolves the other open rows of the device (`ResolveOthers`) and opens
    the new one, so a device has at most one open `location_conflict`. As for every kind, an
    accepted discrepancy with the same fingerprint never reopens; a third site does.
-6. **Payload.** `object_id` is the device, `key` is `located_in`, `declared` and `observed` are
+6. **Payload.** `object_id` is the device, `key` is `located_in` (`mounted_in` for `racks`), `declared` and `observed` are
    empty. `details` is the `place.Conflict` as JSON: the reason, the sites, each place with its
-   type, its site and its sources, and for `rack` the rack and its site. **Ids and sources only, no
+   type, its site and its sources, for `rack` the rack and its site, and for `racks` the `racks[]` (rack id, its site, its sources;
+`sites` holds the sites of the racks only). `places` is always a list, never null. **Ids and sources only, no
    display name**: a reader allowed to see the device learns no name outside their grant. A `sites`
    conflict belongs to a device that has no site, so a site-limited reader does not see it either
    (fail closed, as for the device itself).
-7. **Racks in two different sites are out of scope.** That is the ambiguity of `mounted_in` itself,
-   which `Sites` already fails closed on; `Conflicts` raises nothing for it. Finding opened.
+7. ~~Racks in two different sites are out of scope.~~ **Amended by #180:** they are the `racks`
+   reason. `Conflicts` now also examines devices that are only mounted (it used to loop over the
+   placed ones), and the engine's candidate selection already covered them.
 8. **UI.** The discrepancies page shows the kind translated (the raw kind stays beside it), filters
    by a list of the known kinds (an unknown kind in the address stays selectable), and lists the
    places of a location conflict with their sites and sources. The device's Location section says
@@ -68,4 +73,12 @@ A second, quieter case: a device mounted in a rack of site X and placed in a roo
   claim) or by the rack or the room changing; trica never picks a winner among declarations.
 - An accepted conflict with the same sites stays accepted; site-limited readers do not see a
   `sites` conflict.
-- Racks in two sites remain silent until the finding is handled.
+- Racks in two sites open a `racks` conflict when their device is next touched (#180); one that
+  predates it is found then. Racks that all have no site stay silent.
+
+## Amendment (#180)
+
+`racks` is a reason of its own rather than a use of `sites`: `sites` means "no rack, the places
+disagree", and a mounted device may have no place at all. The fingerprint policy is unchanged, over
+the reason and the sites of the racks. The person withdraws a `mounted_in`, so `key` is
+`mounted_in`. `Sites` and `WithinSites` are not changed.

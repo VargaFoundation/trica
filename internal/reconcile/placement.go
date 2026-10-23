@@ -64,16 +64,27 @@ func (r *run) checkPlacements(ctx context.Context) error {
 			return err
 		}
 		if err := OpenDiscrepancy(ctx, r.tx, Discrepancy{Kind: KindLocationConflict, Fingerprint: fp, ObjectID: id,
-			Key: place.LocatedIn, Details: details}, r.now); err != nil {
+			Key: conflictKey(c.Reason), Details: details}, r.now); err != nil {
 			return err
 		}
-		if c.Reason == place.ReasonRack {
+		switch c.Reason {
+		case place.ReasonRack:
 			r.warn("located_in: %s is placed in another site than its rack: the rack decides (location_conflict)", id)
-		} else {
+		case place.ReasonRacks:
+			r.warn("mounted_in: %s is mounted in racks of different sites: it has no site until one is withdrawn (location_conflict)", id)
+		default:
 			r.warn("located_in: the places of %s are in different sites: it has no site until they agree (location_conflict)", id)
 		}
 	}
 	return nil
+}
+
+// conflictKey is the relation a person withdraws to end the conflict.
+func conflictKey(reason string) string {
+	if reason == place.ReasonRacks {
+		return place.MountedIn
+	}
+	return place.LocatedIn
 }
 
 // locationFingerprint identifies a conflict by its device, its reason and the

@@ -13,7 +13,7 @@ import (
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
-// twoSites loads sites X (rooms x1 and x2, a rack) and Y (a room), an access
+// twoSites loads sites X (rooms x1 and x2, a rack) and Y (a room and a rack), an access
 // point in no place, and a switch mounted in X's rack.
 func twoSites(t *testing.T) (*reconcile.Engine, *store.Store, *clock, map[string]string) {
 	t.Helper()
@@ -26,6 +26,7 @@ func twoSites(t *testing.T) (*reconcile.Engine, *store.Store, *clock, map[string
 	b.Object("x2", "room").Identify("name", "salle-2").In("x")
 	b.Object("y1", "room").Identify("name", "salle-y").In("y")
 	b.Object("rack", "rack").Identify("name", "rack-x").In("x")
+	b.Object("racky", "rack").Identify("name", "rack-y").In("y")
 	b.Object("ap", "device").Identify("name", "ap-1").Set("role", "access_point")
 	b.Object("sw", "device").Identify("name", "sw-1").Set("role", "switch")
 	ids := apply(t, e, b).Objects
@@ -292,6 +293,127 @@ func TestPreviewWarnsOfALocationConflict(t *testing.T) {
 		t.Fatalf("warnings %v", res.Warnings)
 	}
 	if n := len(locRows(t, s, ids["ap"])); n != 0 {
+		t.Fatalf("a preview left %d rows", n)
+	}
+}
+
+func mountAs(c *clock, source string, ids map[string]string, device, rack string) *sdk.Batch {
+	c.advance(time.Minute)
+	b := batch(c, source, sdk.ScopePartial)
+	b.Confidence = sdk.Declared
+	b.RelateEndpoints("mounted_in", sdk.ByID("device", ids[device]), sdk.ByID("rack", ids[rack]))
+	return b
+}
+
+func TestRacksInTwoSitesOpenALocationConflict(t *testing.T) {
+	e, s, c, ids := twoSites(t)
+	b := mountAs(c, "declaration:other", ids, "sw", "racky")
+	res := apply(t, e, b)
+	got := openLoc(t, s, ids["sw"])
+	if len(got) != 1 {
+		t.Fatalf("open conflicts %+v, want one", got)
+	}
+	d := got[0]
+	if d.Key != "mounted_in" || d.Details.Reason != place.ReasonRacks || len(d.Details.Racks) != 2 || len(d.Details.Sites) != 2 {
+		t.Fatalf("conflict %+v", d)
+	}
+	for _, m := range d.Details.Racks {
+		if len(m.Sources) != 1 || m.SiteID == "" {
+			t.Fatalf("mount %+v", m)
+		}
+	}
+	found := false
+	for _, w := range res.Warnings {
+		found = found || strings.Contains(w, "location_conflict")
+	}
+	if !found {
+		t.Fatalf("warnings %v", res.Warnings)
+	}
+	c.advance(time.Minute)
+	apply(t, e, b)
+	again := openLoc(t, s, ids["sw"])
+	if len(again) != 1 || again[0].ID != d.ID || len(locRows(t, s, ids["sw"])) != 1 {
+		t.Fatalf("re-apply: %+v", again)
+	}
+	c.advance(time.Minute)
+	u := batch(c, "declaration:other", sdk.ScopePartial)
+	u.Confidence = sdk.Declared
+	u.Unrelate("mounted_in", sdk.ByID("device", ids["sw"]), sdk.ByID("rack", ids["racky"]))
+	apply(t, e, u)
+	rows := locRows(t, s, ids["sw"])
+	if len(openLoc(t, s, ids["sw"])) != 0 || len(rows) != 1 || rows[0].Status != "resolved" || rows[0].ClosedBy != "reconcile" {
+		t.Fatalf("after the withdrawal: %+v", rows)
+	}
+}
+
+func TestMovingARackOpensARacksConflict(t *testing.T) {
+	e, s, c, ids := twoSites(t)
+	c.advance(time.Minute)
+	b := batch(c, "declaration:test", sdk.ScopePartial)
+	b.Confidence = sdk.Declared
+	b.Object("x", "site").Identify("code", "X")
+	b.Object("rack2", "rack").Identify("name", "rack-x2").In("x")
+	ids["rack2"] = apply(t, e, b).Objects["rack2"]
+	apply(t, e, mountAs(c, "declaration:other", ids, "sw", "rack2"))
+	if got := openLoc(t, s, ids["sw"]); len(got) != 0 {
+		t.Fatalf("two racks of X: %+v", got)
+	}
+	reparent := func(site string) {
+		c.advance(time.Minute)
+		b := batch(c, "declaration:test", sdk.ScopePartial)
+		b.Confidence = sdk.Declared
+		b.Object(site, "site").Identify("code", strings.ToUpper(site))
+		b.Object("rack2", "rack").Identify(sdk.IDKey, ids["rack2"]).In(site)
+		apply(t, e, b)
+	}
+	reparent("y")
+	if got := openLoc(t, s, ids["sw"]); len(got) != 1 || got[0].Details.Reason != place.ReasonRacks {
+		t.Fatalf("a rack moved to Y: %+v", got)
+	}
+	reparent("x")
+	if got := openLoc(t, s, ids["sw"]); len(got) != 0 {
+		t.Fatalf("the rack moved back: %+v", got)
+	}
+}
+
+func TestRacksConflictReasonChange(t *testing.T) {
+	e, s, c, ids := twoSites(t)
+	apply(t, e, place1(c, "user:a", ids, "ap", "x1"))
+	apply(t, e, place1(c, "user:b", ids, "ap", "y1"))
+	want := func(step, reason string) {
+		t.Helper()
+		got := openLoc(t, s, ids["ap"])
+		if len(got) != 1 || got[0].Details.Reason != reason {
+			t.Fatalf("%s: %+v, want exactly one, reason %s", step, got, reason)
+		}
+	}
+	want("two places", place.ReasonSites)
+	apply(t, e, mountAs(c, "declaration:test", ids, "ap", "rack"))
+	want("mounted in X", place.ReasonRack)
+	apply(t, e, mountAs(c, "declaration:test", ids, "ap", "racky"))
+	want("mounted in X and Y", place.ReasonRacks)
+	c.advance(time.Minute)
+	u := batch(c, "declaration:test", sdk.ScopePartial)
+	u.Confidence = sdk.Declared
+	u.Unrelate("mounted_in", sdk.ByID("device", ids["ap"]), sdk.ByID("rack", ids["racky"]))
+	apply(t, e, u)
+	want("racky withdrawn", place.ReasonRack)
+}
+
+func TestPreviewWarnsOfARacksConflict(t *testing.T) {
+	e, s, c, ids := twoSites(t)
+	res, err := e.Preview(context.Background(), mountAs(c, "declaration:other", ids, "sw", "racky"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, w := range res.Warnings {
+		found = found || strings.Contains(w, "racks of different sites")
+	}
+	if !found {
+		t.Fatalf("warnings %v", res.Warnings)
+	}
+	if n := len(locRows(t, s, ids["sw"])); n != 0 {
 		t.Fatalf("a preview left %d rows", n)
 	}
 }

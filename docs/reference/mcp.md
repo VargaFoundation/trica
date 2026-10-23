@@ -113,7 +113,7 @@ proposal in trica. No tool approves, rejects, deletes or writes directly.
 `located_in` (a device in no rack stands in a site, building or room) is a declared relation: a
 proposal may carry it, one place per source (a new one replaces the previous one of the same
 source), and it is the place the site of the device is read from when it is in no rack
-([ADR 0058](../adr/0058-placing-devices-outside-racks.md)). Places in two different sites, or a place in another site than the rack, open a `location_conflict` discrepancy, visible in `object_summary` and `changes_since` ([discrepancies.md](discrepancies.md)).
+([ADR 0058](../adr/0058-placing-devices-outside-racks.md)). Places in two different sites, racks of two different sites, or a place in another site than the rack, open a `location_conflict` discrepancy, visible in `object_summary` and `changes_since` ([discrepancies.md](discrepancies.md)).
 
 ## Authentication, authorization, audit
 

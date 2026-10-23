@@ -374,6 +374,7 @@ export const discrepancyMismatch: Discrepancy = {
 const SITE_B = "0a000000-0000-4000-8000-0000000000c2";
 const ROOM_A = "0a000000-0000-4000-8000-0000000000d1";
 const ROOM_B = "0a000000-0000-4000-8000-0000000000d2";
+const RACK_B = "0a000000-0000-4000-8000-0000000000e1";
 
 /** An access point placed in two sites by two people (ADR 0061, reason "sites"). */
 export const discrepancyLocation: Discrepancy = {
@@ -410,7 +411,25 @@ export const discrepancyLocationRack: Discrepancy = {
   },
 };
 
-export const locationConflictIDs = { siteB: SITE_B, roomA: ROOM_A, roomB: ROOM_B };
+/** A device mounted in racks of two sites, with nothing placed (reason "racks"). */
+export const discrepancyLocationRacks: Discrepancy = {
+  ...discrepancyLocation,
+  id: 8,
+  fingerprint: "location_conflict:sw:3",
+  object_id: ID.swA1,
+  key: "mounted_in",
+  details: {
+    reason: "racks",
+    sites: [ID.site, SITE_B],
+    places: [],
+    racks: [
+      { rack_id: ID.rack, site_id: ID.site, sources: ["arista:eos"] },
+      { rack_id: RACK_B, site_id: SITE_B, sources: ["user:dan"] },
+    ],
+  },
+};
+
+export const locationConflictIDs = { siteB: SITE_B, roomA: ROOM_A, roomB: ROOM_B, rackB: RACK_B };
 
 export const healthOk: SourceHealth = {
   source: "arista:eos",
