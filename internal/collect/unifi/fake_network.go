@@ -194,13 +194,7 @@ func (f *FakeNetwork) handle(w http.ResponseWriter, r *http.Request) {
 			delay = d
 		}
 	})
-	if delay > 0 {
-		select {
-		case <-time.After(delay):
-		case <-r.Context().Done():
-			return
-		}
-	}
+	waitOrAbort(r, delay)
 	w.Header().Set("Content-Type", "application/json")
 	switch {
 	case location != "":
@@ -244,7 +238,7 @@ func (f *FakeNetwork) serve(w http.ResponseWriter, r *http.Request, rel string, 
 	parts := strings.Split(name, "/")
 	isList := name == "sites" || (len(parts) == 3 && parts[0] == "sites" && parts[2] == "devices")
 	if !isList {
-		_, _ = w.Write(b) //nolint:gosec // G705: JSON response of a test fake, Content-Type application/json
+		_, _ = w.Write(b)
 		return
 	}
 	offset, limit, bad := listParams(r, maxLimit)
@@ -252,7 +246,7 @@ func (f *FakeNetwork) serve(w http.ResponseWriter, r *http.Request, rel string, 
 		f.netError(w, r, http.StatusBadRequest, "BAD_REQUEST", "api.request.argument-type-mismatch", bad)
 		return
 	}
-	_, _ = w.Write(cutPage(b, offset, limit)) //nolint:gosec // G705: JSON response of a test fake, Content-Type application/json
+	_, _ = w.Write(cutPage(b, offset, limit))
 }
 
 // listParams reads offset (default 0) and limit (default 25, at most 200) as
