@@ -50,7 +50,7 @@ collector it stands for, and gets a warning instead ([ADR 0005](../adr/0005-sing
 | `POST /batches/preview` | propose | What the batch would do, nothing written |
 | `GET /proposals`, `GET /proposals/{id}` | read | Proposals; a pending one carries a preview against the current state |
 | `POST /proposals/{id}/approve`, `.../reject` | approve | Decide a pending proposal (409 if already decided) |
-| `GET /discrepancies` | read | Declared versus observed, filters `status`, `kind`, `object` |
+| `GET /discrepancies` | read | Declared versus observed, filters `status`, `kind`, `object`; the kinds are in [discrepancies.md](discrepancies.md) |
 | `POST /discrepancies/{id}/accept` | approve | Accept the difference, with a reason |
 | `GET/POST /saved-queries`, `GET/DELETE /saved-queries/{name}` | read / propose | Saved queries; delete by the owner, or by an `admin` |
 

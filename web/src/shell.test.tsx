@@ -116,7 +116,7 @@ describe("keyboard", () => {
     mockApi(defaultRoutes());
     renderApp({ at: "/discrepancies" });
     const user = userEvent.setup();
-    const kind = await screen.findByRole("textbox", { name: "Kind" });
+    const kind = await screen.findByRole("combobox", { name: "Kind" });
     await user.click(kind);
     expect(kind).toHaveFocus();
     await user.keyboard("{Control>}k{/Control}");
