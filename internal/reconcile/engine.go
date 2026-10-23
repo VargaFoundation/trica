@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/VargaFoundation/trica/internal/place"
 	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/internal/store"
 	"github.com/VargaFoundation/trica/internal/tql"
@@ -1019,6 +1020,7 @@ func (r *run) writeRelationClaims(ctx context.Context) error {
 		conf  sdk.Confidence
 	}
 	desired := map[relKey]relWant{}
+	one := map[relKey]string{} // exclusive relations: (type, from) -> the one to
 	for _, rel := range r.b.Relations {
 		rt, err := r.reg.Relation(rel.Type)
 		if err != nil {
@@ -1054,6 +1056,22 @@ func (r *run) writeRelationClaims(ctx context.Context) error {
 		if !rt.Allows(ft, tt) {
 			r.warn("relation %s not allowed from %s to %s", rel.Type, ft, tt)
 			continue
+		}
+		if place.DeclaredOnly(rel.Type) && r.confidence(rel.Confidence) != sdk.Declared {
+			if perr := r.problem("relation %s is declared by people (ADR 0058): the %s claim is dropped", rel.Type, r.confidence(rel.Confidence)); perr != nil {
+				return perr
+			}
+			continue
+		}
+		if place.Exclusive(rel.Type) {
+			ok := relKey{Type: rel.Type, From: from}
+			if prev, dup := one[ok]; dup && prev != to {
+				if perr := r.problem("relation %s: one place per source, %s names two", rel.Type, from); perr != nil {
+					return perr
+				}
+				continue
+			}
+			one[ok] = to
 		}
 		attrs := map[string]any{}
 		for _, k := range sdk.SortedKeys(rel.Attributes) {
@@ -1125,7 +1143,14 @@ func (r *run) writeRelationClaims(ctx context.Context) error {
 	}
 	for k := range existing {
 		_, still := desired[k]
-		if (r.b.Scope == sdk.ScopeFull && !still) || unrelate[k] {
+		// One place per source: the claim the source now moves away from closes.
+		moved := false
+		if place.Exclusive(k.Type) {
+			if to, ok := one[relKey{Type: k.Type, From: k.From}]; ok && to != k.To {
+				moved = true
+			}
+		}
+		if (r.b.Scope == sdk.ScopeFull && !still) || unrelate[k] || moved {
 			batch.Queue(`DELETE FROM rel_claims WHERE type = $1 AND from_id = $2 AND to_id = $3 AND source = $4`, k.Type, k.From, k.To, r.b.Source)
 			r.touchedRels[k] = true
 		}

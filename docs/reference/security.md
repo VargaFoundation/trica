@@ -34,6 +34,13 @@ type- or site-restricted principal. A handler that only knows the object after l
 `auth.Authorize(ctx, action, type, site)`. `audit.Annotate(ctx, key, value)` adds a field to the
 entry recorded for the request.
 
+**The site of an object** (what a grant limited to some sites is matched against) is decided in one
+place, `internal/place`: the site of its parent; for a device, the site of the rack it is mounted
+in; for a device in no rack, the site of the site, building or room a person placed it in
+(`located_in`, [ADR 0058](../adr/0058-placing-devices-outside-racks.md)). A rack wins over a place.
+An object with no site, or whose places lie in two different sites, has none, and a site-limited
+grant does not match it.
+
 ## Credentials
 
 A request carries `Authorization: Bearer <credential>`. The query string is never read.

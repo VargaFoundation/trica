@@ -21,19 +21,38 @@ export interface Mount {
   face?: string;
 }
 
+/** A site, building or room a person placed a device in (located_in, ADR 0058). */
+export interface Place {
+  id: string;
+  name: string;
+}
+
 export interface Tile {
   obj: ObjectView;
   kind: Kind;
   kindLabel: string;
   health: Health;
   mount?: Mount;
+  /** Where the device stands when it is in no rack. */
+  place?: Place;
 }
 
 export interface Group {
   key: string;
   title: string;
   rackId?: string;
+  placeId?: string;
   tiles: Tile[];
+}
+
+/** Where each device not in a rack stands, from the located_in relations (the first place said, when sources disagree). */
+export function placesOf(links: RelationLink[]): Map<string, Place> {
+  const out = new Map<string, Place>();
+  for (const l of links) {
+    if (l.type !== "located_in" || out.has(l.from_id)) continue;
+    out.set(l.from_id, { id: l.to_id, name: l.to.display });
+  }
+  return out;
 }
 
 /** Where each device is mounted, from the mounted_in relations. */
@@ -58,17 +77,22 @@ const byTile = (a: Tile, b: Tile) =>
   SEVERITY[a.health] - SEVERITY[b.health] || a.obj.display.localeCompare(b.obj.display);
 
 /**
- * Tiles grouped by rack (top of the rack first, as one stands in front of it;
- * devices in no rack last) or by kind (the groups holding the worst health
- * first).
+ * Tiles grouped by rack (top of the rack first, as one stands in front of it),
+ * then by the place of the devices in no rack, then the devices that are
+ * nowhere; or by kind (the groups holding the worst health first).
  */
 export function groupTiles(tiles: Tile[], by: "rack" | "kind", notRacked: string): Group[] {
   const groups = new Map<string, Group>();
   for (const tile of tiles) {
-    const key = by === "rack" ? (tile.mount?.rackId ?? "") : tile.kind.key;
+    // A rack decides where a device is: a place counts only for a device in no rack.
+    const place = tile.mount ? undefined : tile.place;
+    const key = by === "rack" ? (tile.mount ? tile.mount.rackId : place ? `place:${place.id}` : "") : tile.kind.key;
     let g = groups.get(key);
     if (!g) {
-      g = by === "rack" ? { key, title: tile.mount?.rack ?? notRacked, rackId: tile.mount?.rackId, tiles: [] } : { key, title: tile.kindLabel, tiles: [] };
+      g =
+        by === "rack"
+          ? { key, title: tile.mount?.rack ?? place?.name ?? notRacked, rackId: tile.mount?.rackId, placeId: place?.id, tiles: [] }
+          : { key, title: tile.kindLabel, tiles: [] };
       groups.set(key, g);
     }
     g.tiles.push(tile);
@@ -77,7 +101,8 @@ export function groupTiles(tiles: Tile[], by: "rack" | "kind", notRacked: string
   if (by === "rack") {
     for (const g of list)
       g.tiles.sort((a, b) => (b.mount?.position ?? -1) - (a.mount?.position ?? -1) || a.obj.display.localeCompare(b.obj.display));
-    return list.sort((a, b) => Number(!a.rackId) - Number(!b.rackId) || a.title.localeCompare(b.title, undefined, { numeric: true }));
+    const rank = (g: Group) => (g.rackId ? 0 : g.placeId ? 1 : 2);
+    return list.sort((a, b) => rank(a) - rank(b) || a.title.localeCompare(b.title, undefined, { numeric: true }));
   }
   for (const g of list) g.tiles.sort(byTile);
   const worst = (g: Group) => Math.min(...g.tiles.map((t) => SEVERITY[t.health]));
@@ -232,9 +257,10 @@ export function Fleet({ defaultGroup = "rack", headingLevel = 2 }: { defaultGrou
   });
   const mounts = useQuery({
     queryKey: ["fleet", "mounts"],
-    queryFn: ({ signal }) => api.relationLinks({ type: "mounted_in", limit: FLEET_LIMIT }, signal),
+    queryFn: ({ signal }) => api.relationLinks({ type: "mounted_in,located_in", limit: FLEET_LIMIT }, signal),
   });
   const mountMap = useMemo(() => mountsOf(mounts.data?.items ?? []), [mounts.data]);
+  const placeMap = useMemo(() => placesOf(mounts.data?.items ?? []), [mounts.data]);
   const H = headingLevel === 2 ? "h2" : "h3";
   const G = headingLevel === 2 ? "h3" : "h4";
 
@@ -246,7 +272,7 @@ export function Fleet({ defaultGroup = "rack", headingLevel = 2 }: { defaultGrou
           if (page.items.length === 0) return <EmptyState icon="server">{t("fleet.empty")}</EmptyState>;
           const tiles: Tile[] = page.items.map((obj) => {
             const k = kindLabel(obj);
-            return { obj, kind: k.kind, kindLabel: k.label, health: healthOf(obj), mount: mountMap.get(obj.id) };
+            return { obj, kind: k.kind, kindLabel: k.label, health: healthOf(obj), mount: mountMap.get(obj.id), place: placeMap.get(obj.id) };
           });
           const counts = countHealth(tiles);
           const power = powerTotal(tiles);
@@ -311,6 +337,8 @@ export function Fleet({ defaultGroup = "rack", headingLevel = 2 }: { defaultGrou
                           <Link to={`/racks/${encodeURIComponent(g.rackId)}`} aria-label={t("fleet.openRack", { rack: g.title })}>
                             {g.title}
                           </Link>
+                        ) : g.placeId ? (
+                          <Link to={`/objects/${encodeURIComponent(g.placeId)}`}>{g.title}</Link>
                         ) : (
                           g.title
                         )}

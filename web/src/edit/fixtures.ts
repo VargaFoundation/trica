@@ -83,6 +83,16 @@ export const physicalSchema: SchemaDoc = {
       custom: false,
     },
     {
+      name: "located_in",
+      label: { en: "is located in", fr: "se trouve dans" },
+      inverse: { en: "houses", fr: "abrite" },
+      description: "",
+      from: ["device"],
+      to: ["site", "building", "room"],
+      attributes: [],
+      custom: false,
+    },
+    {
       name: "instance_of",
       label: { en: "is a", fr: "est un" },
       inverse: { en: "has instances", fr: "a pour instances" },

@@ -12,7 +12,7 @@ func TestBuiltinIsValid(t *testing.T) {
 			t.Errorf("builtin type %s missing: %v", name, err)
 		}
 	}
-	for _, name := range []string{"contains", "mounted_in", "powered_by", "cabled_to", "neighbor_of", "hosts", "depends_on", "calls", "runs"} {
+	for _, name := range []string{"contains", "mounted_in", "located_in", "powered_by", "cabled_to", "neighbor_of", "hosts", "depends_on", "calls", "runs"} {
 		if _, err := r.Relation(name); err != nil {
 			t.Errorf("builtin relation %s missing: %v", name, err)
 		}
@@ -192,6 +192,14 @@ func TestAllows(t *testing.T) {
 	}
 	if !r.Relations["managed_by"].Allows("device", "device") || r.Relations["managed_by"].Allows("interface", "device") {
 		t.Error("managed_by must go from a device to a device only")
+	}
+	for to, want := range map[string]bool{"site": true, "building": true, "room": true, "rack": false} {
+		if got := r.Relations["located_in"].Allows("device", to); got != want {
+			t.Errorf("located_in device -> %s = %v, want %v", to, got, want)
+		}
+	}
+	if r.Relations["located_in"].Allows("interface", "room") || r.Relations["located_in"].Impact != "" {
+		t.Error("located_in goes from a device only and carries no impact: a room failing does not take its devices down")
 	}
 	if r.Relations["managed_by"].Impact != "" {
 		t.Errorf("managed_by carries impact %q: a device keeps forwarding when its controller is down", r.Relations["managed_by"].Impact)

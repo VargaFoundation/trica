@@ -5,55 +5,18 @@ import (
 	"errors"
 	"sort"
 
+	"github.com/VargaFoundation/trica/internal/place"
 	"github.com/VargaFoundation/trica/internal/store"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
 // siteIDs returns, for each object id, the id of the site it is in (itself for
-// a site). An object is in the site of its parent, or, for a device, of the
-// rack it is currently mounted in (devices have no parent in the schema:
-// their place is the mounted_in relation). Objects with no site, or with two
-// different sites, are absent from the map: site-restricted grants then fail
-// closed.
+// a site): its parent's, or for a device the rack it is mounted in, or when it
+// is in no rack the place it was declared in (located_in). The rule lives in
+// internal/place (ADR 0058). Objects with no site, or with two different
+// sites, are absent from the map: site-restricted grants then fail closed.
 func (s *Server) siteIDs(ctx context.Context, ids []string) (map[string]string, error) {
-	out := map[string]string{}
-	if len(ids) == 0 {
-		return out, nil
-	}
-	rows, err := s.st.Pool.Query(ctx, `
-		WITH RECURSIVE up AS (
-			SELECT id AS origin, id, type, 0 AS depth FROM objects WHERE id = ANY($1::uuid[])
-			UNION ALL
-			SELECT up.origin, n.id, n.type, up.depth + 1
-			FROM up
-			JOIN LATERAL (
-				SELECT p.id, p.type FROM objects o JOIN objects p ON p.id = o.parent_id WHERE o.id = up.id
-				UNION
-				SELECT t.id, t.type FROM relations r JOIN objects t ON t.id = r.to_id
-				WHERE r.type = 'mounted_in' AND r.from_id = up.id AND upper_inf(r.valid)
-			) n ON true
-			WHERE up.type <> 'site' AND up.depth < 32
-		)
-		SELECT DISTINCT origin::text, id::text FROM up WHERE type = 'site'`, ids)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	ambiguous := map[string]bool{}
-	for rows.Next() {
-		var origin, site string
-		if err := rows.Scan(&origin, &site); err != nil {
-			return nil, err
-		}
-		if prev, ok := out[origin]; ok && prev != site {
-			ambiguous[origin] = true
-		}
-		out[origin] = site
-	}
-	for o := range ambiguous {
-		delete(out, o)
-	}
-	return out, rows.Err()
+	return place.Sites(ctx, s.st.Pool, ids)
 }
 
 // loadObject returns object id after checking the caller may read it: 404 when

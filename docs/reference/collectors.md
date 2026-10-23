@@ -108,6 +108,11 @@ keeps the newest period's latency, maximum latency, packet loss and uptime on th
 the WAN in use, as curves; `isp_metrics: false` turns that call off, and a failing call is a warning,
 never a failed run ([ADR 0059](../adr/0059-unifi-isp-metrics.md)).
 
+The Site Manager API says nothing about where a device stands: people place the access points and
+readers in a site, building or room (`located_in`, declared from the object page or a declaration
+file), which gives them a site; a collector's own `located_in` is dropped with a warning
+([ADR 0058](../adr/0058-placing-devices-outside-racks.md)).
+
 Every run of a target ends in one health record on the board (`GET /api/v1/health/collection`):
 the collector's own, or, when it returned an error, panicked or reported none, one made by the
 runner (`collect.Failed` / `collect.Succeeded`). A failing target never stops the others, a run

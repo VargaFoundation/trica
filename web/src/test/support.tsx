@@ -134,7 +134,7 @@ export function defaultRoutes(me: Handler = APPROVER): Record<string, Handler> {
       return { ...searchSw, summary: { ...searchSw.summary, query: c.query.get("q") ?? "", total: items.length, by_type: {} }, total: items.length, items };
     },
     "GET /objects": { ...searchSw, items: [swA1], total: 2, limit: 50 },
-    "GET /relations": (c) => (c.query.get("type") === "mounted_in" ? mountsLinks : page([])),
+    "GET /relations": (c) => ((c.query.get("type") ?? "").split(",").includes("mounted_in") ? mountsLinks : page([])),
     [`GET /objects/${ID.srv01}/relations`]: page([]),
     [`GET /objects/${ID.srv01}/timeline`]: page([]),
     [`GET /objects/${ID.srv01}/provenance`]: { object_id: ID.srv01, attributes: [] },

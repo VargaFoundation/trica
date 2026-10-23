@@ -148,6 +148,30 @@ export function chooseModel(c: ChooseModel, now?: Date): Batch {
   return b;
 }
 
+export type PlaceType = "site" | "building" | "room";
+export interface PlaceRef {
+  type: PlaceType;
+  id: string;
+}
+
+/**
+ * Says where a device that is in no rack stands: a declared located_in to a site, a building or a
+ * room (ADR 0058). Nothing withdraws the caller's previous place here: the engine keeps one place per
+ * source, so a new one replaces the old.
+ */
+export function locateDevice(deviceId: string, place: PlaceRef, now?: Date): Batch {
+  const b = emptyBatch(now);
+  b.relations = [{ type: "located_in", from: byId("device", deviceId), to: byId(place.type, place.id), attributes: {} }];
+  return b;
+}
+
+/** Withdraws this caller's claim that a device stands in a place. */
+export function unlocateDevice(deviceId: string, place: PlaceRef, now?: Date): Batch {
+  const b = emptyBatch(now);
+  b.unrelations = [{ type: "located_in", from: byId("device", deviceId), to: byId(place.type, place.id) }];
+  return b;
+}
+
 /** The source a batch from this caller is attributed to (internal/api Principal.BatchSource). */
 export function callerSource(me: { kind: string; subject: string; source?: string } | undefined): string | undefined {
   if (!me) return undefined;
