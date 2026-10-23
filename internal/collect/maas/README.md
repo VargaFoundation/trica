@@ -65,7 +65,7 @@ A run issues five `GET` requests and emits one batch with source `maas:<name>`.
 | bond / bridge `parents` | `member_of` interface to bond or bridge | A VLAN interface is not a member of its parent. |
 | interface `vlan` | `member_of` interface to `vlan`, `tagged` = VID is not 0 | |
 | `links[].ip_address` | `ip_address` (strong `address`, `prefix_length`) and `assigned_to` ip to interface | Addresses on no known interface hang on the device. |
-| `blockdevice_set[]` (physical) | `disk` (child of the device) | Identity `name` + `serial`; `model`, `capacity_bytes`, `firmware_version`, `media`, `protocol`. RAID/LVM/bcache layers are skipped. |
+| `blockdevice_set[]` (physical) | `disk` (child of the device) | Identity `name` + `serial`; `model`, `capacity_bytes`, `firmware_version`, `media`, `protocol`. RAID/LVM/bcache layers are skipped, and so are the units an HPE Smart Array presents (see below). |
 | `subnets/` | `prefix` (strong `prefix`) | `description` from the subnet name/description, `gateway`, `vlan` (tag, if not 0), `assigned_to` prefix to VLAN. |
 | `fabrics/` vlans | `vlan` (strong `key` = `<fabric>:<vid>`) | `vid`, `name`, `domain` = fabric name, `mtu` (**new**), `dhcp_on` (**new**). VID 0 (untagged) is kept: it is a real VLAN of the fabric. |
 
@@ -156,6 +156,7 @@ keys).
 | Events and audit log | One request per machine (N+1), needs view permission, no place in the schema. |
 | `power_parameters` | Contain BMC credentials; readable by administrators only. Never requested. |
 | Virtual block devices (RAID, LVM, bcache), partitions, filesystems, storage layout | Layers over the physical drives, which are what is inventoried. |
+| A block device whose serial is a 16-digit locally assigned NAA name with HPE's OUI (`3001438…`) | A unit an HPE Smart Array presents (a logical drive, or a drive in HBA mode): the operating system reads the identifier the controller gave the unit, not the drive's serial, so nothing could match it to the drive the BMC reports and each drive was stored twice ([#128](https://github.com/VargaFoundation/trica/issues/128)). The drive is the Redfish collector's to report; a server behind such a controller that no Redfish target covers has no disks in the inventory. |
 | MAAS machines that are virtual (LXD, virsh VMs) are not told apart from bare metal | They appear as `device` with `role: server`; `provisioning_power_type` (`lxd`, `virsh`) tells them apart. |
 | DHCP ranges, DNS resources, static routes, spaces | No schema type; out of this collector's scope. |
 | Mainboard and chassis serial numbers | Not used as identity: they are often placeholders and differ from the system serial. |
