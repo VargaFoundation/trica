@@ -197,32 +197,65 @@ const MaxIdleConnsPerHost = 4
 // Factory builds a collector for a target.
 type Factory func(t Target) (sdk.Collector, error)
 
-var (
-	mu        sync.RWMutex
-	factories = map[string]Factory{}
-)
-
-// Register makes a collector kind available. It panics on a duplicate kind,
-// which can only be a programming error.
-func Register(kind string, f Factory) {
-	mu.Lock()
-	defer mu.Unlock()
-	if _, dup := factories[kind]; dup {
-		panic("collect: duplicate collector kind " + kind)
-	}
-	factories[kind] = f
+type module struct {
+	d Descriptor
+	f Factory // nil for an agent module
 }
 
-// Kinds lists the registered collector kinds.
+var (
+	mu      sync.RWMutex
+	modules = map[string]module{}
+)
+
+// Register makes a collector module available: its descriptor and its
+// factory, in one call (nil for a module installed on the host, see
+// DeploymentAgent). It panics on a duplicate kind or on an incomplete
+// descriptor, which can only be a programming error.
+func Register(d Descriptor, f Factory) {
+	if err := d.Validate(f != nil); err != nil {
+		panic("collect: " + err.Error())
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if _, dup := modules[d.Kind]; dup {
+		panic("collect: duplicate collector kind " + d.Kind)
+	}
+	modules[d.Kind] = module{d: d, f: f}
+}
+
+// Kinds lists the registered kinds a target can name (the modules with a
+// factory).
 func Kinds() []string {
 	mu.RLock()
 	defer mu.RUnlock()
-	out := make([]string, 0, len(factories))
-	for k := range factories {
-		out = append(out, k)
+	out := make([]string, 0, len(modules))
+	for k, m := range modules {
+		if m.f != nil {
+			out = append(out, k)
+		}
 	}
 	sort.Strings(out)
 	return out
+}
+
+// Modules lists the descriptors of every registered module, sorted by kind.
+func Modules() []Descriptor {
+	mu.RLock()
+	defer mu.RUnlock()
+	out := make([]Descriptor, 0, len(modules))
+	for _, m := range modules {
+		out = append(out, m.d)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Kind < out[j].Kind })
+	return out
+}
+
+// Lookup returns the descriptor of a kind.
+func Lookup(kind string) (Descriptor, bool) {
+	mu.RLock()
+	defer mu.RUnlock()
+	m, ok := modules[kind]
+	return m.d, ok
 }
 
 // New builds the collector for t.
@@ -231,12 +264,15 @@ func New(t Target) (sdk.Collector, error) {
 		return nil, fmt.Errorf("target of kind %q has no name", t.Kind)
 	}
 	mu.RLock()
-	f, ok := factories[t.Kind]
+	m, ok := modules[t.Kind]
 	mu.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("target %s: unknown collector kind %q (known: %s)", t.Name, t.Kind, strings.Join(Kinds(), ", "))
 	}
-	return f(t)
+	if m.f == nil {
+		return nil, fmt.Errorf("target %s: %q is installed on the host, not configured as a target", t.Name, t.Kind)
+	}
+	return m.f(t)
 }
 
 // Failed is the batch a collector emits when a run fails before it could

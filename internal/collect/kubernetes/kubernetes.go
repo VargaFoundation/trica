@@ -21,6 +21,7 @@ import (
 	kubeclient "k8s.io/client-go/kubernetes"
 
 	"github.com/VargaFoundation/trica/internal/collect"
+	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -31,23 +32,42 @@ const Kind = "kubernetes"
 // (the pod's ServiceAccount token and the API server environment variables).
 const inClusterAddress = "in-cluster"
 
-func init() { collect.Register(Kind, New) }
+// Descriptor is what the module says about itself (ADR 0055).
+var Descriptor = collect.Descriptor{
+	Kind:       Kind,
+	Title:      "Kubernetes",
+	Vendors:    []string{"Kubernetes", "KubeVirt"},
+	Protocol:   "Kubernetes API (list calls), in-cluster or through a kubeconfig",
+	Summary:    schema.Label{EN: "Kubernetes clusters: nodes, namespaces, workloads, pods, services, ingresses and KubeVirt virtual machines.", FR: "Clusters Kubernetes : nœuds, namespaces, charges de travail, pods, services, ingresses et machines virtuelles KubeVirt."},
+	Deployment: collect.DeploymentTarget,
+	Collects:   []string{"ingress", "interface", "ip_address", "k8s_cluster", "k8s_node", "k8s_service", "namespace", "pod", "vm", "workload"},
+	ReadOnly:   "Only list calls and one GET /version; it never reads a Secret or a ConfigMap, and its ServiceAccount has only get, list and watch.",
+	Address:    "in-cluster, empty, or the API server URL (needs options.kubeconfig)",
+	Username:   collect.Credential{Use: collect.UseUnused},
+	Secret:     collect.Credential{Use: collect.UseOptional, Meaning: "Bearer token; without it the kubeconfig or the in-cluster ServiceAccount is used"},
+	Options:    options{},
+	Tested:     []string{"K3s 1.31", "kubeadm 1.29", "KubeVirt 1.4"},
+	Evidence:   collect.EvidenceSynthesised,
+	Docs:       "internal/collect/kubernetes/README.md",
+}
+
+func init() { collect.Register(Descriptor, New) }
 
 // options are the collector-specific settings of a target.
 type options struct {
 	// Cluster names the cluster: the k8s_cluster object and the scope of
 	// everything below it. Required.
-	Cluster string `yaml:"cluster"`
+	Cluster string `yaml:"cluster" doc:"Required. Name of the cluster: the identity of the k8s_cluster object and the scope of everything below it."`
 	// Kubeconfig is the path of a kubeconfig file, required unless the
 	// target's address is empty or "in-cluster".
-	Kubeconfig string `yaml:"kubeconfig"`
+	Kubeconfig string `yaml:"kubeconfig" doc:"Path of a kubeconfig file; required unless the address is empty or in-cluster."`
 	// Context selects a context of the kubeconfig; empty is its current one.
-	Context string `yaml:"context"`
+	Context string `yaml:"context" doc:"Context of the kubeconfig; empty is its current context."`
 	// FinishedPods also collects the pods that have ended (phase Succeeded or
 	// Failed). Off by default: on a cluster running CI or batch jobs they
 	// outnumber the live pods by far, and listing them all can outlast the
 	// run's timeout.
-	FinishedPods bool `yaml:"finished_pods"`
+	FinishedPods bool `yaml:"finished_pods" default:"false" doc:"Also collect the pods that have ended (Succeeded or Failed); on a cluster running CI jobs they can outnumber the live pods by far."`
 }
 
 // clients is what a run needs from the cluster.

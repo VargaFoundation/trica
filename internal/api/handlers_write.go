@@ -621,20 +621,33 @@ func (s *Server) hCollectionHealth(c *call) error {
 	if err != nil {
 		return err
 	}
-	rows, err := s.st.Pool.Query(c.ctx(), `SELECT source, collector, target, version, ok, last_attempt, last_success, last_error,
-		duration_ms, items, warnings, failures FROM source_health ORDER BY source`)
+	all, err := s.sourceHealth(c.ctx())
 	if err != nil {
 		return err
 	}
+	return c.json(http.StatusOK, pageOf(all, pp, false))
+}
+
+// sourceHealth reads the last run of every source, with the credentials
+// a collector may have left in a text cleaned out, and names the module each
+// source belongs to when the binary has one for its prefix.
+func (s *Server) sourceHealth(ctx context.Context) ([]SourceHealth, error) {
+	rows, err := s.st.Pool.Query(ctx, `SELECT source, collector, target, version, ok, last_attempt, last_success, last_error,
+		duration_ms, items, warnings, failures FROM source_health ORDER BY source`)
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
+	mods := moduleIndex(s.collectorSource())
 	all := []SourceHealth{}
 	for rows.Next() {
 		var h SourceHealth
 		var warnings []byte
 		if err := rows.Scan(&h.Source, &h.Collector, &h.Target, &h.Version, &h.OK, &h.LastAttempt, &h.LastSuccess, &h.LastError,
 			&h.DurationMS, &h.Items, &warnings, &h.Failures); err != nil {
-			return err
+			return nil, err
 		}
+		h.Module = moduleOf(h.Source, mods)
 		h.LastError = scrubError(h.LastError)
 		_ = json.Unmarshal(warnings, &h.Warnings)
 		for i, w := range h.Warnings {
@@ -645,10 +658,7 @@ func (s *Server) hCollectionHealth(c *call) error {
 		}
 		all = append(all, h)
 	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	return c.json(http.StatusOK, pageOf(all, pp, false))
+	return all, rows.Err()
 }
 
 // Status is the body of the probes.

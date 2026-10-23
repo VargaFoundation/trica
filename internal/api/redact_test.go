@@ -136,6 +136,7 @@ func TestSecretLikeAttributesNeverLeave(t *testing.T) {
 		"/proposals", "/proposals/1",
 		"/schema", "/schema/types/device", "/schema/types/vpn_gateway",
 		"/openapi.json", "/health/collection",
+		"/collectors", "/collectors/acme", "/collectors/acme/instances", "/collectors/acme/instances/old", "/collectors/acme/instances/sw-1",
 	}
 	secrets := []string{secretCommunity, secretToken, secretOther, secretProposed}
 	for _, p := range paths {

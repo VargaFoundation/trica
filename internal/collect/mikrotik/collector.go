@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/VargaFoundation/trica/internal/collect"
+	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -40,24 +41,43 @@ const (
 	sectionHost     = "host"
 )
 
-func init() { collect.Register(Kind, New) }
+// Descriptor is what the module says about itself (ADR 0055).
+var Descriptor = collect.Descriptor{
+	Kind:       Kind,
+	Title:      "MikroTik RouterOS",
+	Vendors:    []string{"MikroTik"},
+	Protocol:   "RouterOS API: binary word protocol over TCP 8728, or 8729 with TLS",
+	Summary:    schema.Label{EN: "MikroTik switches and routers: interfaces, bridges, VLANs, addresses, neighbours, packages and health sensors.", FR: "Commutateurs et routeurs MikroTik : interfaces, bridges, VLAN, adresses, voisins, paquets et sondes de santé."},
+	Deployment: collect.DeploymentTarget,
+	Collects:   []string{"device", "fan", "interface", "ip_address", "psu", "sensor", "software", "vlan"},
+	ReadOnly:   "Sends /login and print commands only; an allowlist refuses any other command before it reaches the wire.",
+	Address:    "Host or host:port; port 8728, or 8729 when options.tls is set.",
+	Username:   collect.Credential{Use: collect.UseRequired, Meaning: "Account in a read-only group"},
+	Secret:     collect.Credential{Use: collect.UseRequired, Meaning: "Password of that account"},
+	Options:    Options{},
+	Tested:     []string{"RouterOS 7.8", "RouterOS 6.49"},
+	Evidence:   collect.EvidenceSynthesised,
+	Docs:       "internal/collect/mikrotik/README.md",
+}
+
+func init() { collect.Register(Descriptor, New) }
 
 // Options are the collector-specific settings of a target (`options:`).
 type Options struct {
 	// TLS connects to the api-ssl service (port 8729 unless the address has
 	// a port). Certificate verification follows the target's tls settings.
-	TLS bool `yaml:"tls"`
+	TLS bool `yaml:"tls" default:"false" doc:"Connect to the api-ssl service (port 8729 unless the address has a port); certificate verification follows the target tls settings."`
 	// MaxEdgeMACs: learned_macs is reported only on ports with at most this
 	// many addresses in the bridge host table. Default DefaultMaxEdgeMACs.
-	MaxEdgeMACs *int `yaml:"max_edge_macs"`
+	MaxEdgeMACs *int `yaml:"max_edge_macs" default:"4" doc:"learned_macs is reported only on ports with at most this many bridge host table addresses."`
 	// VLANDomain is the layer-2 domain VLAN keys are built in
 	// ("<domain>:<vid>"). Default "default".
-	VLANDomain string `yaml:"vlan_domain"`
+	VLANDomain string `yaml:"vlan_domain" default:"default" doc:"Layer-2 domain VLAN keys are built in (domain:vid)."`
 	// Role overrides the guessed device role: "switch" or "router".
 	// By default CRS/CSS models are switches and everything else a router.
-	Role string `yaml:"role"`
+	Role string `yaml:"role" enum:"switch,router" doc:"Overrides the guessed device role; by default CRS and CSS models are switches and everything else a router."`
 	// Skip lists sections not to collect: health, package, neighbor, host.
-	Skip []string `yaml:"skip"`
+	Skip []string `yaml:"skip" enum:"health,package,neighbor,host" doc:"Sections not to collect."`
 }
 
 type config struct {

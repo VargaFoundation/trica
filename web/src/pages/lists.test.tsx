@@ -96,6 +96,15 @@ describe("collection health", () => {
     expect(ok.querySelector(".badge")).toHaveTextContent("OK");
   });
 
+  it("links a source its module describes to its instance, and leaves the others as text", async () => {
+    mockApi(defaultRoutes());
+    renderApp({ at: "/health" });
+    const link = await screen.findByRole("link", { name: "arista:eos" });
+    expect(link).toHaveAttribute("href", "/collectors/arista/eos");
+    expect(screen.getByText("snmp:core").closest("a")).toBeNull();
+    expect(screen.getByRole("link", { name: "Collectors and their configuration" })).toHaveAttribute("href", "/collectors");
+  });
+
   it("says never when a source has never succeeded", async () => {
     mockApi({ ...defaultRoutes(), "GET /health/collection": page([{ ...healthFailing, last_success: undefined }]) });
     renderApp({ at: "/health" });

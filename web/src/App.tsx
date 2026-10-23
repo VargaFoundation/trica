@@ -6,6 +6,9 @@ import { AuthGate } from "./auth";
 import { takeLanding } from "./auth/oidc";
 import { Layout } from "./components/Layout";
 import { I18nProvider, useI18n, type Locale } from "./i18n";
+import { CollectorInstancePage } from "./collectors/CollectorInstancePage";
+import { CollectorPage } from "./collectors/CollectorPage";
+import { CollectorsPage } from "./collectors/CollectorsPage";
 import { DiscrepanciesPage } from "./pages/DiscrepanciesPage";
 import { HealthPage } from "./pages/HealthPage";
 import { HomePage } from "./pages/HomePage";
@@ -80,7 +83,7 @@ function AfterSignIn() {
   return <Navigate to={to} replace />;
 }
 
-/** Every page has its own address: /objects?type=, /objects/:id, /search?q=, /discrepancies, /proposals/:id, /topology, /health. */
+/** Every page has its own address: /objects?type=, /objects/:id, /search?q=, /discrepancies, /proposals/:id, /topology, /health, /collectors, /collectors/:kind/:name. */
 export function App() {
   return (
     <AuthGate>
@@ -105,6 +108,9 @@ export function App() {
             }
           />
           <Route path="health" element={<HealthPage />} />
+          <Route path="collectors" element={<CollectorsPage />} />
+          <Route path="collectors/:kind" element={<CollectorPage />} />
+          <Route path="collectors/:kind/:name" element={<CollectorInstancePage />} />
           <Route path="oidc/callback" element={<AfterSignIn />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

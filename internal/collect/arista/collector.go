@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/VargaFoundation/trica/internal/collect"
+	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -31,18 +32,37 @@ const DefaultMaxEdgeMACs = 4
 // vlan_domain option is not set.
 const DefaultVLANDomain = "default"
 
-func init() { collect.Register(Kind, New) }
+// Descriptor is what the module says about itself (ADR 0055).
+var Descriptor = collect.Descriptor{
+	Kind:       Kind,
+	Title:      "Arista EOS",
+	Vendors:    []string{"Arista Networks"},
+	Protocol:   "eAPI: JSON-RPC 2.0 over HTTP(S)",
+	Summary:    schema.Label{EN: "Arista switches: interfaces, VLANs, transceivers, power and cooling, learned MACs.", FR: "Commutateurs Arista : interfaces, VLAN, transceivers, alimentation et refroidissement, MAC apprises."},
+	Deployment: collect.DeploymentTarget,
+	Collects:   []string{"device", "fan", "interface", "ip_address", "psu", "sensor", "transceiver", "vlan"},
+	ReadOnly:   "Sends show commands only, through an account limited to the network-operator role.",
+	Address:    "A bare host (https), http://host or https://host[:port]; a path replaces /command-api.",
+	Username:   collect.Credential{Use: collect.UseRequired, Meaning: "Account with the network-operator role"},
+	Secret:     collect.Credential{Use: collect.UseRequired, Meaning: "Password of that account"},
+	Options:    Options{},
+	Tested:     []string{"EOS 4.14.2F", "EOS 4.20.7M"},
+	Evidence:   collect.EvidenceSynthesised,
+	Docs:       "internal/collect/arista/README.md",
+}
+
+func init() { collect.Register(Descriptor, New) }
 
 // Options are the collector-specific settings of a target ("options:").
 type Options struct {
 	// MaxEdgeMACs: learned_macs is reported only on ports with at most this
 	// many entries in the MAC table (edge ports); trunks and uplinks, which
 	// learn the whole network, are left out. Default 4; 0 turns it off.
-	MaxEdgeMACs *int `yaml:"max_edge_macs"`
+	MaxEdgeMACs *int `yaml:"max_edge_macs" default:"4" doc:"learned_macs is reported only on ports with at most this many MAC table entries (edge ports); 0 turns it off."`
 	// VLANDomain names the layer-2 domain the switch's VLANs belong to; VLAN
 	// 100 of two switches of the same domain is one VLAN object. Default
 	// "default".
-	VLANDomain string `yaml:"vlan_domain"`
+	VLANDomain string `yaml:"vlan_domain" default:"default" doc:"Layer-2 domain the switch VLANs belong to: VLAN 100 of two switches of the same domain is one VLAN object."`
 }
 
 // Collector reads one Arista switch.

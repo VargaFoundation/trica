@@ -7,6 +7,14 @@ import type { ThemePreference } from "../theme";
 import { setToken } from "../api/token";
 import {
   APPROVER,
+  collectorArista,
+  collectorAgent,
+  collectorCatalogue,
+  collectorUnifi,
+  instanceReported,
+  instanceSwA1,
+  instanceSwA2,
+  instanceSwA3,
   componentsSrv01,
   discrepancyMismatch,
   healthFailing,
@@ -138,6 +146,20 @@ export function defaultRoutes(me: Handler = APPROVER): Record<string, Handler> {
     "GET /proposals/11": proposalApplied,
     "GET /discrepancies": page([discrepancyMismatch]),
     "GET /health/collection": page([healthOk, healthFailing]),
+    "GET /collectors": collectorCatalogue,
+    "GET /collectors/arista": collectorArista,
+    "GET /collectors/agent": collectorAgent,
+    "GET /collectors/unifi": collectorUnifi,
+    "GET /collectors/arista/instances": (c: Call) => {
+      const status = c.query.get("status");
+      const all = [instanceSwA2, instanceSwA3, instanceSwA1];
+      return page(status ? all.filter((i) => i.status === status) : all);
+    },
+    "GET /collectors/agent/instances": page([instanceReported]),
+    "GET /collectors/unifi/instances": page([]),
+    "GET /collectors/arista/instances/sw-a1": instanceSwA1,
+    "GET /collectors/arista/instances/sw-a2": instanceSwA2,
+    "GET /collectors/agent/instances/host-01": instanceReported,
   };
   for (const o of objects) routes[`GET /objects/${o.id}`] = o;
   for (const o of [swA1, srv01]) routes[`GET /objects/${o.id}/series`] = (c: Call) => seriesOf(o.id, c.query);

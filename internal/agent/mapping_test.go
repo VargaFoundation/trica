@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/VargaFoundation/trica/internal/collect/collecttest"
+	"github.com/VargaFoundation/trica/internal/collect/hostagent"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -476,4 +478,11 @@ func TestNonZeroAndPtr(t *testing.T) {
 	if nilIfEmpty("") != nil || nilIfEmpty("x") != "x" {
 		t.Error("nilIfEmpty")
 	}
+}
+
+// The agent is a collector module like the others (ADR 0055): what the
+// descriptor says it collects covers what it emits.
+func TestBatchTypesAreDeclaredByTheDescriptor(t *testing.T) {
+	collecttest.CheckCollects(t, hostagent.Descriptor, batchOf(t, "debian12"))
+	collecttest.CheckCollects(t, hostagent.Descriptor, batchOf(t, "rhel9"))
 }

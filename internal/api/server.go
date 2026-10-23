@@ -56,6 +56,9 @@ type Config struct {
 	// Live serves the live topology overlay (ADR 0041); nil when the server
 	// has no live block, and GET /topology/live answers enabled: false.
 	Live LiveSource
+	// Collectors is the collector catalogue and the targets this server runs
+	// (ADR 0055). Nil: the registry alone, with no target.
+	Collectors CollectorSource
 }
 
 // LiveSource is the live overlay: a shared, cached measurement set.
@@ -65,18 +68,19 @@ type LiveSource interface {
 
 // Server is the REST API.
 type Server struct {
-	eng      *reconcile.Engine
-	st       *store.Store
-	searcher *search.Searcher
-	auth     Authorizer
-	audit    Auditor
-	log      *slog.Logger
-	version  string
-	now      func() time.Time
-	images   DeviceTypeImages
-	lib      DeviceTypeLibrary
-	routes   []route
-	live     LiveSource
+	eng        *reconcile.Engine
+	st         *store.Store
+	searcher   *search.Searcher
+	auth       Authorizer
+	audit      Auditor
+	log        *slog.Logger
+	version    string
+	now        func() time.Time
+	images     DeviceTypeImages
+	lib        DeviceTypeLibrary
+	routes     []route
+	live       LiveSource
+	collectors CollectorSource
 }
 
 // New builds a Server. It fails without an engine, an Authorizer and an
@@ -94,7 +98,7 @@ func New(cfg Config) (*Server, error) {
 		eng: cfg.Engine, st: cfg.Engine.Store, searcher: &search.Searcher{Store: cfg.Engine.Store},
 		auth: cfg.Authorizer, audit: cfg.Auditor, log: cfg.Logger, version: cfg.Version, now: cfg.Now,
 		images: cfg.Images, lib: cfg.Library,
-		live: cfg.Live,
+		live: cfg.Live, collectors: cfg.Collectors,
 	}
 	if s.log == nil {
 		s.log = slog.Default()

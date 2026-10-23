@@ -5,6 +5,9 @@
 // They are written by hand, not recorded from a server: see docs/reference/ui.md.
 import type {
   Change,
+  CollectorCatalogue,
+  CollectorInstance,
+  CollectorModule,
   Discrepancy,
   Me,
   ObjectView,
@@ -369,6 +372,7 @@ export const discrepancyMismatch: Discrepancy = {
 
 export const healthOk: SourceHealth = {
   source: "arista:eos",
+  module: "arista",
   collector: "arista",
   target: "192.0.2.10",
   version: "0.3.0",
@@ -420,3 +424,134 @@ export function seriesOf(objectId: string, query: URLSearchParams): Series {
     truncated: false,
   };
 }
+
+// The collectors (ADR 0055). `unifi` is a module the UI has never heard of: the
+// pages must render it from its descriptor alone.
+export const collectorArista: CollectorModule = {
+  kind: "arista",
+  title: "Arista EOS",
+  vendors: ["Arista Networks"],
+  protocol: "eAPI: JSON-RPC 2.0 over HTTP(S)",
+  summary: { en: "Arista switches: interfaces, VLANs, transceivers.", fr: "Commutateurs Arista : interfaces, VLAN, transceivers." },
+  deployment: "target",
+  collects: ["device", "psu", "transceiver"],
+  read_only: "Sends show commands only, through a network-operator account.",
+  address: "A bare host (https), http://host or https://host[:port].",
+  credentials: {
+    username: { use: "required", meaning: "Account with the network-operator role" },
+    secret: { use: "required", meaning: "Password of that account" },
+  },
+  options: [
+    { name: "max_edge_macs", type: "integer", default: "4", description: "learned_macs is reported only on ports with at most this many entries." },
+    { name: "role", type: "string", values: ["switch", "router"], description: "Overrides the guessed device role." },
+  ],
+  tested: ["EOS 4.14.2F", "EOS 4.20.7M"],
+  evidence: "synthesised",
+  docs: "internal/collect/arista/README.md",
+  docs_url: "https://github.com/VargaFoundation/trica/blob/main/internal/collect/arista/README.md",
+  counts: { instances: 3, ok: 1, failing: 1, pending: 1, stale: 0 },
+};
+
+export const collectorAgent: CollectorModule = {
+  kind: "agent",
+  title: "Linux host agent",
+  vendors: ["Varga Foundation"],
+  protocol: "Local probes, sent over mutual TLS",
+  summary: { en: "trica-agent, installed on a Linux host.", fr: "trica-agent, installé sur un hôte Linux." },
+  deployment: "agent",
+  collects: ["device"],
+  read_only: "Reads files and runs read-only commands on its own host.",
+  options: [],
+  tested: ["Debian 12"],
+  evidence: "synthesised",
+  docs: "docs/reference/agent.md",
+  docs_url: "https://github.com/VargaFoundation/trica/blob/main/docs/reference/agent.md",
+  counts: { instances: 1, ok: 1, failing: 0, pending: 0, stale: 0 },
+};
+
+export const collectorUnifi: CollectorModule = {
+  kind: "unifi",
+  title: "Ubiquiti UniFi",
+  vendors: ["Ubiquiti"],
+  protocol: "UniFi Network API over HTTPS",
+  summary: { en: "UniFi gateways, switches and access points.", fr: "Passerelles, commutateurs et points d'accès UniFi." },
+  deployment: "target",
+  collects: ["device", "interface"],
+  read_only: "GET only.",
+  address: "https://controller[:port]",
+  credentials: { username: { use: "unused" }, secret: { use: "required", meaning: "API key" } },
+  options: [{ name: "site", type: "string", default: "default", description: "The UniFi site to read." }, { name: "key_file", type: "secret_reference", description: "File holding a second key." }],
+  tested: ["UniFi Network 9.0"],
+  evidence: "recorded",
+  docs: "internal/collect/unifi/README.md",
+  docs_url: "https://github.com/VargaFoundation/trica/blob/main/internal/collect/unifi/README.md",
+  counts: { instances: 0, ok: 0, failing: 0, pending: 0, stale: 0 },
+};
+
+export const collectorCatalogue: CollectorCatalogue = {
+  modules: [collectorAgent, collectorArista, collectorUnifi],
+  unregistered: [healthFailing],
+};
+
+const runOk: SourceHealth = { ...healthOk, source: "arista:sw-a1", module: "arista", target: "192.0.2.10" };
+const runFailing: SourceHealth = {
+  ...healthFailing,
+  source: "arista:sw-a2",
+  module: "arista",
+  collector: "arista",
+  target: "192.0.2.11",
+  last_error: "dial tcp 192.0.2.11:443: i/o timeout",
+};
+
+/** A reader's view: the references are hidden. */
+export const instanceSwA1: CollectorInstance = {
+  source: "arista:sw-a1",
+  kind: "arista",
+  name: "sw-a1",
+  origin: "server",
+  status: "ok",
+  config: {
+    address: "https://192.0.2.10",
+    interval_seconds: 300,
+    timeout_seconds: 30,
+    domain: "paris",
+    tls: { ca_file: "/etc/trica/ca.pem", insecure: false, min_version: "" },
+    options: { max_edge_macs: 4, token_file: "file:/run/secrets/token" },
+    credentials_hidden: true,
+  },
+  health: runOk,
+};
+
+/** The same, as an administrator sees it. */
+export const instanceSwA1Admin: CollectorInstance = {
+  ...instanceSwA1,
+  config: { ...instanceSwA1.config!, credentials_hidden: undefined, credentials: { username: "trica", secret_ref: "file:/run/secrets/arista-password" } },
+};
+
+export const instanceSwA2: CollectorInstance = {
+  source: "arista:sw-a2",
+  kind: "arista",
+  name: "sw-a2",
+  origin: "server",
+  status: "failing",
+  config: { address: "https://192.0.2.11", interval_seconds: 60, timeout_seconds: 30, tls: { ca_file: "", insecure: true, min_version: "" }, options: {}, credentials_hidden: true },
+  health: runFailing,
+};
+
+export const instanceSwA3: CollectorInstance = {
+  source: "arista:sw-a3",
+  kind: "arista",
+  name: "sw-a3",
+  origin: "server",
+  status: "pending",
+  config: { address: "192.0.2.12", interval_seconds: 300, timeout_seconds: 30, tls: { ca_file: "", insecure: false, min_version: "" }, options: {}, credentials_hidden: true },
+};
+
+export const instanceReported: CollectorInstance = {
+  source: "agent:host-01",
+  kind: "agent",
+  name: "host-01",
+  origin: "reported",
+  status: "ok",
+  health: { ...healthOk, source: "agent:host-01", module: "agent", collector: "agent", target: "host-01" },
+};

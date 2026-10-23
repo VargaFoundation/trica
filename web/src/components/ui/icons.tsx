@@ -206,6 +206,12 @@ const PATHS = {
     </>
   ),
   health: <path d="M2.5 12h4l3-8 5 16 3-8h4" />,
+  collector: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" />
+    </>
+  ),
   search: (
     <>
       <circle cx="10.5" cy="10.5" r="7" />

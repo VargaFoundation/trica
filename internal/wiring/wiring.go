@@ -15,6 +15,8 @@ import (
 	"github.com/VargaFoundation/trica/internal/api"
 	"github.com/VargaFoundation/trica/internal/audit"
 	"github.com/VargaFoundation/trica/internal/auth"
+	"github.com/VargaFoundation/trica/internal/collect"
+	"github.com/VargaFoundation/trica/internal/collect/runner"
 	"github.com/VargaFoundation/trica/internal/devicetypes"
 	"github.com/VargaFoundation/trica/internal/graph"
 	"github.com/VargaFoundation/trica/internal/mcp"
@@ -39,6 +41,10 @@ type Wiring struct {
 
 	libOnce sync.Once
 	lib     *devicetypes.Index // nil when the library did not load
+
+	targetsOnce sync.Once
+	targets     []collect.Target
+	targetsErr  error
 }
 
 // core is the shared state.
@@ -129,6 +135,19 @@ func (w *Wiring) build(d server.Deps) (*core, error) {
 	}, nil
 }
 
+// collectTargets loads the targets file once, for the collection component
+// and for the API that lists the collectors (ADR 0055). It returns none when
+// collect.targets_file is unset. A file that does not parse is an error, so
+// the server does not start on it.
+func (w *Wiring) collectTargets() ([]collect.Target, error) {
+	w.targetsOnce.Do(func() {
+		if w.cfg.Collect.TargetsFile != "" {
+			w.targets, w.targetsErr = runner.LoadTargets(w.cfg.Collect.TargetsFile)
+		}
+	})
+	return w.targets, w.targetsErr
+}
+
 func (w *Wiring) policy() (*auth.Policy, error) { return Policy(w.cfg) }
 
 // Policy is the RBAC policy a server started with cfg enforces: the default
@@ -175,8 +194,12 @@ func (w *Wiring) mountAPI(mux *http.ServeMux, d server.Deps) error {
 		return err
 	}
 	lib := Images{Index: w.library(d)}
+	targets, err := w.collectTargets()
+	if err != nil {
+		return err
+	}
 	srv, err := api.New(api.Config{Engine: d.Engine, Authorizer: c.authz, Auditor: c.auditor, Logger: d.Log, Version: w.version,
-		Images: lib, Library: lib, Live: ls})
+		Images: lib, Library: lib, Live: ls, Collectors: api.RegistryCollectors{InServer: targets}})
 	if err != nil {
 		return err
 	}

@@ -64,7 +64,7 @@ func (n nop) Kind() string                               { return n.t.Kind }
 func (n nop) Collect(context.Context, sdk.Emitter) error { return nil }
 
 func TestRegistry(t *testing.T) {
-	Register("test-nop", func(t Target) (sdk.Collector, error) { return nop{t}, nil })
+	Register(testDescriptor("test-nop"), func(t Target) (sdk.Collector, error) { return nop{t}, nil })
 	c, err := New(Target{Kind: "test-nop", Name: "a"})
 	if err != nil || c.Kind() != "test-nop" {
 		t.Fatalf("New: %v, %v", c, err)
@@ -80,7 +80,7 @@ func TestRegistry(t *testing.T) {
 			t.Fatal("duplicate kind accepted")
 		}
 	}()
-	Register("test-nop", nil)
+	Register(testDescriptor("test-nop"), func(t Target) (sdk.Collector, error) { return nop{t}, nil })
 }
 
 func TestTargetDefaultsAndOptions(t *testing.T) {

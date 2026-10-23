@@ -7,9 +7,11 @@ package collecttest
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"testing"
 
+	"github.com/VargaFoundation/trica/internal/collect"
 	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
@@ -24,6 +26,9 @@ func Run(t testing.TB, c sdk.Collector) []*sdk.Batch {
 			t.Errorf("invalid batch: %v", err)
 		}
 		CheckSchema(t, b)
+		if d, ok := collect.Lookup(c.Kind()); ok {
+			CheckCollects(t, d, b)
+		}
 		out = append(out, b)
 		return nil
 	}))
@@ -31,6 +36,18 @@ func Run(t testing.TB, c sdk.Collector) []*sdk.Batch {
 		t.Fatalf("collect: %v", err)
 	}
 	return out
+}
+
+// CheckCollects fails t for every object type of b that d does not declare in
+// Collects, so that what a module says it collects covers what its fakes
+// emit (ADR 0055).
+func CheckCollects(t testing.TB, d collect.Descriptor, b *sdk.Batch) {
+	t.Helper()
+	for _, o := range b.Objects {
+		if !slices.Contains(d.Collects, o.Type) {
+			t.Errorf("%s: object %s is a %s, which the %q descriptor does not list in Collects", b.Source, o.Ref, o.Type, d.Kind)
+		}
+	}
 }
 
 // CheckSchema fails t for every type, attribute, identity key, parent or

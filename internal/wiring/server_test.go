@@ -36,16 +36,17 @@ const patience = 15 * time.Second
 
 // rig is a real server, all components mounted, on a test database.
 type rig struct {
-	t         *testing.T
-	base      string
-	w         *wiring.Wiring
-	url       string
-	caDir     string
-	token     string // a write token
-	readToken string // a read-only token
-	siteToken string // a write token limited to a site
-	srcToken  string // a write token bound to the source arista:sw-a1
-	stop      func() error
+	t          *testing.T
+	base       string
+	w          *wiring.Wiring
+	url        string
+	caDir      string
+	token      string // a write token
+	readToken  string // a read-only token
+	adminToken string // an administrator's token
+	siteToken  string // a write token limited to a site
+	srcToken   string // a write token bound to the source arista:sw-a1
+	stop       func() error
 }
 
 func writeFile(t *testing.T, name, content string) string {
@@ -89,6 +90,7 @@ func newRig(t *testing.T, extraYAML string) *rig {
 	}
 	r.token = mk("rw", []string{"write"}, nil)
 	r.readToken = mk("ro", []string{"read"}, nil)
+	r.adminToken = mk("adm", []string{"admin"}, nil)
 	r.siteToken = mk("site", []string{"write"}, []string{"paris-1"})
 	r.srcToken = mk("arista", []string{"write"}, nil, "arista:sw-a1")
 	st.Close()
