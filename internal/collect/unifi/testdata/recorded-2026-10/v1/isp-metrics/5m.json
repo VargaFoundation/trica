@@ -1,0 +1,234 @@
+{
+  "data": [
+    {
+      "metricType": "5m",
+      "periods": [
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 2,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 2,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T08:00:00Z",
+          "version": "10.6.106"
+        },
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 2,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 2,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T08:05:00Z",
+          "version": "10.6.106"
+        },
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 2,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 2,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T08:10:00Z",
+          "version": "10.6.106"
+        },
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 2,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 2,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T08:15:00Z",
+          "version": "10.6.106"
+        },
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 2,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 2,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T08:20:00Z",
+          "version": "10.6.106"
+        },
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 1,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 2,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T08:25:00Z",
+          "version": "10.6.106"
+        },
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 2,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 2,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T08:30:00Z",
+          "version": "10.6.106"
+        },
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 2,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 2,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T08:35:00Z",
+          "version": "10.6.106"
+        },
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 1,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 2,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T08:40:00Z",
+          "version": "10.6.106"
+        },
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 2,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 3,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T08:45:00Z",
+          "version": "10.6.106"
+        },
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 2,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 2,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T08:50:00Z",
+          "version": "10.6.106"
+        },
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 2,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 2,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T08:55:00Z",
+          "version": "10.6.106"
+        },
+        {
+          "data": {
+            "wan": {
+              "avgLatency": 2,
+              "download_kbps": 0,
+              "downtime": 0,
+              "ispAsn": "64500",
+              "ispName": "Example ISP",
+              "maxLatency": 2,
+              "packetLoss": 0,
+              "upload_kbps": 0,
+              "uptime": 100
+            }
+          },
+          "metricTime": "2026-10-23T09:00:00Z",
+          "version": "10.6.106"
+        }
+      ],
+      "hostId": "000000000000000000000000000000000000000000000000000000000001:1234567890",
+      "siteId": "000000000000000000000001"
+    }
+  ],
+  "httpStatusCode": 200,
+  "traceId": "00000000000000000000000000000000"
+}

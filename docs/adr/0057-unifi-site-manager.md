@@ -41,6 +41,8 @@ recorded on 2026-10-23:
    `http.MethodGet`, any `Post`/`Put`/`Patch`/`Delete`/`Head`, and any string naming `/connector/`,
    `/ea/` or `/proxy/`; the fake answers 405 to a write and records it. `/v1/hosts` is the probe: a
    refused key ends the run after one request.
+   *Amended by ADR 0059: four endpoints, `/v1/isp-metrics/5m` bounded to the last 30 minutes is the
+   fourth, and the scan now refuses any `/v1/` string that is not one of the four.*
 3. **The decode structs are an allow-list.** The account (`userData`), the location, the time zone and
    the identifiers are not declared, so they cannot be read, mapped or logged by a later change that
    adds "one more field" (`TestDecodeStructsHaveNoPersonalFields`); the anonymised fixtures keep them
@@ -75,9 +77,12 @@ recorded on 2026-10-23:
    version, so those never flip between sources); a console disconnected from the cloud has its
    devices emitted without `health` and the batch is partial. Nothing is withdrawn by a partial
    batch.
+   *Amended by ADR 0059: a failing ISP metrics call is a warning, not a partial run.*
 10. **Deferred**: ISP metrics (early access, large, per site; they need series on `internet_access`:
     issue #162) and ports, uplinks and cabling through the console's local Network Integration API
     (issue #163). Both are follow-up stories; neither is attempted with synthesised-only fixtures.
+    *Amended by ADR 0059: the ISP metrics are collected, from the stable `/v1/isp-metrics/5m`, not
+    from `/ea/`.*
 
 ## Consequences
 

@@ -3,6 +3,8 @@ package unifi
 import (
 	"bytes"
 	"encoding/json"
+	"math"
+	"strconv"
 	"strings"
 )
 
@@ -118,8 +120,9 @@ type site struct {
 	SiteID     str `json:"siteId"`
 	HostID     str `json:"hostId"`
 	Statistics struct {
-		ISPInfo ispInfo            `json:"ispInfo"`
-		WANs    map[string]wanStat `json:"wans"`
+		ISPInfo              ispInfo            `json:"ispInfo"`
+		WANLoadBalancingMode str                `json:"wanLoadBalancingMode"`
+		WANs                 map[string]wanStat `json:"wans"`
 	} `json:"statistics"`
 }
 
@@ -127,6 +130,8 @@ type wanStat struct {
 	ExternalIP str     `json:"externalIp"`
 	PortUp     *flag   `json:"portUp"`
 	ISPInfo    ispInfo `json:"ispInfo"`
+	// FailoverPriority is a number, 1 being the preferred WAN; read as text.
+	FailoverPriority str `json:"failoverPriority"`
 }
 
 // ispInfo keeps the provider's name only: the AS number and organisation are
@@ -158,4 +163,54 @@ type device struct {
 	StartupTime     str  `json:"startupTime"`
 	IsConsole       flag `json:"isConsole"`
 	IsManaged       flag `json:"isManaged"`
+}
+
+// num is a number that may come as a numeric string. null, objects, arrays
+// and other text mean "no value" (OK false), never an error: a measurement
+// that changes representation must degrade to "not reported".
+type num struct {
+	V  float64
+	OK bool
+}
+
+func (n *num) UnmarshalJSON(b []byte) error {
+	var s str
+	if err := s.UnmarshalJSON(b); err != nil {
+		return err
+	}
+	*n = num{}
+	if s == "" {
+		return nil
+	}
+	v, err := strconv.ParseFloat(string(s), 64)
+	if err != nil || math.IsNaN(v) || math.IsInf(v, 0) {
+		return nil
+	}
+	*n = num{V: v, OK: true}
+	return nil
+}
+
+// metricSite is one entry of GET /v1/isp-metrics/5m: the periods of one site.
+type metricSite struct {
+	HostID  str            `json:"hostId"`
+	SiteID  str            `json:"siteId"`
+	Periods []metricPeriod `json:"periods"`
+}
+
+type metricPeriod struct {
+	MetricTime str `json:"metricTime"`
+	Data       struct {
+		WAN *ispWAN `json:"wan"`
+	} `json:"data"`
+}
+
+// ispWAN is the measurements of one period and the provider's name, which
+// checks that the metrics describe the WAN the statistics call active. The AS
+// number, the throughput and the downtime are not read (ADR 0059).
+type ispWAN struct {
+	AvgLatency num `json:"avgLatency"`
+	MaxLatency num `json:"maxLatency"`
+	PacketLoss num `json:"packetLoss"`
+	Uptime     num `json:"uptime"`
+	ISPName    str `json:"ispName"`
 }

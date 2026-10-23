@@ -100,6 +100,29 @@ func (p *pipeline) objects(typ string) []*store.Object {
 	return out
 }
 
+// access returns the stored Internet access of a WAN type ("WAN", "WAN2").
+func (p *pipeline) access(wan string) *store.Object {
+	p.t.Helper()
+	for _, o := range p.objects("internet_access") {
+		if strings.HasSuffix(o.Display, "/"+wan) {
+			return o
+		}
+	}
+	p.t.Fatalf("no internet access %s", wan)
+	return nil
+}
+
+// history returns the stored values of a series attribute, oldest first.
+func (p *pipeline) history(o *store.Object, key string) []store.Value {
+	p.t.Helper()
+	vals, _, err := p.st.HistoryBetween(context.Background(), o.ID, key,
+		time.Date(2026, 10, 23, 0, 0, 0, 0, time.UTC), time.Date(2026, 10, 24, 0, 0, 0, 0, time.UTC), 100)
+	if err != nil {
+		p.t.Fatal(err)
+	}
+	return vals
+}
+
 func (p *pipeline) relations() map[string]int {
 	p.t.Helper()
 	rels, err := p.st.CurrentRelations(context.Background())
@@ -147,6 +170,18 @@ func TestEngineAcceptsTheBatch(t *testing.T) {
 	if n := len(p.objects("internet_access")); n != 2 {
 		t.Errorf("%d internet accesses", n)
 	}
+	// The ISP metrics of 09:00 are stored on the active WAN, as floats.
+	wan := p.access("WAN")
+	for k, want := range map[string]float64{"latency_ms": 2, "latency_max_ms": 2, "loss_pct": 0, "uptime_pct": 100} {
+		if got, ok := wan.Attrs[k].(float64); !ok || got != want {
+			t.Errorf("WAN %s = %v (%T), want %v", k, wan.Attrs[k], wan.Attrs[k], want)
+		}
+	}
+	for _, k := range seriesKeys {
+		if v, ok := p.access("WAN2").Attrs[k]; ok {
+			t.Errorf("WAN2 %s = %v: it is not the active WAN", k, v)
+		}
+	}
 
 	// The collection health board.
 	var ok bool
@@ -192,6 +227,49 @@ func TestSecondRunChangesNothing(t *testing.T) {
 	}
 }
 
+// Two runs that see the same newest period store one row per value: the
+// history is the collector's only state (ADR 0059). A newer period with
+// another value adds exactly one row and closes the previous one.
+func TestISPMetricsStoredOnceAcrossOverlappingRuns(t *testing.T) {
+	p := newPipeline(t, SetRecorded)
+	at := func(h, m int) time.Time { return time.Date(2026, 10, 23, h, m, 0, 0, time.UTC) }
+	for _, now := range []time.Time{at(8, 42), at(8, 44), at(8, 47)} {
+		p.clock.set(now)
+		if res := p.run()[0]; len(res.Warnings) != 0 {
+			t.Fatalf("engine warnings at %v: %v", now, res.Warnings)
+		}
+	}
+	wan := p.access("WAN")
+	// 08:40 (latency 1, max 2) was the newest at 08:42 and 08:44; 08:45
+	// (latency 2, max 3) from 08:47.
+	for key, want := range map[string][]float64{"latency_ms": {1, 2}, "latency_max_ms": {2, 3}, "loss_pct": {0}, "uptime_pct": {100}} {
+		rows := p.history(wan, key)
+		if len(rows) != len(want) {
+			t.Fatalf("%s: %d history rows %+v, want %d", key, len(rows), rows, len(want))
+		}
+		for i, w := range want {
+			if got, _ := rows[i].Value.(float64); got != w {
+				t.Errorf("%s row %d = %v, want %v", key, i, rows[i].Value, w)
+			}
+			open := i == len(want)-1
+			if (rows[i].ValidTo == nil) != open {
+				t.Errorf("%s row %d: valid to %v, open expected %v", key, i, rows[i].ValidTo, open)
+			}
+		}
+		if len(rows) == 2 && (rows[0].ValidTo == nil || !rows[0].ValidTo.Equal(at(8, 47)) || !rows[1].ValidFrom.Equal(at(8, 47)) || !rows[0].ValidFrom.Equal(at(8, 42))) {
+			t.Errorf("%s rows %+v: want 08:42-08:47 then 08:47-", key, rows)
+		}
+	}
+	for _, k := range seriesKeys {
+		if rows := p.history(p.access("WAN2"), k); len(rows) != 0 {
+			t.Errorf("WAN2 %s has %d rows", k, len(rows))
+		}
+	}
+	if err := p.f.OnlyReads(); err != nil {
+		t.Error(err)
+	}
+}
+
 // A device that is gone from a full run is withdrawn (its relations close, it
 // becomes absent), and a run that could not read the devices withdraws
 // nothing.
@@ -222,6 +300,15 @@ func TestWithdrawalOnlyOnFullRuns(t *testing.T) {
 	res = p.run()[0]
 	if res.RelationsClosed == 0 {
 		t.Fatal("no relation closed for a device that is gone")
+	}
+	// An hour on, the window holds no period: the full run withdraws the
+	// measurements and their history is closed, which is the gap of the curve.
+	lat := p.history(p.access("WAN"), "latency_ms")
+	if len(lat) != 1 || lat[0].ValidTo == nil {
+		t.Errorf("latency_ms history %+v: want one closed row", lat)
+	}
+	if _, ok := p.access("WAN").Attrs["latency_ms"]; ok {
+		t.Error("latency_ms is still a current value with no reading")
 	}
 	after := p.relations()
 	if after["managed_by"] != 8 {

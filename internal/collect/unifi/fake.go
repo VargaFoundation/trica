@@ -64,6 +64,7 @@ type FakeSiteManager struct {
 	body      map[string]string
 	delay     map[string]time.Duration
 	redirect  map[string]string
+	replayEnd time.Time // ReplayMetricsUntil
 }
 
 // NewFake starts a fake Site Manager serving a fixture set (SetRecorded,
@@ -137,6 +138,13 @@ func (f *FakeSiteManager) SetBody(path, body string) { f.lock(func() { f.body[pa
 // Redirect makes path answer 302 to location.
 func (f *FakeSiteManager) Redirect(path, location string) {
 	f.lock(func() { f.redirect[path] = location })
+}
+
+// ReplayMetricsUntil shifts the periods of the recorded ISP metrics so that the
+// last one sits at end truncated to 5 minutes, for a test whose clock is far
+// from the recording. The zero time restores the recorded times.
+func (f *FakeSiteManager) ReplayMetricsUntil(end time.Time) {
+	f.lock(func() { f.replayEnd = end })
 }
 
 // Requests returns a copy of every request received so far.
@@ -217,6 +225,12 @@ func (f *FakeSiteManager) handle(w http.ResponseWriter, r *http.Request) {
 // page asked with nextToken=T is <x>.T.json, and /v1/devices?hostIds[]=...
 // keeps the groups of those hosts, as the real API does.
 func (f *FakeSiteManager) serve(w http.ResponseWriter, r *http.Request) {
+	if rest, _ := strings.CutPrefix(r.URL.Path, "/v1/"); strings.HasPrefix(rest, "isp-metrics/") {
+		if typ := strings.TrimPrefix(rest, "isp-metrics/"); typ != "" && !strings.Contains(typ, "/") {
+			f.serveMetrics(w, r, typ)
+			return
+		}
+	}
 	name, ok := strings.CutPrefix(r.URL.Path, "/v1/")
 	if !ok || name == "" || strings.Contains(name, "/") || strings.Contains(name, "..") {
 		fakeError(w, http.StatusNotFound, "not_found", "no such endpoint")
@@ -234,6 +248,105 @@ func (f *FakeSiteManager) serve(w http.ResponseWriter, r *http.Request) {
 		b = filterHosts(b, ids)
 	}
 	_, _ = w.Write(b) //nolint:gosec // G705: JSON response of a test fake, Content-Type application/json
+}
+
+// serveMetrics answers /v1/isp-metrics/<type> from the recorded periods. Like
+// the real API it refuses the 5m type with a duration other than 24h (the
+// recorded error), and it keeps the periods with begin <= metricTime <= end,
+// both bounds inclusive, when beginTimestamp and endTimestamp are given. With
+// neither it serves every period (synthesised behaviour: the real API's
+// default window was not recorded).
+func (f *FakeSiteManager) serveMetrics(w http.ResponseWriter, r *http.Request, typ string) {
+	q := r.URL.Query()
+	if typ != "5m" && typ != "1h" {
+		fakeError(w, http.StatusBadRequest, "parameter_invalid", "unsupported metric type")
+		return
+	}
+	if d := q.Get("duration"); typ == "5m" && d != "" && d != "24h" {
+		w.WriteHeader(http.StatusBadRequest)
+		b, err := fixtures.ReadFile(path.Join("testdata", f.set, "errors", "400-isp-metrics-duration.json"))
+		if err != nil {
+			b, _ = json.Marshal(envelope{Code: "parameter_invalid", HTTPStatusCode: http.StatusBadRequest, Message: "5m metric only supports '24h' duration"})
+		}
+		_, _ = w.Write(b)
+		return
+	}
+	var from, to time.Time
+	for param, dst := range map[string]*time.Time{"beginTimestamp": &from, "endTimestamp": &to} {
+		if v := q.Get(param); v != "" {
+			t, err := time.Parse(time.RFC3339, v)
+			if err != nil {
+				fakeError(w, http.StatusBadRequest, "parameter_invalid", param+" is not an RFC 3339 timestamp")
+				return
+			}
+			*dst = t
+		}
+	}
+	b, err := fixtures.ReadFile(path.Join("testdata", f.set, "v1", "isp-metrics", typ+".json"))
+	if err != nil {
+		fakeError(w, http.StatusNotFound, "not_found", "no such endpoint")
+		return
+	}
+	var replay time.Time
+	f.lock(func() { replay = f.replayEnd })
+	_, _ = w.Write(filterPeriods(b, from, to, replay)) //nolint:gosec // G705: JSON response of a test fake, Content-Type application/json
+}
+
+// filterPeriods keeps the periods of each site in [from, to] (a zero bound is
+// open). A non-zero replay first shifts every metricTime so that the last
+// period of the document sits at replay truncated to 5 minutes.
+func filterPeriods(doc []byte, from, to, replay time.Time) []byte {
+	var env map[string]json.RawMessage
+	if json.Unmarshal(doc, &env) != nil {
+		return doc
+	}
+	var sites []map[string]json.RawMessage
+	if json.Unmarshal(env["data"], &sites) != nil {
+		return doc
+	}
+	periods := func(site map[string]json.RawMessage) (ps []map[string]json.RawMessage) {
+		_ = json.Unmarshal(site["periods"], &ps)
+		return ps
+	}
+	timeOf := func(p map[string]json.RawMessage) (t time.Time) {
+		var s string
+		if json.Unmarshal(p["metricTime"], &s) == nil {
+			t, _ = time.Parse(time.RFC3339, s)
+		}
+		return t
+	}
+	var shift time.Duration
+	if !replay.IsZero() {
+		var last time.Time
+		for _, site := range sites {
+			for _, p := range periods(site) {
+				if t := timeOf(p); t.After(last) {
+					last = t
+				}
+			}
+		}
+		shift = replay.UTC().Truncate(5 * time.Minute).Sub(last)
+	}
+	for _, site := range sites {
+		keep := []map[string]json.RawMessage{}
+		for _, p := range periods(site) {
+			t := timeOf(p).Add(shift)
+			if (!from.IsZero() && t.Before(from)) || (!to.IsZero() && t.After(to)) {
+				continue
+			}
+			if shift != 0 {
+				p["metricTime"], _ = json.Marshal(t.UTC().Format(time.RFC3339))
+			}
+			keep = append(keep, p)
+		}
+		site["periods"], _ = json.Marshal(keep)
+	}
+	env["data"], _ = json.Marshal(sites)
+	out, err := json.Marshal(env)
+	if err != nil {
+		return doc
+	}
+	return out
 }
 
 // filterHosts keeps the entries of data[] whose hostId is in ids.

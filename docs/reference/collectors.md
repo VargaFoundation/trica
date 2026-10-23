@@ -76,6 +76,7 @@ targets:
     options:
       hosts: [office-a]                  # optional: consoles to read; default every console of the key
       roles: ["UAH-DOOR=access_control"] # optional: shortname or model = device role
+      isp_metrics: true                  # optional, default true: latency, loss and uptime of the active Internet access
 
   - kind: kubernetes           # inside the cluster: the pod's service account
     name: prod
@@ -102,6 +103,10 @@ name: with `networkPolicy.egressTo` set, allow port 443 to the Internet (`ipBloc
 send the traffic through a proxy you allow. The answers carry the account's e-mail, name and
 permissions and the console's location; none of it is decoded, stored or logged
 ([ADR 0057](../adr/0057-unifi-site-manager.md), [the module's README](../../internal/collect/unifi/README.md)).
+Each run also asks for the last 30 minutes of the site's ISP metrics (`GET /v1/isp-metrics/5m`) and
+keeps the newest period's latency, maximum latency, packet loss and uptime on the Internet access of
+the WAN in use, as curves; `isp_metrics: false` turns that call off, and a failing call is a warning,
+never a failed run ([ADR 0059](../adr/0059-unifi-isp-metrics.md)).
 
 Every run of a target ends in one health record on the board (`GET /api/v1/health/collection`):
 the collector's own, or, when it returned an error, panicked or reported none, one made by the

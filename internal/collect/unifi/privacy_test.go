@@ -31,7 +31,7 @@ var personal = []string{
 func TestPersonalDataNeverEmitted(t *testing.T) {
 	// The sentinels are really in the answers the collector reads.
 	raw := ""
-	for _, name := range []string{"hosts", "sites", "devices"} {
+	for _, name := range []string{"hosts", "sites", "devices", "isp-metrics/5m"} {
 		b, err := os.ReadFile("testdata/" + SetRecorded + "/v1/" + name + ".json")
 		if err != nil {
 			t.Fatal(err)
@@ -45,6 +45,7 @@ func TestPersonalDataNeverEmitted(t *testing.T) {
 	}
 	for _, set := range []string{SetRecorded, SetSynthesised} {
 		f := newFake(t, set)
+		f.ReplayMetricsUntil(time.Now()) // the metrics go through the mapping too
 		b := runOne(t, f)
 		doc, err := json.Marshal(b)
 		if err != nil {
@@ -103,7 +104,7 @@ func personalFields(roots ...any) (found []string, walked int) {
 // The decode structs are an allow-list: nothing personal is declared, so
 // nothing personal can be read by a later change that maps "one more field".
 func TestDecodeStructsHaveNoPersonalFields(t *testing.T) {
-	found, walked := personalFields(host{}, site{}, deviceGroup{}, envelope{})
+	found, walked := personalFields(host{}, site{}, deviceGroup{}, metricSite{}, envelope{})
 	for _, f := range found {
 		t.Errorf("%s is decoded: personal data or location must not be read", f)
 	}

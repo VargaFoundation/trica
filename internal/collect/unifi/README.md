@@ -3,9 +3,10 @@
 Reads the **UniFi consoles of an account and the devices they manage** through the
 **UniFi Site Manager API v1** (`https://api.ui.com`, <https://developer.ui.com/site-manager-api/>).
 It is a cloud collector: it sees what Ubiquiti's cloud knows of a console, not the console's local
-configuration. Read-only: the client has one method, `GET`, on three endpoints, with the API key in
+configuration. Read-only: the client has one method, `GET`, on four endpoints, with the API key in
 the `X-API-KEY` header and nowhere else. Redirects are never followed, so the key cannot leave the
-configured address ([ADR 0057](../../../docs/adr/0057-unifi-site-manager.md)).
+configured address ([ADR 0057](../../../docs/adr/0057-unifi-site-manager.md), ISP metrics:
+[ADR 0059](../../../docs/adr/0059-unifi-isp-metrics.md)).
 
 > Status: **recorded** on 2026-10-23 from one UniFi Dream Machine Pro Max console with ten adopted
 > devices, anonymised (`testdata/recorded-2026-10/`), plus a **synthesised** set for what that
@@ -24,10 +25,11 @@ configured address ([ADR 0057](../../../docs/adr/0057-unifi-site-manager.md)).
   options:
     hosts: [office-a]              # optional: host name, console name or host id; default every console of the key
     roles: ["UAH-DOOR=access_control"]  # optional: shortname or model = device role
+    isp_metrics: true              # optional, default true: latency, loss and uptime of the active Internet access
 ```
 
 `address` is empty for `https://api.ui.com`; it may be another `https` base URL (a proxy in front of
-the API). `username` is unused. Both `hosts` and `roles` are optional; any other option is an error.
+the API). `username` is unused. `hosts`, `roles` and `isp_metrics` are optional; any other option is an error.
 `roles` entries are `<shortname or model>=<role>`, where the role is a value of the schema's
 `device.role` (an unknown value stops the start); the key ignores case, spaces and dashes
 (`UA Hub Door`, `ua-hub-door` and `UAHDOOR` are the same).
@@ -52,8 +54,10 @@ port 443 to `0.0.0.0/0`, or go through a proxy you allow.
 ## What is collected
 
 Requests of one run: `GET /v1/hosts` (the probe: a refused key or an unreachable API ends the run
-there), `GET /v1/sites`, `GET /v1/devices` (with `hostIds[]` when `options.hosts` is set). Lists are
-followed by `nextToken`, at most 50 pages.
+there), `GET /v1/sites`, `GET /v1/devices` (with `hostIds[]` when `options.hosts` is set) and, unless `isp_metrics` is
+`false` or `/v1/sites` failed, `GET /v1/isp-metrics/5m?beginTimestamp=<now-30m>&endTimestamp=<now>`
+(one bounded call, never `/ea/`, never a `duration`). Lists are followed by `nextToken`, at most
+50 pages.
 
 | UniFi | trica |
 |---|---|
@@ -64,13 +68,25 @@ followed by `nextToken`, at most 50 pages.
 | WAN ports of the console | `interface` in the console: `name` (`eth9`), `description` (`WAN`, `WAN2`), `kind` physical, `mac`, `admin_status` (enabled), `oper_status` (plugged), `speed_mbps` (from `speedType`: `10G SFP+` is 10000) |
 | device addresses | `ip_address` `assigned_to` the device (`role` primary). The WAN side address of the console is assigned to its WAN port instead; other private addresses the console reports (LAN) to the console; link-local addresses are left out. The runner stamps the target's `domain` on all of them |
 | each enabled WAN and the site statistics | `internet_access` named `<target>/<console hostname>/<WAN>`: `provider` (the ISP's name), `status` (port up: online) and `public_ips` (the address the cloud sees). The console `routes_via` it. The public address is an attribute and not an `ip_address` object, because the runner would stamp it with the office's domain. Not emitted when `/v1/sites` failed |
+| ISP metrics of a site (`/v1/isp-metrics/5m`) | the **newest period** of the last 30 minutes, set as `latency_ms` (`avgLatency`), `latency_max_ms` (`maxLatency`), `loss_pct` (`packetLoss`) and `uptime_pct` (`uptime`) on the `internet_access` of the site's **primary WAN**: the one that is up with the lowest `failoverPriority` in `/v1/sites`. Not attributed, with a warning, when no WAN is up, when several are up outside `FAILOVER_ONLY` load balancing, when the period's `ispName` is not the active WAN's provider, or when the site is unknown. A value that is null or not a number is left out; one that is negative or above 100 (percentages) is left out with a warning. Throughput, downtime and the AS number are not read ([ADR 0059](../../../docs/adr/0059-unifi-isp-metrics.md)) |
 | installed applications of the console | `software` `application/UniFi Network/10.6.106` (and Protect, Access...), the console `runs` it |
 | a managed device | relation `managed_by` to its console (new relation, no impact: a device keeps forwarding when its controller is down) |
 
 ### Schema additions
 
 Device roles `access_point`, `access_control` and `camera` (without them nine of the ten devices of
-an office are `other`) and the relation `managed_by` (device to device).
+an office are `other`), the relation `managed_by` (device to device), and the series attributes
+`latency_ms`, `latency_max_ms`, `loss_pct` and `uptime_pct` of `internet_access` (floats, `series`,
+drawn as Trends by the object page: ADR 0045).
+
+### How the metrics become a curve
+
+A value is stored when the engine applies it, at its own clock, so a 5-minute period cannot be stored
+at its own time. Each run sets the newest period as the current value and the attribute history does
+the rest: two runs that see the same period write nothing, a newer period with another value writes
+one row. The curve is therefore as fine as the run interval (5 minutes by default), lags by up to one
+period, and has a gap when no period is available (the series is withdrawn by the full batch). Periods
+between two runs are not backfilled.
 
 ### Device types
 
@@ -85,7 +101,11 @@ does not depend on it.
 
 | Situation | Batch |
 |---|---|
-| All three calls answer, every console connected | scope `full`, health OK |
+| All the calls answer, every console connected | scope `full`, health OK |
+| The ISP metrics call fails (400, 403, 429, 5xx, malformed, timeout) | scope and health as if it had not been made, a warning `ISP metrics: ...` (with the `Retry-After`); no series for this run, so the curve has a gap. Never `partial`, so absence detection keeps working |
+| A connected console has no period in the last 30 minutes | a warning, no series for it this run |
+| The metrics cannot be attributed to one WAN (none up, load balancing, another provider) | a warning, no series for it this run |
+| `options.isp_metrics: false` | no metrics call, no series, no warning |
 | The key is refused (401), the API is unreachable, `/v1/hosts` fails or is malformed, the secret cannot be read, `options.hosts` matches no console | `Failed`: at most one request, no objects, nothing withdrawn |
 | `/v1/sites` fails (403, 429, 5xx, malformed, timeout) | devices and the console kept, no Internet access; scope `partial`, health not OK |
 | `/v1/devices` fails | consoles from their host entries; scope `partial`, health not OK |
@@ -108,7 +128,8 @@ it removed from the message).
 ## Version compatibility
 
 Site Manager API v1. Recorded: one UDM Pro Max (UniFi OS 5.1.x; Network 10.6.106, Protect 7.3.70,
-Access 4.3.22) with six U7 Pro, a USW Pro Max 24 PoE, a UA Hub Door and a UA G2 Pro. Everything else
+Access 4.3.22) with six U7 Pro, a USW Pro Max 24 PoE, a UA Hub Door and a UA G2 Pro; its ISP metrics
+(5m, 1h) were recorded the same day, with a throughput that is 0 throughout. Everything else
 is untested: Protect cameras (product line and model strings), update states, offline devices,
 several consoles and pages are synthesised from the public documentation.
 
@@ -119,11 +140,13 @@ several consoles and pages are synthesised from the public documentation.
   API. The local **Network Integration API** of a console (`/proxy/network/integration/v1`, a key
   created on the console, reached from the LAN by `trica collector`) is the follow-up for ports and
   cabling.
-- **ISP metrics** (`/ea/isp-metrics`): early access, large answers, per site and not per WAN; they
-  need time series on `internet_access` (a schema change) and a bounded query.
+- **ISP throughput** (`download_kbps`, `upload_kbps`): 0 in every recorded period and of unverified
+  meaning; trica does not keep throughput (ADR 0041, 0045) (#166).
+- **The `1h` metrics, `/ea/isp-metrics` and the metrics' `POST .../query`**: the scan refuses them.
+- **Backfill of the periods between two runs**: the engine stores a value at its own clock (ADR 0059).
 - **Personal data and location**: see above.
 - **Sites**: a UniFi site is a namespace inside a console, not a place. No `site` object is made and
   the UniFi site name is not stored; devices are not placed in a trica site (people declare places,
   and a device outside a rack cannot be placed in one: see the issue linked from ADR 0057).
-- **Rate limits**: a run makes three calls (more with pages) every interval; a 429 ends that call and
+- **Rate limits**: a run makes four calls (more with pages) every interval; a 429 ends that call and
   shows on the health board with its `Retry-After`. Keep the interval at 5 minutes or more.

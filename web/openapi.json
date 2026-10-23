@@ -2388,6 +2388,39 @@
             },
             "x-trica-unit": "Mb/s"
           },
+          "latency_max_ms": {
+            "description": "Last measured maximum latency to the provider.",
+            "title": "Maximum latency",
+            "type": "number",
+            "x-trica-kind": "float",
+            "x-trica-label": {
+              "en": "Maximum latency",
+              "fr": "Latence maximale"
+            },
+            "x-trica-unit": "ms"
+          },
+          "latency_ms": {
+            "description": "Last measured average latency to the provider.",
+            "title": "Latency",
+            "type": "number",
+            "x-trica-kind": "float",
+            "x-trica-label": {
+              "en": "Latency",
+              "fr": "Latence"
+            },
+            "x-trica-unit": "ms"
+          },
+          "loss_pct": {
+            "description": "Last measured packet loss.",
+            "title": "Loss",
+            "type": "number",
+            "x-trica-kind": "float",
+            "x-trica-label": {
+              "en": "Loss",
+              "fr": "Perte"
+            },
+            "x-trica-unit": "%"
+          },
           "name": {
             "description": "Uplink name.",
             "title": "Name",
@@ -2436,6 +2469,17 @@
               "en": "Status",
               "fr": "État"
             }
+          },
+          "uptime_pct": {
+            "description": "Last measured availability of the uplink.",
+            "title": "Availability",
+            "type": "number",
+            "x-trica-kind": "float",
+            "x-trica-label": {
+              "en": "Availability",
+              "fr": "Disponibilité"
+            },
+            "x-trica-unit": "%"
           }
         },
         "type": "object"

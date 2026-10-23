@@ -1,0 +1,6 @@
+{
+  "code": "parameter_invalid",
+  "httpStatusCode": 400,
+  "message": "5m metric only supports '24h' duration",
+  "traceId": "00000000000000000000000000000000"
+}

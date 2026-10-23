@@ -40,6 +40,7 @@ func runAt(t *testing.T, f *FakeSiteManager, tg collect.Target, now time.Time) *
 
 func TestRecordedOffice(t *testing.T) {
 	f := newFake(t, SetRecorded)
+	f.ReplayMetricsUntil(recordedNow)
 	b := runAt(t, f, f.Target(office), recordedNow)
 
 	if b.Scope != sdk.ScopeFull || !b.Health.OK || b.Health.Collector != Kind || b.Health.Version != "5.1.33" || len(b.Health.Warnings) != 0 {
@@ -149,7 +150,9 @@ func TestRecordedOffice(t *testing.T) {
 	attrs(t, wan, map[string]any{"provider": "Example ISP", "status": "online", "public_ips": []string{"203.0.113.10"}})
 	wan2 := obj(t, b, "internet_access", "name", "office/office-a/WAN2")
 	attrs(t, wan2, map[string]any{"status": "offline", "provider": "Example ISP"})
-	absent(t, wan2, "public_ips")
+	absent(t, wan2, "public_ips", "latency_ms", "latency_max_ms", "loss_pct", "uptime_pct")
+	// The newest period of the window is on the active WAN only.
+	attrs(t, wan, map[string]any{"latency_ms": 2.0, "latency_max_ms": 2.0, "loss_pct": 0.0, "uptime_pct": 100.0})
 	for _, o := range collecttest.Objects([]*sdk.Batch{b}, "ip_address") {
 		if o.Identity["address"] == "203.0.113.10" {
 			t.Error("the public address became an ip_address (it would be stamped with the office domain)")
@@ -356,7 +359,8 @@ func TestHostsFilterMatchingNothingFails(t *testing.T) {
 
 func TestRoleOverride(t *testing.T) {
 	f := newFake(t, SetRecorded)
-	b := runTarget(t, f, withOptions(t, f.Target(office), "roles: [\"UAH-DOOR=sensor\", \"u7 pro=other\"]\n"))
+	// The clock is inside the recorded metrics, so that no warning is expected.
+	b := runAt(t, f, withOptions(t, f.Target(office), "roles: [\"UAH-DOOR=sensor\", \"u7 pro=other\"]\n"), metricsNow)
 	attrs(t, obj(t, b, "device", "base_mac", "02:00:00:00:00:08"), map[string]any{"role": "sensor"})
 	attrs(t, obj(t, b, "device", "base_mac", "02:00:00:00:00:02"), map[string]any{"role": "other"})
 	if len(b.Health.Warnings) != 0 {
@@ -364,7 +368,7 @@ func TestRoleOverride(t *testing.T) {
 	}
 }
 
-func TestReadsOnlyTheThreeEndpoints(t *testing.T) {
+func TestReadsOnlyTheFourEndpoints(t *testing.T) {
 	for _, set := range []string{SetRecorded, SetSynthesised} {
 		f := newFake(t, set)
 		runOne(t, f)
@@ -375,8 +379,8 @@ func TestReadsOnlyTheThreeEndpoints(t *testing.T) {
 			}
 			seen[r.Path] = true
 		}
-		want := map[string]bool{"/v1/hosts": true, "/v1/sites": true, "/v1/devices": true}
-		if len(seen) != 3 || !seen["/v1/hosts"] || !seen["/v1/sites"] || !seen["/v1/devices"] {
+		want := map[string]bool{"/v1/hosts": true, "/v1/sites": true, "/v1/devices": true, "/v1/isp-metrics/5m": true}
+		if len(seen) != 4 || !seen["/v1/hosts"] || !seen["/v1/sites"] || !seen["/v1/devices"] || !seen["/v1/isp-metrics/5m"] {
 			t.Errorf("%s: endpoints %v, want %v", set, seen, want)
 		}
 	}
@@ -574,6 +578,7 @@ func TestNewValidation(t *testing.T) {
 		{"empty host", func(tg *collect.Target) { tg.Options = optionsNode(t, "hosts: [\"\"]\n") }, "empty host name"},
 		{"role not in the schema", func(tg *collect.Target) { tg.Options = optionsNode(t, "roles: [\"X=spine\"]\n") }, `"spine" is not a device role`},
 		{"role without equal", func(tg *collect.Target) { tg.Options = optionsNode(t, "roles: [UAH-DOOR]\n") }, "shortname-or-model=role"},
+		{"isp_metrics not a boolean", func(tg *collect.Target) { tg.Options = optionsNode(t, "isp_metrics: maybe\n") }, "into bool"},
 		{"bad tls", func(tg *collect.Target) { tg.TLS.MinVersion = "0.9" }, "min_version"},
 	}
 	for _, tc := range cases {
@@ -613,7 +618,7 @@ func TestRegistered(t *testing.T) {
 		t.Errorf("descriptor %+v", d)
 	}
 	opts, err := d.OptionFields()
-	if err != nil || len(opts) != 2 || opts[0].Name != "hosts" || opts[1].Name != "roles" {
+	if err != nil || len(opts) != 3 || opts[0].Name != "hosts" || opts[1].Name != "roles" || opts[2].Name != "isp_metrics" || opts[2].Default != "true" {
 		t.Errorf("options %v, %v", opts, err)
 	}
 }
