@@ -33,6 +33,11 @@ const slot = (page: Page, face: "front" | "rear", id: string) => page.locator(`s
 
 test("a rack says which aisle each face is on, and which devices take their air in from the hot aisle", async ({ page }) => {
   const csp = await watchCsp(page);
+  const images: string[] = [];
+  page.on("request", (r) => {
+    const p = new URL(r.url()).pathname;
+    if (p.startsWith("/api/v1/device-types/")) images.push(p);
+  });
   await signInWithToken(page, `/racks/${r30}`);
   const card = page.getByRole("region", { name: "Aisles and airflow" });
   await expect(card).toContainText("Front on the cold aisle, rear on the hot aisle.");
@@ -43,6 +48,12 @@ test("a rack says which aisle each face is on, and which devices take their air 
   // The -F switch on the rear takes its air in at the port side: on the hot aisle.
   await expect(slot(page, "rear", dev.sw30f)).toHaveAttribute("data-airflow", "mismatch");
   await expect(slot(page, "rear", dev.sw30f)).toHaveAttribute("aria-label", /airflow: Reversed/);
+  // #134: it is drawn from its model's front image (the ports) on the rear elevation it is mounted from;
+  // on the front it is only an outline, and no Arista rear image is ever requested for it.
+  await expect(slot(page, "rear", dev.sw30f)).toHaveAttribute("data-face-drawn", "image");
+  await expect(page.locator(`svg[data-face="front"] [data-behind="${dev.sw30f}"]`)).toHaveCount(1);
+  expect(images).toContain("/api/v1/device-types/arista-dcs-7050sx-64-f/front");
+  expect(images.filter((p) => /arista-dcs-7050sx-64-[fr]\/rear$/.test(p))).toEqual([]);
   // Its -R twin on the rear takes its air in at the rack's front: correct.
   await expect(slot(page, "rear", dev.sw30r)).toHaveAttribute("data-airflow", "ok");
   await expect(slot(page, "front", dev.srv30)).toHaveAttribute("data-airflow", "ok");

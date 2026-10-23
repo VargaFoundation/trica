@@ -63,13 +63,15 @@ set; ADR 0030).
   note), no device height means 1 U, no face means front, no position lists the device apart.
 - A device that overlaps another on the same face, or sticks out of the rack, has a red outline, a
   `!` and a note in the table; two racks on one tile, or racks outside the room's size, are flagged.
-- **Faces** (ADR 0042). A device shows its model's image of that face when the device-type
+- **Faces** (ADR 0042). A device shows its model's **front** image on the face it is mounted from (a
+  rear-mounted switch shows its ports on the rear elevation) when the device-type
   library (or the operator's `devicetypes.extra_dir`) has one, stretched to its U box; else a
   generic face drawn for its `role`: drive bays for a server, rows of ports for a switch or a
   router, a few ports and a red band for a firewall, drive carriers for storage and NAS, outlets
   for a PDU, a display and a grille for a UPS, keystone jacks for a patch panel, a blank plate with
   grilles when the role is unknown. The other face of a full-depth device is its rear image,
-  faded, when there is one, else the plain dashed block.
+  faded, when there is one, else the plain dashed block; a shallow device seen from behind is
+  only its outline.
 - **Health**: a strip on the left edge of each device, green ok, amber warning, red critical,
   grey unknown, with an amber or red outline for the last two. It is the worst of the device's
   `health` and of its parts' (`parts_health`: power supplies, fans, disks, modules the reader may

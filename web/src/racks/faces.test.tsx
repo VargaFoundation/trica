@@ -45,6 +45,19 @@ const items: RackItem[] = [
   { device: { id: dev(4), type: "device", display: "pdu-01" }, position: 3, face: "rear", u_height: 1, full_depth: false, role: "pdu", health: "ok" },
 ];
 
+/** The text of a blob (jsdom's has no text()). */
+// The body of a fetched image is Node's Blob on some versions and jsdom's on others: jsdom's
+// FileReader refuses the first, and jsdom's Blob has no text(). Use what the Blob offers.
+const blobText = (b: Blob): Promise<string> => {
+  if (typeof b.text === "function") return b.text();
+  if (typeof b.arrayBuffer === "function") return b.arrayBuffer().then((a) => new TextDecoder().decode(a));
+  return new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error);
+    r.readAsText(b);
+  });
+};
 const faceSvg = (face: "front" | "rear") => document.querySelector(`svg[data-face="${face}"]`) as SVGSVGElement;
 const slot = (face: "front" | "rear", id: string) => faceSvg(face).querySelector(`[data-id="${id}"]`) as SVGElement;
 
@@ -175,6 +188,54 @@ describe("face images", () => {
     await expectNoA11yViolations();
   });
 
+  it("draws a rear-mounted device's front on the rear elevation and its rear on the front (#134)", async () => {
+    const SW = "acme-sw-1u";
+    const EDGE = "acme-edge-1u";
+    const mounted = (n: number, name: string, fullDepth: boolean, model: string): RackItem => ({
+      device: { id: dev(n), type: "device", display: name },
+      position: 5 + (n - 5) * 2,
+      face: "rear",
+      u_height: 1,
+      full_depth: fullDepth,
+      role: "switch",
+      front_image: `/api/v1/device-types/${model}/front`,
+      rear_image: `/api/v1/device-types/${model}/rear`,
+    });
+    const rearItems = [mounted(5, "sw-r1", true, SW), mounted(6, "edge-r1", false, EDGE)];
+    // Each bitmap says which image it is, and each canvas records the last one painted on it.
+    const painted = new Map<HTMLCanvasElement, string>();
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async (b: Blob) => ({ width: 1000, height: 180, close: () => undefined, tag: JSON.parse(await blobText(b)) as string })),
+    );
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(function (this: HTMLCanvasElement) {
+      return { clearRect: () => undefined, drawImage: (b: { tag: string }) => painted.set(this, b.tag) } as never;
+    });
+    const api = mockApi({
+      ...defaultRoutes(),
+      [`GET /objects/${ID.rack}`]: rack,
+      [`GET /racks/${ID.rack}/contents`]: page(rearItems),
+      [`GET /racks/${ID.rack}/removed`]: page([]),
+      [`GET /device-types/${SW}/front`]: `front:${SW}`,
+      [`GET /device-types/${SW}/rear`]: `rear:${SW}`,
+      [`GET /device-types/${EDGE}/front`]: `front:${EDGE}`,
+      [`GET /device-types/${EDGE}/rear`]: `rear:${EDGE}`,
+    });
+    renderApp({ at: `/racks/${ID.rack}` });
+    await screen.findByRole("table");
+    const tagOf = (el: Element | null) => painted.get(el?.querySelector("canvas") as HTMLCanvasElement);
+    // The elevation it is mounted on shows its front (the ports), shallow or not.
+    await waitFor(() => expect(tagOf(slot("rear", dev(5)))).toBe(`front:${SW}`));
+    await waitFor(() => expect(tagOf(slot("rear", dev(6)))).toBe(`front:${EDGE}`));
+    // The other elevation shows a full-depth device's rear, faded.
+    await waitFor(() => expect(tagOf(faceSvg("front").querySelector(".rack-shadow:not(.rack-behind)"))).toBe(`rear:${SW}`));
+    // A shallow device is only an outline from behind: no image on it, and its rear never fetched.
+    const behind = faceSvg("front").querySelector(`[data-behind="${dev(6)}"]`);
+    expect(behind).not.toBeNull();
+    expect(behind?.querySelector("canvas")).toBeNull();
+    expect(api.count(`GET /device-types/${EDGE}/rear`)).toBe(0);
+  });
+
   it("falls back on the role's face when the image cannot be had", async () => {
     mockApi({
       ...defaultRoutes(),
@@ -238,5 +299,29 @@ describe("the export sheet", () => {
     // Generic faces for the devices without an image: their LEDs are arcs.
     expect(calls.some((c) => c.op === "arc")).toBe(true);
     expect(calls.filter((c) => c.op === "fillText").map((c) => c.args[0])).toEqual(expect.arrayContaining(["srv-01  U10-U11", "sw-01  U12"]));
+  });
+
+  it("paints a rear-mounted device's front on the rear sheet and its rear on the front (#134)", () => {
+    const SW_F = "/api/v1/device-types/acme-sw-1u/front";
+    const SW_R = "/api/v1/device-types/acme-sw-1u/rear";
+    const F = { tag: "front" } as unknown as CanvasImageSource;
+    const R = { tag: "rear" } as unknown as CanvasImageSource;
+    const layout = layoutRack(12, [{ id: "sw", name: "sw-r1", position: 5, face: "rear", heightU: 1, fullDepth: true, frontImage: SW_F, rearImage: SW_R }]);
+    const { ctx, calls } = recorder();
+    drawRackSheet(ctx, {
+      title: "Rack r12",
+      uHeight: 12,
+      faces: [
+        { caption: "Front", slots: layout.front },
+        { caption: "Rear", slots: layout.rear },
+      ],
+      footer: "x",
+      images: new Map([
+        [SW_F, F],
+        [SW_R, R],
+      ]),
+    });
+    // The front sheet is drawn first and holds the shadow, the rear image; the rear sheet holds the front image.
+    expect(calls.filter((c) => c.op === "drawImage").map((c) => c.args[0])).toEqual([R, F]);
   });
 });
