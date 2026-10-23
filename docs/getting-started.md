@@ -88,6 +88,13 @@ kubectl -n trica exec deploy/trica -- trica enrol create --config /etc/trica/tri
 Hand the token and the CA certificate (`<transport.ca_dir>/ca.pem`, public; the command says where) to the
 machine over a channel you trust. The token works once.
 
+## Give trica your look
+
+`web.theme.builtin: flat` switches to the built-in flat look; a theme of your own is a zip (or a
+directory) with a `theme.json`, a palette for light and dark, optionally a logo and a font, checked
+with `trica theme check`. On the chart: `theme.builtin`, or `theme.existingConfigMap`. See
+[themes](reference/themes.md).
+
 ## Backup and restore
 
 `trica backup` and `trica restore` take and load a consistent archive of the database. The

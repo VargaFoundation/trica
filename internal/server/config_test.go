@@ -177,3 +177,42 @@ live:
 		t.Fatal("an unknown key in the live block stops the start")
 	}
 }
+
+func TestWebThemeConfig(t *testing.T) {
+	dir := t.TempDir()
+	good := map[string]string{
+		"builtin": "web: {theme: {builtin: flat}}",
+		"path":    "web: {theme: {path: " + dir + ", reload: 30s}}",
+	}
+	for name, yaml := range good {
+		t.Run(name, func(t *testing.T) {
+			c, err := LoadConfig(writeFile(t, "c.yaml", yaml))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if c.Web.Theme == nil || c.Web.Theme.Reload == 0 {
+				t.Fatalf("theme: %+v", c.Web.Theme)
+			}
+		})
+	}
+	if c, _ := LoadConfig(writeFile(t, "c.yaml", "web: {theme: {path: "+dir+"}}")); c.Web.Theme.Reload != time.Minute {
+		t.Errorf("reload defaults to %v, want 1m", c.Web.Theme.Reload)
+	}
+	bad := map[string]struct{ yaml, want string }{
+		"two sources":       {"web: {theme: {builtin: flat, path: " + dir + "}}", "not both"},
+		"no source":         {"web: {theme: {}}", "needs builtin or path"},
+		"unknown built-in":  {"web: {theme: {builtin: neon}}", "not a built-in theme"},
+		"missing path":      {"web: {theme: {path: " + dir + "/none}}", "web.theme.path"},
+		"negative reload":   {"web: {theme: {path: " + dir + ", reload: -1s}}", "negative"},
+		"unknown key":       {"web: {theme: {builtin: flat, locked: true}}", "locked"},
+		"unknown key (url)": {"web: {theme: {url: https://x/t.zip}}", "url"},
+	}
+	for name, c := range bad {
+		t.Run(name, func(t *testing.T) {
+			_, err := LoadConfig(writeFile(t, "c.yaml", c.yaml))
+			if err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Fatalf("error %v, want it to mention %q", err, c.want)
+			}
+		})
+	}
+}

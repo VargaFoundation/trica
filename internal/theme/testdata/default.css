@@ -1,0 +1,6 @@
+/* trica theme default 1.0.0 (default) */
+:root:root{}
+:root:root[data-theme="light"]{}
+@media (prefers-color-scheme: light){
+:root:root:not([data-theme="light"]):not([data-theme="dark"]){}
+}

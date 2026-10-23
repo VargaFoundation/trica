@@ -55,6 +55,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- if .Values.deviceTypes.existingClaim -}}
 {{- $_ := set $cfg "devicetypes" (dict "extra_dir" "/etc/trica/devicetypes") -}}
 {{- end -}}
+{{- if or .Values.theme.builtin .Values.theme.existingConfigMap -}}
+{{- $w := deepCopy (default (dict) $cfg.web) -}}
+{{- if .Values.theme.builtin -}}
+{{- $_ := set $w "theme" (dict "builtin" .Values.theme.builtin) -}}
+{{- else if .Values.theme.archiveKey -}}
+{{- $_ := set $w "theme" (dict "path" (printf "/etc/trica/theme/%s" .Values.theme.archiveKey)) -}}
+{{- else -}}
+{{- $_ := set $w "theme" (dict "path" "/etc/trica/theme") -}}
+{{- end -}}
+{{- $_ := set $cfg "web" $w -}}
+{{- end -}}
 {{- if .Values.live.enabled -}}
 {{- $_ := set $cfg "live" .Values.live.config -}}
 {{- end -}}

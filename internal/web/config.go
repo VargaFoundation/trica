@@ -22,6 +22,9 @@ type Config struct {
 	// OIDC enables "Sign in with SSO" (authorisation code with PKCE). Nil
 	// leaves the pasted API token as the only way in.
 	OIDC *OIDC `json:"oidc"`
+	// Theme is the look in force (ADR 0054). Nil serves the application as
+	// built: no link, no /theme. Never sent to the page.
+	Theme ThemeProvider `json:"-"`
 }
 
 // OIDC describes the public client the page signs in with.

@@ -50,6 +50,17 @@ deviceTypes:
   existingClaim: ""
   subPath: ""
 
+# The look of the console (docs/reference/themes.md). Leave all empty for the
+# built-in default. builtin: "default" or "flat". Or a theme of your own, as a
+# ConfigMap: either the files of the theme (theme.json, logo.svg, ...) as keys,
+# or a zip archive under archiveKey (kubectl create configmap trica-theme
+# --from-file=theme.zip). The ConfigMap is mounted read-only at /etc/trica/theme
+# and re-read every minute, without a restart.
+theme:
+  builtin: ""
+  existingConfigMap: ""
+  archiveKey: ""
+
 service:
   type: ClusterIP
   port: 8080

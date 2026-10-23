@@ -93,6 +93,24 @@
       },
       "additionalProperties": false
     },
+    "theme": {
+      "type": "object",
+      "description": "The look of the console (docs/reference/themes.md): a built-in theme, or a ConfigMap holding a theme (its files, or a zip under archiveKey), mounted read-only at /etc/trica/theme.",
+      "properties": {
+        "builtin": {
+          "type": "string",
+          "enum": ["", "default", "flat"]
+        },
+        "existingConfigMap": {
+          "type": "string"
+        },
+        "archiveKey": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]*$"
+        }
+      },
+      "additionalProperties": false
+    },
     "service": {
       "type": "object",
       "properties": {

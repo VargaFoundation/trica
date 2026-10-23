@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 
 	"github.com/VargaFoundation/trica/internal/live"
 	"github.com/VargaFoundation/trica/internal/reconcile"
+	"github.com/VargaFoundation/trica/internal/theme"
 )
 
 // Config is the server configuration, read from a YAML file and overridden
@@ -177,6 +179,20 @@ type WebConfig struct {
 	Disabled bool `yaml:"disabled"`
 	// OIDC enables "Sign in with SSO" in the browser (public client, PKCE).
 	OIDC *WebOIDCConfig `yaml:"oidc"`
+	// Theme picks the look of the console (ADR 0054). Absent, the built-in
+	// "default" is in force.
+	Theme *WebThemeConfig `yaml:"theme"`
+}
+
+// WebThemeConfig is the "web.theme" section: exactly one of Builtin and Path.
+type WebThemeConfig struct {
+	// Builtin names a theme shipped in the binary (default, flat).
+	Builtin string `yaml:"builtin"`
+	// Path is a theme archive (.zip) or a directory with the same layout, for
+	// instance a mounted ConfigMap. It is read again every Reload.
+	Path string `yaml:"path"`
+	// Reload is how often Path is read again; zero means one minute.
+	Reload time.Duration `yaml:"reload"`
 }
 
 // WebOIDCConfig is what the browser learns from /ui-config.json.
@@ -284,6 +300,9 @@ func (c *Config) defaults() {
 	if c.Web.OIDC != nil && c.Web.OIDC.Issuer == "" && c.Auth.OIDC != nil {
 		c.Web.OIDC.Issuer = c.Auth.OIDC.Issuer
 	}
+	if t := c.Web.Theme; t != nil && t.Reload == 0 {
+		t.Reload = theme.DefaultReload
+	}
 }
 
 func (c *Config) validate() error {
@@ -306,9 +325,37 @@ func (c *Config) validate() error {
 	if w := c.Web.OIDC; w != nil && (w.Issuer == "" || w.ClientID == "") {
 		return errors.New("config: web.oidc needs a client_id and an issuer (or auth.oidc.issuer)")
 	}
+	if t := c.Web.Theme; t != nil {
+		if err := validateTheme(t); err != nil {
+			return err
+		}
+	}
 	if c.Live != nil {
 		if err := c.Live.Validate(); err != nil {
 			return fmt.Errorf("config: %w", err)
+		}
+	}
+	return nil
+}
+
+// validateTheme refuses what the server could not honour: a start with a
+// configuration that names a theme it cannot find is a mistake to report, not
+// to hide behind the default (a theme that fails later, while running, is
+// another matter and never stops the server).
+func validateTheme(t *WebThemeConfig) error {
+	switch {
+	case t.Builtin != "" && t.Path != "":
+		return errors.New("config: web.theme takes builtin or path, not both")
+	case t.Builtin == "" && t.Path == "":
+		return errors.New("config: web.theme needs builtin or path")
+	case t.Reload < 0:
+		return errors.New("config: web.theme.reload must not be negative")
+	case t.Builtin != "" && !slices.Contains(theme.BuiltinNames(), t.Builtin):
+		return fmt.Errorf("config: web.theme.builtin %q is not a built-in theme (%s)", t.Builtin, strings.Join(theme.BuiltinNames(), ", "))
+	}
+	if t.Path != "" {
+		if _, err := os.Stat(t.Path); err != nil {
+			return fmt.Errorf("config: web.theme.path: %w", err)
 		}
 	}
 	return nil

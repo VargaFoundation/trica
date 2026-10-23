@@ -29,7 +29,8 @@ body {
 h1,
 h2,
 h3 {
-  font-weight: 600;
+  font-family: var(--trica-font-title);
+  font-weight: var(--trica-font-title-weight);
   letter-spacing: -0.01em;
   line-height: 1.25;
   overflow-wrap: anywhere;
@@ -155,11 +156,19 @@ main:focus {
 .brand-mark {
   display: inline-grid;
   place-items: center;
-  width: 1.5rem;
+  width: var(--trica-logo-width);
   height: 1.5rem;
   border-radius: var(--trica-radius-control);
-  background: var(--trica-accent);
+  /* A theme's logo (ADR 0054) replaces the drawn icon and its ground. */
+  background-color: var(--trica-brand-ground);
+  background-image: var(--trica-logo);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
   color: var(--trica-accent-ink);
+}
+.brand-mark svg {
+  display: var(--trica-brand-icon);
 }
 .sidebar-nav {
   flex: 1 1 auto;
@@ -202,6 +211,7 @@ main:focus {
   background: var(--trica-accent-soft);
   color: var(--trica-ink);
   font-weight: 500;
+  box-shadow: inset var(--trica-signal-width) 0 0 var(--trica-signal);
 }
 .nav-link[aria-current="page"] .icon {
   color: var(--trica-link);
@@ -981,7 +991,7 @@ details > summary:hover {
   color: var(--trica-ink);
 }
 .tab[aria-selected="true"] {
-  border-bottom-color: var(--trica-accent);
+  border-bottom-color: var(--trica-signal);
   color: var(--trica-ink);
   font-weight: 500;
 }

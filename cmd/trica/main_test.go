@@ -177,3 +177,29 @@ func TestBackupRestoreCommands(t *testing.T) {
 		t.Fatal("restore into a populated database accepted without --replace")
 	}
 }
+
+func TestThemeCheck(t *testing.T) {
+	dir := t.TempDir()
+	write := func(manifest string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, "theme.json"), []byte(manifest), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(`{"schema":1,"name":"acme","version":"1.2.3"}`)
+	out, err := runCmd(t, "theme", "check", dir)
+	if err != nil || !strings.Contains(out, "ok: acme 1.2.3") || !strings.Contains(out, "sha256: ") {
+		t.Fatalf("a good theme: %q %v", out, err)
+	}
+	// Every reason is printed, and the exit is a failure.
+	write(`{"schema":1,"name":"acme","version":"1","colors":{"ink":{"light":"#eeeeee","dark":"#222222"},"nope":{"light":"#ffffff","dark":"#000000"}}}`)
+	out, err = runCmd(t, "theme", "check", dir)
+	if err == nil || !strings.Contains(out, "not a colour token") {
+		t.Fatalf("a bad theme: %q %v", out, err)
+	}
+	for _, args := range [][]string{{"theme"}, {"theme", "check"}, {"theme", "lint", dir}, {"theme", "check", filepath.Join(dir, "none")}} {
+		if _, err := runCmd(t, args...); err == nil {
+			t.Errorf("%v accepted", args)
+		}
+	}
+}

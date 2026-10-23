@@ -365,6 +365,7 @@ configuration is an error at start-up.
 | `/assets/<name>-<hash>.<ext>` | The file, `Cache-Control: public, max-age=31536000, immutable` |
 | Another existing file (`/favicon.svg`) | The file, `no-cache`, ETag |
 | `/api`, `/api/...`, a missing file with an extension, a missing `/assets/...` | 404, never the shell (a stale hashed asset must fail, not load HTML as a script) |
+| `/theme/theme.css`, `/theme/favicon`, `/theme/a/<sha256>/<file>` | With a theme configured: the theme's stylesheet (`no-cache`, ETag), icon and referenced files (`immutable`, sandboxing CSP). Public. Never the shell; a 404 when no theme is configured ([themes](themes.md)) |
 | `/ui-config.json` | The sign-in configuration, JSON, `no-store`, no authentication |
 | Methods other than GET and HEAD | 405 |
 
@@ -374,6 +375,13 @@ form-action 'none'; frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, 
 DENY`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy` and same-origin
 opener/resource policies (with SSO configured, `connect-src` also lists the issuer's origin). The application therefore uses no inline script or style, no web font
 and no remote origin; the tests enforce it.
+
+With a theme configured (`web.theme`), the handler links `/theme/theme.css` last in the head of
+`index.html` and points the icon at `/theme/favicon`; the page's CSP does not change, since the
+theme's stylesheet, images and fonts are same-origin files. A theme restates the `--trica-*`
+tokens of `tokens.css` with a heavier selector (`:root:root`), so it wins whatever the order
+([ADR 0054](../adr/0054-ui-themes.md)). A stylesheet of the console must therefore read colours,
+radii, fonts and the brand mark through tokens only.
 
 Two builds: without a tag the binary embeds `internal/web/placeholder/index.html` (a page that says
 the UI is not built in; `web.Built` is false); `go build -tags webui` embeds the real build. The

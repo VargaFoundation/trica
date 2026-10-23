@@ -1,6 +1,6 @@
 # ADR-0040: The console's look: own tokens and primitives, an operations-console style
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10); the tokens can be restated by a theme (ADR 0054)
 - **Concerns**: `web/src/styles/tokens.css`, `web/src/styles/app.css`, `web/src/components/ui/`,
   `web/src/components/Layout.tsx`, `web/src/inventory/`, the object page, `/` and `/health`
 

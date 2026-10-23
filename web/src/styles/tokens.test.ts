@@ -29,71 +29,13 @@ export function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-// [foreground, background, minimum ratio]: 4.5 for text (WCAG 1.4.3), 3 for
-// interface components and focus indicators (WCAG 1.4.11).
-const PAIRS: [string, string, number][] = [
-  ["trica-ink", "trica-surface", 4.5],
-  ["trica-ink", "trica-raised", 4.5],
-  ["trica-ink", "trica-sidebar", 4.5],
-  ["trica-ink", "trica-surface-muted", 4.5],
-  ["trica-ink-muted", "trica-surface", 4.5],
-  ["trica-ink-muted", "trica-raised", 4.5],
-  ["trica-ink-muted", "trica-sidebar", 4.5],
-  ["trica-ink-muted", "trica-surface-muted", 4.5],
-  ["trica-link", "trica-surface", 4.5],
-  ["trica-link", "trica-raised", 4.5],
-  ["trica-link", "trica-surface-muted", 4.5],
-  ["trica-accent-ink", "trica-accent", 4.5],
-  ["trica-accent-ink", "trica-accent-hover", 4.5],
-  ["trica-link", "trica-accent-soft", 4.5],
-  ["trica-ink", "trica-accent-soft", 4.5],
-  // A pill's text on its own tinted ground.
-  ...(["ok", "warn", "danger", "info", "declared", "neutral"] as const).map((t): [string, string, number] => [`trica-${t}-ink`, `trica-${t}-soft`, 4.5]),
-  // Status text without a ground, on a card.
-  ...(["ok", "warn", "danger", "info", "declared", "neutral"] as const).map((t): [string, string, number] => [`trica-${t}-ink`, `trica-raised`, 4.5]),
-  // Interface parts: a control's border, the focus ring, a status dot.
-  ["trica-line-strong", "trica-surface", 3],
-  ["trica-line-strong", "trica-raised", 3],
-  ["trica-focus", "trica-surface", 3],
-  ["trica-focus", "trica-raised", 3],
-  ["trica-focus", "trica-sidebar", 3],
-  // The red row of a failing source carries ordinary text.
-  ["trica-ink", "trica-danger-soft", 4.5],
-  ["trica-ink-muted", "trica-danger-soft", 4.5],
-  ["trica-link", "trica-danger-soft", 4.5],
-  // The topology canvas: labels on nodes and on the paper, lines on the paper.
-  ["trica-graph-ink", "trica-graph-node", 4.5],
-  ["trica-graph-ink", "trica-graph-unresolved", 4.5],
-  ["trica-graph-ink", "trica-graph-paper", 4.5],
-  ["trica-graph-node-line", "trica-graph-paper", 3],
-  ["trica-graph-unresolved-line", "trica-graph-paper", 3],
-  ["trica-graph-declared", "trica-graph-paper", 3],
-  ["trica-graph-observed", "trica-graph-paper", 3],
-  ["trica-graph-deduced", "trica-graph-paper", 3],
-  // The live overlay: lines and device borders on the paper, the MLAG box's name on its ground.
-  ...(["util-normal", "util-warn", "util-crit", "down", "util-unknown", "health-ok", "health-warn", "health-crit", "group-line"] as const).map(
-    (k): [string, string, number] => [`trica-graph-${k}`, "trica-graph-paper", 3],
-  ),
-  ["trica-graph-ink", "trica-graph-group", 4.5],
-  ["trica-graph-health-ok", "trica-graph-node", 3],
-  ["trica-graph-health-warn", "trica-graph-node", 3],
-  ["trica-graph-health-crit", "trica-graph-node", 3],
-  // The isometric map: labels on the floor, on the halo behind them and on every shaded face.
-  ...(["floor", "label-bg", "top", "top-hi", "south", "east", "neutral-top", "neutral-south", "neutral-east"] as const).map(
-    (k): [string, string, number] => ["trica-graph-ink", `trica-iso-${k}`, 4.5],
-  ),
-  // Lines and health outlines on the floor, health outlines on a raised top face.
-  ...(["util-normal", "util-warn", "util-crit", "down", "util-unknown", "health-ok", "health-warn", "health-crit"] as const).map(
-    (k): [string, string, number] => [`trica-graph-${k}`, "trica-iso-floor", 3],
-  ),
-  ...(["health-ok", "health-warn", "health-crit"] as const).map((k): [string, string, number] => [`trica-graph-${k}`, "trica-iso-top", 3]),
-  ["trica-graph-health-ok", "trica-iso-top-hi", 3],
-  ["trica-iso-edge", "trica-iso-floor", 3],
-  ["trica-iso-neutral-edge", "trica-iso-floor", 3],
-  // The small caption under a label is drawn in the muted ink, on the label halo or the floor.
-  ["trica-ink-muted", "trica-iso-label-bg", 4.5],
-  ["trica-ink-muted", "trica-iso-floor", 4.5],
-];
+// [foreground, background, minimum ratio] (names without the --trica- prefix): 4.5 for
+// text (WCAG 1.4.3), 3 for interface components and focus indicators (WCAG 1.4.11). The
+// list is shared with the Go validator of theme archives (ADR 0054), which refuses a
+// theme whose palette fails the same pairs: one file, so the two cannot drift.
+const PAIRS = (
+  JSON.parse(readFileSync(resolve(import.meta.dirname, "../../../internal/theme/contrast.json"), "utf8")) as [string, string, number][]
+).map(([fg, bg, min]): [string, string, number] => [`trica-${fg}`, `trica-${bg}`, min]);
 
 describe.each([
   ["light", light],
@@ -117,6 +59,19 @@ describe("theme blocks", () => {
   });
   it("dark is the default: the bare :root block is dark", () => {
     expect(css.slice(0, css.indexOf("}"))).toMatch(/color-scheme:\s*dark/);
+  });
+  it("declares the tokens a theme restates (ADR 0054)", () => {
+    for (const t of ["font-title", "font-title-weight", "logo", "logo-width", "brand-icon", "brand-ground", "signal-width"]) {
+      expect(css, `--trica-${t}`).toMatch(new RegExp(`--trica-${t}:`));
+    }
+    expect(dark["trica-signal"]).toBeDefined();
+  });
+  it("the shared contrast list names only declared tokens, and is not trivially short", () => {
+    expect(PAIRS.length).toBeGreaterThan(50);
+    for (const [fg, bg] of PAIRS) {
+      expect(dark[fg], fg).toBeDefined();
+      expect(dark[bg], bg).toBeDefined();
+    }
   });
   it("names every colour token --trica-*", () => {
     expect(Object.keys(dark).every((k) => k.startsWith("trica-"))).toBe(true);
