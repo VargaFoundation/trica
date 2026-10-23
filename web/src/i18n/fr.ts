@@ -302,6 +302,7 @@ export const fr: Record<MessageKey, string> = {
   "discrepancies.location.noSite": "dans aucun site",
   "discrepancies.location.rack": "Monté dans",
   "discrepancies.location.rackWins": "la baie décide du site",
+  "discrepancies.location.racks": "Monté dans des baies de sites différents : l'équipement n'a pas de site tant que l'une n'est pas retirée",
   "filter.all": "Tous",
   "filter.apply": "Filtrer",
 
@@ -603,6 +604,7 @@ export const fr: Record<MessageKey, string> = {
   "edit.location.here": "Équipements ici",
   "edit.location.conflictSites": "Les lieux déclarés pour cet équipement sont dans des sites différents : il n'a pas de site tant qu'ils ne concordent pas. Retirez celui qui est faux.",
   "edit.location.conflictRack": "Un lieu déclaré pour cet équipement est dans un autre site que sa baie : la baie décide, et ce lieu est faux. Retirez-le.",
+  "edit.location.conflictRacks": "Cet équipement est monté dans des baies de sites différents : il n'a pas de site tant que le montage erroné n'est pas retiré.",
   "edit.location.conflictLink": "Voir les conflits d'emplacement",
   "nav.sidebar": "Barre latérale",
   "nav.breadcrumbs": "Fil d'Ariane",

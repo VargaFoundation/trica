@@ -39,8 +39,10 @@ func newWorld(t *testing.T) *world {
 	b.Object("room-x2", "room").Identify("name", "salle-2").In("x")
 	b.Object("room-y", "room").Identify("name", "salle-y").In("y")
 	b.Object("rack-x", "rack").Identify("name", "rack-x").In("x")
+	b.Object("rack-y", "rack").Identify("name", "rack-y").In("y")
 	b.Object("ap", "device").Identify("name", "ap-1").Set("role", "access_point")
 	b.Object("sw", "device").Identify("name", "sw-1").Set("role", "switch")
+	b.Object("srv", "device").Identify("name", "srv-1").Set("role", "server")
 	w.apply(b)
 	b = sdk.NewBatch("declaration:test", sdk.ScopePartial)
 	b.Confidence = sdk.Declared
@@ -68,6 +70,15 @@ func (w *world) locate(source, device, placeRef, typ string) {
 	b := sdk.NewBatch(source, sdk.ScopePartial)
 	b.Confidence = sdk.Declared
 	b.Relations = append(b.Relations, &sdk.Relation{Type: place.LocatedIn, From: sdk.ByID("device", w.ids[device]), To: sdk.ByID(typ, w.ids[placeRef]), Attributes: map[string]any{}})
+	w.apply(b)
+}
+
+// mount declares a mounted_in of a device in a rack with a source.
+func (w *world) mount(source, device, rackRef string) {
+	w.t.Helper()
+	b := sdk.NewBatch(source, sdk.ScopePartial)
+	b.Confidence = sdk.Declared
+	b.Relations = append(b.Relations, &sdk.Relation{Type: place.MountedIn, From: sdk.ByID("device", w.ids[device]), To: sdk.ByID("rack", w.ids[rackRef]), Attributes: map[string]any{}})
 	w.apply(b)
 }
 

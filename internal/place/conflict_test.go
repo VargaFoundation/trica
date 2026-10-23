@@ -2,7 +2,9 @@ package place_test
 
 import (
 	"context"
+	"encoding/json"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/VargaFoundation/trica/internal/place"
@@ -115,6 +117,8 @@ func TestConflictsAgreeWithSites(t *testing.T) {
 	w.locate("user:a", "ap", "room-x1", "room")
 	w.locate("user:b", "ap", "room-y", "room")
 	w.locate("user:a", "sw", "room-y", "room")
+	w.mount("user:a", "srv", "rack-x")
+	w.mount("user:b", "srv", "rack-y")
 	ctx := context.Background()
 	all, _, err := w.st.List(ctx, store.ListFilter{Limit: 1000})
 	if err != nil {
@@ -132,8 +136,8 @@ func TestConflictsAgreeWithSites(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(conflicts) != 2 {
-		t.Fatalf("conflicts %+v, want ap (sites) and sw (rack)", conflicts)
+	if len(conflicts) != 3 {
+		t.Fatalf("conflicts %+v, want ap (sites), sw (rack) and srv (racks)", conflicts)
 	}
 	for dev, c := range conflicts {
 		switch c.Reason {
@@ -145,10 +149,78 @@ func TestConflictsAgreeWithSites(t *testing.T) {
 			if sites[dev] != c.RackSiteID {
 				t.Errorf("%s: Sites gives %q, the rack's site is %s", dev, sites[dev], c.RackSiteID)
 			}
+		case place.ReasonRacks:
+			if s, ok := sites[dev]; ok {
+				t.Errorf("%s has conflict racks but Sites gives %s", dev, s)
+			}
 		default:
 			t.Errorf("reason %q", c.Reason)
 		}
 	}
+}
+
+func TestConflictsRacksInTwoSites(t *testing.T) {
+	t.Run("two racks of two sites", func(t *testing.T) {
+		w := newWorld(t)
+		w.mount("user:b", "sw", "rack-y")
+		c, ok := w.conflict("sw")
+		if !ok || c.Reason != place.ReasonRacks {
+			t.Fatalf("conflict %+v (%v), want racks", c, ok)
+		}
+		want := []string{w.ids["x"], w.ids["y"]}
+		sort.Strings(want)
+		if len(c.Sites) != 2 || c.Sites[0] != want[0] || c.Sites[1] != want[1] {
+			t.Fatalf("sites %v, want %v", c.Sites, want)
+		}
+		if len(c.Racks) != 2 || c.RackID != "" || c.Places == nil || len(c.Places) != 0 {
+			t.Fatalf("racks %+v, rack %q, places %v", c.Racks, c.RackID, c.Places)
+		}
+		for _, m := range c.Racks {
+			wantSite := map[string]string{w.ids["rack-x"]: w.ids["x"], w.ids["rack-y"]: w.ids["y"]}[m.RackID]
+			if m.SiteID != wantSite || len(m.Sources) == 0 {
+				t.Fatalf("mount %+v, want site %s and sources", m, wantSite)
+			}
+		}
+		raw, err := json.Marshal(c)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(raw), `"places":[]`) || !strings.Contains(string(raw), `"racks":[`) {
+			t.Fatalf("json %s", raw)
+		}
+	})
+	t.Run("a place does not change the reason", func(t *testing.T) {
+		w := newWorld(t)
+		w.mount("user:b", "sw", "rack-y")
+		w.locate("user:a", "sw", "room-x1", "room")
+		c, ok := w.conflict("sw")
+		if !ok || c.Reason != place.ReasonRacks || len(c.Places) != 1 || len(c.Sites) != 2 {
+			t.Fatalf("conflict %+v (%v)", c, ok)
+		}
+	})
+	t.Run("a second rack of the same site", func(t *testing.T) {
+		w := newWorld(t)
+		b := sdk.NewBatch("declaration:test", sdk.ScopePartial)
+		b.Confidence = sdk.Declared
+		b.Object("x", "site").Identify("code", "X")
+		b.Object("rack-x2", "rack").Identify("name", "rack-x2").In("x")
+		w.apply(b)
+		w.mount("user:b", "sw", "rack-x2")
+		if c, ok := w.conflict("sw"); ok {
+			t.Fatalf("unexpected conflict %+v", c)
+		}
+	})
+	t.Run("a rack in no site next to a rack in X", func(t *testing.T) {
+		w := newWorld(t)
+		b := sdk.NewBatch("declaration:test", sdk.ScopePartial)
+		b.Confidence = sdk.Declared
+		b.Object("rack-n", "rack").Identify("name", "rack-n")
+		w.apply(b)
+		w.mount("user:b", "sw", "rack-n")
+		if c, ok := w.conflict("sw"); ok {
+			t.Fatalf("unexpected conflict %+v", c)
+		}
+	})
 }
 
 func TestPlacedUnder(t *testing.T) {

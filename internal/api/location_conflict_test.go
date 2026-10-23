@@ -46,3 +46,41 @@ func TestLocationConflictThroughTheAPI(t *testing.T) {
 		t.Fatalf("a Lyon-limited reader sees %d conflicts of a device that has no site", got.Total)
 	}
 }
+
+// A device mounted in racks of two sites has no site: its conflict is listed to
+// a reader of everything, and hidden from a site-limited one.
+func TestRacksConflictThroughTheAPI(t *testing.T) {
+	e := placeEnv(t)
+	b := sdk.NewBatch("declaration:test", sdk.ScopePartial)
+	b.Confidence = sdk.Declared
+	b.Object("paris", "site").Identify("code", "PAR1")
+	b.Object("lyon", "site").Identify("code", "LYO1")
+	b.Object("rack-p", "rack").Identify("name", "rack-p").In("paris")
+	b.Object("rack-l", "rack").Identify("name", "rack-l").In("lyon")
+	e.apply(b)
+	for _, m := range []struct{ source, rack string }{{"user:a", "rack-p"}, {"user:b", "rack-l"}} {
+		e.clk.advance(time.Minute)
+		b := sdk.NewBatch(m.source, sdk.ScopePartial)
+		b.Confidence = sdk.Declared
+		b.RelateEndpoints("mounted_in", sdk.ByID("device", e.ids["ap"]), sdk.ByID("rack", e.ids[m.rack]))
+		e.apply(b)
+	}
+	path := "/api/v1/discrepancies?status=open&kind=location_conflict&object=" + e.ids["ap"]
+	page := e.page(path, tokReader)
+	if page.Total != 1 || len(page.Items) != 1 {
+		t.Fatalf("conflicts %d, want 1", page.Total)
+	}
+	var d struct {
+		Key     string         `json:"key"`
+		Details place.Conflict `json:"details"`
+	}
+	if err := json.Unmarshal(page.Items[0], &d); err != nil {
+		t.Fatal(err)
+	}
+	if d.Key != "mounted_in" || d.Details.Reason != place.ReasonRacks || len(d.Details.Racks) != 2 {
+		t.Fatalf("conflict %+v", d)
+	}
+	if got := e.page(path, tokSiteLyon); got.Total != 0 {
+		t.Fatalf("a Lyon-limited reader sees %d conflicts of a device that has no site", got.Total)
+	}
+}

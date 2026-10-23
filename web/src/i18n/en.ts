@@ -302,6 +302,7 @@ export const en = {
   "discrepancies.location.noSite": "in no site",
   "discrepancies.location.rack": "Mounted in",
   "discrepancies.location.rackWins": "the rack decides the site",
+  "discrepancies.location.racks": "Mounted in racks of different sites: the device has no site until one is withdrawn",
   "filter.all": "All",
   "filter.apply": "Filter",
 
@@ -603,6 +604,7 @@ export const en = {
   "edit.location.here": "Devices here",
   "edit.location.conflictSites": "The places declared for this device are in different sites: it has no site until they agree. Withdraw the one that is wrong.",
   "edit.location.conflictRack": "A place declared for this device is in another site than its rack: the rack decides, and that place is wrong. Withdraw it.",
+  "edit.location.conflictRacks": "This device is mounted in racks of different sites: it has no site until the wrong mounting is withdrawn.",
   "edit.location.conflictLink": "See the location conflicts",
   "nav.sidebar": "Sidebar",
   "nav.breadcrumbs": "Breadcrumb",

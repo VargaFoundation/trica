@@ -1,5 +1,5 @@
 import { DISCREPANCY_KINDS, isKnownKind, kindLabel, locationConflictOf } from "./discrepancies";
-import { discrepancyLocation, discrepancyLocationRack } from "./test/fixtures";
+import { discrepancyLocation, discrepancyLocationRack, discrepancyLocationRacks } from "./test/fixtures";
 
 describe("locationConflictOf", () => {
   it("reads what the engine writes, for both reasons", () => {
@@ -8,6 +8,13 @@ describe("locationConflictOf", () => {
     expect(rack?.reason).toBe("rack");
     expect(rack?.rack_id).toBeDefined();
     expect(rack?.places[0]?.sources).toEqual(["user:dan"]);
+  });
+
+  it("reads the racks of a racks conflict", () => {
+    const racks = locationConflictOf(discrepancyLocationRacks.details);
+    expect(racks?.reason).toBe("racks");
+    expect(racks?.racks).toHaveLength(2);
+    expect(racks?.places).toEqual([]);
   });
 
   it.each([
@@ -19,6 +26,11 @@ describe("locationConflictOf", () => {
     ["a place with no sources", { reason: "sites", sites: [], places: [{ place_id: "a", place_type: "room" }] }],
     ["a place that is not an object", { reason: "sites", sites: [], places: ["a"] }],
     ["a site id that is not a string", { reason: "sites", sites: [], places: [{ place_id: "a", place_type: "room", site_id: 3, sources: [] }] }],
+    ["a racks conflict with no racks", { reason: "racks", sites: [], places: [] }],
+    ["a mount whose rack id is a number", { reason: "racks", sites: [], places: [], racks: [{ rack_id: 3, sources: [] }] }],
+    ["a mount with no sources", { reason: "racks", sites: [], places: [], racks: [{ rack_id: "a" }] }],
+    ["a mount whose site id is a number", { reason: "racks", sites: [], places: [], racks: [{ rack_id: "a", site_id: 3, sources: [] }] }],
+    ["a mount that is not an object", { reason: "racks", sites: [], places: [], racks: ["a"] }],
     ["a rack id that is not a string", { reason: "rack", sites: [], places: [], rack_id: 3 }],
   ])("rejects %s", (_, details) => {
     expect(locationConflictOf(details)).toBeNull();

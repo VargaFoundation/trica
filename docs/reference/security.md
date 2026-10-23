@@ -39,7 +39,7 @@ place, `internal/place`: the site of its parent; for a device, the site of the r
 in; for a device in no rack, the site of the site, building or room a person placed it in
 (`located_in`, [ADR 0058](../adr/0058-placing-devices-outside-racks.md)). A rack wins over a place.
 An object with no site, or whose places lie in two different sites, has none, and a site-limited
-grant does not match it. The engine surfaces the disagreement as a `location_conflict` discrepancy ([ADR 0061](../adr/0061-location-conflict-discrepancy.md)); a site-limited reader does not see a `sites` one, as the device has no site for them.
+grant does not match it. The engine surfaces the disagreement as a `location_conflict` discrepancy ([ADR 0061](../adr/0061-location-conflict-discrepancy.md)); a site-limited reader does not see a `sites` or `racks` one, as the device has no site for them.
 
 ## Credentials
 
