@@ -441,6 +441,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/objects/{id}/series/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The measurements of the object (the series attributes of its type) that have at least one reading in a range, current or withdrawn: which curves its page draws, in one call (ADR 0045).
+         * @description Requires the "read" action.
+         */
+        get: operations["getObjectSeriesKeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/objects/{id}/timeline": {
         parameters: {
             query?: never;
@@ -4069,6 +4089,14 @@ export interface components {
             truncated: boolean;
             unit?: string;
         };
+        SeriesKeys: {
+            /** Format: date-time */
+            from: string;
+            keys: string[];
+            object_id: string;
+            /** Format: date-time */
+            to: string;
+        };
         SeriesPoint: {
             avg: number;
             max: number;
@@ -4929,6 +4957,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Series"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getObjectSeriesKeys: {
+        parameters: {
+            query?: {
+                /** @description Start of the range (default: 24 hours before to). */
+                from?: string | unknown | unknown;
+                /** @description End of the range (default: now). */
+                to?: string | unknown | unknown;
+            };
+            header?: never;
+            path: {
+                /** @description Object id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeriesKeys"];
                 };
             };
             400: components["responses"]["Problem400"];

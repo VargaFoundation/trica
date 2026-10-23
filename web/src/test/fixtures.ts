@@ -19,6 +19,7 @@ import type {
   SchemaDoc,
   SearchPage,
   Series,
+  SeriesKeys,
   SourceHealth,
 } from "../api/types";
 
@@ -404,6 +405,12 @@ export const healthFailing: SourceHealth = {
  * readings, a gap of two buckets, then a fourth. Power is around 400 W, the
  * temperatures around 25 °C.
  */
+export function keysOf(objectId: string, keys: string[], query: URLSearchParams): SeriesKeys {
+  const to = query.get("to") ?? "2026-10-12T06:00:00Z";
+  const from = query.get("from") ?? new Date(Date.parse(to) - 86_400_000).toISOString();
+  return { object_id: objectId, from, to, keys };
+}
+
 export function seriesOf(objectId: string, query: URLSearchParams): Series {
   const key = query.get("key") ?? "";
   const to = query.get("to") ?? "2026-10-12T06:00:00Z";

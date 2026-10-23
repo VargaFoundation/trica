@@ -7849,6 +7849,34 @@
         ],
         "type": "object"
       },
+      "SeriesKeys": {
+        "properties": {
+          "from": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "object_id": {
+            "type": "string"
+          },
+          "to": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "keys",
+          "object_id",
+          "to"
+        ],
+        "type": "object"
+      },
       "SeriesPoint": {
         "properties": {
           "avg": {
@@ -9677,6 +9705,92 @@
           }
         },
         "summary": "A measurement of the object (power, temperature) over a range, in buckets, from its history.",
+        "tags": [
+          "inventory"
+        ],
+        "x-trica-action": "read"
+      }
+    },
+    "/objects/{id}/series/keys": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "getObjectSeriesKeys",
+        "parameters": [
+          {
+            "description": "Object id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start of the range (default: 24 hours before to).",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time"
+                },
+                {
+                  "format": "date"
+                }
+              ],
+              "description": "RFC 3339 time or YYYY-MM-DD date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "End of the range (default: now).",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time"
+                },
+                {
+                  "format": "date"
+                }
+              ],
+              "description": "RFC 3339 time or YYYY-MM-DD date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesKeys"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "The measurements of the object (the series attributes of its type) that have at least one reading in a range, current or withdrawn: which curves its page draws, in one call (ADR 0045).",
         "tags": [
           "inventory"
         ],

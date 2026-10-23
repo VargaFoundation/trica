@@ -29,6 +29,7 @@ export type RelationEnd = S["RelationEnd"];
 export type RackItem = S["RackItem"];
 export type LiveTopology = S["LiveTopology"];
 export type Series = S["Series"];
+export type SeriesKeys = S["SeriesKeys"];
 export type SeriesPoint = S["SeriesPoint"];
 export type LiveLink = S["LiveLink"];
 export type LiveSourceStatus = S["LiveSourceStatus"];

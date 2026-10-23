@@ -635,6 +635,7 @@ export const en = {
   "series.empty": "No reading in this period.",
   "series.summary": "Last {last} · lowest {min} · highest {max}",
   "series.point": "{time}: {avg} (from {min} to {max})",
+  "series.noCurrent": "No current value: the source no longer reports this measurement. The curve shows the readings it had.",
   "series.truncated": "Too many readings in this period: its end is missing. Choose a shorter period.",
   "firmware.summary.one": "{count} component · {stale} over two years old · {behind} behind the fleet.",
   "firmware.summary.other": "{count} components · {stale} over two years old · {behind} behind the fleet.",

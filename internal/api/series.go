@@ -1,9 +1,11 @@
 package api
 
 import (
+	"sort"
 	"strconv"
 	"time"
 
+	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/internal/store"
 )
 
@@ -44,6 +46,80 @@ type Series struct {
 	Truncated bool `json:"truncated"`
 }
 
+// seriesRange reads the from and to of a request: the 24 hours before now by
+// default, from before to, at most maxSeriesSpan.
+func seriesRange(c *call, now time.Time) (from, to time.Time, err error) {
+	t, err := optTime(c, "to")
+	if err != nil {
+		return from, to, err
+	}
+	to = now
+	if t != nil {
+		to = *t
+	}
+	f, err := optTime(c, "from")
+	if err != nil {
+		return from, to, err
+	}
+	from = to.Add(-24 * time.Hour)
+	if f != nil {
+		from = *f
+	}
+	if !from.Before(to) {
+		return from, to, badRequest("from must be before to")
+	}
+	if to.Sub(from) > maxSeriesSpan {
+		return from, to, badRequest("the range must not exceed %d days", int(maxSeriesSpan/(24*time.Hour)))
+	}
+	return from, to, nil
+}
+
+// SeriesKeys lists the measurements of one object that had a reading in a range.
+type SeriesKeys struct {
+	ObjectID string    `json:"object_id"`
+	From     time.Time `json:"from"`
+	To       time.Time `json:"to"`
+	// Keys are the series attributes of the type with at least one value valid
+	// in the range, current or withdrawn, sorted.
+	Keys []string `json:"keys"`
+}
+
+// seriesAttributes returns the measurements a type declares and exposes, sorted.
+func seriesAttributes(t *schema.Type) []string {
+	out := []string{}
+	for name, a := range t.Attributes {
+		if a.Series && !Sensitive(name) {
+			out = append(out, name)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func (s *Server) hSeriesKeys(c *call) error {
+	id, err := c.idParam()
+	if err != nil {
+		return err
+	}
+	from, to, err := seriesRange(c, s.now())
+	if err != nil {
+		return err
+	}
+	o, _, err := c.loadObject(id)
+	if err != nil {
+		return err
+	}
+	keys := []string{}
+	if t, err := s.registry().Type(o.Type); err == nil {
+		if declared := seriesAttributes(t); len(declared) > 0 {
+			if keys, err = s.st.KeysWithHistory(c.ctx(), id, declared, from, to); err != nil {
+				return err
+			}
+		}
+	}
+	return c.json(200, SeriesKeys{ObjectID: id, From: from.UTC(), To: to.UTC(), Keys: keys})
+}
+
 func (s *Server) hSeries(c *call) error {
 	id, err := c.idParam()
 	if err != nil {
@@ -66,26 +142,9 @@ func (s *Server) hSeries(c *call) error {
 		points = n
 	}
 	now := s.now()
-	to, err := optTime(c, "to")
+	from, to, err := seriesRange(c, now)
 	if err != nil {
 		return err
-	}
-	if to == nil {
-		to = &now
-	}
-	from, err := optTime(c, "from")
-	if err != nil {
-		return err
-	}
-	if from == nil {
-		f := to.Add(-24 * time.Hour)
-		from = &f
-	}
-	if !from.Before(*to) {
-		return badRequest("from must be before to")
-	}
-	if to.Sub(*from) > maxSeriesSpan {
-		return badRequest("the range must not exceed %d days", int(maxSeriesSpan/(24*time.Hour)))
 	}
 	o, _, err := c.loadObject(id)
 	if err != nil {
@@ -99,7 +158,7 @@ func (s *Server) hSeries(c *call) error {
 		}
 		unit = a.Unit
 	}
-	vals, truncated, err := s.st.HistoryBetween(c.ctx(), id, key, *from, *to, seriesScan)
+	vals, truncated, err := s.st.HistoryBetween(c.ctx(), id, key, from, to, seriesScan)
 	if err != nil {
 		return err
 	}
