@@ -19,6 +19,10 @@ async function watchCsp(page: Page): Promise<() => string[]> {
 }
 
 test("an uplink is a line of its own in the table and the legend, and is accessible", async ({ page }) => {
+  // Laying out the 200 devices and then running axe over the whole page takes
+  // close to the 30 s default on a CI runner (31.8 s and 32.4 s seen): it gets
+  // three times that, as the layout's own wait already allows 30 s.
+  test.slow();
   const csp = await watchCsp(page);
   await signInWithToken(page, "/topology?view=network");
   await expect(page.locator('.topology-canvas[data-state="ready"][data-nodes="200"]')).toBeVisible(LAYOUT_200);
