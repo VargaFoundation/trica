@@ -8,6 +8,7 @@ package maas
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/netip"
 	"net/url"
@@ -57,6 +58,9 @@ type Options struct {
 	// domain, named after the fabric. Map a fabric to "default" when it is the
 	// network the switches and the firewall report under that name.
 	VLANDomains map[string]string `yaml:"vlan_domains" doc:"Maps a MAAS fabric name to the layer-2 domain its VLANs are filed under; a fabric not listed is its own domain."`
+	// UntaggedVIDs maps a MAAS fabric name to the VLAN ID the switches use for
+	// that fabric's untagged VLAN (MAAS reports it as VID 0).
+	UntaggedVIDs map[string]int `yaml:"untagged_vids" doc:"Maps a MAAS fabric name to the VLAN ID its untagged (VID 0) VLAN carries on the switches; that VLAN is then reported as <domain>:<vid>, the switches' object. A fabric not listed keeps <domain>:0."`
 }
 
 // Collector reads one MAAS region controller.
@@ -76,7 +80,71 @@ func New(t collect.Target) (sdk.Collector, error) {
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return nil, fmt.Errorf("target %s: address must be an http(s) URL such as http://maas.example.net:5240 (got %q)", t.Source(), t.Address)
 	}
+	if opts.UntaggedVIDs, err = checkUntaggedVIDs(opts.UntaggedVIDs); err != nil {
+		return nil, fmt.Errorf("target %s: options.untagged_vids: %w", t.Source(), err)
+	}
 	return &Collector{target: t, opts: opts}, nil
+}
+
+// checkUntaggedVIDs trims the fabric names and refuses a VLAN ID the switches
+// cannot carry.
+func checkUntaggedVIDs(m map[string]int) (map[string]int, error) {
+	if len(m) == 0 {
+		return nil, nil
+	}
+	out := make(map[string]int, len(m))
+	for fabric, vid := range m {
+		name := strings.TrimSpace(fabric)
+		if name == "" {
+			return nil, errors.New("a fabric name is empty")
+		}
+		if vid < 1 || vid > 4094 {
+			return nil, fmt.Errorf("fabric %q: VLAN ID %d is not between 1 and 4094", name, vid)
+		}
+		out[name] = vid
+	}
+	return out, nil
+}
+
+// untaggedVIDs resolves options.untagged_vids against fabrics/: a fabric that
+// already has the VID as a tagged VLAN is not remapped (it would merge two of
+// MAAS's layer-2 networks), and a fabric MAAS does not report is warned about,
+// only when fabrics/ was read (fabricsKnown).
+func untaggedVIDs(opt map[string]int, fabrics []fabric, fabricsKnown bool) (map[string]int, []string) {
+	if len(opt) == 0 {
+		return nil, nil
+	}
+	names := make([]string, 0, len(opt))
+	for n := range opt {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	byName := map[string]fabric{}
+	for _, f := range fabrics {
+		byName[strings.TrimSpace(f.Name)] = f
+	}
+	out := map[string]int{}
+	var warnings []string
+	for _, n := range names {
+		vid := opt[n]
+		if fabricsKnown {
+			f, ok := byName[n]
+			if !ok {
+				warnings = append(warnings, fmt.Sprintf("options.untagged_vids: fabric %q is not in MAAS, ignored", n))
+				continue
+			}
+			clash := false
+			for _, v := range f.VLANs {
+				clash = clash || int(v.VID) == vid
+			}
+			if clash {
+				warnings = append(warnings, fmt.Sprintf("options.untagged_vids: fabric %q already has a tagged VLAN %d, so its untagged VLAN is not reported as VLAN %d", n, vid, vid))
+				continue
+			}
+		}
+		out[n] = vid
+	}
+	return out, warnings
 }
 
 // Kind implements sdk.Collector.
@@ -138,8 +206,9 @@ func (c *Collector) Collect(parent context.Context, emit sdk.Emitter) error {
 		failures = append(failures, "subnets: "+err.Error())
 	}
 	var fabrics []fabric
+	fabricsOK := true
 	if err := cl.get(ctx, "fabrics/", nil, &fabrics); err != nil {
-		fabrics = nil
+		fabrics, fabricsOK = nil, false
 		failures = append(failures, "fabrics: "+err.Error())
 	}
 
@@ -149,10 +218,15 @@ func (c *Collector) Collect(parent context.Context, emit sdk.Emitter) error {
 			"so this batch is partial and withdraws nothing (set options.assume_full_visibility if the key does see every machine)", who.Username))
 	}
 
-	bd := &builder{b: sdk.NewBatch(c.target.Source(), sdk.ScopeFull), domains: c.opts.VLANDomains}
+	untagged, uw := untaggedVIDs(c.opts.UntaggedVIDs, fabrics, fabricsOK)
+	warnings = append(warnings, uw...)
+	bd := &builder{b: sdk.NewBatch(c.target.Source(), sdk.ScopeFull), domains: c.opts.VLANDomains, untagged: untagged}
 	for _, f := range fabrics {
 		for i := range f.VLANs {
 			v := f.VLANs[i]
+			if v.VID == 0 {
+				continue // the untagged VLAN is reported when an interface or a subnet is on it (#148)
+			}
 			if v.Fabric == "" {
 				v.Fabric = f.Name
 			}
@@ -183,6 +257,7 @@ type builder struct {
 	b        *sdk.Batch
 	warnings []string
 	domains  map[string]string // Options.VLANDomains
+	untagged map[string]int    // Options.UntaggedVIDs, once resolved against fabrics/
 }
 
 func (bd *builder) warn(format string, args ...any) {
@@ -207,7 +282,18 @@ func (bd *builder) vlanKey(v *vlanInfo) (domain, key string, ok bool) {
 		return "", "", false
 	}
 	domain = bd.vlanDomain(v.Fabric)
-	return domain, collect.VLANKey(domain, int(v.VID)), true
+	return domain, collect.VLANKey(domain, bd.vid(v)), true
+}
+
+// vid is the VLAN ID v is reported under: its own, or, for the untagged VLAN
+// (VID 0) of a fabric in untagged, the VID the switches use for it.
+func (bd *builder) vid(v *vlanInfo) int {
+	if v.VID == 0 {
+		if n, ok := bd.untagged[strings.TrimSpace(v.Fabric)]; ok {
+			return n
+		}
+	}
+	return int(v.VID)
 }
 
 // vlan returns the ref of the VLAN object, creating it on first sight.
@@ -220,10 +306,14 @@ func (bd *builder) vlan(v *vlanInfo) string {
 	if _, exists := bd.b.Lookup(ref); exists {
 		return ref
 	}
+	name := strings.TrimSpace(v.Name)
+	if v.VID == 0 && bd.vid(v) != 0 && strings.EqualFold(name, "untagged") {
+		name = "" // MAAS's default name, which would compete with the switches' own
+	}
 	bd.b.Object(ref, "vlan").
 		Identify("key", key).
-		Set("vid", int64(v.VID)).
-		Set("name", strings.TrimSpace(v.Name)).
+		Set("vid", int64(bd.vid(v))).
+		Set("name", name).
 		Set("domain", domain).
 		Set("mtu", positive(v.MTU)).
 		Set("dhcp_on", v.DHCPOn)
@@ -261,8 +351,8 @@ func (bd *builder) subnet(s subnet) {
 		o.Set("gateway", gw)
 	}
 	if s.VLAN != nil {
-		if s.VLAN.VID != 0 {
-			o.Set("vlan", int64(s.VLAN.VID))
+		if n := bd.vid(s.VLAN); n != 0 {
+			o.Set("vlan", int64(n))
 		}
 		if vref := bd.vlan(s.VLAN); vref != "" {
 			bd.b.Relate("assigned_to", ref, vref)
@@ -422,6 +512,7 @@ func (bd *builder) iface(devRef, sid string, i *iface) {
 		}
 	}
 	if vref := bd.vlan(i.VLAN); vref != "" {
+		// tagged follows the MAAS VID on purpose: a mapped untagged VLAN stays untagged.
 		bd.b.Relate("member_of", ref, vref).With("tagged", i.VLAN.VID != 0)
 	}
 

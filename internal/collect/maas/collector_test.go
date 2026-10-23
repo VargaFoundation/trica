@@ -268,6 +268,10 @@ func TestCollectV35(t *testing.T) {
 		wantAttrs(t, tagged, map[string]any{"vid": int64(204), "name": "storage", "domain": "fabric-0", "mtu": int64(9000), "dhcp_on": false})
 		wantAttrs(t, obj(t, b, "vlan/fabric-0:0"), map[string]any{"vid": int64(0), "name": "untagged", "dhcp_on": true})
 		obj(t, b, "vlan/fabric-1:0")
+		// An empty fabric's untagged VLAN is not reported (#148); a tagged VLAN
+		// nobody is on is an operator's declaration and is kept.
+		noObj(t, b, "vlan/fabric-2:0")
+		wantAttrs(t, obj(t, b, "vlan/fabric-1:30"), map[string]any{"vid": int64(30), "name": "backup"})
 
 		r := rel(b, "member_of", "machine/fk0a01/if/bond0.204", "vlan/fabric-0:204")
 		if r == nil || r.Attributes["tagged"] != true {
@@ -602,6 +606,9 @@ func TestNewRejectsBadConfiguration(t *testing.T) {
 		{name: "unknown option", options: "assume_full_visiblity: true", want: "options"},
 		{name: "no address", mutate: func(tg *collect.Target) { tg.Address = "" }, want: "address"},
 		{name: "not a URL scheme", mutate: func(tg *collect.Target) { tg.Address = "maas.example.net:5240" }, want: "address"},
+		{name: "untagged VID 0", options: "untagged_vids: {fabric-0: 0}", want: "untagged_vids"},
+		{name: "untagged VID 4095", options: "untagged_vids: {fabric-0: 4095}", want: "untagged_vids"},
+		{name: "untagged blank fabric", options: `untagged_vids: {" ": 10}`, want: "untagged_vids"},
 		{name: "wrong scheme", mutate: func(tg *collect.Target) { tg.Address = "ftp://maas.example.net" }, want: "address"},
 	}
 	for _, tc := range tests {

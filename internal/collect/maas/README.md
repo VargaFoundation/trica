@@ -21,6 +21,7 @@ tests assert that the fake server only ever saw `GET`s.
   options:
     assume_full_visibility: false         # see "Read-only access" below
     vlan_domains: {fabric-0: default}     # fabric name -> layer-2 domain of its VLANs
+    untagged_vids: {fabric-0: 203}        # fabric name -> VID of its untagged VLAN on the switches
 ```
 
 | Field | Meaning |
@@ -28,6 +29,7 @@ tests assert that the fake server only ever saw `GET`s.
 | `address` | `http(s)://host[:port]` of the region controller, without `/MAAS`. |
 | `password` | Secret reference to the API key (`env:NAME` or `file:path`). The `username` field is not used. |
 | `options.vlan_domains` | Maps a fabric name to the layer-2 domain its VLANs are filed under (`<domain>:<vid>`). A fabric that is not listed is its own domain, named after the fabric. Map the fabric that is the switches' network to `default` (or the `vlan_domain` they use) so MAAS and the switches report one VLAN object ([ADR 0050](../../../docs/adr/0050-vlan-layer2-domain.md)). |
+| `options.untagged_vids` | Maps a fabric name to the VLAN ID (1 to 4094) the switches use for that fabric's untagged VLAN, which MAAS reports as VID 0. That VLAN is then reported as `<domain>:<vid>`, the switches' object, with that `vid`; the interfaces stay untagged members of it and the prefix's `vlan` follows. MAAS's default name `untagged` is not carried over (a name set in MAAS is). A fabric that already has that VID as a tagged VLAN is not remapped (one warning), a fabric MAAS does not report is warned about (only when `fabrics/` was read). The VID is the operator's to state, it is not detected ([ADR 0050](../../../docs/adr/0050-vlan-layer2-domain.md), amendment for #148). |
 | `options.assume_full_visibility` | Declares that a non-administrator key sees every machine (default `false`). Unknown options are rejected. |
 
 Authentication is OAuth 1.0a with the PLAINTEXT signature method, the only one
@@ -65,11 +67,11 @@ A run issues five `GET` requests and emits one batch with source `maas:<name>`.
 | boot interface address, else first `ip_addresses` | `device.primary_ip`; `ip_address.dns_name` = `fqdn` | |
 | `interface_set[]` | `interface` (child of the device) | `kind`: physical, bond to `lag`, vlan, bridge to `virtual`, other. `mac`, `mtu` (effective MTU), `admin_status` (`enabled`); `oper_status` and `speed_mbps` on physical ports only. |
 | bond / bridge `parents` | `member_of` interface to bond or bridge | A VLAN interface is not a member of its parent. |
-| interface `vlan` | `member_of` interface to `vlan`, `tagged` = VID is not 0 | |
+| interface `vlan` | `member_of` interface to `vlan`, `tagged` = the MAAS VID is not 0 | Still untagged when `untagged_vids` maps the VLAN. |
 | `links[].ip_address` | `ip_address` (strong `address`, `prefix_length`) and `assigned_to` ip to interface | Addresses on no known interface hang on the device. |
 | `blockdevice_set[]` (physical) | `disk` (child of the device) | Identity `name` + `serial`; `model`, `capacity_bytes`, `firmware_version`, `media`, `protocol`. RAID/LVM/bcache layers are skipped, and so are the units an HPE Smart Array presents (see below). |
-| `subnets/` | `prefix` (strong `prefix`) | `description` from the subnet name/description, `gateway`, `vlan` (tag, if not 0), `assigned_to` prefix to VLAN. |
-| `fabrics/` vlans | `vlan` (strong `key` = `<domain>:<vid>`, the domain being the fabric unless `vlan_domains` maps it) | `vid`, `name`, `domain`, `mtu` (**new**), `dhcp_on` (**new**). VID 0 (untagged) is kept: it is a real VLAN of the fabric. |
+| `subnets/` | `prefix` (strong `prefix`) | `description` from the subnet name/description, `gateway`, `vlan` (the reported VID, if not 0), `assigned_to` prefix to VLAN. |
+| `fabrics/` vlans | `vlan` (strong `key` = `<domain>:<vid>`, the domain being the fabric unless `vlan_domains` maps it) | `vid`, `name`, `domain`, `mtu` (**new**), `dhcp_on` (**new**). A tagged VLAN is always reported. The untagged VLAN (VID 0) is reported only when an interface or a subnet is on it, as `<domain>:0`, or `<domain>:<untagged_vids[fabric]>` when mapped (without MAAS's default name `untagged`); an empty fabric reports nothing (#148). |
 
 ### Placeholder values
 

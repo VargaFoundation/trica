@@ -3,7 +3,7 @@
 - **Status**: accepted (2026-10)
 - **Concerns**: `internal/collect` (`DefaultVLANDomain`, `VLANDomain`, `VLANKey`),
   `internal/collect/pfsense`, `internal/collect/arista`, `internal/collect/mikrotik`,
-  `internal/collect/maas` (`options.vlan_domains`), `web/src/topology/vlans.ts`. Builds on
+  `internal/collect/maas` (`options.vlan_domains`, `options.untagged_vids`), `web/src/topology/vlans.ts`. Builds on
   ADR 0036 (identity scope).
 
 ## Context
@@ -55,7 +55,7 @@ already exists, with this meaning, in two collectors.
   parent interface) files both in its one domain; per-parent domains are not modelled. VLANs a
   firewall holds on its WAN interfaces (ISP VLANs) land in `default` too. MAAS's untagged
   (VID 0) VLAN of a fabric is a real VLAN of that fabric, which on a site is often a tagged VLAN
-  of the switches: it is not mapped to its tagged twin (tracked as a finding).
+  of the switches: `options.untagged_vids` maps it to its tagged twin (amendment below, #148).
 - The domain `default` is a convention, not a discovery: two networks never named are one.
 
 ## Amendment: integration with the collector descriptors (ADR 0055) and the UniFi collectors (ADR 0057, 0060)
@@ -65,3 +65,37 @@ carry the `default` and `doc` tags of the descriptors, and each collector's `Col
 covers the types its fake emits (`collecttest`). The UniFi collectors (`internal/collect/unifi`)
 emit no `vlan` object, so the layer-2 domain rule does not apply to them; if a later `api` emits
 VLANs, it must key them `<domain>:<vid>` with `collect.VLANKey`.
+
+## Amendment: MAAS's untagged VLAN (#148)
+
+MAAS reports the VLAN an interface sits on without a tag as VID 0 of its fabric. On a site that
+network is often a tagged VLAN of the switches (a PXE VLAN 203, say), so `vlan_domains` alone
+leaves two objects, `default:203` from the switches and `default:0` from MAAS, and one empty
+`<fabric>:0` per auto-created fabric.
+
+Decisions:
+
+1. **`options.untagged_vids`** on MAAS: a map from MAAS fabric name to a VID from 1 to 4094. That
+   fabric's VID 0 VLAN is reported as `collect.VLANKey(domain, vid)`, the switches' object, with
+   that `vid`. It is a separate option from `vlan_domains`, so that one keeps its shape and the
+   descriptor (ADR 0055) can reflect both as flat maps; it is keyed by fabric, not by domain,
+   because two fabrics of one domain can carry different untagged VIDs. Unset keeps `<domain>:0`.
+2. **Membership stays untagged.** `member_of` keeps `tagged = (MAAS VID != 0)`: the interfaces
+   join the mapped VLAN untagged. Only the VLAN's identity changes.
+3. **The prefix follows**: its `vlan` attribute and `assigned_to` use the mapped VID.
+4. **The name `untagged`** (MAAS's default, case-insensitive) is not set on a mapped VLAN, so it
+   cannot compete with the switch's name. A name the operator set in MAAS is kept.
+5. **Two guards.** A fabric that already has the VID as a tagged VLAN is not remapped (it would
+   merge two of MAAS's layer-2 networks) and raises a warning; a fabric listed but unknown to MAAS
+   raises a warning (a typo). Both checks are skipped when `fabrics/` could not be read; the
+   mapping then still applies and the batch is partial anyway.
+6. **Empty fabrics report no untagged VLAN.** The untagged VLAN appears only when an interface or
+   a subnet is on it; tagged VLANs of `fabrics/` are still reported, as an operator's declaration.
+   Existing member-less `<fabric>:0` objects, and `default:0` once the option is set, become
+   `absent` after the absence delay. Nothing is deleted and nothing needs a migration; a partial
+   batch withdraws nothing.
+
+Rejected: no object for VID 0 (loses the membership of the interfaces and the prefix's VLAN);
+`interface.native_vlan` (it describes a switchport's configuration, which MAAS does not observe,
+and merges nothing); inferring the VID from a matching switch-side prefix (a guess, and domains
+are named by the operator, not discovered).

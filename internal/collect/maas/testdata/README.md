@@ -21,6 +21,8 @@ as `Unknown`, `Not Specified`, the AMI default UUID, and whose `sdb` sits behind
 HPE Smart Array, its serial the controller's NAA name `3001438000000a01`, the form
 seen on a real DL360 Gen9 with the identifier itself made up; an LXD virtual machine) and a
 fourth, never-commissioned machine in 3.3 (no hardware info, no interfaces).
+`fabrics.json` (3.5, synthesised) has an empty `fabric-2` (only its untagged VLAN, no
+interface, no subnet) and a tagged VLAN 30 (`backup`) on `fabric-1` that nothing uses.
 Differences modelled between 3.3 and 3.5: no `hardware_info.system_sku`, no
 `firmware_version` on block devices, no vendor/product/firmware on interfaces, no
 `disabled_boot_architectures` on subnets.
@@ -57,3 +59,6 @@ identifiers contain `FAKE` or start with `fk`, and there is no secret. The fake 
 When recorded responses become available, add them as new directories next to
 these ones, anonymise them before committing, and extend the matrix in
 `../README.md`.
+10. That an auto-created fabric carries only its untagged VLAN (`vid: 0`), and that
+    interfaces on it report `vid: 0` (the synthesised `fabric-2` and the member-less
+    tagged VLAN 30 of `fabric-1` are modelled on that, not recorded).
