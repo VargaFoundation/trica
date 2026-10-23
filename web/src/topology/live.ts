@@ -4,7 +4,7 @@
 // page never talks to a metrics store.
 
 import type { LiveLink, LiveTopology } from "../api/types";
-import type { Edge, LinkRow } from "./model";
+import { isUplink, type Edge, type LinkRow } from "./model";
 
 export type { LiveLink, LiveTopology };
 
@@ -47,6 +47,8 @@ const up = (o: string | undefined) => (o === "up" || o === "down" ? o : undefine
  * is a link down.
  */
 export function rowLive(r: LinkRow, links: Readonly<Record<string, LiveLink>>): RowLive | undefined {
+  // An uplink names no port: its ends are devices, there is nothing to measure (ADR 0062).
+  if (isUplink(r)) return undefined;
   const a = links[r.a.id];
   const b = links[r.b.id];
   const pick = a ?? b;

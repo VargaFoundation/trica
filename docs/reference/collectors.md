@@ -118,7 +118,8 @@ instead (`address` is the console, `https://192.0.2.1`; the key is created on th
 LAN, so it runs with `trica collector` next to the console, with the same `domain` as the cloud
 target: one device per MAC, the ports of each device with their PoE (`poe_status`, `poe_standard`),
 and `uplinked_to` from each device to the device it reaches the network through. The API names no
-uplink port, so no cable is deduced; clients are never requested
+uplink port, so no cable is deduced (the topology page draws the uplink as a device-level line,
+[ADR 0062](../adr/0062-topology-uplinks.md)); clients are never requested
 ([ADR 0060](../adr/0060-unifi-network-integration-api.md)). Synthesised from the specification,
 never run against a console.
 

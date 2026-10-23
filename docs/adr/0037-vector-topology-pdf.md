@@ -1,6 +1,6 @@
 # ADR-0037: The topology PDF is drawn as vectors, in a font every viewer has
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10); amended by ADR 0062 (an uplink's line has an arrowhead)
 - **Concerns**: `web/src/export/vectorPdf.ts`, `web/src/export/pdf.ts` (`assemblePdf`),
   `web/src/topology/graph.ts` (`figureOf`, `Drawing.vector`), `web/src/export/ExportButtons.tsx`.
   Replaces, for the topology only, the paragraph "The PDF is a picture" of ADR 0024. Issue #49,
@@ -35,5 +35,5 @@ curved lines (solid, dotted, dashed) and short labels.
 - Device names outside Latin-1 (Cyrillic, CJK) print with `?`. Embedding a Unicode font would lift
   that, at the cost of a font file and its licence.
 - The PDF is close to the screen, not identical: Helvetica instead of the system font, the boxes'
-  widths computed, curves approximating cytoscape's bezier edges, no arrowheads (there are none on
-  the screen either).
+  widths computed, curves approximating cytoscape's bezier edges, no arrowheads except an uplink's (ADR 0062: two
+  short strokes on the box it points at, as on the screen).
