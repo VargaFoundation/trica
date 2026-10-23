@@ -332,7 +332,30 @@ func TestCollectV35(t *testing.T) {
 		// RAID/LVM layers are not drives.
 		noObj(t, b, "machine/fk0a01/disk/md0")
 		wantIdentity(t, obj(t, b, "machine/fk0a02/disk/sda"), map[string]string{"name": "sda"})
+		// A unit behind an HPE Smart Array is the BMC's to report (#128).
+		noObj(t, b, "machine/fk0a02/disk/sdb")
 	})
+}
+
+func TestSmartArrayUnit(t *testing.T) {
+	for _, tc := range []struct {
+		serial string
+		want   bool
+	}{
+		{"30014380371aa900", true},
+		{" 3001438000000A01 ", true},
+		{"DSK-FAKE-0001", false},
+		{"", false},
+		{"5001438000000a01", false},  // NAA 5: a registered name, not the controller's local one
+		{"3001438000000a0", false},   // 15 digits
+		{"30014380000000a01", false}, // 17 digits
+		{"3001438000000g01", false},  // not hex
+		{"30014390000000a1", false},  // another OUI
+	} {
+		if got := smartArrayUnit(tc.serial); got != tc.want {
+			t.Errorf("smartArrayUnit(%q) = %v, want %v", tc.serial, got, tc.want)
+		}
+	}
 }
 
 func TestCollectV33(t *testing.T) {

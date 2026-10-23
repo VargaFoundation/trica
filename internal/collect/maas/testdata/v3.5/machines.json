@@ -966,6 +966,30 @@
         "system_id": "fk0a02",
         "resource_uri": "/MAAS/api/2.0/nodes/fk0a02/blockdevices/21/",
         "firmware_version": "FW01"
+      },
+      {
+        "id": 22,
+        "name": "sdb",
+        "type": "physical",
+        "path": "/dev/disk/by-dname/sdb",
+        "size": 480103981056,
+        "used_size": 0,
+        "block_size": 512,
+        "available_size": 480103981056,
+        "uuid": null,
+        "model": "EXAMPLE SSD 480",
+        "serial": "3001438000000a01",
+        "id_path": "/dev/disk/by-id/wwn-0x3001438000000a01",
+        "partition_table_type": null,
+        "filesystem": null,
+        "partitions": [],
+        "tags": [
+          "ssd"
+        ],
+        "storage_pool": null,
+        "system_id": "fk0a02",
+        "resource_uri": "/MAAS/api/2.0/nodes/fk0a02/blockdevices/22/",
+        "firmware_version": "W01"
       }
     ],
     "zone": {

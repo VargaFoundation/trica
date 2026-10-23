@@ -474,6 +474,13 @@ func (bd *builder) disk(devRef, sid string, d *blockDevice) {
 		bd.warn("machine %s: a disk without a name was ignored", sid)
 		return
 	}
+	// A unit an HPE Smart Array presents to the system is not a drive: the
+	// serial the operating system reads is the identifier the controller gave
+	// the unit, so the drive behind it would be stored a second time beside
+	// the one the BMC reports with its real serial (issue #128).
+	if smartArrayUnit(d.Serial) {
+		return
+	}
 	o := bd.b.Object(devRef+"/disk/"+name, "disk").In(devRef).
 		Identify("name", name).
 		Identify("serial", clean(d.Serial))
@@ -482,6 +489,24 @@ func (bd *builder) disk(devRef, sid string, d *blockDevice) {
 		Set("firmware_version", clean(d.FirmwareVersion))
 	media, proto := diskMedia(name, d.Tags)
 	o.Set("media", media).Set("protocol", proto)
+}
+
+// smartArrayUnit reports whether serial is the identifier an HPE Smart Array
+// gives a unit it presents (logical drive, or a drive in HBA mode): a locally
+// assigned NAA name (first digit 3) carrying HPE's OUI 00-14-38, 16 hex
+// digits, the unit's index in the last ones. MAAS reads it where a drive's
+// serial would be.
+func smartArrayUnit(serial string) bool {
+	s := strings.ToLower(strings.TrimSpace(serial))
+	if len(s) != 16 || !strings.HasPrefix(s, "3001438") {
+		return false
+	}
+	for _, r := range s {
+		if !strings.ContainsRune("0123456789abcdef", r) {
+			return false
+		}
+	}
+	return true
 }
 
 // diskMedia reads the technology off the tags MAAS sets at commissioning

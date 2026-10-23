@@ -17,7 +17,9 @@ Files in each directory: `version.json` (`GET version/`), `whoami-admin.json` an
 
 Content: three machines in 3.5 (a bonded, bridged, VLAN-tagged server with real
 identifiers; an unallocated server whose firmware reports only placeholders such
-as `Unknown`, `Not Specified`, the AMI default UUID; an LXD virtual machine) and a
+as `Unknown`, `Not Specified`, the AMI default UUID, and whose `sdb` sits behind an
+HPE Smart Array, its serial the controller's NAA name `3001438000000a01`, the form
+seen on a real DL360 Gen9 with the identifier itself made up; an LXD virtual machine) and a
 fourth, never-commissioned machine in 3.3 (no hardware info, no interfaces).
 Differences modelled between 3.3 and 3.5: no `hardware_info.system_sku`, no
 `firmware_version` on block devices, no vendor/product/firmware on interfaces, no
