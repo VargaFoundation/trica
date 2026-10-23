@@ -1741,6 +1741,11 @@ export interface components {
              */
             admin_status?: "up" | "down" | "unknown";
             /**
+             * Connector
+             * @description Physical connector of the port: RJ45, SFP, SFP+, SFP28, QSFP28.
+             */
+            connector?: string;
+            /**
              * Description
              * @description Configured description.
              */
@@ -1779,6 +1784,11 @@ export interface components {
              */
             mac?: string;
             /**
+             * Max speed
+             * @description Fastest speed the port supports.
+             */
+            max_speed_mbps?: number;
+            /**
              * Mode
              * @description Switchport mode.
              * @enum {string}
@@ -1805,6 +1815,17 @@ export interface components {
              * @enum {string}
              */
             oper_status?: "up" | "down" | "unknown" | "not_present";
+            /**
+             * PoE standard
+             * @description IEEE standard of the port's PoE: 802.3af, 802.3at or 802.3bt.
+             */
+            poe_standard?: string;
+            /**
+             * PoE
+             * @description Power over Ethernet the port supplies: delivering power, enabled with nothing to power, limited by the power budget, disabled. Absent on a port that has no PoE.
+             * @enum {string}
+             */
+            poe_status?: "delivering" | "idle" | "limited" | "disabled" | "unknown";
             /**
              * Speed
              * @description Negotiated speed.

@@ -1,0 +1,37 @@
+{
+  "id": "00000000-0000-4000-8000-000000000411",
+  "macAddress": "02:00:00:01:00:11",
+  "ipAddress": "192.0.2.111",
+  "name": "lab-sw",
+  "model": "USW-Ultra",
+  "supported": true,
+  "state": "ONLINE",
+  "firmwareVersion": "7.0.1",
+  "firmwareUpdatable": false,
+  "configurationId": "00000000-0000-4000-8000-000000000f00",
+  "adoptedAt": "2026-01-10T09:00:00Z",
+  "provisionedAt": "2026-01-10T09:05:00Z",
+  "features": {
+    "switching": {}
+  },
+  "interfaces": {
+    "ports": [
+      {
+        "idx": 1,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 1000,
+        "poe": {
+          "enabled": true,
+          "standard": "802.3af",
+          "state": "DOWN",
+          "type": "1"
+        }
+      }
+    ]
+  },
+  "uplink": {
+    "deviceId": "00000000-0000-4000-8000-000000000401"
+  }
+}

@@ -1,6 +1,7 @@
 package unifi
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,7 +9,14 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+)
+
+// Names of the two APIs, for error messages.
+const (
+	apiNameSiteManager = "Site Manager API"
+	apiNameNetwork     = "Network Integration API"
 )
 
 // maxBody bounds a response. A page of a large account stays far below it.
@@ -48,7 +56,10 @@ type requestError struct {
 	Status int
 	Msg    string
 	Retry  string // Retry-After of a 429
-	Err    error
+	// API names the API in the "is this the ...?" hint; empty is the Site
+	// Manager API.
+	API string
+	Err error
 }
 
 func (e *requestError) Error() string {
@@ -71,7 +82,11 @@ func (e *requestError) Error() string {
 	case errServer:
 		fmt.Fprintf(&b, "HTTP %d", e.Status)
 	case errMalformed:
-		b.WriteString("malformed response (is this the Site Manager API?)")
+		api := e.API
+		if api == "" {
+			api = apiNameSiteManager
+		}
+		b.WriteString("malformed response (is this the " + api + "?)")
 	}
 	if e.Msg != "" {
 		b.WriteString(": " + e.Msg)
@@ -93,54 +108,64 @@ func kindOf(err error) errKind {
 	return errTransport
 }
 
-// client performs read-only calls on the Site Manager API. It has no method
-// that sends anything but GET: the collector cannot write to the account.
+// client performs read-only calls on the Site Manager API or on a console's
+// Network Integration API. It has no method that sends anything but GET: the
+// collector cannot write to the account or to the console.
 type client struct {
-	hc   *http.Client
-	base *url.URL
-	key  string
+	hc      *http.Client
+	base    *url.URL
+	key     string
+	apiName string // for the "is this the ...?" hint of a malformed answer
 }
 
 // newClient copies hc to refuse redirects: the key is sent in a header and
-// must never follow a redirect to another origin.
-func newClient(hc *http.Client, base *url.URL, key string) *client {
+// must never follow a redirect to another origin. api is APISiteManager or
+// APINetwork.
+func newClient(hc *http.Client, base *url.URL, key, api string) *client {
 	cp := *hc
 	cp.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
-	return &client{hc: &cp, base: base, key: key}
+	name := apiNameSiteManager
+	if api == APINetwork {
+		name = apiNameNetwork
+	}
+	return &client{hc: &cp, base: base, key: key, apiName: name}
 }
 
-// get performs one GET and returns the decoded envelope. It is the only place
-// of the package that builds a request, and the key only ever goes in the
-// X-API-KEY header.
-func (c *client) get(ctx context.Context, endpoint string, q url.Values) (*envelope, error) {
+// do performs one GET and returns the body of a 2xx answer. It is the only
+// place of the package that builds a request, and the key only ever goes in
+// the X-API-KEY header. A non-2xx status is classified; the message of the
+// answer's JSON body (both APIs call it "message") is kept, clipped.
+func (c *client) do(ctx context.Context, endpoint string, q url.Values) ([]byte, error) {
+	fail := func(k errKind, status int, msg, retry string, err error) error {
+		return &requestError{Kind: k, Path: endpoint, API: c.apiName, Status: status, Msg: msg, Retry: retry, Err: err}
+	}
 	u := c.base.JoinPath(endpoint)
 	u.RawQuery = q.Encode()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return nil, &requestError{Kind: errTransport, Path: endpoint, Err: c.scrub(err)}
+		return nil, fail(errTransport, 0, "", "", c.scrub(err))
 	}
 	req.Header.Set("X-API-KEY", c.key)
 	req.Header.Set("Accept", "application/json")
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		return nil, &requestError{Kind: errTransport, Path: endpoint, Err: c.scrub(err)}
+		return nil, fail(errTransport, 0, "", "", c.scrub(err))
 	}
 	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBody+1))
 	if err != nil {
-		return nil, &requestError{Kind: errTransport, Path: endpoint, Err: c.scrub(err)}
+		return nil, fail(errTransport, 0, "", "", c.scrub(err))
 	}
 	if len(body) > maxBody {
-		return nil, &requestError{Kind: errMalformed, Path: endpoint, Msg: "response too large"}
-	}
-	var env envelope
-	jsonErr := json.Unmarshal(body, &env)
-	msg := ""
-	if jsonErr == nil {
-		msg = c.clip(string(env.Message))
+		return nil, fail(errMalformed, 0, "response too large", "", nil)
 	}
 	re := func(k errKind) error {
-		return &requestError{Kind: k, Path: endpoint, Status: resp.StatusCode, Msg: msg, Retry: c.clip(resp.Header.Get("Retry-After"))}
+		var env envelope
+		msg := ""
+		if json.Unmarshal(body, &env) == nil {
+			msg = c.clip(string(env.Message))
+		}
+		return fail(k, resp.StatusCode, msg, c.clip(resp.Header.Get("Retry-After")), nil)
 	}
 	switch {
 	case resp.StatusCode == http.StatusUnauthorized:
@@ -154,10 +179,91 @@ func (c *client) get(ctx context.Context, endpoint string, q url.Values) (*envel
 	case resp.StatusCode < 200 || resp.StatusCode > 299:
 		return nil, re(errServer)
 	}
-	if jsonErr != nil {
-		return nil, &requestError{Kind: errMalformed, Path: endpoint, Err: c.scrub(jsonErr)}
+	return body, nil
+}
+
+// get performs one GET of the Site Manager API and returns the decoded envelope.
+func (c *client) get(ctx context.Context, endpoint string, q url.Values) (*envelope, error) {
+	body, err := c.do(ctx, endpoint, q)
+	if err != nil {
+		return nil, err
+	}
+	var env envelope
+	if err := json.Unmarshal(body, &env); err != nil {
+		return nil, &requestError{Kind: errMalformed, Path: endpoint, API: c.apiName, Err: c.scrub(err)}
 	}
 	return &env, nil
+}
+
+// getJSON performs one GET and decodes the whole body into T (an answer of the
+// Network Integration API has no envelope).
+func getJSON[T any](ctx context.Context, c *client, endpoint string, q url.Values) (T, error) {
+	var out T
+	body, err := c.do(ctx, endpoint, q)
+	if err != nil {
+		return out, err
+	}
+	if err := json.Unmarshal(body, &out); err != nil {
+		return out, &requestError{Kind: errMalformed, Path: endpoint, API: c.apiName, Err: c.scrub(err)}
+	}
+	return out, nil
+}
+
+// netPageSize is the page asked of the Network Integration API: its maximum.
+const netPageSize = 200
+
+// listOffset reads every page of an offset/limit list of the Network
+// Integration API: {offset, limit, count, totalCount, data[]}. It stops on an
+// empty page or when the items read reach totalCount, so a server that caps
+// the page size below the limit is followed; a server that ignores offset (the
+// same first item twice) or never ends (more than maxPages) is an error, not
+// a loop.
+func listOffset[T any](ctx context.Context, c *client, endpoint string, q url.Values) ([]T, error) {
+	malformed := func(msg string, err error) error {
+		return &requestError{Kind: errMalformed, Path: endpoint, API: c.apiName, Msg: msg, Err: err}
+	}
+	q = cloneValues(q)
+	q.Set("limit", strconv.Itoa(netPageSize))
+	var out []T
+	seen := map[string]bool{}
+	offset := 0
+	for page := 0; ; page++ {
+		if page >= maxPages {
+			return nil, malformed(fmt.Sprintf("more than %d pages", maxPages), nil)
+		}
+		q.Set("offset", strconv.Itoa(offset))
+		pg, err := getJSON[netPage](ctx, c, endpoint, q)
+		if err != nil {
+			return nil, err
+		}
+		data := bytes.TrimSpace(pg.Data)
+		if len(data) == 0 || data[0] != '[' {
+			return nil, malformed("the page has no data array", nil)
+		}
+		var raw []json.RawMessage
+		if err := json.Unmarshal(data, &raw); err != nil {
+			return nil, malformed("", c.scrub(err))
+		}
+		if len(raw) == 0 {
+			return out, nil
+		}
+		first := string(raw[0])
+		if seen[first] {
+			return nil, malformed("the same first item came back: the server ignores offset", nil)
+		}
+		seen[first] = true
+		for _, r := range raw {
+			var v T
+			if err := json.Unmarshal(r, &v); err != nil {
+				return nil, malformed("", c.scrub(err))
+			}
+			out = append(out, v)
+		}
+		offset += len(raw)
+		if total, err := strconv.Atoi(string(pg.TotalCount)); err == nil && offset >= total {
+			return out, nil
+		}
+	}
 }
 
 // list reads every page of a list endpoint, following nextToken, and hands
@@ -168,21 +274,21 @@ func (c *client) list(ctx context.Context, endpoint string, q url.Values, each f
 	seen := map[string]bool{}
 	for page := 0; ; page++ {
 		if page >= maxPages {
-			return &requestError{Kind: errMalformed, Path: endpoint, Msg: fmt.Sprintf("more than %d pages", maxPages)}
+			return &requestError{Kind: errMalformed, Path: endpoint, API: c.apiName, Msg: fmt.Sprintf("more than %d pages", maxPages)}
 		}
 		env, err := c.get(ctx, endpoint, q)
 		if err != nil {
 			return err
 		}
 		if err := each(env.Data); err != nil {
-			return &requestError{Kind: errMalformed, Path: endpoint, Err: c.scrub(err)}
+			return &requestError{Kind: errMalformed, Path: endpoint, API: c.apiName, Err: c.scrub(err)}
 		}
 		tok := string(env.NextToken)
 		if tok == "" {
 			return nil
 		}
 		if seen[tok] {
-			return &requestError{Kind: errMalformed, Path: endpoint, Msg: "the same nextToken came back: the server is not paging"}
+			return &requestError{Kind: errMalformed, Path: endpoint, API: c.apiName, Msg: "the same nextToken came back: the server is not paging"}
 		}
 		seen[tok] = true
 		q.Set("nextToken", tok)

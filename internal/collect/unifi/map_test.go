@@ -46,7 +46,7 @@ func TestHealthOf(t *testing.T) {
 	for in, want := range map[string]string{
 		"online": "ok", "ONLINE": "ok", "offline": "critical", "disconnected": "critical",
 		"updating": "warning", "adopting": "warning", "pending": "warning", "pendingAdoption": "warning", "PENDING_ADOPTION": "warning",
-		"provisioning": "warning", "gettingReady": "warning", "restarting": "warning", "connectionInterrupted": "warning", "isolated": "warning",
+		"provisioning": "warning", "gettingReady": "warning", "restarting": "warning", "connectionInterrupted": "warning", "isolated": "warning", "DELETING": "warning", "U5G_INCORRECT_TOPOLOGY": "warning",
 		"": "unknown", "weird": "unknown",
 	} {
 		if got := healthOf(in); got != want {

@@ -618,8 +618,11 @@ func TestRegistered(t *testing.T) {
 		t.Errorf("descriptor %+v", d)
 	}
 	opts, err := d.OptionFields()
-	if err != nil || len(opts) != 3 || opts[0].Name != "hosts" || opts[1].Name != "roles" || opts[2].Name != "isp_metrics" || opts[2].Default != "true" {
+	if err != nil || len(opts) != 5 || opts[0].Name != "api" || opts[1].Name != "sites" || opts[2].Name != "hosts" || opts[3].Name != "roles" || opts[4].Name != "isp_metrics" || opts[4].Default != "true" {
 		t.Errorf("options %v, %v", opts, err)
+	}
+	if api := opts[0]; api.Default != APISiteManager || len(api.Values) != 2 || api.Values[0] != APISiteManager || api.Values[1] != APINetwork {
+		t.Errorf("options.api %+v: want the enum site-manager, network and the default site-manager", api)
 	}
 }
 

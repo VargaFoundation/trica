@@ -104,7 +104,7 @@ func personalFields(roots ...any) (found []string, walked int) {
 // The decode structs are an allow-list: nothing personal is declared, so
 // nothing personal can be read by a later change that maps "one more field".
 func TestDecodeStructsHaveNoPersonalFields(t *testing.T) {
-	found, walked := personalFields(host{}, site{}, deviceGroup{}, metricSite{}, envelope{})
+	found, walked := personalFields(host{}, site{}, deviceGroup{}, metricSite{}, envelope{}, netPage{}, netInfo{}, netSite{}, netDeviceOverview{}, netDeviceDetails{})
 	for _, f := range found {
 		t.Errorf("%s is decoded: personal data or location must not be read", f)
 	}

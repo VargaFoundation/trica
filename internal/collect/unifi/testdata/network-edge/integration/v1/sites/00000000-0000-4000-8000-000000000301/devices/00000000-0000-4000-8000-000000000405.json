@@ -1,0 +1,31 @@
+{
+  "id": "00000000-0000-4000-8000-000000000405",
+  "macAddress": "",
+  "ipAddress": "192.0.2.105",
+  "name": "no-mac",
+  "model": "U6LR",
+  "supported": true,
+  "state": "ONLINE",
+  "firmwareVersion": "6.6.77",
+  "firmwareUpdatable": false,
+  "configurationId": "00000000-0000-4000-8000-000000000f00",
+  "adoptedAt": "2026-01-10T09:00:00Z",
+  "provisionedAt": "2026-01-10T09:05:00Z",
+  "features": {
+    "accessPoint": {}
+  },
+  "interfaces": {
+    "ports": [
+      {
+        "idx": 1,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 1000
+      }
+    ]
+  },
+  "uplink": {
+    "deviceId": "00000000-0000-4000-8000-000000000402"
+  }
+}

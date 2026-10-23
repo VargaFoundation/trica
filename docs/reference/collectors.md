@@ -113,6 +113,26 @@ readers in a site, building or room (`located_in`, declared from the object page
 file), which gives them a site; a collector's own `located_in` is dropped with a warning
 ([ADR 0058](../adr/0058-placing-devices-outside-racks.md)).
 
+With `options.api: network` a `unifi` target reads one console's own Network Integration API
+instead (`address` is the console, `https://192.0.2.1`; the key is created on the console), from the
+LAN, so it runs with `trica collector` next to the console, with the same `domain` as the cloud
+target: one device per MAC, the ports of each device with their PoE (`poe_status`, `poe_standard`),
+and `uplinked_to` from each device to the device it reaches the network through. The API names no
+uplink port, so no cable is deduced; clients are never requested
+([ADR 0060](../adr/0060-unifi-network-integration-api.md)). Synthesised from the specification,
+never run against a console.
+
+```yaml
+  - kind: unifi
+    name: office-lan
+    address: https://192.0.2.1
+    password: file:/etc/trica/unifi-console-key
+    domain: office-a
+    options:
+      api: network
+      sites: [default]        # optional
+```
+
 Every run of a target ends in one health record on the board (`GET /api/v1/health/collection`):
 the collector's own, or, when it returned an error, panicked or reported none, one made by the
 runner (`collect.Failed` / `collect.Succeeded`). A failing target never stops the others, a run

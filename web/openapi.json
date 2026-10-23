@@ -2204,6 +2204,16 @@
               "fr": "État administratif"
             }
           },
+          "connector": {
+            "description": "Physical connector of the port: RJ45, SFP, SFP+, SFP28, QSFP28.",
+            "title": "Connector",
+            "type": "string",
+            "x-trica-kind": "string",
+            "x-trica-label": {
+              "en": "Connector",
+              "fr": "Connecteur"
+            }
+          },
           "description": {
             "description": "Configured description.",
             "title": "Description",
@@ -2297,6 +2307,17 @@
               "fr": "MAC"
             }
           },
+          "max_speed_mbps": {
+            "description": "Fastest speed the port supports.",
+            "title": "Max speed",
+            "type": "integer",
+            "x-trica-kind": "int",
+            "x-trica-label": {
+              "en": "Max speed",
+              "fr": "Débit maximal"
+            },
+            "x-trica-unit": "Mb/s"
+          },
           "mode": {
             "description": "Switchport mode.",
             "enum": [
@@ -2357,6 +2378,33 @@
             "x-trica-label": {
               "en": "Link status",
               "fr": "État du lien"
+            }
+          },
+          "poe_standard": {
+            "description": "IEEE standard of the port's PoE: 802.3af, 802.3at or 802.3bt.",
+            "title": "PoE standard",
+            "type": "string",
+            "x-trica-kind": "string",
+            "x-trica-label": {
+              "en": "PoE standard",
+              "fr": "Norme PoE"
+            }
+          },
+          "poe_status": {
+            "description": "Power over Ethernet the port supplies: delivering power, enabled with nothing to power, limited by the power budget, disabled. Absent on a port that has no PoE.",
+            "enum": [
+              "delivering",
+              "idle",
+              "limited",
+              "disabled",
+              "unknown"
+            ],
+            "title": "PoE",
+            "type": "string",
+            "x-trica-kind": "enum",
+            "x-trica-label": {
+              "en": "PoE",
+              "fr": "PoE"
             }
           },
           "speed_mbps": {

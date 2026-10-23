@@ -100,6 +100,8 @@ A `unifi` target reads the UniFi Site Manager cloud API, not a device: the serve
 NetworkPolicy cannot name a host, or an `HTTPS_PROXY`). Its API key is a file reference like any other,
 for instance `collect.secrets: [{name: unifi-key}]` mounted at `/var/run/secrets/collect/unifi-key/key`.
 
+A `unifi` target with `options.api: network` reads a console on the LAN, which the cluster usually cannot reach: run it with `trica collector` next to the console (ADR 0060).
+
 ## Live topology
 
 With `live.enabled`, the topology can overlay link throughput and state read by the server from a

@@ -1,0 +1,25 @@
+{
+  "offset": 0,
+  "limit": 25,
+  "count": 1,
+  "totalCount": 1,
+  "data": [
+    {
+      "id": "00000000-0000-4000-8000-000000000411",
+      "macAddress": "02:00:00:01:00:11",
+      "ipAddress": "192.0.2.111",
+      "name": "lab-sw",
+      "model": "USW-Ultra",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "7.0.1",
+      "firmwareUpdatable": false,
+      "features": [
+        "switching"
+      ],
+      "interfaces": [
+        "ports"
+      ]
+    }
+  ]
+}

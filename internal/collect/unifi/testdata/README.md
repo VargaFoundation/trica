@@ -1,6 +1,6 @@
 # Fixtures of the unifi collector
 
-Two sets. Each file is the complete JSON body of one UniFi Site Manager API answer
+Two sets of the Site Manager API, and two of the console's Network Integration API (below). Each file is the complete JSON body of one UniFi Site Manager API answer
 (`https://api.ui.com`), served by `FakeSiteManager` at the path without `.json`;
 `<name>.<token>.json` is the page asked with `nextToken=<token>`.
 
@@ -67,3 +67,33 @@ Applied by hand, consistently across the three files (one real value always got 
 10. Paging, and `hostIds[]` filtering, on `/v1/isp-metrics/5m`; the 400 body of an unsupported type
     such as `15m` (the fake's is synthesised).
 11. Load-balanced and multi-site consoles: which WAN an entry describes, and one entry per site.
+
+## Network Integration API sets (`network-synthesised/`, `network-edge/`)
+
+Served by `FakeNetwork` under `/proxy/network/integration`; the files are `integration/v1/<path>.json`
+(`info`, `sites`, `sites/<id>/devices`, `sites/<id>/devices/<id>`) and `errors/401.json`. A list file
+holds the whole list: the fake cuts it by `offset` and `limit` (default 25, at most 200, an error above)
+and recomputes `offset`, `limit`, `count` and `totalCount`. A device with no detail file answers 404.
+
+| Set | Recorded or synthesised | Content |
+|---|---|---|
+| `network-synthesised/` | **Synthesised** on 2026-10-23. Nothing was observed. Built from the official OpenAPI document of UniFi Network 10.6.106 embedded in the developer.ui.com reference pages (<https://developer.ui.com/network/v10.6.106/getadopteddevicedetails>, <https://developer.ui.com/network/v10.6.106/connectorget>; the unofficial mirror github.com/opastorello/unifi-api-docs has the same 44 paths). `errors/401.json` is the specification's example. | The office of `recorded-2026-10/` as its console would describe it: the same 10 devices with the same names, MACs and LAN addresses, one site, 45 ports (console: 8 x 1G, one 2.5G, two 10G SFP+; sw-01: 24 RJ45 with 802.3at or bt PoE, 2 SFP+; each AP, hub and reader one port), the uplinks (APs, hub, reader to sw-01; sw-01 to the console). Which switch port carries an AP is implied by the port states only: the API does not say. |
+| `network-edge/` | **Synthesised** the same way. | Three sites (one with an id that is not a UUID); a UXG gateway; a switch with LIMITED and UNKNOWN PoE, SFP28, QSFP28, a port with no speed, a disabled PoE; an offline AP whose detail answers 404; a device whose id is `../../v1/info`; a device with an empty MAC and one with a dashed MAC; an unknown model with no feature, a link-local address, a port 0, a repeated port and an unknown connector; an uplink to an unknown device, to itself and across sites. MACs `02:00:00:01:00:NN`, addresses in 192.0.2.1xx. |
+
+The anonymisation scan (`TestFixturesAreAnonymised`) covers these files too.
+
+### To verify against a real console
+
+1. The `X-API-KEY` header and the key creation path; whether a read-only key exists.
+2. The `/proxy/network/integration` prefix on a UniFi OS console; the path on a self-hosted Network Server.
+3. The 401 code for a wrong (rather than missing) key, and the 403, 404 and 429 bodies.
+4. The `limit` maximum of 200 and the `totalCount` behaviour.
+5. Whether Access devices (hub, reader) are listed as Network devices at all.
+6. Whether `model` equals the Site Manager `shortname` (the collector assumes it).
+7. The `macAddress` format, and that it equals the cloud's base MAC, console included.
+8. The console's `ipAddress`, `firmwareVersion` and `name`.
+9. Whether `idx` is the printed port number, and the 9/10/11 to eth8/eth9/eth10 mapping.
+10. `speedMbps` on a DOWN port; `poe` absent on powered-device ports; whether `poe.type` is a string or a number.
+11. `uplink` absent on the gateway; mesh APs; cross-site uplinks.
+12. The local rate limit.
+13. Whether one key reaches every site.

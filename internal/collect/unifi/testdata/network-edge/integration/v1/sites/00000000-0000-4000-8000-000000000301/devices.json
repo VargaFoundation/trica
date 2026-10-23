@@ -1,0 +1,145 @@
+{
+  "offset": 0,
+  "limit": 25,
+  "count": 8,
+  "totalCount": 8,
+  "data": [
+    {
+      "id": "00000000-0000-4000-8000-000000000401",
+      "macAddress": "02:00:00:01:00:01",
+      "ipAddress": "192.0.2.101",
+      "name": "uxg-gw",
+      "model": "UXGPRO",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "4.0.6",
+      "firmwareUpdatable": false,
+      "features": [
+        "gateway"
+      ],
+      "interfaces": [
+        "ports"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000402",
+      "macAddress": "02:00:00:01:00:02",
+      "ipAddress": "192.0.2.102",
+      "name": "sw-edge",
+      "model": "USW-Edge-24",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "7.0.1",
+      "firmwareUpdatable": false,
+      "features": [
+        "switching"
+      ],
+      "interfaces": [
+        "ports"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000403",
+      "macAddress": "02:00:00:01:00:03",
+      "ipAddress": "192.0.2.103",
+      "name": "ap-offline",
+      "model": "U6LR",
+      "state": "OFFLINE",
+      "supported": true,
+      "firmwareVersion": "6.6.77",
+      "firmwareUpdatable": false,
+      "features": [
+        "accessPoint"
+      ],
+      "interfaces": [
+        "ports",
+        "radios"
+      ]
+    },
+    {
+      "id": "../../v1/info",
+      "macAddress": "02:00:00:01:00:04",
+      "ipAddress": "192.0.2.104",
+      "name": "weird-id",
+      "model": "U6LR",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "6.6.77",
+      "firmwareUpdatable": false,
+      "features": [
+        "accessPoint"
+      ],
+      "interfaces": [
+        "ports",
+        "radios"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000405",
+      "macAddress": "",
+      "ipAddress": "192.0.2.105",
+      "name": "no-mac",
+      "model": "U6LR",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "6.6.77",
+      "firmwareUpdatable": false,
+      "features": [
+        "accessPoint"
+      ],
+      "interfaces": [
+        "ports"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000406",
+      "macAddress": "02-00-00-01-00-07",
+      "ipAddress": "192.0.2.106",
+      "name": "dash-mac",
+      "model": "USW-Lite-8-PoE",
+      "state": "UPDATING",
+      "supported": true,
+      "firmwareVersion": "6.6.65",
+      "firmwareUpdatable": false,
+      "features": [
+        "switching"
+      ],
+      "interfaces": [
+        "ports"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000407",
+      "macAddress": "02:00:00:01:00:08",
+      "ipAddress": "169.254.1.1",
+      "name": "odd-device",
+      "model": "XYZ-1",
+      "state": "DELETING",
+      "supported": true,
+      "firmwareVersion": "1.0.0",
+      "firmwareUpdatable": false,
+      "features": [],
+      "interfaces": [
+        "ports"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000408",
+      "macAddress": "02:00:00:01:00:09",
+      "ipAddress": "192.0.2.109",
+      "name": "ap-x",
+      "model": "U7PRO",
+      "state": "ONLINE",
+      "supported": true,
+      "firmwareVersion": "8.7.11",
+      "firmwareUpdatable": false,
+      "features": [
+        "accessPoint"
+      ],
+      "interfaces": [
+        "ports",
+        "radios"
+      ]
+    }
+  ]
+}

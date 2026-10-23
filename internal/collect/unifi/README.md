@@ -8,6 +8,9 @@ the `X-API-KEY` header and nowhere else. Redirects are never followed, so the ke
 configured address ([ADR 0057](../../../docs/adr/0057-unifi-site-manager.md), ISP metrics:
 [ADR 0059](../../../docs/adr/0059-unifi-isp-metrics.md)).
 
+> A second mode, `options.api: network`, reads one console's own **Network Integration API** from the
+> LAN: see [Network Integration API](#network-integration-api-optionsapi-network) below.
+
 > Status: **recorded** on 2026-10-23 from one UniFi Dream Machine Pro Max console with ten adopted
 > devices, anonymised (`testdata/recorded-2026-10/`), plus a **synthesised** set for what that
 > account could not show (pagination, several consoles, a disconnected console, a camera, an update
@@ -136,10 +139,9 @@ several consoles and pages are synthesised from the public documentation.
 ## Not collected, and why
 
 - **Ports, uplinks, LLDP, VLANs, clients**: the cloud API does not give them, and the console proxy
-  (`/v1/connector/...`) needs the account owner's key and would send the key to the console's own
-  API. The local **Network Integration API** of a console (`/proxy/network/integration/v1`, a key
-  created on the console, reached from the LAN by `trica collector`) is the follow-up for ports and
-  cabling.
+  (`/v1/connector/...`) needs the account owner's key, also forwards writes, and would send the key to
+  the console's own API. Ports and uplinks come from the console's own API (`options.api: network`,
+  below); LLDP, VLANs and clients are not collected.
 - **ISP throughput** (`download_kbps`, `upload_kbps`): 0 in every recorded period and of unverified
   meaning; trica does not keep throughput (ADR 0041, 0045) (#166).
 - **The `1h` metrics, `/ea/isp-metrics` and the metrics' `POST .../query`**: the scan refuses them.
@@ -150,3 +152,47 @@ several consoles and pages are synthesised from the public documentation.
   and a device outside a rack cannot be placed in one: see the issue linked from ADR 0057).
 - **Rate limits**: a run makes four calls (more with pages) every interval; a 429 ends that call and
   shows on the health board with its `Retry-After`. Keep the interval at 5 minutes or more.
+
+## Network Integration API (`options.api: network`)
+
+Reads **one console's own API** (`https://<console>/proxy/network/integration/v1`, UniFi Network
+10.6.106 schema) from the LAN, with a key created on the console, for what the cloud does not give:
+the ports of each device with their PoE, and the device each one is uplinked to
+([ADR 0060](../../../docs/adr/0060-unifi-network-integration-api.md)). **Synthesised from the official
+OpenAPI document, never run against a real console**; the 13 points to verify are in
+`testdata/README.md`.
+
+```yaml
+- kind: unifi
+  name: office-lan
+  address: https://192.0.2.1          # required, https, no path
+  password: file:/etc/trica/unifi-console-key
+  domain: office-a                    # the SAME domain as the cloud target: addresses merge
+  tls: {ca_file: /etc/trica/console-ca.pem}   # or insecure: true
+  options:
+    api: network
+    sites: [default]                  # optional: name or internal reference
+```
+
+Run it with `trica collector` on the office LAN. `options.hosts` and `options.isp_metrics` are refused
+with `api: network`, `options.sites` with the Site Manager.
+
+Requests of one run: `GET /v1/info` (probe), `/v1/sites`, `/v1/sites/{id}/devices` per site (paged,
+`limit=200`) and `/v1/sites/{id}/devices/{id}` per device. Nothing else, and never the clients.
+
+| Console API | trica |
+|---|---|
+| each device | the same `device` as the cloud's, merged by `base_mac`. This source sets `name`, `vendor`, `part_number` (the API's `model`), `role` (options.roles; features gateway, accessPoint, switching; the cloud's model rules; an `UA` prefix that is not `UAP`/`UAL` is `access_control`; else unset and a warning), `os_version`, `health`, `mgmt_ip` (not on a gateway: the cloud reports its WAN side) and the address. It never sets `model`, the firmware record, `uptime_s`, `serial` or `managed_by`, so the two sources never make a value flip |
+| each port | `interface` `Port <idx>` in the device: `oper_status`, `speed_mbps` (up only), `max_speed_mbps`, `connector` (`RJ45`, `SFP`, `SFP+`, `SFP28`, `QSFP28`), `poe_status` (`delivering`, `idle`, `limited`, `disabled`, `unknown`; none on a port without PoE) and `poe_standard` |
+| a device's `uplink.deviceId` | relation `uplinked_to` device to device (impact to_from), across sites; an unknown id is a warning, a self-uplink ignored |
+
+**No cable is made.** The API names the parent device of an uplink, not a port on either end, and
+trica does not guess a port pairing (ADR 0010): there is no `neighbor_of` and `internal/deduce` finds
+nothing to deduce. Port-level adjacency is a follow-up.
+
+Runs: `/v1/info` or `/v1/sites` failing, a refused key, or `options.sites` matching nothing fails the
+run (nothing withdrawn); a site's device list or a device's detail failing, or an id that is not a
+UUID (never put in a path), makes the batch partial; a 401 or 429 stops the remaining calls. The
+console's WAN ports appear twice (cloud `eth8`/`eth9`, console `Port 9`/`Port 10`): the API gives no
+port role to match them. Radios, LAGs, networks, statistics and the clients (personal data) are not
+read.

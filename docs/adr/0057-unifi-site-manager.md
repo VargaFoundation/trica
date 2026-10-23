@@ -1,6 +1,6 @@
 # ADR-0057: UniFi consoles and devices come from the Site Manager cloud API, read-only, with the personal data never decoded
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10), amended by ADR 0059 and ADR 0060
 - **Concerns**: `internal/collect/unifi` (new), `internal/collect/all`, `internal/schema/builtin.yaml`
   (`device.role`, `managed_by`), `web/src/inventory/kind.ts` and the web catalogues,
   `docs/reference/collectors.md`, `charts/trica/README.md`. Builds on ADR 0005 (single writer),
@@ -83,6 +83,9 @@ recorded on 2026-10-23:
     (issue #163). Both are follow-up stories; neither is attempted with synthesised-only fixtures.
     *Amended by ADR 0059: the ISP metrics are collected, from the stable `/v1/isp-metrics/5m`, not
     from `/ea/`.*
+    *Amended by ADR 0060: ports, PoE and uplinks are collected through the console's own Network
+    Integration API (`options.api: network`), as synthesised-only fixtures with the unverified points
+    listed; no cable is deduced.*
 
 ## Consequences
 
