@@ -20,7 +20,7 @@ async function watchCsp(page: Page): Promise<() => string[]> {
 
 test("an uplink is a line of its own in the table and the legend, and is accessible", async ({ page }) => {
   const csp = await watchCsp(page);
-  await signInWithToken(page, "/topology");
+  await signInWithToken(page, "/topology?view=network");
   await expect(page.locator('.topology-canvas[data-state="ready"][data-nodes="200"]')).toBeVisible(LAYOUT_200);
   const row = page.locator("tbody tr", { hasText: "uplink (port unknown)" }).filter({ has: page.getByRole("link", { name: "srv-f001" }) });
   await expect(row).toHaveCount(1);
@@ -42,7 +42,7 @@ test("an uplink is a line of its own in the table and the legend, and is accessi
 
 test("the PDF carries the uplink's label, and the PNG is exported with it", async ({ page }) => {
   const csp = await watchCsp(page);
-  await signInWithToken(page, "/topology");
+  await signInWithToken(page, "/topology?view=network");
   await expect(page.locator('.topology-canvas[data-state="ready"][data-nodes="200"]')).toBeVisible(LAYOUT_200);
   const [d] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export PDF" }).click()]);
   const text = readFileSync((await d.path()) as string).toString("latin1");
@@ -55,7 +55,7 @@ test("the PDF carries the uplink's label, and the PNG is exported with it", asyn
 });
 
 test("a VLAN filter leaves the uplinks out: a VLAN is a property of ports", async ({ page }) => {
-  await signInWithToken(page, "/topology");
+  await signInWithToken(page, "/topology?view=network");
   await expect(page.locator('.topology-canvas[data-state="ready"][data-nodes="200"]')).toBeVisible(LAYOUT_200);
   await page.getByLabel("VLAN").selectOption({ label: "vlan-10" });
   await expect(page.locator("tbody tr", { hasText: "uplink (port unknown)" })).toHaveCount(0);
