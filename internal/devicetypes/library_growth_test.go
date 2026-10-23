@@ -54,6 +54,17 @@ func TestCollectorNamesMatchTheLibrary(t *testing.T) {
 		{"Synology", "DS1821+", "", "synology-ds1821-plus", devicetypes.ByModel, true},
 		{"Synology Inc.", "DS3617xs", "", "synology-ds3617xs", devicetypes.ByModel, true},
 		{"Synology Inc.", "RS3617RPxs", "", "synology-rs3617rpxs", devicetypes.ByModel, false},
+		// A "+" is the word plus (#159): DS218 and DS218+ are two models.
+		{"Synology", "DS218", "", "synology-ds218", devicetypes.ByModel, true},
+		{"Synology", "DS218+", "", "synology-ds218-plus", devicetypes.ByModel, true},
+		{"Synology", "DS218 Plus", "", "synology-ds218-plus", devicetypes.ByModel, true},
+		{"Synology Inc.", "RS815", "", "synology-rs815", devicetypes.ByModel, false},
+		{"Synology", "RS815+", "", "synology-rs815-plus", devicetypes.ByModel, false},
+		{"Synology", "RS1221 Plus", "", "synology-rs1221-plus", devicetypes.ByModel, false},
+		{"Synology", "DS1821 Plus", "", "synology-ds1821-plus", devicetypes.ByModel, true},
+		{"Synology", "", "DS218+", "synology-ds218-plus", devicetypes.ByPartNumber, true},
+		{"Ubiquiti", "U6 Plus", "", "ubiquiti-u6-plus", devicetypes.ByModel, true},
+		{"HPE", "Aruba 2930M-24G-PoE Plus", "", "hpe-aruba-2930m-24g-poep", devicetypes.ByModel, false},
 		// HPE and Aruba.
 		{"HPE", "ProLiant DL380 Gen11", "", "hpe-proliant-dl380-gen11", devicetypes.ByModel, false},
 		{"Hewlett Packard Enterprise", "Aruba 6300M-48G-4SFP56", "", "hpe-aruba-6300m-48g-4sfp56", devicetypes.ByModel, false},
@@ -73,6 +84,17 @@ func TestCollectorNamesMatchTheLibrary(t *testing.T) {
 		}
 		if m.Model.Racked() == c.zeroU {
 			t.Errorf("%s: Racked() %v with u_height %v", c.slug, m.Model.Racked(), m.Model.UHeight)
+		}
+	}
+}
+
+// A name that drops the "+" its model has is another name (#159): DS920 is
+// not the DS920+.
+func TestANameWithoutItsPlusMatchesNothing(t *testing.T) {
+	ix := defaultIndex(t)
+	for _, c := range [][2]string{{"Synology", "DS920"}, {"Synology", "RS1221"}, {"HPE", "Aruba 2930M-24G-PoE"}, {"MikroTik", "CRS326-24G-2S"}} {
+		if m := ix.Find(c[0], c[1], ""); m != nil {
+			t.Errorf("%s %q matched %s", c[0], c[1], m.Model.Slug)
 		}
 	}
 }
@@ -164,15 +186,16 @@ func TestOverlaysThatFailTheLoad(t *testing.T) {
 		}
 	}
 	bad := map[string]struct{ overlay, want string }{
-		"unknown slug":            {"manufacturer: Acme\nmodels:\n  - slug: acme-nope\n    part_numbers: [X1]\n", "no model has the slug"},
-		"other manufacturer":      {"manufacturer: Acme\nmodels:\n  - slug: other-thing\n    part_numbers: [X1]\n", "Other model"},
-		"project model":           {"manufacturer: Acme\nmodels:\n  - slug: acme-box-2\n    part_numbers: [X1]\n", "not an upstream model"},
-		"no part number":          {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: []\n", "lists no part number"},
-		"empty part number":       {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [X1, ' ']\n", "empty part number"},
-		"duplicate once normal":   {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [UDM-SE, UDMSE]\n", "already listed"},
-		"listed by another model": {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [b3 held]\n", "already listed by acme-box-3"},
-		"unknown key":             {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [X1]\n    note: hi\n", "field note"},
-		"not yaml":                {"manufacturer: [unclosed\n", "overlays/Acme.yaml"},
+		"unknown slug":                   {"manufacturer: Acme\nmodels:\n  - slug: acme-nope\n    part_numbers: [X1]\n", "no model has the slug"},
+		"other manufacturer":             {"manufacturer: Acme\nmodels:\n  - slug: other-thing\n    part_numbers: [X1]\n", "Other model"},
+		"project model":                  {"manufacturer: Acme\nmodels:\n  - slug: acme-box-2\n    part_numbers: [X1]\n", "not an upstream model"},
+		"no part number":                 {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: []\n", "lists no part number"},
+		"empty part number":              {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [X1, ' ']\n", "empty part number"},
+		"duplicate once plus is spelled": {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [B1+, B1 Plus]\n", "already listed"},
+		"duplicate once normal":          {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [UDM-SE, UDMSE]\n", "already listed"},
+		"listed by another model":        {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [b3 held]\n", "already listed by acme-box-3"},
+		"unknown key":                    {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [X1]\n    note: hi\n", "field note"},
+		"not yaml":                       {"manufacturer: [unclosed\n", "overlays/Acme.yaml"},
 	}
 	for name, c := range bad {
 		_, err := devicetypes.Load(lib(c.overlay), "lib")
@@ -205,7 +228,7 @@ func TestOverlaysThatFailTheLoad(t *testing.T) {
 }
 
 // Name matching is by the model's own name: a library where two models have
-// the same normalised name (DS218 and DS218+, which lose their "+"), or a
+// the same normalised name (DS218 and DS218+, which lost their "+" before #159), or a
 // model whose name is another model's, would match neither. Every model of
 // the library is found by its own name.
 func TestEveryModelIsFoundByItsOwnName(t *testing.T) {

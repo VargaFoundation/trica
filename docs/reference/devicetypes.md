@@ -29,6 +29,7 @@ is closed (history keeps it) and a new one opened.
 |---|---|
 | First, a part number listed in a model's `part_numbers` (the chassis variant, [ADR 0043](../adr/0043-device-type-variants-and-drawn-faces.md)) | `ProLiant DL380 Gen9` + `767032-B21` = `hpe-proliant-dl380-gen9-24sff`, matched `by sku` |
 | Case and punctuation ignored | `dcs 7050tx 48` = `DCS-7050TX-48`; the slug is accepted as a name too |
+| A `+` is the word `plus` (#159) | `DS218+` = `DS218 Plus` = `ds218-plus`, which is not `DS218`; `CRS326-24G-2S+RM` and its slug are one key; `Aruba 2930M-24G-PoE Plus` finds the `PoE+` model |
 | Vendor spellings aliased | `Arista Networks`, `HP`, `Hewlett Packard Enterprise`, `Dell Inc.`, `Dell EMC`, `Routerboard`, `Ubiquiti Inc.`, `Ubiquiti Networks`, `UBNT`, `UniFi`, `Synology Inc.` |
 | A UniFi shortname the overlay lists (`library/overlays/Ubiquiti.yaml`, [ADR 0056](../adr/0056-growing-the-device-type-library.md)) | `USW Pro Max 24 PoE` + `USPM24P` = `ubiquiti-unifi-switch-pro-max-24-poe`, matched `by sku`; so are `Express 7` + `UX7` or `AC Pro` + `U7PG2`, whose names upstream does not say |
 | Vendor repeated in the model is dropped | `Dell PowerEdge R640` |
@@ -61,7 +62,11 @@ is the exact chassis and lists the candidates ([ADR 0048](../adr/0048-choosing-t
 | `ambiguous` | no | nothing matched, models fit the name | `ProLiant DL180 Gen9` (three chassis, no generic model) |
 | `none` | no | nothing matched or fits | |
 
-The **candidates** are the models of the vendor whose name starts, word for word, with the name
+A name that drops the `+` (`DS920` for a DS920+) matches nothing, or the model without the `+`
+when the library has one.
+
+The **candidates** are the models of the vendor whose name starts, word for word (a `+` counts as
+the word `plus`), with the name
 the device reports, the match itself, and the models `variant_of` links to any of them (when
 `variant_of` curates the family, a model found by its name alone that it does not link is left
 out, see "Catalogue"); a name that fits more than 12 models offers none. `variant_of: <slug>` (a trica extension, optional)
@@ -233,11 +238,12 @@ plenty; it is stretched to the U box, so a crop with the chassis' own proportion
 The embedded library is a **catalogue of the models people actually rack**: the servers,
 switches, firewalls, storage and power that sell most on the refurbished and data-centre market,
 each with its front and rear face where one could be had, and each chassis variant of a server as
-its own model. 519 models (HPE 151, Dell 81, Ubiquiti 101, Synology 38, 14 other manufacturers);
-169 have faces (113 NetBox photographs, 220 faces drawn by the project); 64 are 0 U (desktop and wall
+its own model. 523 models (HPE 151, Dell 81, Ubiquiti 101, Synology 42, 14 other manufacturers);
+169 have faces (113 NetBox photographs, 220 faces drawn by the project); 66 are 0 U (desktop and wall
 devices, see "Adding a model"). [ADR 0056](../adr/0056-growing-the-device-type-library.md) took the
 library from 199 to 519 models, copying 317 upstream files at master
-`4a87296236ab01f624b42de578a5f7720d0255fe` (licence checked 2026-10-23) and writing three models.
+`4a87296236ab01f624b42de578a5f7720d0255fe` (licence checked 2026-10-23) and writing three models;
+#159 copied the four files that differ only by a `+` (Synology DS218, DS218+, RS815, RS815+) at the same commit.
 
 ### How the models were chosen
 
@@ -259,8 +265,8 @@ ADR 0056 added what the owner's own equipment is and what sits next to it: **HPE
 to Gen12 (DL, ML, DX, Microserver, SimpliVity, Apollo R4200, Synergy frame), MSA, StoreEasy,
 StoreOnce, StoreEver and Alletra storage, the Aruba CX 6000 to 8360 switches, ArubaOS-S 2540,
 2920 and 2930M, and four Aruba access points (HPE 20 to 128 files); **Synology** every
-RackStation and DiskStation upstream has but the four files that only differ by a `+`, and the
-DS1821+, plus the DS3617xs written here from its data sheet; **Ubiquiti** every UniFi cloud
+RackStation and DiskStation upstream has (the four files that only differ by a `+` came with
+#159), and the DS1821+, plus the DS3617xs written here from its data sheet; **Ubiquiti** every UniFi cloud
 gateway, UniFi switch, U7 and U6 access point, NVR, NAS, controller, UPS and PDU upstream has,
 plus the UniFi Access Door Hub and G2 Reader Pro written here from the tech specs; and the
 popular models of the other manufacturers already present (Dell PowerEdge R250 to R940,
@@ -331,8 +337,9 @@ library and `TestCatalogueListIsCurrent` fails when it is out of date (`go test
   Apollo R2x00, c7000, Primera, Nimble, CX 6405/6410), Gen5 to Gen7 servers, airMAX, UISP and
   UniFi Protect cameras, and the Aruba 8325 and 8360 back-to-front editions (only the
   front-to-back ones are copied).
-- `DS218`/`DS218+` and `RS815`/`RS815+`: the matcher drops the `+`, so each pair would match
-  neither; they wait for a `+` to `plus` rule.
+- A name glued to `plus` (`DS218plus`) matches, but offers only its own model as candidate; a
+  device that drops the `+` its model has loses the match; the DS218+ has no face (upstream has
+  pictures, but the image budget does not allow them).
 - UniFi shortnames that the fingerprint database does not list (the USW-Flex-2.5G family, the
   CKG2-RM), and operator overlays in `extra_dir`.
 - Part numbers upstream gives to two models (HPE `P19766-B21`, `P56707-B21`, `R4U28A`; Lenovo

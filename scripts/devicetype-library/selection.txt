@@ -146,6 +146,8 @@ Synology/rs422-plus.yaml
 Synology/rs820RP-plus.yaml
 Synology/RX1217.yaml
 Synology/FS6400.yaml
+Synology/RS815.yaml
+Synology/RS815+.yaml
 
 # Synology: DiskStation desktop units (0U)
 Synology/ds1821+.yaml
@@ -161,6 +163,8 @@ Synology/DS220+.yaml
 Synology/DS925+.yaml
 Synology/DS425+.yaml
 Synology/DS225+.yaml
+Synology/DS218.yaml
+Synology/DS218+.yaml
 
 # Ubiquiti: Gateways
 Ubiquiti/UniFi-Dream-Machine.yaml

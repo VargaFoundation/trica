@@ -15,7 +15,7 @@ operator's guide: [docs/reference/devicetypes.md](../../../docs/reference/device
 
 `Arista/DCS-7050SX-64-F.yaml` and `-R.yaml` and `Dell/PowerEdge-R330.yaml` were copied at master
 `37f5f02`, the models the catalogue added (docs/reference/devicetypes.md, "Catalogue") at
-`9510b3c`, the other upstream model files at `565a9ba` (see `NOTICE`). The 317 models of ADR 0056
+`9510b3c`, the other upstream model files at `565a9ba` (see `NOTICE`). The 317 models of ADR 0056 and the four of #159 (Synology DS218, DS218+, RS815, RS815+)
 were copied at master `4a87296236ab01f624b42de578a5f7720d0255fe` (CC0-1.0, licence checked
 2026-10-23), unchanged, by `scripts/devicetype-library/fetch.sh` from the list in
 `scripts/devicetype-library/selection.txt`; the commit and the git blob of every file of a vendor
