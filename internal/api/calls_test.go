@@ -79,6 +79,8 @@ func (e *env) calls(t testing.TB, proposalID, discrepancyID int64) map[string]ca
 		"getObjectTimeline":       {"GET", "/api/v1/objects/" + sw + "/timeline", ""},
 		"getRackContents":         {"GET", "/api/v1/racks/" + e.ids["rack-p"] + "/contents", ""},
 		"getTopologyMap":          {"GET", "/api/v1/topology/map?level=global", ""},
+		"getRackRemoved":          {"GET", "/api/v1/racks/" + e.ids["rack-p"] + "/removed", ""},
+		"getPlacementHistory":     {"GET", "/api/v1/objects/" + e.ids["sw"] + "/placement-history", ""},
 		"getDeviceTypeImage":      {"GET", "/api/v1/device-types/acme-sw48/front", ""},
 		"search":                  {"GET", "/api/v1/search?q=sw-a1", ""},
 		"whoHad":                  {"GET", "/api/v1/whohad?key=mgmt_ip&value=192.0.2.10", ""},

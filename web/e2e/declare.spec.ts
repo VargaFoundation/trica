@@ -129,3 +129,21 @@ test("a free floor tile opens 'add a rack' with its coordinates, and a taken til
   ).toContainText("New Rack:");
   await expectAccessible(page);
 });
+
+test("a device taken out of a rack is listed in its tray and put back in two clicks, where it was", async ({
+  page,
+}) => {
+  await signInWithToken(page, `/racks/${ID.r12}`);
+  const tray = page.getByRole("region", {
+    name: "Recently taken out of this rack",
+  });
+  await expect(tray.getByRole("link", { name: "old-sw" })).toBeVisible();
+  await expect(tray).toContainText("U20");
+  await expectAccessible(page);
+  await tray.getByRole("button", { name: /Put back/ }).click();
+  const dialog = page.getByRole("dialog", { name: /Put back old-sw · r12/ });
+  await expect(dialog.getByLabel("Position (U)")).toHaveValue("20");
+  await expect(dialog.getByText("The engine would:")).toBeVisible();
+  await dialog.getByRole("button", { name: "Put back", exact: true }).click();
+  await expect(dialog.getByRole("status")).toContainText("Sent for approval");
+});

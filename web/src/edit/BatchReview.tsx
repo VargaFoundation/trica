@@ -36,6 +36,8 @@ export const INVENTORY_QUERIES = [
   "search",
   "discrepancies",
   "placement",
+  "placement-history",
+  "rack-removed",
   "faces",
   "device-type-candidates",
 ];

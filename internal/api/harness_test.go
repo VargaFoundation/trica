@@ -34,6 +34,7 @@ const (
 	tokDevices   = "t-devices"    // user frank: read limited to devices
 	tokSiteParis = "t-site-paris" // user gina: read limited to the site paris-1
 	tokDevProp   = "t-dev-prop"   // user hugo: read + propose limited to devices
+	tokRackOnly  = "t-rack-only"  // user jade: read limited to racks
 	tokRackView  = "t-rack-view"  // user iris: read limited to racks, devices and models (not their parts)
 )
 
@@ -96,6 +97,7 @@ func newEnv(t *testing.T, policy reconcile.Policy) *env {
 		tokDevices:   {Principal: api.Principal{Subject: "frank", Kind: api.KindUser}, Actions: []string{api.ActionRead}, Types: []string{"device"}},
 		tokSiteParis: {Principal: api.Principal{Subject: "gina", Kind: api.KindUser}, Actions: []string{api.ActionRead}, Sites: []string{e.ids["paris"]}},
 		tokDevProp:   {Principal: api.Principal{Subject: "hugo", Kind: api.KindUser}, Actions: []string{api.ActionRead, api.ActionPropose}, Types: []string{"device"}},
+		tokRackOnly:  {Principal: api.Principal{Subject: "jade", Kind: api.KindUser}, Actions: []string{api.ActionRead}, Types: []string{"rack"}},
 		tokRackView:  {Principal: api.Principal{Subject: "iris", Kind: api.KindUser}, Actions: []string{api.ActionRead}, Types: []string{"rack", "device", "device_type"}},
 	}}
 	srv, err := api.New(api.Config{Engine: e.eng, Authorizer: e.auth, Auditor: e.aud, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Version: "test", Now: e.clk.now,

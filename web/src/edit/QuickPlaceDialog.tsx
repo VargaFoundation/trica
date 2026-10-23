@@ -57,6 +57,8 @@ export interface QuickPlaceProps {
   onClose: () => void;
   /** The change was applied (200): the caller closes the dialog and may say what happened. */
   onDone?: (message: string) => void;
+  /** The change was queued for approval (202): the caller may mark the device as waiting. */
+  onProposed?: () => void;
   /** The person asked for the full form. */
   onFullForm?: (carry: FullFormCarry) => void;
   /** Where the focus goes back to when the element that opened the dialog is gone. */
@@ -83,6 +85,7 @@ function Body({
   initialFace,
   onClose,
   onDone,
+  onProposed,
   onFullForm,
   returnFocus,
   rules,
@@ -248,6 +251,8 @@ function Body({
       if (o.status === "applied") {
         setApplied(true);
         onDone?.(placedAt());
+      } else if (o.status === "proposed") {
+        onProposed?.();
       }
     });
   const proposed =

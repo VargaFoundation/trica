@@ -621,6 +621,46 @@ func (s *Store) RelationHistory(ctx context.Context, id string, limit int) ([]Re
 	return scanRelations(rows)
 }
 
+// MountHistory returns the mounted_in relations a device ever had, current
+// ones first, then the closed ones, the most recently closed first. It is the
+// read behind "where was it before" (ADR 0053).
+func (s *Store) MountHistory(ctx context.Context, deviceID string, limit int) ([]Relation, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	rows, err := s.Pool.Query(ctx, `SELECT `+relationCols+` FROM relations
+WHERE type = 'mounted_in' AND from_id = $1
+ORDER BY upper_inf(valid) DESC, upper(valid) DESC, id DESC LIMIT $2`, deviceID, limit)
+	if err != nil {
+		return nil, err
+	}
+	return scanRelations(rows)
+}
+
+// RemovedFrom returns, for the devices taken out of a rack, the mounted_in
+// relation that ended there: a device is listed when its most recent mount
+// (across every rack) ended in this rack and it has no current mount. A
+// device moved to another rack, or put back, is not listed. Newest first;
+// since, when given, keeps what ended at or after it.
+func (s *Store) RemovedFrom(ctx context.Context, rackID string, since *time.Time, limit int) ([]Relation, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	rows, err := s.Pool.Query(ctx, `SELECT `+relationCols+` FROM (
+  SELECT DISTINCT ON (r.from_id) r.* FROM relations r
+  WHERE r.type = 'mounted_in'
+    AND r.from_id IN (SELECT from_id FROM relations WHERE type = 'mounted_in' AND to_id = $1 AND NOT upper_inf(valid))
+    AND NOT EXISTS (SELECT 1 FROM relations c WHERE c.type = 'mounted_in' AND c.from_id = r.from_id AND upper_inf(c.valid))
+  ORDER BY r.from_id, upper(r.valid) DESC, r.id DESC
+) lastm
+WHERE lastm.to_id = $1 AND ($2::timestamptz IS NULL OR upper(lastm.valid) >= $2)
+ORDER BY upper(lastm.valid) DESC, lastm.id DESC LIMIT $3`, rackID, since, limit)
+	if err != nil {
+		return nil, err
+	}
+	return scanRelations(rows)
+}
+
 // CurrentRelations streams every current relation; used to build the graph cache.
 func (s *Store) CurrentRelations(ctx context.Context) ([]Relation, error) {
 	rows, err := s.Pool.Query(ctx, `SELECT `+relationCols+` FROM relations WHERE upper_inf(valid)`)

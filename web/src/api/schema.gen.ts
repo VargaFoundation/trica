@@ -381,6 +381,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/objects/{id}/placement-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where a device was mounted (ADR 0053): the current placement first, then the closed ones, the most recently closed first, 20 by default. Each has the rack, position and face (as they were when it ended), when it began and ended, and the source whose placement it was. A rack the caller may not read is left out. Not for objects other than devices (404).
+         * @description Requires the "read" action.
+         */
+        get: operations["getPlacementHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/objects/{id}/provenance": {
         parameters: {
             query?: never;
@@ -593,6 +613,26 @@ export interface paths {
          * @description Requires the "read" action.
          */
         get: operations["getRackContents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/racks/{id}/removed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The devices taken out of a rack and not mounted anywhere since (ADR 0053): a device is listed when its most recent placement, in any rack, ended in this one and it has no current placement. Each item is what the elevation knew of the device (position, face, model, height) plus when and by which source's placement it ended, and the device's status. Most recently removed first, 20 by default. A device is listed only if the caller may read it. A device moved to another rack, or put back, is not listed.
+         * @description Requires the "read" action.
+         */
+        get: operations["getRackRemoved"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4010,6 +4050,13 @@ export interface components {
             total: number;
             truncated?: boolean;
         };
+        PagePlacementRecord: {
+            items: components["schemas"]["PlacementRecord"][];
+            limit: number;
+            offset: number;
+            total: number;
+            truncated?: boolean;
+        };
         PageProposal: {
             items: components["schemas"]["Proposal"][];
             limit: number;
@@ -4033,6 +4080,13 @@ export interface components {
         };
         PageRelationView: {
             items: components["schemas"]["RelationView"][];
+            limit: number;
+            offset: number;
+            total: number;
+            truncated?: boolean;
+        };
+        PageRemovedItem: {
+            items: components["schemas"]["RemovedItem"][];
             limit: number;
             offset: number;
             total: number;
@@ -4065,6 +4119,22 @@ export interface components {
             offset: number;
             total: number;
             truncated?: boolean;
+        };
+        PlacedRack: {
+            display: string;
+            id: string;
+            status: string;
+            type: string;
+        };
+        PlacementRecord: {
+            face?: string;
+            position?: number;
+            rack: components["schemas"]["PlacedRack"];
+            /** Format: date-time */
+            since: string;
+            source: string;
+            /** Format: date-time */
+            until?: string;
         };
         PlannedChange: {
             after?: unknown;
@@ -4187,6 +4257,27 @@ export interface components {
             valid_from: string;
             /** Format: date-time */
             valid_to?: string;
+        };
+        RemovedItem: {
+            airflow?: components["schemas"]["AirflowCheck"];
+            device: components["schemas"]["ObjectRef"];
+            face?: string;
+            front_image?: string;
+            full_depth: boolean;
+            health?: string;
+            model?: components["schemas"]["ObjectRef"];
+            model_name?: string;
+            parts_health?: string;
+            position?: number;
+            rear_image?: string;
+            /** Format: date-time */
+            removed_at: string;
+            removed_by: string;
+            role?: string;
+            status: string;
+            u_height?: number;
+            variant_uncertain?: boolean;
+            variants?: number;
         };
         SavedQuery: {
             /** Format: date-time */
@@ -5024,6 +5115,39 @@ export interface operations {
             500: components["responses"]["Problem500"];
         };
     };
+    getPlacementHistory: {
+        parameters: {
+            query?: {
+                /** @description Page size, 1 to 1000 (default 50). */
+                limit?: number;
+                /** @description Items to skip (default 0). */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Device id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagePlacementRecord"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            500: components["responses"]["Problem500"];
+        };
+    };
     getObjectProvenance: {
         parameters: {
             query?: never;
@@ -5360,6 +5484,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageRackItem"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getRackRemoved: {
+        parameters: {
+            query?: {
+                /** @description Only what was taken out at or after this time. */
+                since?: string | unknown | unknown;
+                /** @description Page size, 1 to 1000 (default 50). */
+                limit?: number;
+                /** @description Items to skip (default 0). */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Rack id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageRemovedItem"];
                 };
             };
             400: components["responses"]["Problem400"];

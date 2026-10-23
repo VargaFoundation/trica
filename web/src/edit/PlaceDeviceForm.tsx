@@ -62,6 +62,8 @@ export interface PlaceDeviceProps {
   rack?: RackRef;
   /** The device, when the form is opened from a device page. */
   device?: { id: string; display: string };
+  /** The rack the select starts on (a device page: where the device is now or was last). */
+  initialRack?: string;
   initialPosition?: number;
   initialFace?: string;
   /** A device chosen already (the quick dialog's, carried over); the person may pick another. */
@@ -88,6 +90,7 @@ export function PlaceDeviceForm(props: PlaceDeviceProps) {
 function PlaceDevice({
   rack: fixedRack,
   device: fixedDevice,
+  initialRack,
   initialPosition,
   initialFace,
   initialDevice,
@@ -102,7 +105,7 @@ function PlaceDevice({
   const source = callerSource(useMe().data);
 
   /* ---- which rack ---- */
-  const [rackChoice, setRackChoice] = useState("");
+  const [rackChoice, setRackChoice] = useState(initialRack ?? "");
   const racks = useQuery({
     queryKey: ["objects", { type: "rack", sort: "name", limit: 1000 }],
     queryFn: ({ signal }) =>
