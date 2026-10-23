@@ -53,8 +53,7 @@ type Choice struct {
 	Match *Match
 	// Certain: the match names the exact chassis. A part number listed by one
 	// model is certain; a name, a mounting suffix or an upstream part number
-	// is certain when the model has no variant or is itself a variant
-	// (variant_of).
+	// is certain unless another model's variant_of names it (ADR 0056).
 	Certain bool
 	// Reason is the match kind (sku, model, mounting, part_number) when
 	// Certain, else one of the Uncertain* values.
@@ -118,15 +117,18 @@ func (ix *Index) Choices(vendor, model, partNumber string) Choice {
 		ch.Certain, ch.Reason = true, ch.Match.How
 	default:
 		ch.Certain, ch.Reason = true, ch.Match.How
-		for _, c := range ch.Candidates {
-			if c.Model.Slug != ch.Match.Model.Slug {
-				ch.Certain, ch.Reason = false, UncertainBase
-				break
-			}
+		if ix.hasVariants(ch.Match.Model.Slug) {
+			ch.Certain, ch.Reason = false, UncertainBase
 		}
 	}
 	return ch
 }
+
+// hasVariants reports whether some model names this one in its variant_of:
+// only then is a name match not enough to tell the chassis (ADR 0056). A
+// model whose name merely starts with another's ("U7 Pro Max" and "U7 Pro")
+// is another product, not a variant.
+func (ix *Index) hasVariants(slug string) bool { return ix.baseOf[slug] }
 
 func (ix *Index) family(vendor, model string, match *Match) []Candidate {
 	vk := vendorKey(vendor)

@@ -67,6 +67,15 @@ func TestEmbeddedImagesAreFoundByTheirName(t *testing.T) {
 		{"hpe-proliant-dl380-gen10-24sff", img{pngT, local}, img{pngT, local}},
 		{"apc-smt1500rmi2u", img{pngT, local}, img{pngT, local}},
 		{"dell-poweredge-r730", none, none},
+		// ADR 0056: the upstream faces of the rack-mounted UniFi gateways and
+		// of the USW Pro Max 24 PoE; the other UniFi models have none.
+		{"ubiquiti-unifi-dream-machine-pro-max", img{pngT, up}, img{pngT, up}},
+		{"ubiquiti-unifi-dream-machine-pro", img{pngT, up}, img{pngT, up}},
+		{"ubiquiti-unifi-dream-machine-pro-special-edition", img{pngT, up}, img{pngT, up}},
+		{"ubiquiti-enterprise-fortress-gateway", img{pngT, up}, img{pngT, up}},
+		{"ubiquiti-unifi-switch-pro-max-24-poe", img{pngT, up}, img{pngT, up}},
+		{"ubiquiti-u7-pro", none, none},
+		{"synology-ds1821-plus", none, none},
 		// No picture: the variant is not known from the name alone.
 		{"hpe-proliant-dl380-gen9", none, none},
 		{"dell-poweredge-r330", none, none},

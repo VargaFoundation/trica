@@ -1,0 +1,207 @@
+---
+# Shortnames of the UniFi devices, written by the trica project (Apache-2.0), ADR 0056.
+#
+# A UniFi controller reports a device by a shortname ("USPM24P" for a USW Pro Max 24 PoE),
+# which is not always the upstream part_number. Each entry adds its shortnames to the
+# part_numbers of the upstream model with that slug, so that a device matches by SKU
+# without the upstream file changing. The loader checks every entry (unknown slug, other
+# manufacturer, shortname listed twice: the load fails).
+#
+# Source: Ubiquiti's device fingerprint database, https://static.ui.com/fingerprint/ui/public.json
+# (700 devices, read 2026-10-23): the "shortnames" of the record whose "sku" is the model's
+# part_number. Models of the database that the library does not have are left out; so are
+# the USW-Flex-2.5G family and the CKG2-RM, which it does not list.
+manufacturer: Ubiquiti
+models:
+  # Gateways
+  - slug: ubiquiti-udm
+    part_numbers: [UDM]
+  - slug: ubiquiti-unifi-dream-machine-pro
+    part_numbers: [UDMPRO, UDMP]
+  - slug: ubiquiti-unifi-dream-machine-pro-special-edition
+    part_numbers: [UDMPROSE, UDM-SE]
+  - slug: ubiquiti-unifi-dream-machine-pro-max
+    part_numbers: [UDMPROMAX]
+  - slug: ubiquiti-unifi-cloud-gateway-ultra
+    part_numbers: [UDRULT, UCG-Ultra, UDR-Pro, UDR-Ultra]
+  - slug: ubiquiti-unifi-cloud-gateway-max
+    part_numbers: [UCGMAX]
+  - slug: ubiquiti-unifi-cloud-gateway-fiber
+    part_numbers: [UCGFIBER, UCGF]
+  - slug: ubiquiti-unifi-gateway-lite
+    part_numbers: [UXG, UXG-Lite]
+  - slug: ubiquiti-unifi-gateway-max
+    part_numbers: [UXGB]
+  - slug: ubiquiti-unifi-gateway-pro
+    part_numbers: [UXGPRO]
+  - slug: ubiquiti-enterprise-fortress-gateway
+    part_numbers: [EFG, UDMENT]
+  - slug: ubiquiti-unifi-dream-router-7
+    part_numbers: [UDR7]
+  - slug: ubiquiti-unifi-express-7
+    part_numbers: [UX7, UXMAX]
+  - slug: ubiquiti-unifi-express-ux
+    part_numbers: [UX, UEX]
+  - slug: ubiquiti-usg
+    part_numbers: [USG, UGWHD4]
+  - slug: ubiquiti-unifi-security-gateway-pro
+    part_numbers: [UGW4, USG-PRO-4]
+  # Switches
+  - slug: ubiquiti-unifi-pro-max-16
+    part_numbers: [USPM16]
+  - slug: ubiquiti-unifi-pro-max-16-poe
+    part_numbers: [USPM16P]
+  - slug: ubiquiti-unifi-switch-pro-max-24
+    part_numbers: [USPM24]
+  - slug: ubiquiti-unifi-switch-pro-max-24-poe
+    part_numbers: [USPM24P]
+  - slug: ubiquiti-unifi-switch-pro-max-48
+    part_numbers: [USPM48]
+  - slug: ubiquiti-unifi-switch-pro-max-48-poe
+    part_numbers: [USPM48P]
+  - slug: ubiquiti-unifi-switch-24-pro-poe-gen2
+    part_numbers: [US24PRO, USLP24P]
+  - slug: ubiquiti-unifi-switch-24-pro
+    part_numbers: [US24PRO2]
+  - slug: ubiquiti-unifi-switch-48-pro
+    part_numbers: [US48PRO2]
+  - slug: ubiquiti-unifi-switch-48-pro-poe-gen2
+    part_numbers: [US48PRO, USLP48P]
+  - slug: ubiquiti-unifi-switch-pro-hd-24
+    part_numbers: [USPH24]
+  - slug: ubiquiti-unifi-switch-pro-hd-24-poe
+    part_numbers: [USPH24P]
+  - slug: ubiquiti-unifi-switch-pro-aggregation
+    part_numbers: [USAGGPRO]
+  - slug: ubiquiti-unifi-switch-pro-xg-aggregation
+    part_numbers: [USWPXGAGG]
+  - slug: ubiquiti-unifi-switch-pro-xg-8-poe
+    part_numbers: [USPXG8P]
+  - slug: ubiquiti-unifi-switch-pro-xg-10-poe
+    part_numbers: [USPXG10P]
+  - slug: ubiquiti-unifi-switch-pro-xg-24
+    part_numbers: [USWPXG24]
+  - slug: ubiquiti-unifi-switch-pro-xg-24-poe
+    part_numbers: [USWPXG24P]
+  - slug: ubiquiti-unifi-switch-pro-xg-48
+    part_numbers: [USWPXG48]
+  - slug: ubiquiti-unifi-switch-pro-xg-48-poe
+    part_numbers: [USWPXG48P]
+  - slug: ubiquiti-usw-enterprise-8-poe
+    part_numbers: [US68P]
+  - slug: ubiquiti-unifi-switch-enterprise-24-poe
+    part_numbers: [US624P]
+  - slug: ubiquiti-unifi-switch-enterprise-48-poe
+    part_numbers: [US648P]
+  - slug: ubiquiti-unifi-switch-16-poe-gen2
+    part_numbers: [USL16P, USL16PB]
+  - slug: ubiquiti-unifi-switch-24-poe-gen2
+    part_numbers: [USL24P, USL24PB]
+  - slug: ubiquiti-unifi-switch-48-poe-gen2
+    part_numbers: [USL48P, USL48PB]
+  - slug: ubiquiti-unifi-switch-24-gen2
+    part_numbers: [USL24, USL24B]
+  - slug: ubiquiti-unifi-switch-48-gen2
+    part_numbers: [USL48, USL48B]
+  - slug: ubiquiti-unifi-switch-lite-8-poe
+    part_numbers: [USL8LP, USL8LPB]
+  - slug: ubiquiti-unifi-switch-lite-16-poe
+    part_numbers: [USL16LP, USL16LPB]
+  - slug: ubiquiti-unifi-switch-flex
+    part_numbers: [USF5P]
+  - slug: ubiquiti-unifi-switch-flex-mini
+    part_numbers: [USMINI, USMINI2]
+  - slug: ubiquiti-unifi-switch-flex-xg
+    part_numbers: [USFXG]
+  - slug: ubiquiti-unifi-switch-ultra
+    part_numbers: [USM8P]
+  - slug: ubiquiti-usw-pro-8-poe
+    part_numbers: [USLP8P]
+  - slug: ubiquiti-unifi-wan-switch-rj45
+    part_numbers: [WRS3]
+  - slug: ubiquiti-unifi-switch-aggregation
+    part_numbers: [USL8A]
+  - slug: ubiquiti-enterprise-campus-switch-24-port-poe
+    part_numbers: [ECS24P, EAS24P]
+  - slug: ubiquiti-enterprise-campus-aggregation
+    part_numbers: [ECSAGG]
+  - slug: ubiquiti-unifi-switch-24-gen1
+    part_numbers: [US24]
+  - slug: ubiquiti-unifi-switch-48-gen1
+    part_numbers: [US48]
+  - slug: ubiquiti-unifi-switch-16-xg
+    part_numbers: [USXG]
+  - slug: ubiquiti-unifi-switch-24-poe-250w-gen1
+    part_numbers: [US24P250, S224250]
+  - slug: ubiquiti-unifi-switch-48-poe-500w-gen1
+    part_numbers: [US48P500, S248500]
+  # Access points
+  - slug: ubiquiti-u7-pro
+    part_numbers: [U7PRO]
+  - slug: ubiquiti-u7-pro-max
+    part_numbers: [U7PROMAX]
+  - slug: ubiquiti-u7-lite
+    part_numbers: [G7LT]
+  - slug: ubiquiti-u7-long-range
+    part_numbers: [G7LRv2]
+  - slug: ubiquiti-u7-pro-wall
+    part_numbers: [U7PIW, U7-Pro-IW, U7-Pro-W]
+  - slug: ubiquiti-u7-pro-xg
+    part_numbers: [U7PROXG]
+  - slug: ubiquiti-u7-pro-xgs
+    part_numbers: [U7PROXGS]
+  - slug: ubiquiti-u7-outdoor
+    part_numbers: [UKPW, UK-Pro]
+  - slug: ubiquiti-u7-pro-outdoor
+    part_numbers: [U7PO]
+  - slug: ubiquiti-e7
+    part_numbers: [E7]
+  - slug: ubiquiti-u6-pro
+    part_numbers: [UAP6MP]
+  - slug: ubiquiti-u6-lr
+    part_numbers: [UALR6v3, UALR6v2]
+  - slug: ubiquiti-u6-lite
+    part_numbers: [UAL6]
+  - slug: ubiquiti-u6-plus
+    part_numbers: [UAPL6]
+  - slug: ubiquiti-u6-enterprise
+    part_numbers: [U6ENT]
+  - slug: ubiquiti-u6-mesh
+    part_numbers: [UAM6, U6M]
+  - slug: ubiquiti-u6-iw
+    part_numbers: [UAIW6, U6IW]
+  - slug: ubiquiti-uap-ac-pro
+    part_numbers: [U7PG2]
+  - slug: ubiquiti-uap-ac-lr
+    part_numbers: [U7LR]
+  - slug: ubiquiti-uap-ac-lite
+    part_numbers: [U7LT]
+  - slug: ubiquiti-uap-nanohd
+    part_numbers: [U7NHD]
+  # Recorders, NAS, controllers, power
+  - slug: ubiquiti-unifi-protect-network-video-recorder
+    part_numbers: [UNVR4]
+  - slug: ubiquiti-unifi-protect-network-video-recorder-pro
+    part_numbers: [UNVRPRO]
+  - slug: ubiquiti-unifi-unvr-g2-pro
+    part_numbers: [UNVRAI8]
+  - slug: ubiquiti-enterprise-network-video-recorder
+    part_numbers: [ENVR]
+  - slug: ubiquiti-unas-pro
+    part_numbers: [UNASPRO]
+  - slug: ubiquiti-cloud-key-gen2
+    part_numbers: [UCKG2]
+  - slug: ubiquiti-cloud-key-gen2-plus
+    part_numbers: [UCKP]
+  - slug: ubiquiti-unifi-application-server
+    part_numbers: [UAS, UASXG]
+  - slug: ubiquiti-ups-2u-eu
+    part_numbers: [UPS26]
+  - slug: ubiquiti-ups-2u-us
+    part_numbers: [UPS25]
+  - slug: ubiquiti-usp-pdu-pro
+    part_numbers: [USPPDUP]
+  - slug: ubiquiti-usp-pdu-hd
+    part_numbers: [USPPDUHD]
+  - slug: ubiquiti-unifi-smartpower-rps
+    part_numbers: [USPRPS]

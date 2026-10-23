@@ -33,6 +33,8 @@ var vendorAliases = map[string]string{
 	"hp":             "hpe", "hpe": "hpe", "hewlettpackard": "hpe", "hewlettpackardenterprise": "hpe",
 	"dell": "dell", "dellinc": "dell", "dellemc": "dell",
 	"routerboard": "mikrotik", "mikrotik": "mikrotik", "mikrotikls": "mikrotik",
+	"ubiquiti": "ubiquiti", "ubiquitiinc": "ubiquiti", "ubiquitinetworks": "ubiquiti", "ubnt": "ubiquiti", "unifi": "ubiquiti",
+	"synology": "synology", "synologyinc": "synology",
 }
 
 var nonAlnum = regexp.MustCompile(`[^a-z0-9]+`)
@@ -79,13 +81,16 @@ type Index struct {
 	variants map[string]*Model
 	// bySlug holds every model and synthesised base model by slug.
 	bySlug map[string]*Model
+	// baseOf holds the slugs some model names in its variant_of: the models
+	// that are the base of a family of chassis variants.
+	baseOf map[string]bool
 }
 
 func key(vendor, k string) string { return vendorKey(vendor) + "|" + k }
 
 // NewIndex indexes models by vendor and by model name, part number and slug.
 func NewIndex(models []*Model) *Index {
-	ix := &Index{byKey: map[string][]*Model{}, bySKU: map[string][]*Model{}, variants: map[string]*Model{}, bySlug: map[string]*Model{}}
+	ix := &Index{byKey: map[string][]*Model{}, bySKU: map[string][]*Model{}, variants: map[string]*Model{}, bySlug: map[string]*Model{}, baseOf: map[string]bool{}}
 	addTo := func(idx map[string][]*Model, k string, m *Model) {
 		for _, e := range idx[k] {
 			if e == m {
@@ -98,6 +103,9 @@ func NewIndex(models []*Model) *Index {
 	families := map[string][]*Model{}
 	for _, m := range models {
 		ix.bySlug[m.Slug] = m
+		if m.VariantOf != "" {
+			ix.baseOf[m.VariantOf] = true
+		}
 		add(key(m.Vendor, modelKey(m.Vendor, m.Model)), m)
 		add(key(m.Vendor, norm(m.Slug)), m)
 		add(key(m.Vendor, modelKey(m.Vendor, m.Slug)), m)

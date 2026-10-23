@@ -26,6 +26,10 @@ written, and what wins when the library or a collector later says something else
 
 ## Decision
 
+> Amended by [ADR 0056](0056-growing-the-device-type-library.md): in §2, a name match is not
+> certain because a longer-named sibling exists, only because another model's `variant_of` names
+> the matched model.
+
 1. **Candidates are the family the library can name.** `Index.Choices(vendor, model, part
    number)` returns Find's match, whether it is certain, and the candidate models: the models of
    the same vendor whose name starts, word for word, with the name the device reports

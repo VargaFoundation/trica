@@ -138,3 +138,42 @@ func TestRackContentsFallBackOnTheDeviceHeight(t *testing.T) {
 		t.Fatalf("sw-a1 height %v, want none (no model, no height of its own)", *sw1.UHeight)
 	}
 }
+
+// A model of height 0 (a desktop NAS, a wall access point) occupies no rack
+// unit: rack contents give no height for it, so the device's own height
+// applies and the elevation does not draw a 0 U box (ADR 0056). The model's
+// 0 comes from its own attributes or from the library when it is not
+// described yet.
+func TestRackContentsTreatAModelOfZeroUAsHavingNoHeight(t *testing.T) {
+	e := newEnv(t, reconcile.Policy{})
+	e.furnish()
+	b := sdk.NewBatch("declaration:test", sdk.ScopePartial)
+	b.Confidence = sdk.Declared
+	b.Object("t0", "device_type").Identify("slug", "acme-zero").Set("model", "Zero").Set("u_height", 0)
+	b.Object("tl", "device_type").Identify("slug", "acme-desk-nas")
+	b.Object("own", "device").Identify("name", "z-own").Set("role", "nas").Set("u_height", 1)
+	b.Object("none", "device").Identify("name", "z-none").Set("role", "nas")
+	b.Object("lib", "device").Identify("name", "z-lib").Set("role", "nas").Set("u_height", 2)
+	rack := sdk.Endpoint{Type: "rack", Identity: map[string]string{sdk.IDKey: e.ids["rack-p"]}}
+	b.Relations = append(b.Relations,
+		&sdk.Relation{Type: "instance_of", From: sdk.Ref("own"), To: sdk.Ref("t0")},
+		&sdk.Relation{Type: "instance_of", From: sdk.Ref("none"), To: sdk.Ref("t0")},
+		&sdk.Relation{Type: "instance_of", From: sdk.Ref("lib"), To: sdk.Ref("tl")},
+		&sdk.Relation{Type: "mounted_in", From: sdk.Ref("own"), To: rack, Attributes: map[string]any{}},
+		&sdk.Relation{Type: "mounted_in", From: sdk.Ref("none"), To: rack, Attributes: map[string]any{}},
+		&sdk.Relation{Type: "mounted_in", From: sdk.Ref("lib"), To: rack, Attributes: map[string]any{}})
+	e.apply(b)
+	by := map[string]rackItem{}
+	for _, it := range rackItems(t, e.page("/api/v1/racks/"+e.ids["rack-p"]+"/contents", tokReader)) {
+		by[it.Device.Display] = it
+	}
+	if it := by["z-own"]; it.Model == nil || it.UHeight == nil || *it.UHeight != 1 {
+		t.Fatalf("z-own height %v model %+v, want its own 1 U under a 0 U model", it.UHeight, it.Model)
+	}
+	if it := by["z-none"]; it.Model == nil || it.UHeight != nil {
+		t.Fatalf("z-none height %v model %+v, want no height (not 0)", it.UHeight, it.Model)
+	}
+	if it := by["z-lib"]; it.Model == nil || it.UHeight == nil || *it.UHeight != 2 {
+		t.Fatalf("z-lib height %v, want its own 2 U under a library 0 U model", it.UHeight)
+	}
+}
