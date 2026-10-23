@@ -5,7 +5,7 @@ import { prefersReducedMotion } from "../../motion";
 import { capacityWidth, planFlows, type Direction, type SpeedClass } from "./flow";
 import type { IsoBox, Rot } from "./iso";
 import { nextSpot, type Arrow } from "./nav";
-import { buildScene, type SceneEdge, type SceneItem } from "./scene";
+import { buildScene, type SceneEdge, type SceneFrame, type SceneItem } from "./scene";
 
 export interface IsoSceneProps {
   map: TopologyMap;
@@ -49,6 +49,7 @@ export function IsoScene(p: IsoSceneProps) {
   const svg = useRef<SVGSVGElement>(null);
   const els = useRef(new Map<string, SVGGElement>());
   const [hover, setHover] = useState<string | undefined>();
+  const [focused, setFocused] = useState<string | undefined>();
   const sceneKey = `${p.map.level}|${p.map.focus?.id ?? ""}|${p.rot}`;
   // View and roving focus belong to one scene: another level or rotation starts them afresh.
   const [viewState, setViewState] = useState({ key: sceneKey, k: 1, px: 0, py: 0 });
@@ -236,6 +237,10 @@ export function IsoScene(p: IsoSceneProps) {
         <filter id="iso-blur" x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation="5" />
         </filter>
+        <linearGradient id="iso-grad-top" x1="0" y1="0" x2="1" y2="1">
+          <stop className="iso-stop-hi" offset="0" />
+          <stop className="iso-stop-lo" offset="1" />
+        </linearGradient>
       </defs>
       <g className="iso-plates">
         {scene.plates.map((pl) => (
@@ -245,6 +250,13 @@ export function IsoScene(p: IsoSceneProps) {
           </g>
         ))}
       </g>
+      {scene.frame ? (
+        <g className="iso-frame iso-frame-back">
+          {scene.frame.back.map((b, i) => (
+            <Post key={i} box={b} />
+          ))}
+        </g>
+      ) : null}
       <g className="iso-items">
         {scene.items.map((it, n) => (
           <g
@@ -263,12 +275,19 @@ export function IsoScene(p: IsoSceneProps) {
             aria-pressed={p.selected === it.id}
             onClick={() => act(it)}
             onKeyDown={(e) => onKey(e, it)}
-            onFocus={() => setCur(it.id)}
+            onFocus={() => {
+              setCur(it.id);
+              setFocused(it.id);
+            }}
+            onBlur={() => setFocused((f) => (f === it.id ? undefined : f))}
             onPointerEnter={() => setHover(it.id)}
             onPointerLeave={() => setHover(undefined)}
           >
-            {it.role !== "device" && it.role !== "shelf" ? <polygon className="iso-shadow" points={it.iso.foot} transform="translate(12 8)" filter="url(#iso-blur)" /> : null}
+            {it.role !== "device" && it.role !== "shelf" && it.parts.length === 0 ? <polygon className="iso-shadow" points={it.iso.foot} transform="translate(12 8)" filter="url(#iso-blur)" /> : null}
             <Faces item={it} />
+            {it.parts.map((b, i) => (
+              <Post key={i} box={b} />
+            ))}
             {it.minis.map((m, i) => (
               <g key={i} className="iso-mini">
                 <polygon className="iso-face iso-south" points={m.south} />
@@ -276,9 +295,8 @@ export function IsoScene(p: IsoSceneProps) {
                 <polygon className="iso-face iso-top" points={m.top} />
               </g>
             ))}
-            {it.role === "internet" ? <path className="iso-cloud" d={CLOUD} transform={`translate(${it.iso.anchor.x} ${it.iso.anchor.y - 16})`} /> : null}
+            {it.role === "internet" ? <path className="iso-cloud" d={CLOUD} transform={`translate(${it.iso.anchor.x} ${it.iso.anchor.y - 18})`} /> : null}
             {it.arrow ? <polygon className="iso-front" points={it.arrow} /> : null}
-            <Label item={it} sub={it.subShown ? (it.sub ?? summary(it.node)) : undefined} />
             <g
               className="iso-info"
               aria-hidden="true"
@@ -294,6 +312,7 @@ export function IsoScene(p: IsoSceneProps) {
           </g>
         ))}
       </g>
+      {scene.frame ? <FrameFront frame={scene.frame} /> : null}
       <g className="iso-edges">
         {scene.edges.map((e) => {
           const lane = laneOf.get(e.edge.id);
@@ -319,13 +338,56 @@ export function IsoScene(p: IsoSceneProps) {
               {e.util === "down" ? <circle className="iso-edge-x" cx={e.mid.x} cy={e.mid.y} r="5" /> : null}
               {e.lanes.map((l) => {
                 const cls = lane?.get(l.dir);
-                return cls ? <path key={l.dir} className={`iso-flow s${cls} ${l.dir}`} d={l.d} strokeWidth={Math.min(w, 3)} /> : null;
+                return cls ? (
+                  <g key={l.dir}>
+                    <path className={`iso-flow-glow s${cls} ${l.dir}`} d={l.d} strokeWidth={Math.min(w, 3) + 6} />
+                    <path className={`iso-flow s${cls} ${l.dir}`} d={l.d} strokeWidth={Math.min(w, 3) + 1} />
+                  </g>
+                ) : null;
               })}
             </g>
           );
         })}
       </g>
+      <g className="iso-label-layer">
+        {scene.items.map((it) => (
+          <Label
+            key={it.id}
+            item={it}
+            shown={it.labelShown || hover === it.id || p.selected === it.id || focused === it.id}
+            sub={it.subShown && it.hasSub ? (it.sub ?? summary(it.node)) : undefined}
+          />
+        ))}
+      </g>
     </svg>
+  );
+}
+
+function Post({ box }: { box: IsoBox }) {
+  return (
+    <g className="iso-post">
+      <polygon className="iso-face iso-south" points={box.south} />
+      <polygon className="iso-face iso-east" points={box.east} />
+      <polygon className="iso-face iso-top" points={box.top} />
+    </g>
+  );
+}
+
+/** The posts at the front of a rack, its top rail and the U ticks: drawn after the devices. */
+function FrameFront({ frame }: { frame: SceneFrame }) {
+  return (
+    <g className="iso-frame iso-frame-front" aria-hidden="true">
+      <polygon className="iso-rail" points={frame.top} />
+      {frame.front.map((b, i) => (
+        <Post key={i} box={b} />
+      ))}
+      <path className="iso-ticks" d={frame.ticks} />
+      {frame.marks.map((m) => (
+        <text key={m.text} className="iso-tick-label" x={m.x} y={m.y} textAnchor="end">
+          {m.text}
+        </text>
+      ))}
+    </g>
   );
 }
 
@@ -350,24 +412,24 @@ function Faces({ item }: { item: SceneItem }) {
   );
 }
 
-function Label({ item, sub }: { item: SceneItem; sub?: string }) {
-  const at = item.labelAt;
-  const anchor = item.labelStart ? "start" : "middle";
+function Label({ item, sub, shown }: { item: SceneItem; sub?: string; shown: boolean }) {
+  const pl = item.pill;
+  const h = sub ? 34 : 21;
+  const x = pl.x0;
+  const y = item.labelAt.y - 14;
   return (
-    <g className={`iso-labels${item.labelShown ? "" : " is-hidden"}`} aria-hidden="true">
-      {item.labelStart ? <line className="iso-leader" x1={item.iso.bounds.x1} y1={at.y - 3} x2={at.x - 4} y2={at.y - 3} /> : null}
-      <circle className="iso-lamp" cx={item.labelStart ? at.x + 4 : at.x - labelHalf(item.label) - 9} cy={at.y - 4} r="3.5" />
-      <text className="iso-label" x={item.labelStart ? at.x + 13 : at.x} y={at.y} textAnchor={anchor}>
+    <g className={`iso-labels h-${item.node.health.worst}${shown ? "" : " is-hidden"}`} data-for={item.id} aria-hidden="true">
+      {item.labelStart ? <line className="iso-leader" x1={item.iso.bounds.x1} y1={item.labelAt.y - 3} x2={x} y2={item.labelAt.y - 3} /> : null}
+      <rect className="iso-pill" x={x} y={y} width={Math.max(pl.x1 - pl.x0, 1)} height={h} rx={h > 25 ? 10 : 10.5} />
+      <circle className="iso-lamp" cx={x + 11} cy={y + 10.5} r="3.5" />
+      <text className="iso-label" x={x + 20} y={y + 14.5}>
         {item.label}
       </text>
       {sub ? (
-        <text className="iso-sub" x={item.labelStart ? at.x + 13 : at.x} y={at.y + 13} textAnchor={anchor}>
+        <text className="iso-sub" x={x + 20} y={y + 28}>
           {sub}
         </text>
       ) : null}
     </g>
   );
 }
-
-/** A label's half width, px: enough to put the health lamp beside it without measuring the text. */
-const labelHalf = (s: string) => Math.min(s.length, 28) * 3.4;

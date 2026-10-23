@@ -4,7 +4,7 @@
 
 import type { MapEdge, MapNode, TopologyMap } from "../../api/types";
 import { isoBox, project, turnPoint, turnRect, union, viewBoxOf, type Bounds, type IsoBox, type Pt, type Rot } from "./iso";
-import { layoutWorld, type ItemRole, type Plate, type WorldItem, type WorldLayout } from "./layout";
+import { isGate, layoutWorld, UZ, type ItemRole, type Plate, type WorldItem, type WorldLayout } from "./layout";
 import { edgeUtilClass, type Direction } from "./flow";
 
 export interface SceneItem {
@@ -31,6 +31,23 @@ export interface SceneItem {
   drillable: boolean;
   /** World centre, for spatial keyboard navigation (turned). */
   centre: Pt;
+  /** The posts and lintel of a gate (portals and the Internet). */
+  parts: IsoBox[];
+  /** A caption exists for this item (its sub text, or a summary the page writes). */
+  hasSub: boolean;
+  /** The label's pill, in screen px, once placed. */
+  pill: Bounds;
+}
+
+export interface SceneFrame {
+  /** Posts behind the devices, and those in front of them. */
+  back: IsoBox[];
+  front: IsoBox[];
+  /** The top rails, as polygon points. */
+  top: string;
+  /** U ticks along the front-left post, and the numbers of some of them. */
+  ticks: string;
+  marks: { x: number; y: number; text: string }[];
 }
 
 export interface ScenePlate {
@@ -62,6 +79,7 @@ export interface Scene {
   bounds: Bounds;
   viewBox: string;
   units?: number;
+  frame?: SceneFrame;
 }
 
 const fmt = (n: number) => Math.round(n * 10) / 10;
@@ -120,7 +138,22 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
       .join(" ");
   }
   const r = turnRect(b, world, rot);
-  const port = it.role === "device" ? project(r.x + r.w / 2, r.y + r.d, b.z + b.h / 2) : iso.anchor;
+  const gate = isGate(it.role);
+  let port = iso.anchor;
+  if (it.role === "device") port = it.portSide === "east" ? project(r.x + r.w, r.y + r.d / 2, b.z + b.h / 2) : project(r.x + r.w / 2, r.y + r.d, b.z + b.h / 2);
+  else if (gate) port = project(r.x + r.w / 2, r.y + r.d / 2, b.z + b.h / 2);
+  const parts: IsoBox[] = [];
+  if (gate) {
+    const P = 0.2;
+    const lintel = Math.min(0.16, b.h / 4);
+    for (const box of [
+      { x: b.x - 0.03, y: b.y - 0.03, w: P, d: P, z: b.z, h: b.h },
+      { x: b.x - 0.03, y: b.y + b.d - P + 0.03, w: P, d: P, z: b.z, h: b.h },
+      { x: b.x - 0.03, y: b.y - 0.03, w: P, d: b.d + 0.06, z: b.z + b.h - lintel, h: lintel },
+    ])
+      parts.push(isoBox(box, world, rot));
+  }
+  const summarised = it.role === "site" || it.role === "room" || it.role === "area" || it.role === "rack";
   const centre = turnPoint({ x: b.x + b.w / 2, y: b.y + b.d / 2 }, world, rot);
   return {
     id: it.id,
@@ -138,6 +171,9 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
     subShown: true,
     drillable: !!it.node.drill,
     centre,
+    parts,
+    hasSub: it.sub !== undefined || summarised,
+    pill: { x0: 0, y0: 0, x1: 0, y1: 0 },
   };
 }
 
@@ -162,30 +198,87 @@ export function arc(a: Pt, b: Pt, shift = 0, reverse = false): { d: string; mid:
 
 export const LANE_GAP = 3;
 
+const CHAR = 6.9;
+
+/** The size of a label's pill, from an estimate of the text (it is not measured). */
+function pillSize(i: SceneItem, withSub: boolean): { w: number; h: number } {
+  const sub = withSub ? (i.sub?.length ?? 18) * 6.2 : 0;
+  return { w: Math.round(Math.max(i.label.length * CHAR, sub) + 30), h: withSub ? 34 : 21 };
+}
+
+function pillAt(i: SceneItem, withSub: boolean, dy: number): Bounds {
+  const { w, h } = pillSize(i, withSub);
+  const x0 = i.labelStart ? i.labelAt.x : i.labelAt.x - w / 2;
+  const y0 = i.labelAt.y + dy - 14;
+  return { x0, x1: x0 + w, y0, y1: y0 + h };
+}
+
 /**
- * Labels that would be written over one another: the nearest item keeps its
- * label, a farther one loses its caption, then its label (it reappears when
- * pointed at). Widths are estimated, not measured.
+ * Where each label goes. The nearest item places its label first; a farther
+ * one that would be written over it first loses its caption, then moves down a
+ * step or two (a rack's devices keep the height of their unit instead), then
+ * is hidden until pointed at. Widths are estimated, not measured.
  */
-function cullLabels(items: SceneItem[]): void {
+function placeLabels(items: SceneItem[]): void {
   const taken: Bounds[] = [];
-  const hit = (r: Bounds) => taken.some((t) => r.x0 < t.x1 && t.x0 < r.x1 && r.y0 < t.y1 && t.y0 < r.y1);
-  const rect = (i: SceneItem, withSub: boolean): Bounds => {
-    const w = Math.max(i.label.length, withSub ? (i.sub ?? "").length : 0) * 6.4 + 14;
-    const x0 = i.labelStart ? i.labelAt.x : i.labelAt.x - w / 2;
-    return { x0, x1: x0 + w, y0: i.labelAt.y - 11, y1: i.labelAt.y + (withSub ? 16 : 3) };
-  };
+  const hit = (r: Bounds) => taken.some((t) => r.x0 - 2 < t.x1 && t.x0 < r.x1 + 2 && r.y0 - 2 < t.y1 && t.y0 < r.y1 + 2);
   for (const i of [...items].reverse()) {
     if (!i.labelShown) continue;
-    if (hit(rect(i, true))) {
-      i.subShown = false;
-      if (hit(rect(i, false))) {
-        i.labelShown = false;
-        continue;
+    const steps = i.labelStart ? [0] : [0, 38, 76, 114];
+    let done = false;
+    for (const dy of steps) {
+      for (const withSub of i.hasSub ? [true, false] : [false]) {
+        const r = pillAt(i, withSub, dy);
+        if (hit(r)) continue;
+        i.labelAt = { x: i.labelAt.x, y: i.labelAt.y + dy };
+        i.subShown = withSub;
+        i.pill = r;
+        taken.push(r);
+        done = true;
+        break;
       }
+      if (done) break;
     }
-    taken.push(rect(i, i.subShown));
+    if (!done) {
+      i.labelShown = false;
+      i.subShown = false;
+      i.pill = pillAt(i, false, 0);
+    }
   }
+  for (const i of items) if (!i.labelShown && i.pill.x1 === 0) i.pill = pillAt(i, false, 0);
+}
+
+function frameScene(f: NonNullable<WorldLayout["frame"]>, layout: WorldLayout, rot: Rot): SceneFrame {
+  const world = { w: layout.w, d: layout.d };
+  const { x, y, w, d, h } = f.box;
+  const P = 0.14;
+  const posts = [
+    { x, y, w: P, d: P, z: 0, h },
+    { x: x + w - P, y, w: P, d: P, z: 0, h },
+    { x, y: y + d - P, w: P, d: P, z: 0, h },
+    { x: x + w - P, y: y + d - P, w: P, d: P, z: 0, h },
+  ]
+    .map((b) => isoBox(b, world, rot))
+    .sort((a, c) => a.depth - c.depth);
+  const r = turnRect(f.box, world, rot);
+  const corner = (cx: number, cy: number, z: number) => {
+    const p = project(cx, cy, z);
+    return `${fmt(p.x)},${fmt(p.y)}`;
+  };
+  const top = [corner(r.x, r.y, h), corner(r.x + r.w, r.y, h), corner(r.x + r.w, r.y + r.d, h), corner(r.x, r.y + r.d, h)].join(" ");
+  // The ticks sit on the post at the left of the front, one per unit, a number every few.
+  const step = f.units <= 24 ? 4 : 6;
+  let ticks = "";
+  const marks: SceneFrame["marks"] = [];
+  for (let u = 1; u <= f.units; u++) {
+    const p = project(r.x, r.y + r.d, u * UZ);
+    ticks += `M${fmt(p.x - (u % step === 0 ? 8 : 5))},${fmt(p.y)}L${fmt(p.x)},${fmt(p.y)}`;
+    if (u === 1 || u % step === 0) {
+      const c = project(r.x, r.y + r.d, (u - 0.5) * UZ);
+      marks.push({ x: fmt(c.x - 11), y: fmt(c.y + 3), text: String(u) });
+    }
+  }
+  return { back: posts.slice(0, 1), front: posts.slice(1), top, ticks, marks };
 }
 
 export function buildScene(m: TopologyMap, rot: Rot): Scene {
@@ -202,7 +295,7 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
     i.labelStart = true;
     i.labelShown = (i.node.mount?.u_height ?? 1) >= 2 || linked.has(i.id);
   }
-  cullLabels(items);
+  placeLabels(items);
   const edges: SceneEdge[] = [];
   for (const e of m.edges) {
     const a = at.get(e.a);
@@ -217,17 +310,17 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
     }
     edges.push({ edge: e, d: base.d, lanes, util: edgeUtilClass(e), mid: base.mid });
   }
+  const frame = layout.frame ? frameScene(layout.frame, layout, rot) : undefined;
   const bounds = union(
     [
       ...items.map((i) => i.iso.bounds),
-      ...items.map((i) =>
-        i.labelStart
-          ? { x0: i.labelAt.x, x1: i.labelAt.x + 120, y0: i.labelAt.y - 12, y1: i.labelAt.y + 4 }
-          : { x0: i.labelAt.x - 60, x1: i.labelAt.x + 60, y0: i.labelAt.y - 12, y1: i.labelAt.y + 16 },
-      ),
+      ...items.flatMap((i) => i.parts.map((p) => p.bounds)),
+      ...items.map((i) => (i.pill.x1 > 0 ? i.pill : { x0: i.iso.bounds.x0, x1: i.iso.bounds.x1, y0: i.iso.bounds.y1, y1: i.iso.bounds.y1 + 20 })),
       ...plates.map((p) => p.iso.bounds),
+      ...(frame ? [...frame.back, ...frame.front].map((p) => p.bounds) : []),
+      ...(frame ? frame.marks.map((m) => ({ x0: m.x - 20, x1: m.x, y0: m.y - 10, y1: m.y + 2 })) : []),
     ],
     36,
   );
-  return { items, plates, edges, bounds, viewBox: viewBoxOf(bounds), units: layout.units };
+  return { items, plates, edges, bounds, viewBox: viewBoxOf(bounds), units: layout.units, frame };
 }

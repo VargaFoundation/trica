@@ -128,6 +128,8 @@ describe("the topology map", () => {
     renderApp({ at: "/topology?level=room&id=%3Croom%3E" });
     await ready();
     await waitFor(() => expect(document.querySelectorAll(".iso-flow").length).toBeGreaterThan(0));
+    // Each moving dash has a wider, fainter copy that glows round it.
+    expect(document.querySelectorAll(".iso-flow-glow")).toHaveLength(document.querySelectorAll(".iso-flow").length);
     document.body.innerHTML = "";
 
     serve();
@@ -135,6 +137,7 @@ describe("the topology map", () => {
     renderApp({ at: "/topology?level=room&id=%3Croom%3E" });
     await ready();
     expect(document.querySelectorAll(".iso-flow")).toHaveLength(0);
+    expect(document.querySelectorAll(".iso-flow-glow")).toHaveLength(0);
     expect(scene()).toHaveAttribute("data-lanes", "0");
     expect(screen.getByRole("checkbox", { name: /animate the traffic/i })).toBeDisabled();
   });

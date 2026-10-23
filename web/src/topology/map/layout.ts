@@ -19,6 +19,8 @@ export interface WorldItem {
   facing?: { x: number; y: number };
   label: string;
   sub?: string;
+  /** Where lines meet a device of a rack: its front, or its side when gates stand beside the rack. */
+  portSide?: "south" | "east";
 }
 
 export interface Plate {
@@ -38,7 +40,13 @@ export interface WorldLayout {
   plates: Plate[];
   /** Number of rack units drawn, for the rack level. */
   units?: number;
+  /** The cabinet's outer footprint and height (rack level): the four posts and the rails stand on it. */
+  frame?: { box: Box; units: number };
 }
+
+/** The shape of a gate: a thin panel standing across a column, its long side along y. */
+export const GATE = { w: 0.14, d: 1.8, h: 2.2 };
+export const isGate = (r: ItemRole) => r === "internet" || r === "portal";
 
 const MARGIN = 2;
 const FACING: Record<Facing, { x: number; y: number }> = {
@@ -74,35 +82,48 @@ function item(n: MapNode, role: ItemRole, box: Box, extra: Partial<WorldItem> = 
   return { id: n.id, node: n, role, box, minis: 0, label: n.display, ...extra };
 }
 
-/** Portals stand in a line along the north edge of the content, below the horizon. */
-function portals(nodes: MapNode[], y: number, x0: number): WorldItem[] {
+/** Portals (other places, the Internet) are gates standing in a column outside the content. */
+function portals(nodes: MapNode[], at: (i: number, n: MapNode) => Pick<Box, "x" | "y" | "z"> & Partial<Box>): WorldItem[] {
   return nodes
     .filter((n) => n.kind === "portal")
     .sort((a, b) => (a.place_type === "internet" ? -1 : b.place_type === "internet" ? 1 : byName(a, b)))
-    .map((n, i) =>
-      item(n, n.place_type === "internet" ? "internet" : "portal", { x: x0 + i * 2.8, y, w: 1.6, d: 1.6, z: 0, h: 2.2 }),
-    );
+    .map((n, i) => {
+      const p = at(i, n);
+      return item(n, n.place_type === "internet" ? "internet" : "portal", { w: GATE.w, d: GATE.d, h: GATE.h, ...p });
+    });
 }
 
 function layoutGlobal(m: TopologyMap): WorldLayout {
   const sites = m.nodes.filter((n) => n.kind === "site").sort(byName);
   const internet = m.nodes.find((n) => n.kind === "internet");
   const unplaced = m.nodes.find((n) => n.kind === "unplaced");
-  const n = sites.length;
-  const radius = n <= 1 ? 0 : Math.max(5.5, n * 1.9);
+  // Sites in rows that run level across the screen (a step of +x -y is a step to the right), the
+  // unplaced devices as the last cell, and the Internet as a gate behind the first row.
+  const cells = sites.length + (unplaced ? 1 : 0);
+  const perRow = Math.max(1, Math.min(cells, 4));
+  const STEP = 4.6;
+  const ROW = 5;
+  const at = (k: number) => {
+    const col = k % perRow;
+    const row = Math.floor(k / perRow);
+    return { x: col * STEP + row * ROW, y: -col * STEP + row * ROW };
+  };
   const items: WorldItem[] = [];
-  sites.forEach((s, i) => {
-    const a = (2 * Math.PI * i) / Math.max(n, 1) - Math.PI / 2 + (n === 2 ? Math.PI / 4 : 0);
-    const cx = radius * Math.cos(a);
-    const cy = radius * Math.sin(a);
+  sites.forEach((s, k) => {
+    const p = at(k);
     const racks = s.counts.racks;
     items.push(
-      item(s, "site", { x: cx - 1.8, y: cy - 1.8, w: 3.6, d: 3.6, z: 0, h: 0.7 + Math.min(2.2, Math.log2(1 + racks) * 0.4) }, { minis: Math.min(racks, 9), sub: s.group?.display }),
+      item(s, "site", { x: p.x, y: p.y, w: 3.6, d: 3.6, z: 0, h: 0.7 + Math.min(2.2, Math.log2(1 + racks) * 0.4) }, { minis: Math.min(racks, 9), sub: s.group?.display }),
     );
   });
-  const top = -(radius + 5.5);
-  if (internet) items.push(item(internet, "internet", { x: -1.4, y: top, w: 2.8, d: 2.8, z: 3, h: 0.5 }));
-  if (unplaced) items.push(item(unplaced, "unplaced", { x: radius + 4, y: radius + 3, w: 2.8, d: 2.8, z: 0, h: 0.4 }));
+  if (unplaced) {
+    const p = at(sites.length);
+    items.push(item(unplaced, "unplaced", { x: p.x + 0.4, y: p.y + 0.4, w: 2.8, d: 2.8, z: 0, h: 0.4 }));
+  }
+  if (internet) {
+    const c = ((Math.min(cells, perRow) - 1) / 2) * STEP;
+    items.push(item(internet, "internet", { x: c - 6.4, y: -c - 6.4, w: GATE.w, d: GATE.d + 0.6, z: 0, h: GATE.h + 0.4 }));
+  }
   return settle(items, []);
 }
 
@@ -137,8 +158,7 @@ function layoutSite(m: TopologyMap): WorldLayout {
     x += w + GAP;
     rowD = Math.max(rowD, d);
   }
-  const top = -4.6;
-  const ps = portals(m.nodes, top, 0);
+  const ps = portals(m.nodes, (i) => ({ x: -3.6, y: 0.4 + i * 2.6, z: 0 }));
   return settle([...items, ...ps], []);
 }
 
@@ -195,13 +215,13 @@ function layoutRoom(m: TopologyMap): WorldLayout {
       items.push(item(n, "shelf", { x: (i % per) + 0.15, y: below + Math.floor(i / per) + 0.15, w: 0.7, d: 0.7, z: 0, h: 0.35 }, { sub: n.role }));
     });
   }
-  const ps = portals(m.nodes, -4.4, 0);
+  const ps = portals(m.nodes, (i) => ({ x: -3.6, y: 0.4 + i * 2.6, z: 0 }));
   return settle([...items, ...ps], plates);
 }
 
 /** The usual rack heights; a rack is drawn at the first one that holds its devices. */
 const HEIGHTS = [12, 24, 42, 48, 52];
-const UZ = 0.36;
+export const UZ = 0.36;
 
 function layoutRack(m: TopologyMap): WorldLayout {
   const devs = m.nodes.filter((n) => n.kind === "device").sort(byName);
@@ -211,7 +231,9 @@ function layoutRack(m: TopologyMap): WorldLayout {
   const units = HEIGHTS.find((h) => h >= top) ?? Math.ceil(top / 6) * 6;
   const W = 2.6;
   const D = 2.6;
+  const gates = m.nodes.filter((n) => n.kind === "portal");
   const items: WorldItem[] = [];
+  const zOf = new Map<string, { z: number; h: number }>();
   for (const n of mounted) {
     const mt = n.mount;
     if (!mt) continue;
@@ -220,17 +242,29 @@ function layoutRack(m: TopologyMap): WorldLayout {
     const half = !mt.full_depth;
     const d = half ? D / 2 - 0.05 : D - 0.1;
     const y = half ? (rear ? 0.05 : D / 2) : 0.05;
-    items.push(
-      item(n, "device", { x: 0.1, y, w: W - 0.2, d, z: (mt.position - 1) * UZ + 0.02, h: u * UZ - 0.04 }, { sub: n.role }),
-    );
+    const box = { x: 0.1, y, w: W - 0.2, d, z: (mt.position - 1) * UZ + 0.02, h: u * UZ - 0.04 };
+    zOf.set(n.id, box);
+    items.push(item(n, "device", box, { sub: n.role, portSide: gates.length > 0 ? "east" : "south" }));
   }
-  loose.forEach((n, i) => {
-    items.push(item(n, "shelf", { x: W + 1.6 + (i % 4) * 1.5, y: 0.6 + Math.floor(i / 4) * 1.5, w: 1.2, d: 1.2, z: 0, h: 0.4 }, { sub: n.role }));
+  // Gates stand in a column outside the rack, on the right, each at the height of the device it is cabled from.
+  const GH = 1.1;
+  const ps = portals(m.nodes, (i, p) => {
+    const link = m.edges.find((e) => e.a === p.id || e.b === p.id);
+    const dev = zOf.get((link?.a === p.id ? link?.b : link?.a) ?? "");
+    const z = dev ? Math.max(0, dev.z + dev.h / 2 - GH / 2) : 0;
+    return { x: W + 2.2, y: 0.4 + i * 1.7, z, d: 1.4, h: GH };
   });
-  const plates: Plate[] = [{ id: "base", box: { x: -0.1, y: -0.1, w: W + 0.2, d: D + 0.2, z: -0.12, h: 0.12 } }];
-  const ps = portals(m.nodes, 0, 0).map((p, i) => ({ ...p, box: { ...p.box, x: -4.4, y: 0.2 + i * 2.6 } }));
+  loose.forEach((n, i) => {
+    items.push(item(n, "shelf", { x: W + 5 + (i % 4) * 1.5, y: 0.6 + Math.floor(i / 4) * 1.5, w: 1.2, d: 1.2, z: 0, h: 0.4 }, { sub: n.role }));
+  });
+  const POST = 0.14;
+  const frame = { box: { x: -POST, y: -POST, w: W + POST * 2, d: D + POST * 2, z: 0, h: units * UZ + 0.1 }, units };
+  const plates: Plate[] = [{ id: "base", box: { x: -0.45, y: -0.45, w: W + 0.9, d: D + 0.9, z: -0.12, h: 0.12 } }];
   const out = settle([...items, ...ps], plates);
-  return { ...out, units };
+  const base = out.plates[0]?.box ?? { x: 0.45, y: 0.45 };
+  const dx = base.x + 0.45;
+  const dy = base.y + 0.45;
+  return { ...out, units, frame: { ...frame, box: { ...frame.box, x: frame.box.x + dx, y: frame.box.y + dy } } };
 }
 
 function layoutUnplaced(m: TopologyMap): WorldLayout {

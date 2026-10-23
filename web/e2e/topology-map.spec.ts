@@ -51,7 +51,7 @@ for (const theme of ["dark", "light"] as const) {
 test("the world is walked down to a device with the mouse, and back with the keyboard", async ({ page }) => {
   await signInWithToken(page, "/topology");
   await expect(page.locator(drawn)).toHaveAttribute("data-level", "global");
-  await page.locator('.iso-item[data-kind="site"]', { hasText: "paris-1" }).click();
+  await page.locator('.iso-item[data-kind="site"][aria-label*="paris-1"]').click();
   await expect(page.locator(drawn)).toHaveAttribute("data-level", "site");
   await page.locator('.iso-item[data-kind="room"]').first().click();
   await expect(page.locator(drawn)).toHaveAttribute("data-level", "room");
@@ -66,7 +66,7 @@ test("the world is walked down to a device with the mouse, and back with the key
 test("a place is opened with the keyboard alone", async ({ page }) => {
   await signInWithToken(page, "/topology");
   await expect(page.locator(drawn)).toBeVisible();
-  await page.locator('.iso-item[data-kind="site"]', { hasText: "paris-1" }).focus();
+  await page.locator('.iso-item[data-kind="site"][aria-label*="paris-1"]').focus();
   await page.keyboard.press("Enter");
   await expect(page.locator(drawn)).not.toHaveAttribute("data-level", "global");
 });

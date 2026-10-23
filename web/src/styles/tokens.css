@@ -93,6 +93,7 @@
   --trica-iso-floor: #1f2125;
   --trica-iso-floor-line: #34373d;
   --trica-iso-top: #355a8a;
+  --trica-iso-top-hi: #3c6396;
   --trica-iso-south: #284569;
   --trica-iso-east: #1e3555;
   --trica-iso-edge: #8cc0f5;
@@ -182,6 +183,7 @@
   --trica-iso-floor: #eef0f4;
   --trica-iso-floor-line: #d3d7de;
   --trica-iso-top: #d8e8fb;
+  --trica-iso-top-hi: #f1f7fe;
   --trica-iso-south: #b4d1f4;
   --trica-iso-east: #9dbfea;
   --trica-iso-edge: #2f66a0;
@@ -262,6 +264,7 @@
     --trica-iso-floor: #eef0f4;
     --trica-iso-floor-line: #d3d7de;
     --trica-iso-top: #d8e8fb;
+    --trica-iso-top-hi: #f1f7fe;
     --trica-iso-south: #b4d1f4;
     --trica-iso-east: #9dbfea;
     --trica-iso-edge: #2f66a0;

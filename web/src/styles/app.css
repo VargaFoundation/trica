@@ -1907,6 +1907,71 @@ label.check {
 .iso-area .iso-face {
   stroke-dasharray: 5 4;
 }
+/* A portal is a gate, not a place: a see-through panel between two posts and a lintel. */
+.iso-portal > .iso-face,
+.iso-internet > .iso-face {
+  fill-opacity: 0.16;
+  stroke-opacity: 0.45;
+  stroke-dasharray: 3 3;
+}
+.iso-portal .iso-post .iso-face,
+.iso-internet .iso-post .iso-face {
+  stroke-dasharray: none;
+  stroke-opacity: 0.9;
+}
+.iso-portal .iso-shadow,
+.iso-internet .iso-shadow {
+  display: none;
+}
+/* Sites and rooms: a soft sheen across the top and a heavier shadow on the ground. */
+.iso-stop-hi {
+  stop-color: var(--trica-iso-top-hi);
+}
+.iso-stop-lo {
+  stop-color: var(--trica-iso-top);
+}
+.iso-site > .iso-face.iso-top,
+.iso-room > .iso-face.iso-top {
+  fill: url(#iso-grad-top);
+}
+.iso-site .iso-shadow {
+  opacity: 0.5;
+}
+/* The rack's cabinet: posts, top rail and the unit ticks. */
+.iso-frame {
+  pointer-events: none;
+}
+.iso-post .iso-top {
+  fill: var(--trica-iso-neutral-top);
+}
+.iso-post .iso-south {
+  fill: var(--trica-iso-neutral-south);
+}
+.iso-post .iso-east {
+  fill: var(--trica-iso-neutral-east);
+}
+.iso-post .iso-face {
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-opacity: 0.8;
+}
+.iso-rail {
+  fill: none;
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+.iso-ticks {
+  fill: none;
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-width: 1;
+  opacity: 0.75;
+}
+.iso-tick-label {
+  fill: var(--trica-ink-muted);
+  font-family: var(--trica-font-sans);
+  font-size: 10px;
+}
 .iso-mini .iso-face {
   stroke-opacity: 0.35;
 }
@@ -1963,24 +2028,29 @@ label.check {
   stroke: var(--trica-iso-label-bg);
   stroke-width: 1.5;
 }
-.iso-item.h-ok .iso-lamp {
+.iso-labels.h-ok .iso-lamp {
   fill: var(--trica-graph-health-ok);
 }
-.iso-item.h-warning .iso-lamp {
+.iso-labels.h-warning .iso-lamp {
   fill: var(--trica-graph-health-warn);
 }
-.iso-item.h-critical .iso-lamp {
+.iso-labels.h-critical .iso-lamp {
   fill: var(--trica-graph-health-crit);
 }
 
-/* Labels sit on a halo of the paper colour instead of a box. */
+/* Labels are small pills on a layer above every shape, so that no box hides one. */
+.iso-label-layer {
+  pointer-events: none;
+}
+.iso-pill {
+  fill: var(--trica-iso-label-bg);
+  fill-opacity: 0.92;
+  stroke: var(--trica-iso-floor-line);
+  stroke-width: 1;
+}
 .iso-label,
 .iso-sub {
   font-family: var(--trica-font-sans);
-  paint-order: stroke;
-  stroke: var(--trica-iso-label-bg);
-  stroke-width: 4px;
-  stroke-linejoin: round;
   pointer-events: none;
 }
 .iso-label {
@@ -2001,15 +2071,6 @@ label.check {
 }
 .iso-labels.is-hidden {
   opacity: 0;
-}
-.iso-item:hover .iso-labels.is-hidden,
-.iso-item:focus .iso-labels.is-hidden,
-.iso-item.is-selected .iso-labels.is-hidden {
-  opacity: 1;
-}
-.iso-item:focus-visible .iso-label,
-.iso-item.is-selected .iso-label {
-  text-decoration: underline;
 }
 .iso-info {
   opacity: 0;
@@ -2061,7 +2122,8 @@ label.check {
   opacity: 0.9;
 }
 .iso-edge-base,
-.iso-flow {
+.iso-flow,
+.iso-flow-glow {
   fill: none;
   stroke: var(--trica-graph-util-unknown);
   stroke-linecap: round;
@@ -2077,46 +2139,62 @@ label.check {
   pointer-events: none;
 }
 .u-normal .iso-edge-base,
-.u-normal .iso-flow {
+.u-normal .iso-flow,
+.u-normal .iso-flow-glow {
   stroke: var(--trica-graph-util-normal);
 }
 .u-warn .iso-edge-base,
-.u-warn .iso-flow {
+.u-warn .iso-flow,
+.u-warn .iso-flow-glow {
   stroke: var(--trica-graph-util-warn);
 }
 .u-crit .iso-edge-base,
-.u-crit .iso-flow {
+.u-crit .iso-flow,
+.u-crit .iso-flow-glow {
   stroke: var(--trica-graph-util-crit);
 }
 .u-down .iso-edge-base,
-.u-down .iso-flow {
+.u-down .iso-flow,
+.u-down .iso-flow-glow {
   stroke: var(--trica-graph-down);
 }
 .iso-edge:has(.iso-flow) .iso-edge-base {
-  opacity: 0.45;
+  opacity: 0.4;
 }
+/* The moving dashes are brighter than the line, over a wider, fainter copy that glows around them. */
 .iso-flow {
-  stroke-dasharray: 2 14;
+  stroke-dasharray: 7 13;
+  filter: brightness(1.45) saturate(1.2);
   animation: iso-flow 3s linear infinite;
 }
-.iso-flow.s1 {
+.iso-flow-glow {
+  stroke-dasharray: 7 13;
+  opacity: 0.26;
+  animation: iso-flow 3s linear infinite;
+}
+.iso-flow.s1,
+.iso-flow-glow.s1 {
   animation-duration: 6s;
 }
-.iso-flow.s2 {
+.iso-flow.s2,
+.iso-flow-glow.s2 {
   animation-duration: 4.5s;
 }
-.iso-flow.s3 {
+.iso-flow.s3,
+.iso-flow-glow.s3 {
   animation-duration: 3s;
 }
-.iso-flow.s4 {
+.iso-flow.s4,
+.iso-flow-glow.s4 {
   animation-duration: 2s;
 }
-.iso-flow.s5 {
+.iso-flow.s5,
+.iso-flow-glow.s5 {
   animation-duration: 1.2s;
 }
 @keyframes iso-flow {
   to {
-    stroke-dashoffset: -16;
+    stroke-dashoffset: -20;
   }
 }
 
@@ -2153,6 +2231,7 @@ label.check {
 }
 @media (prefers-reduced-motion: reduce) {
   .iso-flow,
+  .iso-flow-glow,
   .iso-svg .iso-item,
   .iso-svg .iso-plates {
     animation: none;

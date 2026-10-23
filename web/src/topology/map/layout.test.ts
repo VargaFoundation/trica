@@ -43,11 +43,30 @@ describe("the layout of every recorded level", () => {
     });
   }
 
-  it("global: the Internet floats above the sites", () => {
+  it("global: the Internet is a gate behind the sites, and the unplaced devices sit in the row of the sites", () => {
     const w = layoutWorld(MAPS.global);
     const net = w.items.find((i) => i.role === "internet");
-    expect(net?.box.z).toBeGreaterThan(0);
-    expect(w.items.filter((i) => i.role === "site")).toHaveLength(2);
+    const sites = w.items.filter((i) => i.role === "site");
+    expect(sites).toHaveLength(2);
+    expect(net && net.box.w).toBeLessThan(0.5);
+    // Behind: further from the viewer than every site (a smaller x + y).
+    expect(net && net.box.x + net.box.y).toBeLessThan(Math.min(...sites.map((s) => s.box.x + s.box.y)));
+    const un = w.items.find((i) => i.role === "unplaced");
+    expect(un && Math.abs(un.box.x + un.box.y - (sites[0]?.box.x ?? 0) - (sites[0]?.box.y ?? 0))).toBeLessThan(1.5);
+  });
+
+  it("room and site: the portals are gates outside the floor, never on it", () => {
+    for (const name of ["room", "site"] as const) {
+      const w = layoutWorld(MAPS[name]);
+      const gates = w.items.filter((i) => i.role === "portal" || i.role === "internet");
+      expect(gates.length, name).toBeGreaterThan(0);
+      const others = w.items.filter((i) => !gates.includes(i));
+      const floor = w.plates.find((p) => p.id === "floor")?.box;
+      for (const g of gates) {
+        expect(g.box.w).toBeLessThan(0.5);
+        expect(g.box.x + g.box.w, `${name} ${g.id}`).toBeLessThanOrEqual(Math.min(...others.map((o) => o.box.x), floor?.x ?? Infinity));
+      }
+    }
   });
 
   it("room: racks stand on the tile their floor position names", () => {
@@ -133,6 +152,44 @@ describe("the layout of every recorded level", () => {
     expect(w.items.find((i) => i.id === "in")?.role).toBe("device");
   });
 
+  it("rack: a frame of four posts stands round the devices, and the gates in a column outside it on the right", () => {
+    const w = layoutWorld(MAPS.rack);
+    const f = w.frame;
+    expect(f).toBeDefined();
+    expect(f?.units).toBe(w.units);
+    const devs = w.items.filter((i) => i.role === "device");
+    for (const d of devs) {
+      expect(d.box.x).toBeGreaterThanOrEqual(f?.box.x ?? 0);
+      expect(d.box.x + d.box.w).toBeLessThanOrEqual((f?.box.x ?? 0) + (f?.box.w ?? 0));
+      expect(d.box.z + d.box.h).toBeLessThanOrEqual(f?.box.h ?? 0);
+      expect(d.portSide).toBe("east");
+    }
+    const gates = w.items.filter((i) => i.role === "portal" || i.role === "internet");
+    expect(gates.length).toBeGreaterThan(0);
+    for (const g of gates) expect(g.box.x).toBeGreaterThanOrEqual((f?.box.x ?? 0) + (f?.box.w ?? 0));
+    expect(new Set(gates.map((g) => g.box.x)).size).toBe(1);
+  });
+
+  it("rack: a gate stands at the height of the device it is cabled from", () => {
+    const m = level(
+      "rack",
+      [
+        node("low", { mount: { position: 2, u_height: 1, full_depth: true } }),
+        node("high", { mount: { position: 30, u_height: 2, full_depth: true } }),
+        node("g1", { kind: "portal", place_type: "internet" }),
+        node("g2", { kind: "portal" }),
+      ],
+    );
+    const edge = (id: string, a: string, b: string) => ({ ...MAPS.rack.edges[0]!, id, a, b });
+    const w = layoutWorld({ ...m, edges: [edge("e1", "low", "g1"), edge("e2", "g2", "high")] });
+    const gate = (id: string) => w.items.find((i) => i.id === id)!;
+    const dev = (id: string) => w.items.find((i) => i.id === id)!;
+    const mid = (i: WorldItem) => i.box.z + i.box.h / 2;
+    expect(Math.abs(mid(gate("g1")) - mid(dev("low")))).toBeLessThan(0.05);
+    expect(Math.abs(mid(gate("g2")) - mid(dev("high")))).toBeLessThan(0.05);
+    expect(mid(gate("g2"))).toBeGreaterThan(mid(gate("g1")) + 5);
+  });
+
   it("rack: a rack of 96 devices is laid out (the heaviest recorded size)", () => {
     const devs = Array.from({ length: 96 }, (_, i) => node(`d${i}`, { mount: { position: i + 1, u_height: 1, full_depth: i % 2 === 0, face: i % 2 ? "rear" : "front" } }));
     const w = layoutWorld(level("rack", devs));
@@ -166,6 +223,34 @@ describe("the scene", () => {
     expect(s.items.some((i) => !i.subShown)).toBe(true);
     const far = buildScene(level("rack", [node("a", { role: "switch", mount: { position: 1, u_height: 2, full_depth: true } }), node("b", { role: "switch", mount: { position: 30, u_height: 2, full_depth: true } })]), 0);
     expect(far.items.every((i) => i.labelShown && i.subShown)).toBe(true);
+  });
+
+  it("scene: labels are pills that do not overlap, in every recorded level and every turn", () => {
+    const hit = (a: { x0: number; x1: number; y0: number; y1: number }, b: typeof a) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+    for (const [name, m] of Object.entries(MAPS)) {
+      for (const rot of [0, 1, 2, 3] as const) {
+        const shown = buildScene(m, rot).items.filter((i) => i.labelShown);
+        for (const [k, a] of shown.entries())
+          for (const b of shown.slice(k + 1)) expect(hit(a.pill, b.pill), `${name}/${rot}: ${a.id} / ${b.id}`).toBe(false);
+      }
+    }
+  });
+
+  it("scene: a label that would sit on another's is moved down a step rather than lost", () => {
+    const m = level("room", [node("a", { kind: "rack", floor: { x: 0, y: 0 } }), node("b", { kind: "rack", floor: { x: 1, y: 0 } })], {
+      focus: { id: "r", type: "room", display: "R", width_mm: 1800, depth_mm: 1200, tile_mm: 600 },
+    });
+    const s = buildScene(m, 0);
+    expect(s.items.filter((i) => i.labelShown)).toHaveLength(2);
+  });
+
+  it("scene: the rack's frame has two layers of posts, U ticks, and numbers", () => {
+    const s = buildScene(MAPS.rack, 0);
+    expect(s.frame?.back).toHaveLength(1);
+    expect(s.frame?.front).toHaveLength(3);
+    expect((s.frame?.ticks.match(/M/g) ?? []).length).toBe(s.units);
+    expect(s.frame?.marks[0]?.text).toBe("1");
+    expect(buildScene(MAPS.room, 0).frame).toBeUndefined();
   });
 
   it("runs the two lanes of a line along the same curve in opposite directions", () => {
