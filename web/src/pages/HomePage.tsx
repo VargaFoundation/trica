@@ -50,6 +50,10 @@ export function HomePage() {
           <Link to="/health">{t("nav.health")}</Link>
           <p>{t("home.healthText")}</p>
         </li>
+        <li>
+          <Link to="/collectors">{t("nav.collectors")}</Link>
+          <p>{t("home.collectorsText")}</p>
+        </li>
       </ul>
     </>
   );

@@ -17,13 +17,33 @@ import (
 	"time"
 
 	"github.com/VargaFoundation/trica/internal/collect"
+	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
 // Kind is the collector family and the Target.Kind value that selects it.
 const Kind = "pfsense"
 
-func init() { collect.Register(Kind, New) }
+// Descriptor is what the module says about itself (ADR 0055).
+var Descriptor = collect.Descriptor{
+	Kind:       Kind,
+	Title:      "pfSense",
+	Vendors:    []string{"Netgate"},
+	Protocol:   "pfSense REST API package v2 (pfrest) over HTTPS",
+	Summary:    schema.Label{EN: "pfSense firewalls: interfaces, VLANs, addresses, gateways, routes, firewall and NAT rules, VPN tunnels.", FR: "Pare-feu pfSense : interfaces, VLAN, adresses, passerelles, routes, règles de filtrage et de NAT, tunnels VPN."},
+	Deployment: collect.DeploymentTarget,
+	Collects:   []string{"device", "firewall_rule", "gateway", "interface", "ip_address", "prefix", "tunnel", "vlan"},
+	ReadOnly:   "The client has one method, GET; redirects are never followed, so the key cannot leave the configured address.",
+	Address:    "host[:port], https only; the REST API is served by the web GUI.",
+	Username:   collect.Credential{Use: collect.UseUnused},
+	Secret:     collect.Credential{Use: collect.UseRequired, Meaning: "API key"},
+	Options:    Options{},
+	Tested:     []string{"pfSense 2.7.2", "pfSense 2.8.1"},
+	Evidence:   collect.EvidenceSynthesised,
+	Docs:       "internal/collect/pfsense/README.md",
+}
+
+func init() { collect.Register(Descriptor, New) }
 
 // Sections an operator may switch off with Options.Skip, typically because
 // the API key's user lacks the read privilege for them.
@@ -37,9 +57,9 @@ const (
 // Options are the collector-specific settings (target.options).
 type Options struct {
 	// BasePath is the API prefix; "/api/v2" unless a reverse proxy rewrites it.
-	BasePath string `yaml:"base_path"`
+	BasePath string `yaml:"base_path" default:"/api/v2" doc:"API prefix; change it only behind a reverse proxy that rewrites it."`
 	// Skip lists sections not to collect: firewall_rules, nat, vpn, routes.
-	Skip []string `yaml:"skip"`
+	Skip []string `yaml:"skip" enum:"firewall_rules,nat,vpn,routes" doc:"Sections not to collect, typically because the API key user lacks the read privilege."`
 }
 
 type collector struct {

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/VargaFoundation/trica/internal/collect"
+	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -42,10 +43,10 @@ const rootPath = "/redfish/v1/"
 // Options are the redfish-specific settings of a target.
 type Options struct {
 	// LogDays is the look-back window of the event log counters (default 30).
-	LogDays int `yaml:"log_days"`
+	LogDays int `yaml:"log_days" default:"30" doc:"Look-back window, in days, of the event log counters; must be positive."`
 	// SkipLogs turns the event log reading off (the IML of an old iLO 4 can
 	// be slow to page through).
-	SkipLogs bool `yaml:"skip_logs"`
+	SkipLogs bool `yaml:"skip_logs" default:"false" doc:"Do not read the event log at all (the IML of an old iLO 4 can be slow to page through)."`
 }
 
 // Collector reads one BMC.
@@ -56,7 +57,26 @@ type Collector struct {
 	now    func() time.Time
 }
 
-func init() { collect.Register(Kind, New) }
+// Descriptor is what the module says about itself (ADR 0055).
+var Descriptor = collect.Descriptor{
+	Kind:       Kind,
+	Title:      "Redfish BMC",
+	Vendors:    []string{"HPE (iLO)", "Dell (iDRAC)"},
+	Protocol:   "Redfish REST API over HTTPS",
+	Summary:    schema.Label{EN: "Servers through their BMC: CPUs, memory, drives, network ports, power, cooling, sensors and event log counters.", FR: "Serveurs via leur BMC : CPU, mémoire, disques, ports réseau, alimentation, refroidissement, sondes et totaux du journal d'événements."},
+	Deployment: collect.DeploymentTarget,
+	Collects:   []string{"cpu", "device", "disk", "fan", "interface", "ip_address", "memory", "module", "psu", "sensor"},
+	ReadOnly:   "Sends GET requests only; it creates no Redfish session and calls no action.",
+	Address:    "host, host:port or https://host:port of the BMC.",
+	Username:   collect.Credential{Use: collect.UseRequired, Meaning: "Read-only BMC account (HTTP Basic on every request)"},
+	Secret:     collect.Credential{Use: collect.UseRequired, Meaning: "Password of that account"},
+	Options:    Options{},
+	Tested:     []string{"HPE iLO 4", "HPE iLO 5", "Dell iDRAC 8"},
+	Evidence:   collect.EvidenceSynthesised,
+	Docs:       "internal/collect/redfish/README.md",
+}
+
+func init() { collect.Register(Descriptor, New) }
 
 // New builds the collector of a target.
 func New(t collect.Target) (sdk.Collector, error) {

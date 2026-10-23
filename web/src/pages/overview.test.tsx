@@ -263,6 +263,7 @@ describe("the sidebar", () => {
     expect(within(nav).getAllByRole("link").map((l) => [l.textContent, l.getAttribute("href")])).toEqual([
       ["Overview", "/"],
       ["Health", "/health"],
+      ["Collectors", "/collectors"],
       ["All objects", "/objects"],
       ["Search", "/search"],
       ["Rooms and racks", "/rooms"],

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router";
 import { api } from "../api/endpoints";
 import { Async } from "../components/Async";
 import { Empty, Time } from "../components/Time";
@@ -19,6 +20,9 @@ export function HealthPage() {
     <>
       <h1>{t("health.title")}</h1>
       <p className="lead">{t("health.intro")}</p>
+      <p>
+        <Link to="/collectors">{t("health.seeCollectors")}</Link>
+      </p>
       <Fleet defaultGroup="kind" />
       <section aria-labelledby="collection-h">
         <h2 id="collection-h">{t("health.collection")}</h2>
@@ -53,7 +57,7 @@ export function HealthPage() {
                     {rows.map((r) => (
                       <tr key={`${r.source}/${r.collector}/${r.target}`} data-ok={r.ok ? "true" : "false"}>
                         <th scope="row" data-label={t("health.source")}>
-                          {r.source}
+                          {r.module ? <Link to={`/collectors/${encodeURIComponent(r.module)}/${encodeURIComponent(r.source.slice(r.module.length + 1))}`}>{r.source}</Link> : r.source}
                         </th>
                         <td data-label={t("health.state")}>
                           <span className={r.ok ? "badge badge-ok" : "badge badge-failing"} data-value={r.ok ? "ok" : "failing"}>

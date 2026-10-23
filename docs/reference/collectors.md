@@ -15,7 +15,7 @@ a pasted secret stops the start instead of collecting nothing.
 
 | Key | Meaning |
 |---|---|
-| `kind` | `arista`, `kubernetes`, `maas`, `mikrotik`, `pfsense` or `redfish`. |
+| `kind` | The collector module: `arista`, `kubernetes`, `maas`, `mikrotik`, `pfsense` or `redfish` today. `GET /api/v1/collectors` (or the Collectors page) is the authoritative list of what this build knows. |
 | `name` | Identifies the target. The batch source is `<kind>:<name>`, which is also the key of the health board and of the logs. |
 | `address` | Where to connect; the form depends on the collector (examples below). |
 | `username` | Account name, for the collectors that use one. |
@@ -90,6 +90,57 @@ runner (`collect.Failed` / `collect.Succeeded`). A failing target never stops th
 that is still going is not started a second time (it is skipped and counted), and the first run
 of each target waits a random fraction of its interval (10 % at most) so that a restart does not
 hit every device at once.
+
+A target removed from the file stays on the Collectors page as "reported" for as long as its row
+exists on the health board: nothing is deleted (a source nobody runs any more is only silent).
+
+## Collector modules
+
+Every collector is a module that describes itself ([ADR 0055](../adr/0055-collector-modules-describe-themselves.md)):
+its package registers a `collect.Descriptor` together with its factory, `collect.Register(Descriptor,
+New)`, and a descriptor that is incomplete stops the start. The API (`GET /api/v1/collectors`, see
+[the API](api.md)) and the **Collectors** pages of the web UI ([UI](ui.md)) are built from the
+descriptors, the targets file and the health board, so a module appears there with no change to
+either. Nothing is stored: the view is computed at each request.
+
+| Field | What it says |
+|---|---|
+| `Kind` | The source prefix (`arista`), `^[a-z][a-z0-9-]*$`; the `kind` of a target. |
+| `Title`, `Vendors`, `Protocol` | What it is: "Arista EOS", "Arista Networks", "eAPI: JSON-RPC 2.0 over HTTP(S)". |
+| `Summary` | One sentence, in English and French. |
+| `Deployment` | `target` (a line of the targets file, run by the server or by `trica collector`) or `agent` (installed on the host it inventories: no target and no factory; the host agent is the module `agent`). |
+| `Collects` | The object types it emits. Every fake run is checked against it (`collecttest.Run`). |
+| `ReadOnly` | How read-only is enforced. |
+| `Address`, `Username`, `Secret` | What a target's `address` takes; whether `username` and `password` are `required`, `optional` or `unused`, and what to put there. `password` is always a reference. |
+| `Options` | The struct `DecodeOptions` decodes into. The option table is generated from its `yaml`, `doc`, `default` and `enum` tags, so it cannot drift from what the collector accepts. |
+| `Tested`, `Evidence` | The equipment versions the fakes stand for, and whether they are `synthesised`, `recorded` or `field`, as the package's `testdata/README.md` says. This is the compatibility matrix of the roadmap. |
+| `Docs` | The module's README, linked on GitHub (the tag of the build, else `main`). |
+
+What the pages show of a target: its address (URL credentials cleaned), interval, timeout, routing
+domain, TLS settings and options; a secret-kind option or one named like a secret shows as its
+reference, never as a value. The username and the secret reference of a target are shown to an
+administrator only; a plain password written in the file (which the runner refuses) shows as
+`[redacted]`. A remote `trica collector` keeps its targets on its own host: the server sees only
+its health, so its instances show as "reported", with no configuration.
+
+An instance is `ok` or `failing` after its last run, `pending` before its first, and `stale` when
+its last attempt is older than three intervals plus a timeout (the collector is not running at all).
+
+### Adding a module
+
+1. Create `internal/collect/<kind>` with a `var Descriptor = collect.Descriptor{...}` and
+   `func init() { collect.Register(Descriptor, New) }`. Give every field of the `Options` struct
+   a `yaml` tag and a `doc` tag (and `default` or `enum` where they apply).
+2. Write its README (the descriptor's `Docs` must exist) and a `Fake*` with its `testdata/`
+   directory and `testdata/README.md` (recorded or synthesised, from which version, what was
+   anonymised); set `Evidence` accordingly.
+3. Run the fake through `collecttest.Run`: it fails for a type missing from `Collects`.
+4. Add one import line to `internal/collect/all/all.go`. `TestEveryModulePackageIsImported` fails
+   when it is missing, and `TestEveryModuleIsDescribed` checks the descriptor, the README and the
+   declared types.
+
+Nothing else changes: the endpoints and the pages list the new module, its instances and their
+health.
 
 ## Mode 1: in the server
 

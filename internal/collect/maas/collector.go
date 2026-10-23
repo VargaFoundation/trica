@@ -17,13 +17,33 @@ import (
 	"time"
 
 	"github.com/VargaFoundation/trica/internal/collect"
+	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
 // Kind is the collector kind to use in a target.
 const Kind = "maas"
 
-func init() { collect.Register(Kind, New) }
+// Descriptor is what the module says about itself (ADR 0055).
+var Descriptor = collect.Descriptor{
+	Kind:       Kind,
+	Title:      "MAAS",
+	Vendors:    []string{"Canonical"},
+	Protocol:   "MAAS REST API 2.0 over HTTP(S), OAuth 1.0a PLAINTEXT",
+	Summary:    schema.Label{EN: "Bare-metal machines managed by a MAAS region controller: interfaces, addresses, disks, subnets and VLANs.", FR: "Machines bare-metal gérées par un contrôleur de région MAAS : interfaces, adresses, disques, sous-réseaux et VLAN."},
+	Deployment: collect.DeploymentTarget,
+	Collects:   []string{"device", "disk", "interface", "ip_address", "prefix", "vlan"},
+	ReadOnly:   "The client has no code path that sends anything but GET.",
+	Address:    "http(s)://host[:port] of the region controller, without /MAAS.",
+	Username:   collect.Credential{Use: collect.UseUnused},
+	Secret:     collect.Credential{Use: collect.UseRequired, Meaning: "API key consumer_key:token_key:token_secret"},
+	Options:    Options{},
+	Tested:     []string{"MAAS 3.5"},
+	Evidence:   collect.EvidenceSynthesised,
+	Docs:       "internal/collect/maas/README.md",
+}
+
+func init() { collect.Register(Descriptor, New) }
 
 // Options are the MAAS-specific settings of a target (the "options" block).
 type Options struct {
@@ -32,7 +52,7 @@ type Options struct {
 	// an RBAC "view all" role on every resource pool). Without it, a non
 	// administrator's batch is partial, so that machines it cannot see are not
 	// reported as gone.
-	AssumeFullVisibility bool `yaml:"assume_full_visibility"`
+	AssumeFullVisibility bool `yaml:"assume_full_visibility" default:"false" doc:"Declares that a non-administrator API key sees every machine; without it such a batch is partial, so machines it cannot see are not reported as gone."`
 }
 
 // Collector reads one MAAS region controller.

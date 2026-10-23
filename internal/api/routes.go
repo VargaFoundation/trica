@@ -114,7 +114,10 @@ func (s *Server) routeTable() []route {
 		tDisc   = "discrepancies"
 		tSaved  = "saved queries"
 		tOps    = "operations"
+		tColl   = "collectors"
 	)
+	collectorKind := param{Name: "kind", In: "path", Desc: "Kind of the collector module.", Required: true,
+		Schema: map[string]any{"type": "string", "pattern": "^[a-z][a-z0-9-]*$"}}
 	typeParam := param{Name: "type", In: "query", Desc: "Restrict to one object type.", Schema: map[string]any{"type": "string", enumTypes: true}}
 	return []route{
 		{Method: "GET", Path: "/healthz", ID: "getHealthz", Tag: tOps, Summary: "Liveness probe (public).",
@@ -130,6 +133,22 @@ func (s *Server) routeTable() []route {
 		{Method: "GET", Path: "/health/collection", ID: "getCollectionHealth", Tag: tOps, Action: ActionRead,
 			Summary: "Collection health: the last run of every source.", Params: list(),
 			Responses: ok(Page[SourceHealth]{}), Errors: []int{http.StatusBadRequest}, H: s.hCollectionHealth},
+
+		{Method: "GET", Path: "/collectors", ID: "listCollectors", Tag: tColl, Action: ActionRead,
+			Summary:   "The collector modules this binary knows, with their instances counted by status, and the sources no module claims.",
+			Responses: ok(CollectorCatalogue{}), H: s.hListCollectors},
+		{Method: "GET", Path: "/collectors/{kind}", ID: "getCollector", Tag: tColl, Action: ActionRead,
+			Summary:   "One collector module: what it collects, how it is configured, what it was tested with.",
+			Params:    []param{collectorKind},
+			Responses: ok(CollectorModule{}), Errors: []int{http.StatusNotFound}, H: s.hGetCollector},
+		{Method: "GET", Path: "/collectors/{kind}/instances", ID: "listCollectorInstances", Tag: tColl, Action: ActionRead,
+			Summary:   "The instances of a module (its targets and the sources reported by its collectors), failing first.",
+			Params:    append([]param{collectorKind}, list(qEnum("status", "Filter by status.", instanceStatuses...))...),
+			Responses: ok(Page[CollectorInstance]{}), Errors: []int{http.StatusBadRequest, http.StatusNotFound}, H: s.hListCollectorInstances},
+		{Method: "GET", Path: "/collectors/{kind}/instances/{name}", ID: "getCollectorInstance", Tag: tColl, Action: ActionRead,
+			Summary:   "One instance: its configuration (credential references to administrators only) and its last run.",
+			Params:    []param{collectorKind, {Name: "name", In: "path", Desc: "Name of the instance (the source without its kind prefix).", Required: true, Schema: map[string]any{"type": "string"}}},
+			Responses: ok(CollectorInstance{}), Errors: []int{http.StatusNotFound}, H: s.hGetCollectorInstance},
 
 		{Method: "GET", Path: "/schema", ID: "getSchema", Tag: tSchema, Action: ActionRead,
 			Summary:   "The schema registry: object types, attributes, relation types.",

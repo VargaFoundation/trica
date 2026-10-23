@@ -4,6 +4,9 @@
 full-scope `sdk.Batch` per run, from the source `agent:<hostname>`. Code:
 `internal/agent` (probes, mapping) and `cmd/trica-agent` (the binary).
 
+The agent is listed on the Collectors page of the web UI as the collector module `agent`, with the
+hosts that report as its instances ([ADR 0055](../adr/0055-collector-modules-describe-themselves.md)).
+
 With `--server` the batches are sent to a trica server over mutual TLS, with an
 on-disk spool while it is unreachable ([below](#sending-to-a-server),
 [ADR-0027](../adr/0027-agent-sends-to-the-server.md)). Without it they go to

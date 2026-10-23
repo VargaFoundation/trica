@@ -4810,6 +4810,225 @@
         ],
         "type": "object"
       },
+      "CollectorCatalogue": {
+        "properties": {
+          "modules": {
+            "items": {
+              "$ref": "#/components/schemas/CollectorModule"
+            },
+            "type": "array"
+          },
+          "unregistered": {
+            "items": {
+              "$ref": "#/components/schemas/SourceHealth"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "modules",
+          "unregistered"
+        ],
+        "type": "object"
+      },
+      "CollectorCounts": {
+        "properties": {
+          "failing": {
+            "type": "integer"
+          },
+          "instances": {
+            "type": "integer"
+          },
+          "ok": {
+            "type": "integer"
+          },
+          "pending": {
+            "type": "integer"
+          },
+          "stale": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "failing",
+          "instances",
+          "ok",
+          "pending",
+          "stale"
+        ],
+        "type": "object"
+      },
+      "CollectorCredential": {
+        "properties": {
+          "meaning": {
+            "type": "string"
+          },
+          "use": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "use"
+        ],
+        "type": "object"
+      },
+      "CollectorCredentials": {
+        "properties": {
+          "secret": {
+            "$ref": "#/components/schemas/CollectorCredential"
+          },
+          "username": {
+            "$ref": "#/components/schemas/CollectorCredential"
+          }
+        },
+        "required": [
+          "secret",
+          "username"
+        ],
+        "type": "object"
+      },
+      "CollectorInstance": {
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/TargetConfig"
+          },
+          "health": {
+            "$ref": "#/components/schemas/SourceHealth"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "origin",
+          "source",
+          "status"
+        ],
+        "type": "object"
+      },
+      "CollectorModule": {
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "collects": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/CollectorCounts"
+          },
+          "credentials": {
+            "$ref": "#/components/schemas/CollectorCredentials"
+          },
+          "deployment": {
+            "type": "string"
+          },
+          "docs": {
+            "type": "string"
+          },
+          "docs_url": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/CollectorOption"
+            },
+            "type": "array"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "read_only": {
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/Label"
+          },
+          "tested": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": {
+            "type": "string"
+          },
+          "vendors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "collects",
+          "counts",
+          "deployment",
+          "docs",
+          "docs_url",
+          "evidence",
+          "kind",
+          "options",
+          "protocol",
+          "read_only",
+          "summary",
+          "tested",
+          "title",
+          "vendors"
+        ],
+        "type": "object"
+      },
+      "CollectorOption": {
+        "properties": {
+          "default": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "description",
+          "name",
+          "type"
+        ],
+        "type": "object"
+      },
       "DecisionOutcome": {
         "properties": {
           "proposal_id": {
@@ -6659,6 +6878,35 @@
         ],
         "type": "object"
       },
+      "PageCollectorInstance": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CollectorInstance"
+            },
+            "type": "array"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "total"
+        ],
+        "type": "object"
+      },
       "PageDiscrepancy": {
         "properties": {
           "items": {
@@ -7555,6 +7803,9 @@
             "format": "date-time",
             "type": "string"
           },
+          "module": {
+            "type": "string"
+          },
           "ok": {
             "type": "boolean"
           },
@@ -7595,6 +7846,73 @@
         },
         "required": [
           "status"
+        ],
+        "type": "object"
+      },
+      "TargetConfig": {
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "credentials": {
+            "$ref": "#/components/schemas/TargetCredentials"
+          },
+          "credentials_hidden": {
+            "type": "boolean"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "interval_seconds": {
+            "type": "integer"
+          },
+          "options": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "timeout_seconds": {
+            "type": "integer"
+          },
+          "tls": {
+            "$ref": "#/components/schemas/TargetTLS"
+          }
+        },
+        "required": [
+          "address",
+          "interval_seconds",
+          "options",
+          "timeout_seconds",
+          "tls"
+        ],
+        "type": "object"
+      },
+      "TargetCredentials": {
+        "properties": {
+          "secret_ref": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "TargetTLS": {
+        "properties": {
+          "ca_file": {
+            "type": "string"
+          },
+          "insecure": {
+            "type": "boolean"
+          },
+          "min_version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ca_file",
+          "insecure",
+          "min_version"
         ],
         "type": "object"
       },
@@ -7979,6 +8297,229 @@
         "summary": "The change feed between two times.",
         "tags": [
           "inventory"
+        ],
+        "x-trica-action": "read"
+      }
+    },
+    "/collectors": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "listCollectors",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectorCatalogue"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "The collector modules this binary knows, with their instances counted by status, and the sources no module claims.",
+        "tags": [
+          "collectors"
+        ],
+        "x-trica-action": "read"
+      }
+    },
+    "/collectors/{kind}": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "getCollector",
+        "parameters": [
+          {
+            "description": "Kind of the collector module.",
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectorModule"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "One collector module: what it collects, how it is configured, what it was tested with.",
+        "tags": [
+          "collectors"
+        ],
+        "x-trica-action": "read"
+      }
+    },
+    "/collectors/{kind}/instances": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "listCollectorInstances",
+        "parameters": [
+          {
+            "description": "Kind of the collector module.",
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by status.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "enum": [
+                "ok",
+                "failing",
+                "pending",
+                "stale"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size, 1 to 1000 (default 50).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items to skip (default 0).",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageCollectorInstance"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "The instances of a module (its targets and the sources reported by its collectors), failing first.",
+        "tags": [
+          "collectors"
+        ],
+        "x-trica-action": "read"
+      }
+    },
+    "/collectors/{kind}/instances/{name}": {
+      "get": {
+        "description": "Requires the \"read\" action.",
+        "operationId": "getCollectorInstance",
+        "parameters": [
+          {
+            "description": "Kind of the collector module.",
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Name of the instance (the source without its kind prefix).",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectorInstance"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem404"
+          },
+          "500": {
+            "$ref": "#/components/responses/Problem500"
+          }
+        },
+        "summary": "One instance: its configuration (credential references to administrators only) and its last run.",
+        "tags": [
+          "collectors"
         ],
         "x-trica-action": "read"
       }
@@ -10073,6 +10614,9 @@
   "tags": [
     {
       "name": "batches"
+    },
+    {
+      "name": "collectors"
     },
     {
       "name": "discrepancies"

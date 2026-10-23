@@ -402,10 +402,10 @@ func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			"changes": []obj{{"op": "set_attr", "object_id": oid(idSwA1), "type": "device", "key": "rack_unit", "after": "U40"}}}
 		writeJSON(w, http.StatusOK, p)
 	case path == "/health/collection":
-		writeJSON(w, http.StatusOK, page([]obj{
-			{"source": "arista:eos", "collector": "arista", "target": "192.0.2.10", "version": "0.3.0", "ok": true, "last_attempt": t1, "last_success": t1, "duration_ms": 840, "items": 124, "warnings": []string{}, "failures": 0},
-			{"source": "snmp:core", "collector": "snmp", "target": "198.51.100.1", "ok": false, "last_attempt": "2026-10-12T06:25:00Z", "last_success": "2026-10-11T06:25:00Z", "last_error": "timeout after 30s", "duration_ms": 30000, "items": 0, "warnings": []string{"no ifAlias on 3 interfaces"}, "failures": 4},
-		}))
+		eos, snmp, sw2, host := healthRows()
+		writeJSON(w, http.StatusOK, page([]obj{eos, snmp, sw2, host}))
+	case path == "/collectors" || strings.HasPrefix(path, "/collectors/"):
+		a.collectors(w, path)
 	case path == "/schema":
 		writeJSON(w, http.StatusOK, schemaDoc())
 	case path == "/topology/live":

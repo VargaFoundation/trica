@@ -44,6 +44,10 @@ describe("every call the client makes exists in the document", () => {
       "GET /discrepancies": {},
       "GET /health/collection": {},
       "GET /schema": {},
+      "GET /collectors": {},
+      "GET /collectors/acme": {},
+      "GET /collectors/acme/instances": {},
+      "GET /collectors/acme/instances/sw%201": {},
     });
     await api.me();
     await api.search({ q: "sw", limit: 100, offset: 0 });
@@ -60,8 +64,12 @@ describe("every call the client makes exists in the document", () => {
     await api.discrepancies({ status: "open", kind: "value_mismatch", limit: 50, offset: 0 });
     await api.health();
     await api.schema();
+    await api.collectors();
+    await api.collector("acme");
+    await api.collectorInstances("acme", { status: "failing", limit: 50, offset: 0 });
+    await api.collectorInstance("acme", "sw 1");
 
-    expect(mock.calls).toHaveLength(15);
+    expect(mock.calls).toHaveLength(19);
     for (const c of mock.calls) {
       const tpl = templateOf(c.path);
       expect(tpl, `${c.method} ${c.path} is not a path of openapi.json`).toBeDefined();

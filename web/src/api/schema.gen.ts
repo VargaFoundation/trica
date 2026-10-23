@@ -64,6 +64,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/collectors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The collector modules this binary knows, with their instances counted by status, and the sources no module claims.
+         * @description Requires the "read" action.
+         */
+        get: operations["listCollectors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collectors/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One collector module: what it collects, how it is configured, what it was tested with.
+         * @description Requires the "read" action.
+         */
+        get: operations["getCollector"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collectors/{kind}/instances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The instances of a module (its targets and the sources reported by its collectors), failing first.
+         * @description Requires the "read" action.
+         */
+        get: operations["listCollectorInstances"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/collectors/{kind}/instances/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One instance: its configuration (credential references to administrators only) and its last run.
+         * @description Requires the "read" action.
+         */
+        get: operations["getCollectorInstance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/device-types/{slug}/{face}": {
         parameters: {
             query?: never;
@@ -2883,6 +2963,59 @@ export interface components {
             source: string;
             value: unknown;
         };
+        CollectorCatalogue: {
+            modules: components["schemas"]["CollectorModule"][];
+            unregistered: components["schemas"]["SourceHealth"][];
+        };
+        CollectorCounts: {
+            failing: number;
+            instances: number;
+            ok: number;
+            pending: number;
+            stale: number;
+        };
+        CollectorCredential: {
+            meaning?: string;
+            use: string;
+        };
+        CollectorCredentials: {
+            secret: components["schemas"]["CollectorCredential"];
+            username: components["schemas"]["CollectorCredential"];
+        };
+        CollectorInstance: {
+            config?: components["schemas"]["TargetConfig"];
+            health?: components["schemas"]["SourceHealth"];
+            kind: string;
+            name: string;
+            origin: string;
+            source: string;
+            status: string;
+        };
+        CollectorModule: {
+            address?: string;
+            collects: string[];
+            counts: components["schemas"]["CollectorCounts"];
+            credentials?: components["schemas"]["CollectorCredentials"];
+            deployment: string;
+            docs: string;
+            docs_url: string;
+            evidence: string;
+            kind: string;
+            options: components["schemas"]["CollectorOption"][];
+            protocol: string;
+            read_only: string;
+            summary: components["schemas"]["Label"];
+            tested: string[];
+            title: string;
+            vendors: string[];
+        };
+        CollectorOption: {
+            default?: string;
+            description: string;
+            name: string;
+            type: string;
+            values?: string[];
+        };
         DecisionOutcome: {
             proposal_id: number;
             result?: components["schemas"]["ApplyResult"];
@@ -3658,6 +3791,13 @@ export interface components {
             total: number;
             truncated?: boolean;
         };
+        PageCollectorInstance: {
+            items: components["schemas"]["CollectorInstance"][];
+            limit: number;
+            offset: number;
+            total: number;
+            truncated?: boolean;
+        };
         PageDiscrepancy: {
             items: components["schemas"]["Discrepancy"][];
             limit: number;
@@ -3905,6 +4045,7 @@ export interface components {
             last_error?: string;
             /** Format: date-time */
             last_success?: string;
+            module?: string;
             ok: boolean;
             source: string;
             target: string;
@@ -3913,6 +4054,27 @@ export interface components {
         };
         Status: {
             status: string;
+        };
+        TargetConfig: {
+            address: string;
+            credentials?: components["schemas"]["TargetCredentials"];
+            credentials_hidden?: boolean;
+            domain?: string;
+            interval_seconds: number;
+            options: {
+                [key: string]: unknown;
+            };
+            timeout_seconds: number;
+            tls: components["schemas"]["TargetTLS"];
+        };
+        TargetCredentials: {
+            secret_ref?: string;
+            username?: string;
+        };
+        TargetTLS: {
+            ca_file: string;
+            insecure: boolean;
+            min_version: string;
         };
         TypeDoc: {
             attributes: components["schemas"]["AttributeDoc"][];
@@ -4149,6 +4311,120 @@ export interface operations {
             400: components["responses"]["Problem400"];
             401: components["responses"]["Problem401"];
             403: components["responses"]["Problem403"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    listCollectors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectorCatalogue"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getCollector: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Kind of the collector module. */
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectorModule"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    listCollectorInstances: {
+        parameters: {
+            query?: {
+                /** @description Filter by status. */
+                status?: "ok" | "failing" | "pending" | "stale";
+                /** @description Page size, 1 to 1000 (default 50). */
+                limit?: number;
+                /** @description Items to skip (default 0). */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Kind of the collector module. */
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageCollectorInstance"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getCollectorInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Kind of the collector module. */
+                kind: string;
+                /** @description Name of the instance (the source without its kind prefix). */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectorInstance"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
             500: components["responses"]["Problem500"];
         };
     };

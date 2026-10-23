@@ -36,7 +36,7 @@ var collectRetry = 15 * time.Second
 // the health board).
 func (w *Wiring) runCollect(ctx context.Context, d server.Deps) error {
 	file := w.cfg.Collect.TargetsFile
-	targets, err := runner.LoadTargets(file)
+	targets, err := w.collectTargets()
 	if err != nil {
 		return err
 	}

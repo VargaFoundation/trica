@@ -11,6 +11,9 @@ import type {
   DeviceAirflow,
   BatchOutcome,
   Change,
+  CollectorCatalogue,
+  CollectorInstance,
+  CollectorModule,
   DecisionOutcome,
   DeviceFaces,
   DeviceTypeChoice,
@@ -85,4 +88,12 @@ export const api = {
     request<Page<Discrepancy>>("/discrepancies", { query: q, signal }),
   health: (signal?: AbortSignal) => request<Page<SourceHealth>>("/health/collection", { query: { limit: 1000 }, signal }),
   schema: (signal?: AbortSignal) => request<SchemaDoc>("/schema", { signal }),
+
+  /** The collector modules this server knows, and the sources no module claims (ADR 0055). */
+  collectors: (signal?: AbortSignal) => request<CollectorCatalogue>("/collectors", { signal }),
+  collector: (kind: string, signal?: AbortSignal) => request<CollectorModule>(`/collectors/${encodeURIComponent(kind)}`, { signal }),
+  collectorInstances: (kind: string, q: QueryOf<"/collectors/{kind}/instances">, signal?: AbortSignal) =>
+    request<Page<CollectorInstance>>(`/collectors/${encodeURIComponent(kind)}/instances`, { query: q, signal }),
+  collectorInstance: (kind: string, name: string, signal?: AbortSignal) =>
+    request<CollectorInstance>(`/collectors/${encodeURIComponent(kind)}/instances/${encodeURIComponent(name)}`, { signal }),
 };

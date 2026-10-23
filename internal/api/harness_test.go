@@ -99,7 +99,7 @@ func newEnv(t *testing.T, policy reconcile.Policy) *env {
 		tokRackView:  {Principal: api.Principal{Subject: "iris", Kind: api.KindUser}, Actions: []string{api.ActionRead}, Types: []string{"rack", "device", "device_type"}},
 	}}
 	srv, err := api.New(api.Config{Engine: e.eng, Authorizer: e.auth, Auditor: e.aud, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Version: "test", Now: e.clk.now,
-		Images: testImages, Library: testLibrary})
+		Images: testImages, Library: testLibrary, Collectors: testCollectors})
 	if err != nil {
 		t.Fatal(err)
 	}

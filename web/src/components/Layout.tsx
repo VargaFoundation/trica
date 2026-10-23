@@ -17,6 +17,7 @@ export const NAV: { title: MessageKey; items: Item[] }[] = [
     items: [
       { to: "/", label: "nav.overview", icon: "overview", end: true },
       { to: "/health", label: "nav.health", icon: "health" },
+      { to: "/collectors", label: "nav.collectors", icon: "collector" },
     ],
   },
   {

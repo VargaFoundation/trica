@@ -22,7 +22,11 @@ collector it stands for, and gets a warning instead ([ADR 0005](../adr/0005-sing
 | `GET /healthz`, `GET /readyz` | none | Liveness; readiness (the database answers). No credential needed |
 | `GET /openapi.json` | read | The generated OpenAPI document |
 | `GET /me` | read | Who the caller is and which actions it holds globally (`actions`). The web UI uses it to decide which controls to offer; a grant limited to some types or sites can still be refused on one object, and every call is checked again |
-| `GET /health/collection` | read | Last run of every source |
+| `GET /health/collection` | read | Last run of every source; `module` is the kind of the collector module the source belongs to (its prefix), when this build has one |
+| `GET /collectors` | read | The collector modules of this build (ADR 0055): `{modules: [{kind, title, vendors, protocol, summary: {en, fr}, deployment, collects, read_only, address, credentials: {username, secret: {use, meaning}}, options: [{name, type, default, values, description}], tested, evidence, docs, docs_url, counts: {instances, ok, failing, pending, stale}}], unregistered: [<health row>]}`; `unregistered` are the sources no module claims (a collector built with the SDK) |
+| `GET /collectors/{kind}` | read | One module (404 when this build has none of that kind) |
+| `GET /collectors/{kind}/instances` | read | Its instances, failing first then stale, pending and ok; `status` filters (400 on another value). Each is `{source, kind, name, origin: server\|reported, status, config, health}`: `config` is the target of the targets file (`address`, `interval_seconds`, `timeout_seconds`, `domain`, `tls`, `options`, and `credentials: {username, secret_ref}` for an `admin` caller, `credentials_hidden: true` for the others), absent for a reported instance; `health` is the row of the health board, absent while pending |
+| `GET /collectors/{kind}/instances/{name}` | read | One instance (404) |
 | `GET /schema`, `GET /schema/types/{type}` | read | Types, attributes, relation types (built-in and overlay) |
 | `GET /objects` | read | List, with `q` (TQL), `type`, `sort`. Pages |
 | `GET /relations` | read | The current relations of some types across the inventory, both ends named (`from`, `to`: id, type, display, parent, site). `type` is required: a comma list of at most 8 registered relation types. Listed only if the caller may read both ends. Pages, ordered by id; scans at most 5,000 candidates. Built for views that need the links in bulk (the topology page) |
@@ -131,6 +135,11 @@ size of the whole result for the caller, not of the page. Lists that are post-fi
   variants) is removed from objects, history, search results, discrepancies and proposals, and
   cannot be queried, sorted on or written. The rule is on the name, so it over-approximates on
   purpose; a test checks that no built-in attribute trips it.
+- No credential of a collector's target: `GET /collectors/...` shows the address with URL credentials
+  cleaned (`https://***@host`), an option of a secret kind or named like a secret as its reference
+  (`file:`, `env:`) or `[redacted]`, never as a value, and the username and the secret reference
+  only to a caller holding `admin`. Health texts are cleaned the same way. A test sweeps these
+  paths with a password, a URL credential and a secret option in the targets.
 - No id of an object the caller may not read, in the change feed: a relation change on a readable
   object stays in `/changes`, but its `other_id` is blank when the caller may not read the other
   end (by type or by site). The change is kept, only the id is redacted.

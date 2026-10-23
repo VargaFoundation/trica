@@ -240,7 +240,10 @@ type ProposalView = reconcile.Proposal
 
 // SourceHealth is one row of the collection health board.
 type SourceHealth struct {
-	Source      string     `json:"source"`
+	Source string `json:"source"`
+	// Module is the kind of the collector module the source belongs to (its
+	// prefix), when this binary registers one: the key of GET /collectors.
+	Module      string     `json:"module,omitempty"`
 	Collector   string     `json:"collector"`
 	Target      string     `json:"target"`
 	Version     string     `json:"version,omitempty"`

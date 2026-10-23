@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/VargaFoundation/trica/internal/collect"
+	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -77,5 +79,39 @@ func TestRunAndHelpers(t *testing.T) {
 	}
 	if !strings.HasPrefix(bs[0].Source, "test:") {
 		t.Fatal(bs[0].Source)
+	}
+}
+
+type fakeKind struct{ fixed }
+
+func (fakeKind) Kind() string { return "collecttest-fake" }
+
+// A fake run that emits a type its module does not declare fails Run, so a
+// descriptor's Collects always covers what the fakes emit.
+func TestRunRejectsUndeclaredTypes(t *testing.T) {
+	if _, ok := collect.Lookup("collecttest-fake"); !ok {
+		collect.Register(collect.Descriptor{
+			Kind: "collecttest-fake", Title: "Fake", Vendors: []string{"Acme"}, Protocol: "none",
+			Summary:    schema.Label{EN: "A fake.", FR: "Un faux."},
+			Deployment: collect.DeploymentTarget,
+			Collects:   []string{"device"}, // the batch also emits an interface
+			ReadOnly:   "n/a", Address: "n/a", Tested: []string{"1"}, Evidence: collect.EvidenceSynthesised,
+			Username: collect.Credential{Use: collect.UseUnused}, Secret: collect.Credential{Use: collect.UseUnused},
+			Docs: "n/a",
+		}, func(collect.Target) (sdk.Collector, error) { return nil, nil })
+	}
+	r := &recorder{TB: t}
+	Run(r, fakeKind{fixed{goodBatch()}})
+	if len(r.errs) != 1 || !strings.Contains(r.errs[0], "interface") || !strings.Contains(r.errs[0], "Collects") {
+		t.Fatalf("errors: %v", r.errs)
+	}
+
+	// Declaring the type makes the same batch pass.
+	d, _ := collect.Lookup("collecttest-fake")
+	d.Collects = []string{"device", "interface"}
+	r = &recorder{TB: t}
+	CheckCollects(r, d, goodBatch())
+	if len(r.errs) != 0 {
+		t.Fatalf("declared types rejected: %v", r.errs)
 	}
 }
