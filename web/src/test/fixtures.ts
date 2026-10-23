@@ -528,7 +528,7 @@ export const collectorUnifi: CollectorModule = {
   read_only: "GET only.",
   address: "https://controller[:port]",
   credentials: { username: { use: "unused" }, secret: { use: "required", meaning: "API key" } },
-  options: [{ name: "site", type: "string", default: "default", description: "The UniFi site to read." }, { name: "key_file", type: "secret_reference", description: "File holding a second key." }],
+  options: [{ name: "site", type: "string", default: "default", description: "The UniFi site to read." }, { name: "key_file", type: "secret_reference", description: "File holding a second key." }, { name: "vids", type: "map", value_kind: "integer", description: "A VID per name." }],
   tested: ["UniFi Network 9.0"],
   evidence: "recorded",
   docs: "internal/collect/unifi/README.md",

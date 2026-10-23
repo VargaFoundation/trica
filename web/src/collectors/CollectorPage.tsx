@@ -124,7 +124,7 @@ function ModuleBody({ module: m }: { module: CollectorModule }) {
                       <th scope="row" data-label={t("collectors.opt.name")}>
                         <code>{o.name}</code>
                       </th>
-                      <td data-label={t("collectors.opt.type")}>{word("optionType", o.type)}</td>
+                      <td data-label={t("collectors.opt.type")}>{word("optionType", o.type)}{o.value_kind ? <> ({word("optionType", o.value_kind)})</> : null}</td>
                       <td data-label={t("collectors.opt.default")}>{o.default ? <code>{o.default}</code> : <Empty />}</td>
                       <td data-label={t("collectors.opt.values")}>{o.values?.length ? o.values.join(", ") : <Empty />}</td>
                       <td data-label={t("collectors.opt.description")}>{o.description}</td>

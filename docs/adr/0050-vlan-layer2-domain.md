@@ -57,3 +57,11 @@ already exists, with this meaning, in two collectors.
   (VID 0) VLAN of a fabric is a real VLAN of that fabric, which on a site is often a tagged VLAN
   of the switches: it is not mapped to its tagged twin (tracked as a finding).
 - The domain `default` is a convention, not a discovery: two networks never named are one.
+
+## Amendment: integration with the collector descriptors (ADR 0055) and the UniFi collectors (ADR 0057, 0060)
+
+The options added here (`vlan_domain` on arista, mikrotik and pfSense, `vlan_domains` on MAAS)
+carry the `default` and `doc` tags of the descriptors, and each collector's `Collects` still
+covers the types its fake emits (`collecttest`). The UniFi collectors (`internal/collect/unifi`)
+emit no `vlan` object, so the layer-2 domain rule does not apply to them; if a later `api` emits
+VLANs, it must key them `<domain>:<vid>` with `collect.VLANKey`.

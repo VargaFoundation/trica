@@ -5110,6 +5110,9 @@
           "type": {
             "type": "string"
           },
+          "value_kind": {
+            "type": "string"
+          },
           "values": {
             "items": {
               "type": "string"

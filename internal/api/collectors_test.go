@@ -21,6 +21,7 @@ type acmeOptions struct {
 	VLANDomain string         `yaml:"vlan_domain" default:"default" doc:"Layer-2 domain."`
 	Skip       []string       `yaml:"skip" enum:"a,b" doc:"Sections not to collect."`
 	APIKey     string         `yaml:"api_key" doc:"Written as a value by mistake."`
+	Fabrics    map[string]int `yaml:"fabrics" doc:"A map of integers."`
 }
 
 const (
@@ -114,6 +115,7 @@ type collectorsBody struct {
 		} `json:"credentials"`
 		Options []struct {
 			Name, Type, Default, Description string
+			ValueKind                        string `json:"value_kind"`
 			Values                           []string
 		} `json:"options"`
 		Counts  struct{ Instances, OK, Failing, Pending, Stale int } `json:"counts"`
@@ -195,9 +197,9 @@ func TestCollectorCatalogue(t *testing.T) {
 	// Options are listed from the struct, in its order.
 	var names []string
 	for _, o := range acme.Options {
-		names = append(names, o.Name+":"+o.Type)
+		names = append(names, o.Name+":"+o.Type+o.ValueKind)
 	}
-	if strings.Join(names, ",") != "token_file:secret_reference,vlan_domain:string,skip:list,api_key:string" {
+	if strings.Join(names, ",") != "token_file:secret_reference,vlan_domain:string,skip:list,api_key:string,fabrics:mapinteger" {
 		t.Fatalf("options: %v", names)
 	}
 	if acme.DocsURL != "https://github.com/VargaFoundation/trica/blob/main/internal/collect/README.md" {

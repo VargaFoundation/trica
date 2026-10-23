@@ -832,6 +832,7 @@ export const en = {
   "collectors.optionType.integer": "integer",
   "collectors.optionType.duration": "duration",
   "collectors.optionType.list": "list",
+  "collectors.optionType.map": "map (name to value)",
   "collectors.optionType.secret_reference": "reference (file: or env:)",
   "collectors.unregistered": "Sources from other collectors",
   "collectors.unregisteredIntro": "These sources have reported, but no module of this server describes them: a collector built with the SDK, or from another version.",

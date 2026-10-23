@@ -100,3 +100,10 @@ component. A UniFi collector comes right after this story.
 - Descriptor texts other than the summary are in English.
 - Readers see the collectors' addresses (they already see the management addresses in the
   inventory) and what each option is set to, but not the credentials.
+
+## Amendment (ADR 0050): the `map` option kind
+
+An option may be a map from text keys to text or integer values (`map[string]string`,
+`map[string]int`): the kind is `map`, and `OptionField.ValueKind` (`value_kind` in the API, shown
+in the options table) says `string` or `integer`. Maps with non-text keys, and maps of lists or
+structs, are still refused at registration. The MAAS `vlan_domains` option is the first.

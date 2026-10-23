@@ -3075,6 +3075,7 @@ export interface components {
             description: string;
             name: string;
             type: string;
+            value_kind?: string;
             values?: string[];
         };
         DecisionOutcome: {
