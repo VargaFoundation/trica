@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { callerSource, chooseModel, cleanAttrs, createObject, declareFrontAisle, placeDevice, unplaceDevice, updateObject } from "./batch";
+import { callerSource, chooseModel, cleanAttrs, createObject, declareFrontAisle, locateDevice, placeDevice, unlocateDevice, unplaceDevice, updateObject } from "./batch";
 
 const AT = new Date("2026-03-01T08:00:00Z");
 
@@ -44,6 +44,10 @@ function uiBatches() {
     frontAisleCold: declareFrontAisle("@rack", "cold", AT),
     frontAisleHot: declareFrontAisle("@rack", "hot", AT),
     frontAisleUnset: declareFrontAisle("@rack", null, AT),
+    locateApInParisRoom: locateDevice("@ap", { type: "room", id: "@room-p" }, AT),
+    locateApInLyonRoom: locateDevice("@ap", { type: "room", id: "@room-l" }, AT),
+    locateApInSite: locateDevice("@ap", { type: "site", id: "@paris" }, AT),
+    unlocateApInLyon: unlocateDevice("@ap", { type: "room", id: "@room-l" }, AT),
   };
 }
 
@@ -107,6 +111,19 @@ describe("the batches the forms send", () => {
     expect(b.relations).toEqual([{ type: "instance_of", from: { type: "device", identity: { id: "d1" } }, to: { ref: "model" } }]);
     expect(b.unrelations).toEqual([{ type: "instance_of", from: { type: "device", identity: { id: "d1" } }, to: { type: "device_type", identity: { id: "m0" } } }]);
     expect(chooseModel({ deviceId: "d1", slug: "x" }, AT).unrelations).toBeUndefined();
+  });
+
+  it("places a device by id in a room, with nothing else: the engine closes the caller's previous place", () => {
+    const b = locateDevice("d1", { type: "room", id: "r1" }, AT);
+    expect(b.objects).toEqual([]);
+    expect(b.relations).toEqual([{ type: "located_in", from: { type: "device", identity: { id: "d1" } }, to: { type: "room", identity: { id: "r1" } }, attributes: {} }]);
+    expect(b.unrelations).toBeUndefined();
+  });
+
+  it("withdraws only the caller's claim on the place it names", () => {
+    const b = unlocateDevice("d1", { type: "building", id: "b1" }, AT);
+    expect(b.relations).toEqual([]);
+    expect(b.unrelations).toEqual([{ type: "located_in", from: { type: "device", identity: { id: "d1" } }, to: { type: "building", identity: { id: "b1" } } }]);
   });
 
   it("knows the source the server will attribute the batch to", () => {

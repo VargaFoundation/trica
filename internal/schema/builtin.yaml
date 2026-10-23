@@ -703,6 +703,12 @@ relations:
     attributes:
       position: {kind: float, unit: U, label: {en: Position, fr: Position}, description: "Lowest U occupied (1 is the bottom)."}
       face: {kind: enum, values: [front, rear], label: {en: Face, fr: Face}, description: "Face the device is mounted on."}
+  located_in:
+    label: {en: is located in, fr: se trouve dans}
+    inverse: {en: houses, fr: abrite}
+    description: "Where a device that is in no rack stands (an access point in a room, a desktop NAS in a building). Declared by people; one place per source, a new one replaces the old. A device mounted in a rack is where its rack is, whatever this says."
+    from: [device]
+    to: [site, building, room]
   instance_of:
     label: {en: is a, fr: est un}
     inverse: {en: has instances, fr: a pour instances}

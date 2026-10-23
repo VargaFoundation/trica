@@ -81,7 +81,7 @@ type Authorizer interface {
 	// Principal authenticates r. It must not write to the response.
 	Principal(r *http.Request) (Principal, error)
 	// Allow reports whether p may perform action on objects of type objType
-	// located in site (the id of the site the object is in: through its parent, or for a device the rack it is mounted in).
+	// located in site (the id of the site the object is in: through its parent, or for a device the rack it is mounted in, or the place it was declared in when it is in no rack: internal/place, ADR 0058).
 	//
 	// Two forms are used:
 	//   - Allow(p, action, "", ""): a global check, "does p hold this action at

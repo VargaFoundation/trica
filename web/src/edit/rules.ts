@@ -12,6 +12,8 @@ export interface EditRules {
   halfUnits: boolean;
   /** The schema has mounted_in from device to rack at all. */
   canMount: boolean;
+  /** The types located_in leads to (site, building, room), as the schema lists them: where a device in no rack may be placed. Empty when the schema has no such relation. */
+  locationTypes: string[];
   /** device.role values. */
   roles: string[];
   /** The device type has its own u_height (for devices whose model is unknown). */
@@ -25,12 +27,14 @@ export interface EditRules {
 export function editRules(doc: SchemaDoc | undefined): EditRules {
   const types = new Map((doc?.types ?? []).map((t) => [t.name, t]));
   const mounted = (doc?.relations ?? []).find((r) => r.name === "mounted_in");
+  const located = (doc?.relations ?? []).find((r) => r.name === "located_in");
   const relAttr = (key: string) => mounted?.attributes.find((a) => a.name === key);
   const attribute = (type: string, key: string) => types.get(type)?.attributes.find((a) => a.name === key);
   return {
     faces: relAttr("face")?.values ?? [],
     halfUnits: relAttr("position")?.kind === "float",
     canMount: !!mounted && mounted.from.includes("device") && mounted.to.includes("rack") && !!relAttr("position"),
+    locationTypes: located && located.from.includes("device") ? located.to.filter((t) => types.has(t)) : [],
     roles: attribute("device", "role")?.values ?? [],
     deviceHeight: !!attribute("device", "u_height"),
     type: (name) => types.get(name),

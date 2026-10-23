@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/VargaFoundation/trica/internal/place"
 	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/internal/tql"
 )
@@ -284,8 +285,9 @@ func (c *compiler) parent(p tql.Pred) (string, error) {
 }
 
 // site matches the objects in a site named by id, name or code: the site
-// itself, then everything below it through parents and mounted_in, the same
-// path the API follows to tell an object's site. The set is built from the
+// itself, then everything below it through parents, mounted_in and, for a device in no
+// rack, located_in: the rule of internal/place, which the API follows to tell
+// an object's site (ADR 0058). The set is built from the
 // sites downwards, like relation.
 func (c *compiler) site(p tql.Pred) (string, error) {
 	if p.Op != tql.OpEq && p.Op != tql.OpNe {
@@ -296,20 +298,7 @@ func (c *compiler) site(p tql.Pred) (string, error) {
 		like := c.arg(likePattern(v, false))
 		alts = append(alts, fmt.Sprintf("s.id::text = %s OR lower(s.display) LIKE %[2]s OR lower(s.attrs->>'code') LIKE %[2]s OR lower(s.attrs->>'name') LIKE %[2]s", c.arg(v), like))
 	}
-	s := fmt.Sprintf(`o.id IN (
-		WITH RECURSIVE hit(id, depth) AS (
-			SELECT s.id, 0 FROM objects s WHERE s.type = 'site' AND (%s)
-			UNION
-			SELECT n.id, hit.depth + 1 FROM hit
-			JOIN LATERAL (
-				SELECT c.id FROM objects c WHERE c.parent_id = hit.id
-				UNION ALL
-				SELECT r.from_id FROM relations r
-				WHERE r.to_id = hit.id AND r.type = 'mounted_in' AND upper_inf(r.valid)
-			) n ON true
-			WHERE hit.depth < 32
-		)
-		SELECT id FROM hit)`, strings.Join(alts, " OR "))
+	s := place.WithinSites(strings.Join(alts, " OR "))
 	if p.Op == tql.OpNe {
 		s = "NOT " + s
 	}

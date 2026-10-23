@@ -110,6 +110,11 @@ scope is `partial` (it withdraws nothing by omission) and its confidence `declar
 `{status: "proposed", proposal_id, preview}`. Nothing is applied: a person approves or rejects the
 proposal in trica. No tool approves, rejects, deletes or writes directly.
 
+`located_in` (a device in no rack stands in a site, building or room) is a declared relation: a
+proposal may carry it, one place per source (a new one replaces the previous one of the same
+source), and it is the place the site of the device is read from when it is in no rack
+([ADR 0058](../adr/0058-placing-devices-outside-racks.md)).
+
 ## Authentication, authorization, audit
 
 - Streamable HTTP: `Authorization: Bearer <credential>` on every request, authenticated afresh

@@ -1,6 +1,6 @@
 import type { AttributeDoc, ObjectView, RelationLink } from "../api/types";
 import { formatBytes, formatDuration, formatQuantity } from "./format";
-import { countHealth, FOLD_AFTER, foldTiles, groupTiles, mountsOf, powerTotal, type Tile } from "./Fleet";
+import { countHealth, FOLD_AFTER, foldTiles, groupTiles, mountsOf, placesOf, powerTotal, type Tile } from "./Fleet";
 import { healthOf } from "./health";
 import { KNOWN_ROLES, kindOf } from "./kind";
 import { en } from "../i18n/en";
@@ -112,7 +112,7 @@ const obj = (id: string, display: string, attributes: Record<string, unknown> = 
   created_at: "2026-01-01T00:00:00Z",
   observed: true,
 });
-const tile = (o: ObjectView, health: Tile["health"], mount?: Tile["mount"]): Tile => ({ obj: o, kind: kindOf(o), kindLabel: String(o.attributes.role ?? "Device"), health, mount });
+const tile = (o: ObjectView, health: Tile["health"], mount?: Tile["mount"], place?: Tile["place"]): Tile => ({ obj: o, kind: kindOf(o), kindLabel: String(o.attributes.role ?? "Device"), health, mount, place });
 
 describe("the fleet", () => {
   it("says what its power total covers: devices measured, and supply output apart", () => {
@@ -158,6 +158,32 @@ describe("the fleet", () => {
     );
     expect(groups.map((g) => g.title)).toEqual(["rack 2", "rack 10", "Not in a rack"]);
     expect(groups[0]?.tiles.map((x) => x.obj.id)).toEqual(["d", "b"]);
+  });
+
+  it("groups a device in no rack under the place it stands in, between the racks and the devices that are nowhere", () => {
+    const groups = groupTiles(
+      [
+        tile(obj("nowhere", "nowhere"), "ok"),
+        tile(obj("ap", "ap"), "ok", undefined, { id: "room1", name: "salle-1" }),
+        tile(obj("sw", "sw"), "ok", { rackId: "r1", rack: "rack 1", position: 3 }),
+        // A rack wins over a place: this device is drawn in its rack.
+        tile(obj("both", "both"), "ok", { rackId: "r1", rack: "rack 1", position: 4 }, { id: "room1", name: "salle-1" }),
+      ],
+      "rack",
+      "Not in a rack",
+    );
+    expect(groups.map((g) => g.title)).toEqual(["rack 1", "salle-1", "Not in a rack"]);
+    expect(groups[0]?.tiles.map((x) => x.obj.id)).toEqual(["both", "sw"]);
+    expect(groups[1]).toMatchObject({ placeId: "room1" });
+    expect(groups[1]?.tiles.map((x) => x.obj.id)).toEqual(["ap"]);
+  });
+
+  it("knows where each device not in a rack stands, the first place said when sources disagree", () => {
+    const link = (type: string, from: string, to: string, name: string) =>
+      ({ id: 1, type, from_id: from, to_id: to, from: { id: from, type: "device", display: from }, to: { id: to, type: "room", display: name }, source: "s", confidence: "declared", valid_from: "2026-01-01T00:00:00Z" }) as RelationLink;
+    const m = placesOf([link("mounted_in", "d0", "r0", "rack"), link("located_in", "d1", "room1", "salle-1"), link("located_in", "d1", "room2", "salle-2")]);
+    expect([...m.keys()]).toEqual(["d1"]);
+    expect(m.get("d1")).toEqual({ id: "room1", name: "salle-1" });
   });
 
   it("groups by kind, the group with the worst health first, the worst device first inside", () => {

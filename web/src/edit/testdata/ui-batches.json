@@ -459,5 +459,105 @@
       }
     ],
     "relations": []
+  },
+  "locateApInParisRoom": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [],
+    "relations": [
+      {
+        "type": "located_in",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@ap"
+          }
+        },
+        "to": {
+          "type": "room",
+          "identity": {
+            "id": "@room-p"
+          }
+        },
+        "attributes": {}
+      }
+    ]
+  },
+  "locateApInLyonRoom": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [],
+    "relations": [
+      {
+        "type": "located_in",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@ap"
+          }
+        },
+        "to": {
+          "type": "room",
+          "identity": {
+            "id": "@room-l"
+          }
+        },
+        "attributes": {}
+      }
+    ]
+  },
+  "locateApInSite": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [],
+    "relations": [
+      {
+        "type": "located_in",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@ap"
+          }
+        },
+        "to": {
+          "type": "site",
+          "identity": {
+            "id": "@paris"
+          }
+        },
+        "attributes": {}
+      }
+    ]
+  },
+  "unlocateApInLyon": {
+    "source": "ui",
+    "scope": "partial",
+    "observed_at": "2026-03-01T08:00:00.000Z",
+    "confidence": "declared",
+    "objects": [],
+    "relations": [],
+    "unrelations": [
+      {
+        "type": "located_in",
+        "from": {
+          "type": "device",
+          "identity": {
+            "id": "@ap"
+          }
+        },
+        "to": {
+          "type": "room",
+          "identity": {
+            "id": "@room-l"
+          }
+        }
+      }
+    ]
   }
 }

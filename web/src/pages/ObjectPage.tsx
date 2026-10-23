@@ -22,6 +22,7 @@ import { Measurements } from "../charts/Measurements";
 import { FirmwareSection } from "../firmware/FirmwareCard";
 import { DeviceFacesSection } from "../faces/DeviceFaces";
 import { ModelChoiceSection, VariantPill } from "../devicetypes/ModelChoice";
+import { DeviceLocation, LocatedHere } from "../edit/DeviceLocation";
 import { DevicePlacement } from "../edit/DevicePlacement";
 import { AirflowSection } from "../aisles/Airflow";
 import { EditPanel, useCanDeclare } from "../edit/EditPanel";
@@ -57,6 +58,8 @@ function ObjectDetail({ obj }: { obj: ObjectView }) {
   const site = useObjectName(obj.site_id);
   const parent = useObjectName(obj.parent_id !== obj.site_id ? obj.parent_id : undefined);
   const mount = relations.data?.items.find((r) => r.type === "mounted_in" && r.direction === "out");
+  // A device in no rack stands where a person placed it (ADR 0058); a rack wins.
+  const placed = mount ? undefined : relations.data?.items.find((r) => r.type === "located_in" && r.direction === "out");
   const hasHealth = "health" in obj.attributes || lookup.attribute(obj.type, "health") !== undefined;
 
   useCrumbs([
@@ -140,6 +143,14 @@ function ObjectDetail({ obj }: { obj: ObjectView }) {
               </dd>
             </div>
           ) : null}
+          {placed ? (
+            <div data-fact="location">
+              <dt>{t("object.location")}</dt>
+              <dd>
+                <ObjectLink id={placed.other.id} display={placed.other.display} />
+              </dd>
+            </div>
+          ) : null}
           <div>
             <dt>{t("object.type")}</dt>
             <dd>{typeLabel}</dd>
@@ -195,6 +206,8 @@ function ObjectDetail({ obj }: { obj: ObjectView }) {
             <Measurements obj={obj} lookup={lookup} />
             <FirmwareSection obj={obj} lookup={lookup} />
             {obj.type === "device" ? <DevicePlacement device={obj} /> : null}
+            {obj.type === "device" ? <DeviceLocation device={obj} /> : null}
+            {obj.type === "site" || obj.type === "building" || obj.type === "room" ? <LocatedHere obj={obj} /> : null}
             {obj.type === "device" ? <AirflowSection obj={obj} /> : null}
           </>
         ) : tab === "components" ? (

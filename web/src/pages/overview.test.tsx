@@ -10,14 +10,14 @@ function tileOf(name: string): HTMLElement {
 }
 
 describe("the overview: the physical estate at a glance", () => {
-  it("asks for every device and where it is mounted", async () => {
+  it("asks for every device and where it is mounted or placed", async () => {
     const api = mockApi(fleet());
     renderApp({ at: "/" });
     await screen.findByRole("link", { name: "srv-01" });
     const devices = api.calls.find((c) => c.path === "/objects");
     expect(devices?.query.get("type")).toBe("device");
     expect(devices?.query.get("limit")).toBe("1000");
-    expect(api.calls.find((c) => c.path === "/relations")?.query.get("type")).toBe("mounted_in");
+    expect(api.calls.find((c) => c.path === "/relations")?.query.get("type")).toBe("mounted_in,located_in");
   });
 
   it("shows one tile per device with its kind, health, power, temperatures and critical events", async () => {
