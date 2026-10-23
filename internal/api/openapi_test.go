@@ -135,7 +135,7 @@ func TestOpenAPIAndRouteTableAgree(t *testing.T) {
 		default:
 			t.Errorf("%s: x-trica-action %q", key, action)
 		}
-		isWrite := strings.HasPrefix(key, "POST ") || strings.HasPrefix(key, "DELETE ")
+		isWrite := strings.HasPrefix(key, "POST ") || strings.HasPrefix(key, "DELETE ") || strings.HasPrefix(key, "PUT ")
 		audited, _ := op["x-trica-audited"].(bool)
 		preview := key == "POST /batches/preview"
 		if isWrite && !audited && !preview {
@@ -185,7 +185,7 @@ func TestRealTrafficConformsToTheDocument(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer "+token)
 		}
 		if body != "" {
-			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Content-Type", contentTypeOf(method, path))
 		}
 		// The validator reads the request body: give it a copy.
 		vreq := req.Clone(req.Context())
@@ -513,4 +513,13 @@ func TestAttributeKindsMapToJSONSchema(t *testing.T) {
 			}
 		}
 	}
+}
+
+// contentTypeOf is the body type of a request: JSON, but for the one upload
+// whose body is the archive itself.
+func contentTypeOf(method, path string) string {
+	if method == "POST" && path == "/api/v1/ui/themes" {
+		return "application/zip"
+	}
+	return "application/json"
 }

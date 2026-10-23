@@ -46,7 +46,9 @@ type rig struct {
 	adminToken string // an administrator's token
 	siteToken  string // a write token limited to a site
 	srcToken   string // a write token bound to the source arista:sw-a1
-	stop       func() error
+	// themeClient, when set, downloads the theme URL (a test server's TLS).
+	themeClient *http.Client
+	stop        func() error
 }
 
 func writeFile(t *testing.T, name, content string) string {
@@ -60,12 +62,15 @@ func writeFile(t *testing.T, name, content string) string {
 
 // newRig migrates a database, mints tokens (there is no CLI for it yet), and
 // starts the server from a YAML configuration, as cmd/trica does.
-func newRig(t *testing.T, extraYAML string) *rig {
+func newRig(t *testing.T, extraYAML string, opts ...func(*rig)) *rig {
 	t.Helper()
 	if os.Getenv(server.EnvDatabaseURL) != "" {
 		t.Skip(server.EnvDatabaseURL + " is set; it would override the test database")
 	}
 	r := &rig{t: t, url: testdb.NewURL(t), caDir: filepath.Join(t.TempDir(), "ca")}
+	for _, o := range opts {
+		o(r)
+	}
 	ctx := context.Background()
 
 	st, err := store.Open(ctx, r.url)
@@ -93,6 +98,7 @@ func newRig(t *testing.T, extraYAML string) *rig {
 	r.adminToken = mk("adm", []string{"admin"}, nil)
 	r.siteToken = mk("site", []string{"write"}, []string{"paris-1"})
 	r.srcToken = mk("arista", []string{"write"}, nil, "arista:sw-a1")
+	r.adminToken = mk("admin", []string{"admin"}, nil)
 	st.Close()
 	r.start(extraYAML)
 	return r
@@ -127,6 +133,9 @@ http: {addr: "127.0.0.1:0"}
 		t.Fatal(err)
 	}
 	r.w = wiring.New(cfg, "test")
+	if r.themeClient != nil {
+		r.w.SetThemeClient(r.themeClient)
+	}
 	srv := server.New(cfg, slog.New(slog.NewJSONHandler(io.Discard, nil)), "test", r.w.Components()...)
 
 	runCtx, cancel := context.WithCancel(ctx)

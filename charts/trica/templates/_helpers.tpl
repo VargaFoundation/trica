@@ -55,15 +55,23 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- if .Values.deviceTypes.existingClaim -}}
 {{- $_ := set $cfg "devicetypes" (dict "extra_dir" "/etc/trica/devicetypes") -}}
 {{- end -}}
-{{- if or .Values.theme.builtin .Values.theme.existingConfigMap -}}
+{{- if or .Values.theme.builtin .Values.theme.existingConfigMap .Values.theme.url -}}
 {{- $w := deepCopy (default (dict) $cfg.web) -}}
+{{- $th := dict -}}
 {{- if .Values.theme.builtin -}}
-{{- $_ := set $w "theme" (dict "builtin" .Values.theme.builtin) -}}
+{{- $_ := set $th "builtin" .Values.theme.builtin -}}
+{{- else if .Values.theme.url -}}
+{{- $_ := set $th "url" .Values.theme.url -}}
+{{- $_ := set $th "sha256" .Values.theme.sha256 -}}
 {{- else if .Values.theme.archiveKey -}}
-{{- $_ := set $w "theme" (dict "path" (printf "/etc/trica/theme/%s" .Values.theme.archiveKey)) -}}
+{{- $_ := set $th "path" (printf "/etc/trica/theme/%s" .Values.theme.archiveKey) -}}
 {{- else -}}
-{{- $_ := set $w "theme" (dict "path" "/etc/trica/theme") -}}
+{{- $_ := set $th "path" "/etc/trica/theme" -}}
 {{- end -}}
+{{- if .Values.theme.locked -}}
+{{- $_ := set $th "locked" true -}}
+{{- end -}}
+{{- $_ := set $w "theme" $th -}}
 {{- $_ := set $cfg "web" $w -}}
 {{- end -}}
 {{- if .Values.live.enabled -}}

@@ -280,6 +280,16 @@ the value was said by someone else the page says so and has nothing to send.
   also checks rendered contrast on every page, in English and French. **Not checked**: real screen
   readers, phone layout. Firefox and WebKit run the same browser tests on demand only (ADR 0038).
 
+## Administration: themes
+
+`/admin/themes`, under an **Administration** group of the sidebar shown to holders of `admin`
+only (the API refuses everyone else regardless): the theme in force and where it comes from, the
+built-ins and the archives kept in the database with **Use** and **Delete** (confirmed; the
+active one cannot be deleted), and a zip upload whose validation errors are listed as they come
+back (422). When the deployment is `locked` the page says so and offers no choice. Using or
+resetting a theme reloads the page, since the stylesheet is linked in the head
+([themes](themes.md), ADR 0054).
+
 ## Signing in and permissions
 
 The API takes bearer credentials only. The UI asks for one (an API token `trica_<id>_<secret>` or

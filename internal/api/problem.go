@@ -33,6 +33,9 @@ type httpError struct {
 	status int
 	slug   string
 	detail string
+	// title overrides the generic title of the status, for a problem class that
+	// has its own ("Batch rejected").
+	title string
 }
 
 func (e *httpError) Error() string { return fmt.Sprintf("%d %s: %s", e.status, e.slug, e.detail) }
@@ -61,7 +64,7 @@ var titles = map[int]string{
 	http.StatusMethodNotAllowed:      "Method not allowed",
 	http.StatusConflict:              "Conflict",
 	http.StatusRequestEntityTooLarge: "Request too large",
-	http.StatusUnprocessableEntity:   "Batch rejected",
+	http.StatusUnprocessableEntity:   "Unprocessable content",
 	http.StatusInternalServerError:   "Internal error",
 	http.StatusServiceUnavailable:    "Service unavailable",
 }
@@ -82,7 +85,9 @@ func classify(err error) (*httpError, bool) {
 		return newErr(http.StatusBadRequest, "invalid-batch", "%s", err.Error()), false
 	case errors.Is(err, reconcile.ErrRejected):
 		// Well formed, refused by the engine (ADR 0005): the caller can fix and resend.
-		return newErr(http.StatusUnprocessableEntity, "rejected", "%s", err.Error()), false
+		he := newErr(http.StatusUnprocessableEntity, "rejected", "%s", err.Error())
+		he.title = "Batch rejected"
+		return he, false
 	case errors.Is(err, search.ErrQuery), errors.As(err, &syn):
 		return newErr(http.StatusBadRequest, "invalid-query", "%s", err.Error()), false
 	case errors.Is(err, reconcile.ErrConflict):
@@ -97,7 +102,10 @@ func classify(err error) (*httpError, bool) {
 }
 
 func writeProblem(w http.ResponseWriter, r *http.Request, he *httpError) {
-	title := titles[he.status]
+	title := he.title
+	if title == "" {
+		title = titles[he.status]
+	}
 	if title == "" {
 		title = http.StatusText(he.status)
 	}

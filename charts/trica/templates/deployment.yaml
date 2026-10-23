@@ -10,8 +10,17 @@
 {{- if and .Values.live.enabled .Values.config.live }}
 {{- fail "set the live block in live.config, not config.live" }}
 {{- end }}
-{{- if and .Values.theme.builtin .Values.theme.existingConfigMap }}
-{{- fail "theme.builtin and theme.existingConfigMap are exclusive: a theme comes from one source" }}
+{{- if gt (len (compact (list .Values.theme.builtin .Values.theme.existingConfigMap .Values.theme.url))) 1 }}
+{{- fail "theme.builtin, theme.existingConfigMap and theme.url are exclusive: a theme comes from one source" }}
+{{- end }}
+{{- if and .Values.theme.url (not .Values.theme.sha256) }}
+{{- fail "theme.url needs theme.sha256: the digest the downloaded archive must match" }}
+{{- end }}
+{{- if and .Values.theme.sha256 (not .Values.theme.url) }}
+{{- fail "theme.sha256 goes with theme.url" }}
+{{- end }}
+{{- if and .Values.theme.locked (not (or .Values.theme.builtin .Values.theme.existingConfigMap .Values.theme.url)) }}
+{{- fail "theme.locked needs a source to lock to: theme.builtin, theme.existingConfigMap or theme.url" }}
 {{- end }}
 {{- if and .Values.theme.archiveKey (not .Values.theme.existingConfigMap) }}
 {{- fail "theme.archiveKey needs theme.existingConfigMap: the key of the ConfigMap that holds the archive" }}

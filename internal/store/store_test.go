@@ -179,3 +179,49 @@ func TestConcurrentMigrationsTakeTurns(t *testing.T) {
 		t.Fatalf("down one: %d -> %d", v, w)
 	}
 }
+
+// The theme tables belong to migration 00007: down drops them, up brings them
+// back, and the constraints the code relies on are in place.
+func TestThemeTablesGoWithTheirMigration(t *testing.T) {
+	s := testdb.New(t)
+	ctx := context.Background()
+	exists := func() (n int) {
+		if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM information_schema.tables WHERE table_name IN ('ui_themes', 'ui_theme_active')`).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if exists() != 2 {
+		t.Fatal("the theme tables are not there after the migrations")
+	}
+	// An active row names a stored archive or a built-in theme, never both or neither.
+	for _, q := range []string{
+		`INSERT INTO ui_theme_active (builtin, sha256) VALUES ('flat', decode(repeat('aa', 32), 'hex'))`,
+		`INSERT INTO ui_theme_active (set_by) VALUES ('x')`,
+		`INSERT INTO ui_theme_active (sha256) VALUES (decode(repeat('aa', 32), 'hex'))`, // no such archive
+		`INSERT INTO ui_themes (sha256, name, title, version, archive, origin, uploaded_by) VALUES (decode('aa', 'hex'), 'n', '', '1', 'x', 'upload', 'u')`,
+		`INSERT INTO ui_themes (sha256, name, title, version, archive, origin, uploaded_by) VALUES (decode(repeat('aa', 32), 'hex'), 'n', '', '1', 'x', 'elsewhere', 'u')`,
+	} {
+		if _, err := s.Pool.Exec(ctx, q); err == nil {
+			t.Errorf("accepted: %s", q)
+		}
+	}
+	v, err := s.SchemaVersion(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for ; v >= 7; v-- {
+		if err := s.MigrateDownOne(ctx); err != nil {
+			t.Fatalf("down from %d: %v", v, err)
+		}
+	}
+	if n := exists(); n != 0 {
+		t.Errorf("%d theme table(s) survive their migration", n)
+	}
+	if err := s.Migrate(ctx); err != nil {
+		t.Fatalf("up again: %v", err)
+	}
+	if exists() != 2 {
+		t.Error("the theme tables did not come back")
+	}
+}

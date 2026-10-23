@@ -71,6 +71,8 @@ type env struct {
 	reg  *regHolder
 	// ids maps a fixture name to the object id.
 	ids map[string]string
+	// themes is the fake behind the theme endpoints.
+	themes *fakeThemes
 }
 
 var t0 = time.Date(2026, 3, 1, 8, 0, 0, 0, time.UTC)
@@ -82,7 +84,7 @@ func newEnv(t *testing.T, policy reconcile.Policy) *env {
 	// Database creation is slow on a busy machine: let tests overlap.
 	t.Parallel()
 	st := testdb.New(t)
-	e := &env{t: t, st: st, aud: &api.MemoryAuditor{}, clk: &clock{t: t0}, reg: &regHolder{reg: schema.Builtin()}, ids: map[string]string{}}
+	e := &env{t: t, st: st, aud: &api.MemoryAuditor{}, clk: &clock{t: t0}, reg: &regHolder{reg: schema.Builtin()}, ids: map[string]string{}, themes: &fakeThemes{}}
 	e.eng = &reconcile.Engine{Store: st, Schema: e.reg.get, Policy: policy, Now: e.clk.now}
 	e.fixtures()
 	e.auth = &api.StaticAuthorizer{Tokens: map[string]api.Grant{
@@ -101,7 +103,7 @@ func newEnv(t *testing.T, policy reconcile.Policy) *env {
 		tokRackView:  {Principal: api.Principal{Subject: "iris", Kind: api.KindUser}, Actions: []string{api.ActionRead}, Types: []string{"rack", "device", "device_type"}},
 	}}
 	srv, err := api.New(api.Config{Engine: e.eng, Authorizer: e.auth, Auditor: e.aud, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Version: "test", Now: e.clk.now,
-		Images: testImages, Library: testLibrary, Collectors: testCollectors})
+		Images: testImages, Library: testLibrary, Collectors: testCollectors, Themes: e.themes})
 	if err != nil {
 		t.Fatal(err)
 	}

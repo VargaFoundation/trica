@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -184,13 +185,24 @@ type WebConfig struct {
 	Theme *WebThemeConfig `yaml:"theme"`
 }
 
-// WebThemeConfig is the "web.theme" section: exactly one of Builtin and Path.
+// WebThemeConfig is the "web.theme" section: exactly one of Builtin, Path and
+// URL. It is the deployment's default theme; an administrator may select
+// another one in the console unless Locked.
 type WebThemeConfig struct {
 	// Builtin names a theme shipped in the binary (default, flat).
 	Builtin string `yaml:"builtin"`
 	// Path is a theme archive (.zip) or a directory with the same layout, for
 	// instance a mounted ConfigMap. It is read again every Reload.
 	Path string `yaml:"path"`
+	// URL is an https address serving a theme archive, for instance a public
+	// object in a bucket. It needs SHA256: the archive is downloaded once,
+	// checked against it, and kept in PostgreSQL.
+	URL string `yaml:"url"`
+	// SHA256 is the hex digest of the archive at URL.
+	SHA256 string `yaml:"sha256"`
+	// Locked makes this section always win: the administrator's selection is
+	// ignored and the API refuses to change it.
+	Locked bool `yaml:"locked"`
 	// Reload is how often Path is read again; zero means one minute.
 	Reload time.Duration `yaml:"reload"`
 }
@@ -338,20 +350,40 @@ func (c *Config) validate() error {
 	return nil
 }
 
+var reSHA256 = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+func countSet(vs ...string) (n int) {
+	for _, v := range vs {
+		if v != "" {
+			n++
+		}
+	}
+	return n
+}
+
 // validateTheme refuses what the server could not honour: a start with a
 // configuration that names a theme it cannot find is a mistake to report, not
 // to hide behind the default (a theme that fails later, while running, is
 // another matter and never stops the server).
 func validateTheme(t *WebThemeConfig) error {
 	switch {
-	case t.Builtin != "" && t.Path != "":
-		return errors.New("config: web.theme takes builtin or path, not both")
-	case t.Builtin == "" && t.Path == "":
-		return errors.New("config: web.theme needs builtin or path")
+	case countSet(t.Builtin, t.Path, t.URL) > 1:
+		return errors.New("config: web.theme takes one of builtin, path and url")
+	case countSet(t.Builtin, t.Path, t.URL) == 0:
+		return errors.New("config: web.theme needs builtin, path or url")
+	case t.URL != "" && !reSHA256.MatchString(t.SHA256):
+		return errors.New("config: web.theme.url needs web.theme.sha256, 64 lowercase hex digits")
+	case t.URL == "" && t.SHA256 != "":
+		return errors.New("config: web.theme.sha256 goes with web.theme.url")
 	case t.Reload < 0:
 		return errors.New("config: web.theme.reload must not be negative")
 	case t.Builtin != "" && !slices.Contains(theme.BuiltinNames(), t.Builtin):
 		return fmt.Errorf("config: web.theme.builtin %q is not a built-in theme (%s)", t.Builtin, strings.Join(theme.BuiltinNames(), ", "))
+	}
+	if t.URL != "" {
+		if err := theme.ValidateURL(t.URL); err != nil {
+			return fmt.Errorf("config: web.theme.url: %w", err)
+		}
 	}
 	if t.Path != "" {
 		if _, err := os.Stat(t.Path); err != nil {

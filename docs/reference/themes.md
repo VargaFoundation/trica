@@ -17,9 +17,12 @@ web:
     builtin: flat          # or:
     # path: /etc/trica/theme   # a .zip file or a directory
     # reload: 1m               # how often a path is read again
+    # url: https://example.org/themes/acme.zip   # with its digest:
+    # sha256: <64 hex>
+    # locked: true             # the console's page cannot change it
 ```
 
-Exactly one of `builtin` and `path`. An unknown key, both, none, an unknown built-in name or a
+Exactly one of `builtin`, `path` and `url`. An unknown key, both, none, an unknown built-in name or a
 path that does not exist stops the start. A `path` that exists but holds a bad theme does not:
 the built-in `default` serves until it loads. Afterwards a bad edit is logged and counted and
 the previous theme stays. Chart: `theme.builtin`, or `theme.existingConfigMap` with an optional
@@ -81,7 +84,7 @@ All keys are checked; an unknown one is refused.
 |---|---|
 | `schema` | `1` (required) |
 | `name` | `a-z0-9-`, 40 characters at most, not `default` or `flat` (required) |
-| `title`, `description` | Shown by the administration page (part 2). 64 and 280 characters at most |
+| `title`, `description` | Shown by the administration page. 64 and 280 characters at most |
 | `version` | Any of `0-9A-Za-z.+-`, 32 characters at most (required) |
 | `extends` | `default` or `flat`: start from that built-in. No other value, no chain |
 | `colors` | `{ "<token>": { "light": "#rrggbb", "dark": "#rrggbb" } }`. Both modes together. Token = the CSS name without `--trica-` |
@@ -138,8 +141,30 @@ All public. The page's own Content-Security-Policy does not change.
 Metrics `trica_ui_theme_info{name,version,sha256,source}` (1 for the theme in force) and
 `trica_ui_theme_load_errors_total{source}`. Log lines carry `source=theme`.
 
-## Not in this version (part 2)
+## Choosing one in the console (ADR 0054, part 2)
 
-A theme stored in the database and chosen by an administrator in the console, an admin API,
-`url` + `sha256` sources, `locked`, notification between replicas, the chart's `url`, `sha256`
-and `locked`.
+An administrator opens **Administration > Themes** (`/admin/themes`): the theme in force, the
+two built-ins, and the archives kept in PostgreSQL, each with **Use** and **Delete**; an upload
+field takes a zip, which is validated exactly like a configured one (every violation is listed).
+The choice is stored in the database and survives a restart.
+
+Precedence, strongest first: `web.theme.locked`, the administrator's choice, the configured
+source (`builtin`, `path` or `url`), the built-in `default`. With `locked: true` the
+configuration always wins: the page shows it and the API answers 409 `theme-locked`; `locked`
+needs a source. Deleting the theme in force is refused (409 `theme-active`); a theme nobody uses
+may be deleted. Themes are not inventory, so this is a real delete, and it is audited
+(`theme.upload`, `theme.activate`, `theme.reset`, `theme.delete`).
+
+Replicas: every change sends `NOTIFY trica_theme` in its transaction, so the other replicas
+re-read the database at once; they also re-read every `reload` (a lost notification costs at
+most that long). The API is in [api](api.md#endpoints).
+
+### `url` and `sha256`
+
+`web.theme.url` is an `https` address of a zip; `sha256` is mandatory and the download is refused
+unless it matches, before anything is parsed. It is fetched once (30 s, 2 MiB at most, no
+redirect to anything but `https`), kept in the database with `origin: url`, and served from
+there: the address is not contacted again while the digest is unchanged, and a failed fetch
+leaves the theme in force as it is (logged and counted, `source=url`). The server does not
+download at construction: the first load does. Chart: `theme.url`, `theme.sha256`,
+`theme.locked`.

@@ -98,3 +98,8 @@ export type QueryOf<P extends keyof paths> = paths[P] extends { get: { parameter
 export type ProposalStatus = NonNullable<QueryOf<"/proposals">["status"]>;
 export type DiscrepancyStatus = NonNullable<QueryOf<"/discrepancies">["status"]>;
 export type CollectorStatus = NonNullable<QueryOf<"/collectors/{kind}/instances">["status"]>;
+
+export type ThemeState = S["ThemeState"];
+export type ThemeRef = S["ThemeRef"];
+export type StoredTheme = S["StoredTheme"];
+export type ThemeSelection = S["ThemeSelection"];

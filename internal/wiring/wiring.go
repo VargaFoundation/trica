@@ -49,6 +49,8 @@ type Wiring struct {
 	themeOnce   sync.Once
 	theme       *theme.Service // nil when no theme is configured
 	themeErr    error
+	// themeClient downloads a theme URL; nil means the default client.
+	themeClient *http.Client
 }
 
 // core is the shared state.
@@ -89,8 +91,9 @@ func (w *Wiring) Components() []server.Component {
 		cs = append(cs, server.Component{Name: "mcp", Mount: w.mountMCP})
 	}
 	if !w.cfg.Web.Disabled {
-		cs = append(cs, server.Component{Name: "web", Mount: w.mountWeb, Run: w.runTheme})
+		cs = append(cs, server.Component{Name: "web", Mount: w.mountWeb})
 	}
+	cs = append(cs, server.Component{Name: "theme", Run: w.runTheme})
 	if !w.cfg.Deduce.Disabled {
 		cs = append(cs, server.Component{Name: "deduce", Run: w.runDeduce})
 	}
@@ -209,9 +212,13 @@ func (w *Wiring) mountAPI(mux *http.ServeMux, d server.Deps) error {
 		return err
 	}
 	c.chainInvalidate(d)
+	ts, err := w.themeService(d)
+	if err != nil {
+		return err
+	}
 	srv, err := api.New(api.Config{Engine: d.Engine, Authorizer: c.authz, Auditor: c.auditor, Logger: d.Log, Version: w.version,
 		Images: lib, Library: lib, Live: ls, Collectors: api.RegistryCollectors{InServer: targets},
-		Graph: c.cache, MapMaxStale: mapMaxStale})
+		Graph: c.cache, MapMaxStale: mapMaxStale, Themes: themeAdmin{ts}})
 	if err != nil {
 		return err
 	}
@@ -292,9 +299,7 @@ func (w *Wiring) mountWeb(mux *http.ServeMux, d server.Deps) error {
 	if err != nil {
 		return err
 	}
-	if ts != nil {
-		cfg.Theme = themeProvider{ts}
-	}
+	cfg.Theme = themeProvider{ts}
 	h, err := web.DefaultWithConfig(cfg)
 	if err != nil {
 		return err

@@ -826,6 +826,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ui/themes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The theme in force, the deployment default, the built-in themes and the stored archives.
+         * @description Requires the "admin" action.
+         */
+        get: operations["getThemes"];
+        put?: never;
+        /**
+         * Upload a theme archive (the zip itself as the body, 2 MiB at most). It is validated and kept, not selected.
+         * @description Requires the "admin" action.
+         */
+        post: operations["uploadTheme"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ui/themes/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Select the theme for every replica: a built-in one or a stored archive. Refused when the configuration locks the theme.
+         * @description Requires the "admin" action.
+         */
+        put: operations["activateTheme"];
+        post?: never;
+        /**
+         * Drop the selection: the deployment default is back. Refused when the configuration locks the theme.
+         * @description Requires the "admin" action.
+         */
+        delete: operations["resetTheme"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ui/themes/{sha256}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a stored archive. The theme in force is refused.
+         * @description Requires the "admin" action.
+         */
+        delete: operations["deleteTheme"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/whohad": {
         parameters: {
             query?: never;
@@ -4359,6 +4427,17 @@ export interface components {
         Status: {
             status: string;
         };
+        StoredTheme: {
+            name: string;
+            origin: string;
+            sha256: string;
+            size: number;
+            title: string;
+            /** Format: date-time */
+            uploaded_at: string;
+            uploaded_by: string;
+            version: string;
+        };
         TargetConfig: {
             address: string;
             credentials?: components["schemas"]["TargetCredentials"];
@@ -4379,6 +4458,24 @@ export interface components {
             ca_file: string;
             insecure: boolean;
             min_version: string;
+        };
+        ThemeRef: {
+            name: string;
+            sha256?: string;
+            source: string;
+            title: string;
+            version: string;
+        };
+        ThemeSelection: {
+            builtin?: string;
+            sha256?: string;
+        };
+        ThemeState: {
+            active: components["schemas"]["ThemeRef"];
+            builtins: components["schemas"]["ThemeRef"][];
+            deployment_default: components["schemas"]["ThemeRef"];
+            locked: boolean;
+            themes: components["schemas"]["StoredTheme"][];
         };
         TopologyMap: {
             edges: components["schemas"]["MapEdge"][];
@@ -4488,7 +4585,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description Batch rejected */
+        /** @description Unprocessable content */
         Problem422: {
             headers: {
                 [name: string]: unknown;
@@ -5822,6 +5919,150 @@ export interface operations {
             401: components["responses"]["Problem401"];
             403: components["responses"]["Problem403"];
             404: components["responses"]["Problem404"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    getThemes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThemeState"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    uploadTheme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/zip": string;
+            };
+        };
+        responses: {
+            /** @description Already kept (same bytes). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoredTheme"];
+                };
+            };
+            /** @description Kept. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoredTheme"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            413: components["responses"]["Problem413"];
+            422: components["responses"]["Problem422"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    activateTheme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThemeSelection"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThemeState"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    resetTheme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reset. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            500: components["responses"]["Problem500"];
+        };
+    };
+    deleteTheme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identity of the archive. */
+                sha256: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
             500: components["responses"]["Problem500"];
         };
     };

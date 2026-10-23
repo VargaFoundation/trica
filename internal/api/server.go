@@ -68,6 +68,9 @@ type Config struct {
 	// MapMaxStale is how long after a commit the map may still be served from
 	// the previous graph (default 10 s): bursts of commits cost one reload.
 	MapMaxStale time.Duration
+	// Themes administers the console's theme (ADR 0054). Nil: the endpoints
+	// answer 404.
+	Themes ThemeAdmin
 }
 
 // LiveSource is the live overlay: a shared, cached measurement set.
@@ -92,6 +95,7 @@ type Server struct {
 	collectors CollectorSource
 	graph      *graph.Cache
 	mapStale   time.Duration
+	themes     ThemeAdmin
 }
 
 // New builds a Server. It fails without an engine, an Authorizer and an
@@ -109,7 +113,7 @@ func New(cfg Config) (*Server, error) {
 		eng: cfg.Engine, st: cfg.Engine.Store, searcher: &search.Searcher{Store: cfg.Engine.Store},
 		auth: cfg.Authorizer, audit: cfg.Auditor, log: cfg.Logger, version: cfg.Version, now: cfg.Now,
 		images: cfg.Images, lib: cfg.Library,
-		live: cfg.Live, collectors: cfg.Collectors, graph: cfg.Graph, mapStale: cmp.Or(cfg.MapMaxStale, mapMaxStale),
+		live: cfg.Live, collectors: cfg.Collectors, graph: cfg.Graph, mapStale: cmp.Or(cfg.MapMaxStale, mapMaxStale), themes: cfg.Themes,
 	}
 	if s.log == nil {
 		s.log = slog.Default()
@@ -129,21 +133,27 @@ func (s *Server) registry() *schema.Registry { return s.eng.Schema() }
 // Handler returns the HTTP handler to mount (it serves paths under Prefix).
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	paths := map[string][]string{}
 	for _, rt := range s.routes {
 		mux.Handle(rt.Method+" "+Prefix+rt.Path, s.wrap(rt))
-		paths[rt.Path] = append(paths[rt.Path], rt.Method)
 	}
-	// The mux answers a wrong method with plain text; answer in problem+json.
-	for p, methods := range paths {
-		allow := strings.Join(methods, ", ")
-		mux.HandleFunc(Prefix+p, func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Allow", allow)
-			writeProblem(w, r, newErr(http.StatusMethodNotAllowed, "method-not-allowed", "%s is not allowed here; allowed: %s", r.Method, allow))
-		})
-	}
+	// The mux answers a wrong method with plain text, and a method-less
+	// fallback per path would collide with a wildcard sibling (a literal
+	// /themes/active beside /themes/{sha256}); so the catch-all matches the
+	// route templates itself and answers in problem+json.
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		writeProblem(w, r, notFound("no such endpoint: %s", r.URL.Path))
+		var methods []string
+		for _, rt := range s.routes {
+			if pathMatches(Prefix+rt.Path, r.URL.Path) {
+				methods = append(methods, rt.Method)
+			}
+		}
+		if len(methods) == 0 {
+			writeProblem(w, r, notFound("no such endpoint: %s", r.URL.Path))
+			return
+		}
+		allow := strings.Join(methods, ", ")
+		w.Header().Set("Allow", allow)
+		writeProblem(w, r, newErr(http.StatusMethodNotAllowed, "method-not-allowed", "%s is not allowed here; allowed: %s", r.Method, allow))
 	})
 	return s.middleware(mux)
 }
@@ -231,8 +241,12 @@ func (s *Server) wrap(rt route) http.Handler {
 				return
 			}
 		}
-		if rt.Body != nil {
-			r.Body = http.MaxBytesReader(w, r.Body, maxBody)
+		if rt.Body != nil || len(rt.BodyBinary) > 0 {
+			limit := int64(maxBody)
+			if rt.MaxBody > 0 {
+				limit = rt.MaxBody
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, limit)
 		}
 		err := rt.H(c)
 		if err == nil {
@@ -304,4 +318,25 @@ func optTime(c *call, name string) (*time.Time, error) {
 		return nil, err
 	}
 	return &t, nil
+}
+
+// pathMatches reports whether a request path fits a route template, where a
+// {name} segment matches any one non-empty segment.
+func pathMatches(tmpl, path string) bool {
+	ts, ps := strings.Split(tmpl, "/"), strings.Split(path, "/")
+	if len(ts) != len(ps) {
+		return false
+	}
+	for i, t := range ts {
+		if strings.HasPrefix(t, "{") && strings.HasSuffix(t, "}") {
+			if ps[i] == "" {
+				return false
+			}
+			continue
+		}
+		if t != ps[i] {
+			return false
+		}
+	}
+	return true
 }

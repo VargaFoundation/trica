@@ -27,34 +27,34 @@ func TestServiceKeepsServingWhenAThemeIsBad(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.OnLoad = func(th *theme.Theme) { loaded = append(loaded, th.Name) }
-	s.OnError = func(error) { errs++ }
+	s.OnError = func(string, error) { errs++ }
 	if got := s.Active().Name; got != "default" {
 		t.Fatalf("a bad theme at start: active is %q, want the built-in default", got)
 	}
 
-	s.Reload()
+	s.Reload(context.Background())
 	if errs != 1 {
 		t.Fatalf("errors %d, want 1", errs)
 	}
 	writeTheme(t, dir, "one")
-	s.Reload()
+	s.Reload(context.Background())
 	first := s.Active()
 	if first.Name != "one" || first.Source != "path" || len(loaded) != 1 {
 		t.Fatalf("active %+v loaded %v", first, loaded)
 	}
-	s.Reload() // unchanged: no swap, no callback
+	s.Reload(context.Background()) // unchanged: no swap, no callback
 	if len(loaded) != 1 {
 		t.Errorf("an unchanged theme was announced again: %v", loaded)
 	}
 
 	must(t, os.WriteFile(filepath.Join(dir, "theme.json"), []byte(`{"schema":1,"name":"broken"}`), 0o600))
-	s.Reload()
+	s.Reload(context.Background())
 	if s.Active().Name != "one" || errs != 2 {
 		t.Errorf("after a bad edit: active %q, errors %d", s.Active().Name, errs)
 	}
 
 	writeTheme(t, dir, "two")
-	s.Reload()
+	s.Reload(context.Background())
 	if s.Active().Name != "two" {
 		t.Fatalf("active %q", s.Active().Name)
 	}

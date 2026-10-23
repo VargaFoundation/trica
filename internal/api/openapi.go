@@ -135,6 +135,13 @@ func (s *Server) operation(g *schemaGen, rt route, types []string) (map[string]a
 	if rt.Body != nil {
 		op["requestBody"] = map[string]any{"required": !rt.BodyOptional, "content": map[string]any{"application/json": map[string]any{"schema": g.ref(reflect.TypeOf(rt.Body))}}}
 	}
+	if len(rt.BodyBinary) > 0 {
+		content := map[string]any{}
+		for _, ct := range rt.BodyBinary {
+			content[ct] = map[string]any{"schema": map[string]any{"type": "string", "format": "binary"}}
+		}
+		op["requestBody"] = map[string]any{"required": true, "content": content}
+	}
 	responses := map[string]any{}
 	for _, r := range rt.Responses {
 		resp := map[string]any{"description": r.Desc}

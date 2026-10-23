@@ -95,7 +95,7 @@
     },
     "theme": {
       "type": "object",
-      "description": "The look of the console (docs/reference/themes.md): a built-in theme, or a ConfigMap holding a theme (its files, or a zip under archiveKey), mounted read-only at /etc/trica/theme.",
+      "description": "The look of the console (docs/reference/themes.md): a built-in theme, or a ConfigMap holding a theme (its files, or a zip under archiveKey), mounted read-only at /etc/trica/theme, or a zip downloaded once from an https url that must match sha256; locked makes this configuration win over the console.",
       "properties": {
         "builtin": {
           "type": "string",
@@ -107,6 +107,17 @@
         "archiveKey": {
           "type": "string",
           "pattern": "^[A-Za-z0-9._-]*$"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^(https://.*)?$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{64})?$"
+        },
+        "locked": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false

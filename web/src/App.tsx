@@ -20,6 +20,7 @@ import { SearchPage } from "./pages/SearchPage";
 import { RackPage } from "./racks/RackPage";
 import { RoomPage, RoomsPage } from "./racks/RoomPages";
 import { ThemeProvider, type ThemePreference } from "./theme";
+import { ThemesPage } from "./themes/ThemesPage";
 
 // The topology page (the isometric map and, behind a tab, the network graph) is its own chunk,
 // fetched when the page is opened; the graph's cytoscape and ELK (about 1.5 MB) are a further one.
@@ -111,6 +112,7 @@ export function App() {
           <Route path="collectors" element={<CollectorsPage />} />
           <Route path="collectors/:kind" element={<CollectorPage />} />
           <Route path="collectors/:kind/:name" element={<CollectorInstancePage />} />
+          <Route path="admin/themes" element={<ThemesPage />} />
           <Route path="oidc/callback" element={<AfterSignIn />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
