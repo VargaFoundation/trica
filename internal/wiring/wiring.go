@@ -53,6 +53,9 @@ type core struct {
 	auditor *Auditor
 	limiter *auth.RateLimiter
 	cache   *graph.Cache
+	// invalidate chains the cache's invalidation onto the engine's OnCommit,
+	// once, whichever of the API and the MCP server mounts first.
+	invalidate sync.Once
 	// refusals records what the API and the MCP server cannot: the 401, 403
 	// and 429 answered before or around their handlers (#56). It is shared,
 	// so that one caller's 429s are sampled once across both.
@@ -76,10 +79,10 @@ func (w *Wiring) TransportAddr() string {
 // mux ranks below every more specific pattern.
 func (w *Wiring) Components() []server.Component {
 	cs := []server.Component{
-		{Name: "api", Mount: w.mountAPI},
+		{Name: "api", Mount: w.mountAPI, Run: w.runGraphRefresh},
 	}
 	if !w.cfg.MCP.Disabled {
-		cs = append(cs, server.Component{Name: "mcp", Mount: w.mountMCP, Run: w.runGraphRefresh})
+		cs = append(cs, server.Component{Name: "mcp", Mount: w.mountMCP})
 	}
 	if !w.cfg.Web.Disabled {
 		cs = append(cs, server.Component{Name: "web", Mount: w.mountWeb})
@@ -184,6 +187,9 @@ func Policy(cfg *server.Config) (*auth.Policy, error) {
 	return pol, nil
 }
 
+// mapMaxStale: see api.Config.MapMaxStale; a test shortens it.
+var mapMaxStale = 10 * time.Second
+
 func (w *Wiring) mountAPI(mux *http.ServeMux, d server.Deps) error {
 	c, err := w.shared(d)
 	if err != nil {
@@ -198,8 +204,10 @@ func (w *Wiring) mountAPI(mux *http.ServeMux, d server.Deps) error {
 	if err != nil {
 		return err
 	}
+	c.chainInvalidate(d)
 	srv, err := api.New(api.Config{Engine: d.Engine, Authorizer: c.authz, Auditor: c.auditor, Logger: d.Log, Version: w.version,
-		Images: lib, Library: lib, Live: ls, Collectors: api.RegistryCollectors{InServer: targets}})
+		Images: lib, Library: lib, Live: ls, Collectors: api.RegistryCollectors{InServer: targets},
+		Graph: c.cache, MapMaxStale: mapMaxStale})
 	if err != nil {
 		return err
 	}
@@ -207,20 +215,28 @@ func (w *Wiring) mountAPI(mux *http.ServeMux, d server.Deps) error {
 	return nil
 }
 
+// chainInvalidate makes every commit (a batch, an approved proposal, the
+// absence sweep, the deducer) mark the graph stale; the next reader (a graph
+// tool call, a topology map request) reloads it. Both the MCP server and the
+// topology map read it, and either may be the only one enabled.
+func (c *core) chainInvalidate(d server.Deps) {
+	c.invalidate.Do(func() {
+		prev := d.Engine.OnCommit
+		d.Engine.OnCommit = func(r reconcile.Result) {
+			if prev != nil {
+				prev(r)
+			}
+			c.cache.Invalidate()
+		}
+	})
+}
+
 func (w *Wiring) mountMCP(mux *http.ServeMux, d server.Deps) error {
 	c, err := w.shared(d)
 	if err != nil {
 		return err
 	}
-	// Every commit (a batch, an approved proposal, the absence sweep, the
-	// deducer) marks the graph stale; the next graph tool call reloads it.
-	prev := d.Engine.OnCommit
-	d.Engine.OnCommit = func(r reconcile.Result) {
-		if prev != nil {
-			prev(r)
-		}
-		c.cache.Invalidate()
-	}
+	c.chainInvalidate(d)
 	srv, err := mcp.New(mcp.Config{
 		Engine: d.Engine, Authorizer: c.authz, Auditor: c.auditor, Graph: GraphAdapter{Cache: c.cache},
 		Logger: d.Log, Version: w.version, DisableLocalhostProtection: w.cfg.MCP.DisableLocalhostProtection,
@@ -234,7 +250,8 @@ func (w *Wiring) mountMCP(mux *http.ServeMux, d server.Deps) error {
 	return nil
 }
 
-// runGraphRefresh marks the graph stale when another replica commits: a commit
+// runGraphRefresh (a component of the API, which serves the topology map from
+// the graph even when the MCP server is disabled) marks the graph stale when another replica commits: a commit
 // made elsewhere does not reach this one's OnCommit, but its notification on
 // reconcile.ChangesChannel does. Every mcp.graph_refresh it also marks it
 // stale, in case a notification was missed. The reload itself is lazy (next

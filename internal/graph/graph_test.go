@@ -2,11 +2,13 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/internal/store"
@@ -153,5 +155,84 @@ func TestCacheInvalidatedDuringLoadReloadsAgain(t *testing.T) {
 	}
 	if n := l.loads.Load(); n != 2 {
 		t.Errorf("a commit during a load must trigger another load, got %d loads", n)
+	}
+}
+
+// fakeClock is a settable clock for the staleness tests.
+type fakeClock struct{ t time.Time }
+
+func (f *fakeClock) now() time.Time { return f.t }
+
+func TestRecentServesWithinMaxStale(t *testing.T) {
+	l := &fakeLoader{w: lab()}
+	clk := &fakeClock{t: time.Unix(1_000, 0)}
+	c := NewCache(l, nil)
+	c.now = clk.now
+	ctx := context.Background()
+	s1, err := c.Recent(ctx, 10*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Invalidate() // a commit
+	clk.t = clk.t.Add(9 * time.Second)
+	s2, _ := c.Recent(ctx, 10*time.Second)
+	if s2 != s1 || l.loads.Load() != 1 {
+		t.Fatalf("a snapshot 9 s into its staleness is served as it is (loads=%d)", l.loads.Load())
+	}
+	// Get never serves a dirty snapshot: the MCP tools keep their contract.
+	if s3, _ := c.Get(ctx); s3 == s1 || l.loads.Load() != 2 {
+		t.Fatalf("Get reloads a dirty cache (loads=%d)", l.loads.Load())
+	}
+}
+
+func TestRecentReloadsPastMaxStale(t *testing.T) {
+	l := &fakeLoader{w: lab()}
+	clk := &fakeClock{t: time.Unix(1_000, 0)}
+	c := NewCache(l, nil)
+	c.now = clk.now
+	ctx := context.Background()
+	s1, _ := c.Recent(ctx, 10*time.Second)
+	c.Invalidate()
+	clk.t = clk.t.Add(5 * time.Second)
+	c.Invalidate() // a later commit does not restart the clock
+	clk.t = clk.t.Add(6 * time.Second)
+	s2, err := c.Recent(ctx, 10*time.Second)
+	if err != nil || s2 == s1 || l.loads.Load() != 2 {
+		t.Fatalf("a snapshot stale for 11 s is reloaded (loads=%d, err=%v)", l.loads.Load(), err)
+	}
+	// Clean again: no reload, whatever the age.
+	clk.t = clk.t.Add(time.Hour)
+	if s3, _ := c.Recent(ctx, 10*time.Second); s3 != s2 || l.loads.Load() != 2 {
+		t.Fatalf("a clean snapshot is never reloaded (loads=%d)", l.loads.Load())
+	}
+}
+
+func TestBuildCarriesConfidenceAndAttrs(t *testing.T) {
+	w := lab()
+	w.rels = append(w.rels, store.Relation{Type: "mounted_in", FromID: "srv-single", ToID: "sw1", Confidence: "declared", Attrs: map[string]any{"position": 3.0}})
+	s := w.snapshot()
+	var got *Edge
+	for i, e := range s.Out["srv-single"] {
+		if e.Type == "mounted_in" {
+			got = &s.Out["srv-single"][i]
+		}
+	}
+	if got == nil || got.Confidence != "declared" || got.Attrs["position"] != 3.0 {
+		t.Fatalf("out edge: %+v", got)
+	}
+	if in := s.In["sw1"]; in[len(in)-1].Confidence != "declared" {
+		t.Fatalf("in edge: %+v", in)
+	}
+}
+
+// MCP serves hops as JSON: the topology map's extra fields must not leak.
+func TestHopJSONUnchanged(t *testing.T) {
+	e := Edge{Type: "cabled_to", From: "a", To: "b", Impact: "link", Confidence: "declared", Attrs: map[string]any{"x": 1}}
+	raw, err := json.Marshal(e)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"type":"cabled_to","from":"a","to":"b","impact":"link"}`; string(raw) != want {
+		t.Fatalf("%s, want %s", raw, want)
 	}
 }

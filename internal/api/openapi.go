@@ -14,6 +14,7 @@ import (
 	"github.com/VargaFoundation/trica/internal/schema"
 	"github.com/VargaFoundation/trica/internal/search"
 	"github.com/VargaFoundation/trica/internal/store"
+	"github.com/VargaFoundation/trica/internal/topomap"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -288,6 +289,9 @@ var (
 	rawType        = reflect.TypeOf((*interface{ MarshalJSON() ([]byte, error) })(nil)).Elem()
 	objectViewType = reflect.TypeOf(ObjectView{})
 	apiPkgPath     = reflect.TypeOf(Problem{}).PkgPath()
+	// topomapPkgPath: the map's payload types follow the api rule, their
+	// slices and maps are never nil on the wire.
+	topomapPkgPath = reflect.TypeOf(topomap.TopologyMap{}).PkgPath()
 	typeRenames    = map[reflect.Type]string{
 		reflect.TypeOf(sdk.Object{}):              "BatchObject",
 		reflect.TypeOf(sdk.Relation{}):            "BatchRelation",
@@ -432,7 +436,7 @@ func (g *schemaGen) structSchema(t reflect.Type) (map[string]any, error) {
 			}
 			omit := strings.Contains(opts, "omitempty") || strings.Contains(opts, "omitzero")
 			sc := g.ref(f.Type)
-			if !omit && t.PkgPath() != apiPkgPath {
+			if !omit && t.PkgPath() != apiPkgPath && t.PkgPath() != topomapPkgPath {
 				switch f.Type.Kind() {
 				case reflect.Pointer, reflect.Slice, reflect.Map:
 					if f.Type != timeType {

@@ -6,6 +6,7 @@ import (
 	"github.com/VargaFoundation/trica/internal/reconcile"
 	"github.com/VargaFoundation/trica/internal/search"
 	"github.com/VargaFoundation/trica/internal/store"
+	"github.com/VargaFoundation/trica/internal/topomap"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -195,6 +196,11 @@ func (s *Server) routeTable() []route {
 		{Method: "GET", Path: "/topology/live", ID: "getLiveTopology", Tag: tInv, Action: ActionRead,
 			Summary:   "Live state of the links: throughput, link state and utilisation per interface id, read by the server from the configured metrics endpoint and cached (refresh_seconds). enabled is false when the server has no live block; stale is true when the last refresh failed and the values are the last good ones. Only interfaces the caller may read are listed. Nothing here is stored in the inventory.",
 			Responses: ok(LiveTopology{}), H: s.hLiveTopology},
+		{Method: "GET", Path: "/topology/map", ID: "getTopologyMap", Tag: tInv, Action: ActionRead,
+			Summary: "One level of the topology map (ADR 0051): the places of the level (sites; the rooms of a site; the racks of a room; the devices of a rack; or the devices in no site) as nodes, the links between them aggregated per pair and medium as edges (physical cables and adjacencies, tunnels, Internet uplinks), with the live rates when a live source is configured, and portals standing for what lies outside the level. level is global, site, room or rack, or unplaced; id is the site, the room (or a site, for its floor outside rooms) or the rack, and is refused for global and unplaced. Computed from the shared inventory graph, at most 10 seconds behind the last commit; nodes and edges are listed only if the caller may read them (the Internet and the uplinks only to a caller who reads gateways in every site).",
+			Params: []param{requiredParam(qEnum("level", "The level to show.", topomap.LevelGlobal, topomap.LevelSite, topomap.LevelRoom, topomap.LevelRack, topomap.LevelUnplaced)),
+				qUUID("id", "The place the level is about: a site, a room or a rack. Absent for global and unplaced.")},
+			Responses: ok(topomap.TopologyMap{}), Errors: []int{http.StatusBadRequest, http.StatusForbidden, http.StatusNotFound}, H: s.hTopologyMap},
 		{Method: "GET", Path: "/racks/{id}/contents", ID: "getRackContents", Tag: tInv, Action: ActionRead,
 			Summary:   "The devices mounted in a rack, with position, face, model, height and depth, and each device's airflow check against the rack's front_aisle (ADR 0049): one call for an elevation. A device is listed only if the caller may read it, its model only if the caller may read the model. Ordered by position, unknown positions last.",
 			Params:    list(pathUUID("id", "Rack id.")),
@@ -291,3 +297,6 @@ func (s *Server) routeTable() []route {
 			Responses: []response{{Status: http.StatusNoContent, Desc: "Deleted."}}, Errors: []int{http.StatusNotFound}, H: s.hQueryDelete},
 	}
 }
+
+// requiredParam marks a parameter required.
+func requiredParam(p param) param { p.Required = true; return p }

@@ -1,6 +1,6 @@
 # ADR-0041: Live topology overlay, proxied by the server; cables inferred for management controllers
 
-- **Status**: accepted (2026-10); amended by ADR 0045 (measurements reported as attributes are drawn over time)
+- **Status**: accepted (2026-10); amended by ADR 0045 (measurements reported as attributes are drawn over time) and ADR 0051 (the topology map reads the overlay server-side)
 - **Concerns**: `internal/live`, `internal/api` (one endpoint), `internal/server` (the `live` block),
   `internal/deduce`. Amends ADR 0024 (the topology reads more than relations) and ADR 0010 (who a
   forwarding table may cable).

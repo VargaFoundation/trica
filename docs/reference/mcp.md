@@ -161,7 +161,7 @@ graph. Without a `Graph` in the `Config`, the two tools are not offered. The ser
 every commit of the engine (`Engine.OnCommit`: a batch, an approval, the absence sweep, the
 deducer), on every notification on the PostgreSQL channel `trica_changes`, where every replica
 announces its commits (ADR 0032), and every `mcp.graph_refresh` in case a notification was
-missed; the reload itself happens on the next graph tool call. The adapter, in
+missed (the API component runs this refresh, so it also applies with MCP disabled); the reload itself happens on the next graph tool call. The adapter, in
 short (the result types mirror those of `internal/graph` field for field, so a JSON round trip
 converts them):
 
