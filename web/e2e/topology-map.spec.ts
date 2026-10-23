@@ -115,6 +115,11 @@ test("a device uplink is drawn between places with an arrow, named in the legend
   await expect(uplink.locator(".iso-edge-arrow")).toHaveCount(1);
   await expect(uplink.locator(".iso-edge-base")).toHaveAttribute("stroke-dasharray", "10 3 2 3 2 3");
   await expect(page.locator(".iso-legend")).toContainText("Uplink: a controller names the device");
+  // The tunnel between the same two places is listed and drawn on its own line.
+  await expect(page.locator(".iso-legend")).toContainText("Tunnel: a VPN");
+  const tunnel = page.locator('.iso-edge[data-medium="tunnel"]');
+  await expect(tunnel.locator(".iso-edge-base")).toHaveAttribute("stroke-dasharray", "10 4 2 4");
+  expect(await tunnel.locator(".iso-edge-base").getAttribute("d")).not.toBe(await uplink.locator(".iso-edge-base").getAttribute("d"));
   const row = page.locator(`tr[data-id="${(await uplink.getAttribute("data-id")) ?? ""}"]`);
   await expect(row).toContainText("Uplink (port unknown)");
   await row.getByRole("button").click();

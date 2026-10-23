@@ -115,4 +115,10 @@ tunnels, uplinks); nothing combined the two, and the live overlay (ADR 0041) is 
   unmeasured line. The legend gets an entry only while such an edge is drawn; the table and the
   panel say "Uplink (port unknown)", and the panel "An uplink names no port: there is nothing to
   measure."
+- **Amended by #195 and #196.** Every medium has a fixed sideways shift off the arc its pair
+  shares: `physical` and `uplink` 0 (an uplink always ends at the Internet, a cable never does, so
+  they never share a pair), `uplinked_to` +8 px, `tunnel` -8 px on the other side. Media that can
+  share a pair are at least 8 px apart, more than half the 14 px hit target, so each line stays
+  selectable. Measured lanes follow their line's shift. The tunnel's dash-dot (`10 4 2 4`) is now
+  set by the scene, not the stylesheet, and the legend lists the tunnel only while one is drawn.
 - The map has no export and no filter, so there is nothing to carry over.
