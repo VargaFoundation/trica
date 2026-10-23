@@ -19,6 +19,7 @@ import (
 	"github.com/VargaFoundation/trica/internal/collect"
 	"github.com/VargaFoundation/trica/internal/collect/collecttest"
 	"github.com/VargaFoundation/trica/internal/collect/runner"
+	"github.com/VargaFoundation/trica/internal/devicetypes"
 	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
@@ -384,6 +385,46 @@ func TestNetworkEdgeDevicesAndPorts(t *testing.T) {
 	attrs(t, off, map[string]any{"health": "critical", "role": "access_point"})
 	if n := len(portsOf(b, off.Ref)); n != 0 {
 		t.Errorf("%d ports on a device whose detail failed", n)
+	}
+}
+
+// Every port the Network collector reports for the owner's office is a
+// template of its device's model in the library, so that an observed
+// interface and its template are the same string (#173). It fails when a
+// template is named otherwise, and when the collector names a port otherwise.
+func TestOfficePortsAreTemplatesOfTheirModel(t *testing.T) {
+	b := runNet(t, newFakeNet(t, SetNetwork))
+	models, err := devicetypes.Default()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ix := devicetypes.NewIndex(models)
+	checked := map[string]int{}
+	for _, d := range collecttest.Objects([]*sdk.Batch{b}, "device") {
+		pn, _ := d.Attributes["part_number"].(string)
+		if pn == "" {
+			continue
+		}
+		m := ix.Find("Ubiquiti", "", pn)
+		if m == nil {
+			t.Errorf("%s: no model for part number %q", d.Ref, pn)
+			continue
+		}
+		tmpl := map[string]bool{}
+		for _, p := range m.Model.Ports {
+			if p.Group == "interface" {
+				tmpl[p.Name] = true
+			}
+		}
+		for _, p := range portsOf(b, d.Ref) {
+			if name := p.Identity["name"]; !tmpl[name] {
+				t.Errorf("%s (%s): port %q is no interface template of %s", d.Ref, pn, name, m.Model.Slug)
+			}
+			checked[pn]++
+		}
+	}
+	if checked["UDMPROMAX"] != 11 || checked["USPM24P"] != 26 {
+		t.Fatalf("ports checked per model %v: the UDM Pro Max has 11, the switch 26", checked)
 	}
 }
 

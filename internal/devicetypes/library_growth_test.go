@@ -2,7 +2,9 @@ package devicetypes_test
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -170,7 +172,7 @@ func TestOverlayShortnamesResolve(t *testing.T) {
 }
 
 func TestOverlaysThatFailTheLoad(t *testing.T) {
-	const acme = "manufacturer: Acme\nmodel: Box 1\nslug: acme-box-1\nu_height: 1\n"
+	const acme = "manufacturer: Acme\nmodel: Box 1\nslug: acme-box-1\nu_height: 1\ninterfaces:\n  - name: e1\n    type: 1000base-t\n    label: First\n  - name: e2\npower-ports:\n  - name: e1\n"
 	const two = "manufacturer: Acme\nmodel: Box 2\nslug: acme-box-2\nu_height: 1\npart_numbers: [B2-LOCAL]\n"
 	const other = "manufacturer: Other\nmodel: Thing\nslug: other-thing\nu_height: 1\n"
 	lib := func(overlay string) fstest.MapFS {
@@ -196,6 +198,14 @@ func TestOverlaysThatFailTheLoad(t *testing.T) {
 		"listed by another model":        {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [b3 held]\n", "already listed by acme-box-3"},
 		"unknown key":                    {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [X1]\n    note: hi\n", "field note"},
 		"not yaml":                       {"manufacturer: [unclosed\n", "overlays/Acme.yaml"},
+		"unknown interface":              {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e9: x}\n", `no interface is named "e9"`},
+		"power port is not an interface": {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {PSU: x}\n", "no interface is named"},
+		"rename onto a kept name":        {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: e2}\n", `interface "e2" would be named twice`},
+		"rename to nothing":              {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: ' '}\n", "to nothing"},
+		"rename to itself":               {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: e1}\n", "to itself"},
+		"two ends renamed alike":         {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: z, e2: z}\n", `would be named twice`},
+		"duplicate key":                  {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: a, e1: b}\n", "already defined"},
+		"rename on a project model":      {"manufacturer: Acme\nmodels:\n  - slug: acme-box-2\n    interface_names: {e1: a}\n", "not an upstream model"},
 	}
 	for name, c := range bad {
 		_, err := devicetypes.Load(lib(c.overlay), "lib")
@@ -224,6 +234,121 @@ func TestOverlaysThatFailTheLoad(t *testing.T) {
 	// No overlays directory: nothing to apply.
 	if _, err := devicetypes.Load(fstest.MapFS{"lib/Acme/box1.yaml": file([]byte(acme))}, "lib"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// An overlay renames interface templates (ADR 0056, #173): at once, so that a
+// swap works, only interfaces, and an entry may do nothing else.
+func TestOverlayRenamesInterfaces(t *testing.T) {
+	const acme = "manufacturer: Acme\nmodel: Box 1\nslug: acme-box-1\nu_height: 1\ninterfaces:\n  - name: e1\n    type: 1000base-t\n    label: First\n  - name: e2\n    mgmt_only: true\npower-ports:\n  - name: e1\n"
+	load := func(overlay string) *devicetypes.Model {
+		t.Helper()
+		models, err := devicetypes.Load(fstest.MapFS{
+			"lib/Acme/box1.yaml":     file([]byte(acme)),
+			"lib/overlays/Acme.yaml": file([]byte(overlay)),
+		}, "lib")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return models[0]
+	}
+	names := func(m *devicetypes.Model, group string) string {
+		var out []string
+		for _, p := range m.Ports {
+			if p.Group == group {
+				out = append(out, p.Name)
+			}
+		}
+		return strings.Join(out, ",")
+	}
+	m := load("manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: e2, e2: e1}\n")
+	if got := names(m, "interface"); got != "e2,e1" {
+		t.Fatalf("interfaces %q after a swap, want e2,e1", got)
+	}
+	if p := m.Ports[0]; p.Type != "1000base-t" || p.Label != "First" {
+		t.Fatalf("type and label are kept: %+v", p)
+	}
+	if p := m.Ports[1]; !p.MgmtOnly {
+		t.Fatalf("mgmt_only is kept: %+v", p)
+	}
+	if got := names(m, "power"); got != "e1" {
+		t.Fatalf("the power port %q must not be renamed", got)
+	}
+	m = load("manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: ' Port 1 '}\n")
+	if got := names(m, "interface"); got != "Port 1,e2" {
+		t.Fatalf("interfaces %q, want a trimmed Port 1,e2", got)
+	}
+}
+
+// The UniFi Network collector names a port "Port <idx>" (ADR 0060). The
+// templates of the models whose upstream names differ carry that name, so
+// that an observed interface and its template are the same string (#173).
+func TestUniFiPortTemplatesAreNamedAsTheConsoleNamesThem(t *testing.T) {
+	models, err := devicetypes.Default()
+	if err != nil {
+		t.Fatal(err)
+	}
+	by := map[string]*devicetypes.Model{}
+	for _, m := range models {
+		by[m.Slug] = m
+	}
+	ifaces := func(m *devicetypes.Model) []string {
+		var out []string
+		for _, p := range m.Ports {
+			if p.Group == "interface" {
+				out = append(out, p.Name)
+			}
+		}
+		return out
+	}
+	for slug, n := range map[string]int{
+		"ubiquiti-udm":                                     5,
+		"ubiquiti-unifi-dream-machine-pro":                 11,
+		"ubiquiti-unifi-dream-machine-pro-special-edition": 11,
+		"ubiquiti-unifi-dream-machine-pro-max":             11,
+		"ubiquiti-unifi-dream-router-7":                    5,
+	} {
+		m := by[slug]
+		if m == nil {
+			t.Errorf("%s: no such model", slug)
+			continue
+		}
+		var want []string
+		for i := 1; i <= n; i++ {
+			want = append(want, fmt.Sprintf("Port %d", i))
+		}
+		if got := ifaces(m); !slices.Equal(got, want) {
+			t.Errorf("%s: interfaces %v, want %v", slug, got, want)
+		}
+	}
+	for _, slug := range []string{"ubiquiti-unifi-switch-pro-max-24", "ubiquiti-unifi-switch-pro-max-24-poe"} {
+		m := by[slug]
+		if m == nil {
+			t.Errorf("%s: no such model", slug)
+			continue
+		}
+		got := ifaces(m)
+		for _, want := range []string{"Port 25", "Port 26"} {
+			if !slices.Contains(got, want) {
+				t.Errorf("%s: no %q in %v", slug, want, got)
+			}
+		}
+		for _, bad := range []string{"SFP+ 25", "SFP+ 26"} {
+			if slices.Contains(got, bad) {
+				t.Errorf("%s: still has %q", slug, bad)
+			}
+		}
+	}
+	dotted := regexp.MustCompile(`^port\.\d+$`)
+	for _, m := range models {
+		if m.Vendor != "Ubiquiti" {
+			continue
+		}
+		for _, name := range ifaces(m) {
+			if dotted.MatchString(name) {
+				t.Errorf("%s: interface %q, the console names it Port N", m.Slug, name)
+			}
+		}
 	}
 }
 

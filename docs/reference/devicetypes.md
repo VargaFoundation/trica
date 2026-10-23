@@ -47,6 +47,13 @@ the display name as `model` (`UDM Pro Max`, `U7 Pro`) and the shortname the cont
 add to the overlay, with its source. The overlay is part of the embedded library: an operator's
 `extra_dir` has none.
 
+The overlay can also rename interface templates (`interface_names`, old name to new, [ADR 0056](../adr/0056-growing-the-device-type-library.md)
+amended by #173). Seven models have it: the UDM, UDM Pro, UDM Pro SE, UDM Pro Max and UDR7, whose
+upstream names are `port.1` to `port.N`, and the USW Pro Max 24 and 24 PoE, whose SFP+ ports are
+`SFP+ 25` and `SFP+ 26`. The UniFi Network collector names every port `Port <idx>` ([ADR 0060](../adr/0060-unifi-network-integration-api.md)),
+so the templates of these models now carry the same names; the upstream files stay unchanged. The
+report to upstream is drafted in issue #173 and was not filed.
+
 ## How sure a match is, and the variants a person can choose
 
 `Index.Choices` (behind `GET /api/v1/objects/{id}/device-type-candidates`) says whether the model
@@ -340,6 +347,11 @@ library and `TestCatalogueListIsCurrent` fails when it is out of date (`go test
 - A name glued to `plus` (`DS218plus`) matches, but offers only its own model as candidate; a
   device that drops the `+` its model has loses the match; the DS218+ has no face (upstream has
   pictures, but the image budget does not allow them).
+- UniFi families whose template names still differ from the collector's `Port <idx>`: UCG-Max and
+  UCG-Fiber (`WAN`, `LAN1`), UXG (`WAN 1`, `Lan 1`), access points (`eth0`, `lan0`), USW-Pro-Max-16
+  (`GbE N`, `SFP+ 1`), the first-generation switches (`SFP 1` for port 25). They wait for a recorded
+  console to confirm the port order (finding #177). The `eth8` and `eth9` the cloud collector
+  gives the console's WAN ports are an observed name, not a template.
 - UniFi shortnames that the fingerprint database does not list (the USW-Flex-2.5G family, the
   CKG2-RM), and operator overlays in `extra_dir`.
 - Part numbers upstream gives to two models (HPE `P19766-B21`, `P56707-B21`, `R4U28A`; Lenovo
