@@ -60,7 +60,7 @@ function routes({ links = sampleLinks(), context = sampleContext(), truncated, v
   };
 }
 
-async function open(setup: Setup = {}, at = "/topology") {
+async function open(setup: Setup = {}, at = "/topology?view=network") {
   const api = mockApi(routes(setup));
   renderApp({ at });
   await screen.findByRole("heading", { level: 1, name: "Topology" });
@@ -239,7 +239,7 @@ describe("filters", () => {
 describe("what the page says it did not draw", () => {
   it("says when there is no link at all", async () => {
     mockApi(routes({ links: [], context: [] }));
-    renderApp({ at: "/topology" });
+    renderApp({ at: "/topology?view=network" });
     expect(await screen.findByText("No link between ports is recorded yet.")).toBeDefined();
     expect(screen.queryByRole("img")).toBeNull();
   });
@@ -283,7 +283,7 @@ describe("failure", () => {
     const inner = r["GET /relations"] as (c: Call) => unknown;
     r["GET /relations"] = (c: Call) => (fail ? problem(500, "internal", "database down") : inner(c));
     mockApi(r);
-    renderApp({ at: "/topology" });
+    renderApp({ at: "/topology?view=network" });
     expect(await screen.findByRole("alert")).toBeDefined();
     fail = false;
     await userEvent.setup().click(screen.getByRole("button", { name: "Retry" }));
@@ -299,7 +299,7 @@ describe("accessibility", () => {
 
   it("has no violation in French, and speaks French", async () => {
     mockApi(routes());
-    renderApp({ at: "/topology", locale: "fr" });
+    renderApp({ at: "/topology?view=network", locale: "fr" });
     await screen.findByRole("table");
     expect(screen.getByRole("heading", { level: 1, name: "Topologie" })).toBeDefined();
     expect(screen.getByText("4 liens · 4 équipements")).toBeDefined();

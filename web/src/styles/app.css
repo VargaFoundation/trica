@@ -1755,3 +1755,525 @@ label.check {
   color: var(--trica-ink-muted);
   margin: 0.2rem 0 0;
 }
+
+/* ─────────────────────── topology: the isometric map ───────────────────────
+   Drawn in SVG by src/topology/map. Colours are the --trica-iso-* and
+   --trica-graph-* tokens, so every theme (light, dark, system, custom) reaches
+   the map. Three faces per box, lit from the left: top, south, east. */
+.iso-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.iso-stage:has(.iso-side) {
+  grid-template-columns: minmax(0, 1fr) 22rem;
+}
+@media (max-width: 62rem) {
+  .iso-stage:has(.iso-side) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.iso-main {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.iso-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+}
+.iso-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.iso-live {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--trica-ink-muted);
+  font-size: 0.8125rem;
+}
+.iso-live[data-stale="true"] {
+  color: var(--trica-warn-ink);
+}
+.iso-card {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+.iso-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--trica-line);
+  background: var(--trica-raised);
+}
+.iso-tools .check {
+  margin-left: auto;
+}
+.iso-svg {
+  display: block;
+  width: 100%;
+  height: min(68vh, 44rem);
+  min-height: 22rem;
+  background: radial-gradient(ellipse at 50% 38%, var(--trica-iso-floor), var(--trica-graph-paper) 72%);
+  cursor: grab;
+  touch-action: none;
+  transition: opacity 0.2s var(--trica-easing);
+}
+.iso-svg:active {
+  cursor: grabbing;
+}
+.iso-card[data-busy="true"] .iso-svg {
+  opacity: 0.55;
+}
+.iso-help {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--trica-line);
+}
+
+/* The floor under a level. */
+.iso-plate {
+  stroke: var(--trica-iso-floor-line);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.iso-plate-top {
+  fill: var(--trica-iso-floor);
+}
+.iso-plate-south,
+.iso-plate-east {
+  fill: var(--trica-iso-floor-line);
+}
+.iso-grid {
+  fill: none;
+  stroke: var(--trica-iso-floor-line);
+  stroke-width: 1;
+  opacity: 0.85;
+}
+.is-dashed .iso-plate {
+  stroke-dasharray: 6 5;
+}
+
+/* Boxes. */
+.iso-face {
+  stroke: var(--trica-iso-edge);
+  stroke-opacity: 0.55;
+  stroke-width: 1;
+  stroke-linejoin: round;
+  transition: filter 0.15s var(--trica-easing);
+}
+.iso-face.iso-top {
+  fill: var(--trica-iso-top);
+}
+.iso-face.iso-south {
+  fill: var(--trica-iso-south);
+}
+.iso-face.iso-east {
+  fill: var(--trica-iso-east);
+}
+.iso-portal .iso-face,
+.iso-internet .iso-face,
+.iso-unplaced .iso-face,
+.iso-area .iso-face {
+  stroke: var(--trica-iso-neutral-edge);
+}
+.iso-portal .iso-top,
+.iso-internet .iso-top,
+.iso-unplaced .iso-top,
+.iso-area .iso-top {
+  fill: var(--trica-iso-neutral-top);
+}
+.iso-portal .iso-south,
+.iso-internet .iso-south,
+.iso-unplaced .iso-south,
+.iso-area .iso-south {
+  fill: var(--trica-iso-neutral-south);
+}
+.iso-portal .iso-east,
+.iso-internet .iso-east,
+.iso-unplaced .iso-east,
+.iso-area .iso-east {
+  fill: var(--trica-iso-neutral-east);
+}
+.iso-area .iso-face {
+  stroke-dasharray: 5 4;
+}
+/* A portal is a gate, not a place: a see-through panel between two posts and a lintel. */
+.iso-portal > .iso-face,
+.iso-internet > .iso-face {
+  fill-opacity: 0.16;
+  stroke-opacity: 0.45;
+  stroke-dasharray: 3 3;
+}
+.iso-portal .iso-post .iso-face,
+.iso-internet .iso-post .iso-face {
+  stroke-dasharray: none;
+  stroke-opacity: 0.9;
+}
+.iso-portal .iso-shadow,
+.iso-internet .iso-shadow {
+  display: none;
+}
+/* Sites and rooms: a soft sheen across the top and a heavier shadow on the ground. */
+.iso-stop-hi {
+  stop-color: var(--trica-iso-top-hi);
+}
+.iso-stop-lo {
+  stop-color: var(--trica-iso-top);
+}
+.iso-site > .iso-face.iso-top,
+.iso-room > .iso-face.iso-top {
+  fill: url(#iso-grad-top);
+}
+.iso-site .iso-shadow {
+  opacity: 0.5;
+}
+/* The rack's cabinet: posts, top rail and the unit ticks. */
+.iso-frame {
+  pointer-events: none;
+}
+.iso-post .iso-top {
+  fill: var(--trica-iso-neutral-top);
+}
+.iso-post .iso-south {
+  fill: var(--trica-iso-neutral-south);
+}
+.iso-post .iso-east {
+  fill: var(--trica-iso-neutral-east);
+}
+.iso-post .iso-face {
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-opacity: 0.8;
+}
+.iso-rail {
+  fill: none;
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+.iso-ticks {
+  fill: none;
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-width: 1;
+  opacity: 0.75;
+}
+.iso-tick-label {
+  fill: var(--trica-ink-muted);
+  font-family: var(--trica-font-sans);
+  font-size: 10px;
+}
+.iso-mini .iso-face {
+  stroke-opacity: 0.35;
+}
+.iso-shadow {
+  fill: var(--trica-iso-shadow);
+  opacity: 0.3;
+  pointer-events: none;
+}
+.iso-cloud {
+  fill: var(--trica-graph-ink);
+  opacity: 0.9;
+  pointer-events: none;
+}
+.iso-front {
+  fill: var(--trica-iso-edge);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* The item states: pointed at, keyboard focus, selected, and its health. */
+.iso-item {
+  outline: none;
+}
+.iso-item.is-drill {
+  cursor: pointer;
+}
+.iso-item:hover .iso-face,
+.iso-item.is-hover .iso-face {
+  filter: brightness(1.14);
+  stroke-opacity: 0.9;
+}
+.iso-item.h-warning .iso-top {
+  stroke: var(--trica-graph-health-warn);
+  stroke-opacity: 1;
+  stroke-width: 2.5;
+}
+.iso-item.h-critical .iso-top {
+  stroke: var(--trica-graph-health-crit);
+  stroke-opacity: 1;
+  stroke-width: 2.5;
+}
+.iso-item.is-selected .iso-face {
+  stroke: var(--trica-accent);
+  stroke-opacity: 1;
+  stroke-width: 2.5;
+}
+.iso-item:focus-visible .iso-face {
+  stroke: var(--trica-focus);
+  stroke-opacity: 1;
+  stroke-width: 3;
+}
+.iso-lamp {
+  fill: var(--trica-graph-util-unknown);
+  stroke: var(--trica-iso-label-bg);
+  stroke-width: 1.5;
+}
+.iso-labels.h-ok .iso-lamp {
+  fill: var(--trica-graph-health-ok);
+}
+.iso-labels.h-warning .iso-lamp {
+  fill: var(--trica-graph-health-warn);
+}
+.iso-labels.h-critical .iso-lamp {
+  fill: var(--trica-graph-health-crit);
+}
+
+/* Labels are small pills on a layer above every shape, so that no box hides one. */
+.iso-label-layer {
+  pointer-events: none;
+}
+.iso-pill {
+  fill: var(--trica-iso-label-bg);
+  fill-opacity: 0.92;
+  stroke: var(--trica-iso-floor-line);
+  stroke-width: 1;
+}
+.iso-label,
+.iso-sub {
+  font-family: var(--trica-font-sans);
+  pointer-events: none;
+}
+.iso-label {
+  fill: var(--trica-graph-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.iso-sub {
+  fill: var(--trica-ink-muted);
+  font-size: 11px;
+}
+.iso-leader {
+  stroke: var(--trica-iso-floor-line);
+  stroke-width: 1;
+}
+.iso-labels {
+  transition: opacity 0.15s var(--trica-easing);
+}
+.iso-labels.is-hidden {
+  opacity: 0;
+}
+.iso-info {
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.15s var(--trica-easing);
+}
+.iso-info circle {
+  fill: var(--trica-raised);
+  stroke: var(--trica-line-strong);
+  stroke-width: 1.5;
+}
+.iso-info text {
+  fill: var(--trica-ink);
+  font-family: var(--trica-font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+.iso-item:hover .iso-info,
+.iso-item:focus .iso-info,
+.iso-item.is-selected .iso-info {
+  opacity: 1;
+}
+
+/* Lines: a base stroke (width = capacity, colour = utilisation, dashes = confidence), dashes running over it. */
+.iso-edge {
+  transition: opacity 0.2s var(--trica-easing);
+}
+.iso-edge.is-dim {
+  opacity: 0.2;
+}
+.iso-edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.iso-edge-casing {
+  fill: none;
+  stroke: var(--trica-iso-label-bg);
+  stroke-linecap: round;
+  opacity: 0.6;
+  pointer-events: none;
+}
+.iso-edge.is-hot .iso-edge-casing,
+.iso-edge.is-selected .iso-edge-casing {
+  stroke: var(--trica-accent);
+  opacity: 0.9;
+}
+.iso-edge-base,
+.iso-flow,
+.iso-flow-glow {
+  fill: none;
+  stroke: var(--trica-graph-util-unknown);
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.iso-edge.m-tunnel .iso-edge-base {
+  stroke-dasharray: 10 4 2 4;
+}
+.iso-edge-x {
+  fill: var(--trica-graph-down);
+  stroke: var(--trica-iso-label-bg);
+  stroke-width: 2;
+  pointer-events: none;
+}
+.u-normal .iso-edge-base,
+.u-normal .iso-flow,
+.u-normal .iso-flow-glow {
+  stroke: var(--trica-graph-util-normal);
+}
+.u-warn .iso-edge-base,
+.u-warn .iso-flow,
+.u-warn .iso-flow-glow {
+  stroke: var(--trica-graph-util-warn);
+}
+.u-crit .iso-edge-base,
+.u-crit .iso-flow,
+.u-crit .iso-flow-glow {
+  stroke: var(--trica-graph-util-crit);
+}
+.u-down .iso-edge-base,
+.u-down .iso-flow,
+.u-down .iso-flow-glow {
+  stroke: var(--trica-graph-down);
+}
+.iso-edge:has(.iso-flow) .iso-edge-base {
+  opacity: 0.4;
+}
+/* The moving dashes are brighter than the line, over a wider, fainter copy that glows around them. */
+.iso-flow {
+  stroke-dasharray: 7 13;
+  filter: brightness(1.45) saturate(1.2);
+  animation: iso-flow 3s linear infinite;
+}
+.iso-flow-glow {
+  stroke-dasharray: 7 13;
+  opacity: 0.26;
+  animation: iso-flow 3s linear infinite;
+}
+.iso-flow.s1,
+.iso-flow-glow.s1 {
+  animation-duration: 6s;
+}
+.iso-flow.s2,
+.iso-flow-glow.s2 {
+  animation-duration: 4.5s;
+}
+.iso-flow.s3,
+.iso-flow-glow.s3 {
+  animation-duration: 3s;
+}
+.iso-flow.s4,
+.iso-flow-glow.s4 {
+  animation-duration: 2s;
+}
+.iso-flow.s5,
+.iso-flow-glow.s5 {
+  animation-duration: 1.2s;
+}
+@keyframes iso-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+/* A level arrives: the floor fades in, the boxes rise one after the other. */
+@media (prefers-reduced-motion: no-preference) {
+  .iso-svg .iso-plates {
+    animation: iso-fade 0.4s var(--trica-easing) both;
+  }
+  .iso-svg .iso-item {
+    animation: iso-rise 0.45s var(--trica-easing) both;
+  }
+  .iso-item[data-i="1"] { animation-delay: 0.03s; }
+  .iso-item[data-i="2"] { animation-delay: 0.06s; }
+  .iso-item[data-i="3"] { animation-delay: 0.09s; }
+  .iso-item[data-i="4"] { animation-delay: 0.12s; }
+  .iso-item[data-i="5"] { animation-delay: 0.15s; }
+  .iso-item[data-i="6"] { animation-delay: 0.18s; }
+  .iso-item[data-i="7"] { animation-delay: 0.21s; }
+  .iso-item[data-i="8"] { animation-delay: 0.24s; }
+  .iso-item[data-i="9"] { animation-delay: 0.27s; }
+  .iso-item[data-i="10"] { animation-delay: 0.3s; }
+  .iso-item[data-i="11"] { animation-delay: 0.33s; }
+}
+@keyframes iso-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes iso-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iso-flow,
+  .iso-flow-glow,
+  .iso-svg .iso-item,
+  .iso-svg .iso-plates {
+    animation: none;
+  }
+}
+
+.iso-side {
+  position: sticky;
+  top: calc(var(--trica-topbar) + 1rem);
+}
+.iso-panel h3 {
+  margin: 0.25rem 0;
+  font-size: 1rem;
+}
+.iso-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.iso-members {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+.iso-notes {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--trica-ink-muted);
+  font-size: 0.8125rem;
+}
+.iso-notes:empty {
+  display: none;
+}
+.iso-legend {
+  display: grid;
+  gap: 0.4rem;
+}
+.iso-links h2 {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+}
+.iso-links tr[aria-selected="true"] {
+  background: var(--trica-accent-soft);
+}

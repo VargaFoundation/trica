@@ -418,6 +418,8 @@ func (a *api) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.collectors(w, path)
 	case path == "/schema":
 		writeJSON(w, http.StatusOK, schemaDoc())
+	case path == "/topology/map":
+		a.topologyMap(w, r)
 	case path == "/topology/live":
 		writeJSON(w, http.StatusOK, a.live())
 	default:
@@ -821,6 +823,25 @@ func schemaDoc() obj {
 // exports physical ports. generated_at is a few seconds ago.
 func (a *api) live() obj {
 	links := obj{}
+	for id, m := range a.measures() {
+		l := obj{"rx_bps": m.rx, "tx_bps": m.tx, "util": max(m.rx, m.tx) / (m.speed * 1e6), "oper": m.oper, "speed_mbps": m.speed, "source": "e2e-fake"}
+		links[id] = l
+	}
+	at := time.Now().Add(-4 * time.Second).UTC().Format(time.RFC3339)
+	return obj{"enabled": true, "generated_at": at, "stale": false, "refresh_seconds": 30, "links": links,
+		"sources": []obj{{"name": "e2e-fake", "kind": "generic", "series": len(links) * 3, "matched": len(links) * 3, "stale": false}}}
+}
+
+// measure is the invented traffic of one interface, in bits per second.
+type measure struct {
+	rx, tx, speed float64
+	oper          string
+}
+
+// measures gives every measured physical interface its figures, by id: the
+// same for /topology/live and for the map, so that both tell one story.
+func (a *api) measures() map[string]measure {
+	out := map[string]measure{}
 	for _, o := range a.inv.objects {
 		if o["type"] != "interface" {
 			continue
@@ -842,9 +863,7 @@ func (a *api) live() obj {
 		if n%37 == 5 {
 			oper, tx, rx = "down", 0, 0
 		}
-		links[id] = obj{"rx_bps": rx, "tx_bps": tx, "util": max(rx, tx) / (speed * 1e6), "oper": oper, "speed_mbps": speed, "source": "e2e-fake"}
+		out[id] = measure{rx: rx, tx: tx, speed: speed, oper: oper}
 	}
-	at := time.Now().Add(-4 * time.Second).UTC().Format(time.RFC3339)
-	return obj{"enabled": true, "generated_at": at, "stale": false, "refresh_seconds": 30, "links": links,
-		"sources": []obj{{"name": "e2e-fake", "kind": "generic", "series": len(links) * 3, "matched": len(links) * 3, "stale": false}}}
+	return out
 }

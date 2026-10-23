@@ -19,7 +19,8 @@ developer and an operator need; when it and the code disagree, the code wins.
 | `/collectors/<kind>?status=&offset=` | One module: its summary (in the reader's language), read-only guarantee, the object types it collects (each leading to `/objects?type=`, and "Objects from this collector" to `source:<kind>:*`), its configuration (address form, username and secret use, the options table with type, default, allowed values and description; a `secret_reference` option is marked), what it was tested with and a link to its README, and its instances, failing first, filterable by status |
 | `/collectors/<kind>/<name>` | One instance: status and origin; the configuration of its target (address, interval, timeout, routing domain, TLS with a warning when the certificate is not verified, options); the credential references when the API gives them (administrators only, otherwise a note says so); the last run (times, duration, items, failures, error, warnings); a link to the objects this source reports. A "reported" instance (remote collector, host agent) has only its health |
 | `/rooms`, `/rooms/<id>` | Every room; the floor plan of one room (SVG, racks on a grid of the room's tiles, 600 mm unless the room sets `tile_mm`; north is up, the bar on a rack is its front) with a table of its racks. Racks stand in the room directly or through a row |
-| `/topology?site=&rack=&vlan=&classes=` | The layer-2 links: a layered graph (Cytoscape + ELK) of the devices that have a link, a legend, filters, and the same links as a table. See "Topology" below |
+| `/topology?level=&id=&sel=&rot=` | The isometric map, one level at a time (all sites, a site, a room, a rack, the unplaced devices), with live traffic. See "Topology map" below |
+| `/topology?view=network&site=&rack=&vlan=&classes=` | The layer-2 links: a layered graph (Cytoscape + ELK) of the devices that have a link, a legend, filters, and the same links as a table. See "Topology" below |
 | `/racks/<id>` | Front and rear elevations of one rack (SVG, U 1 at the bottom) with free units, a table of what is mounted, and the devices mounted without a position. Opened from the floor plan, from a rack's object page, or from the room page |
 
 Every address is a deep link: filters, the open type and the page are in the URL, and the
@@ -82,6 +83,35 @@ set; ADR 0030).
   number of devices.
 - Known limits: at most 1000 devices per rack and 1000 racks per room are read (the page says when
   it is cut).
+
+### Topology map
+
+`/topology` opens on the **Map** tab; **Network** (the layer-2 graph below) is one tab away. Legacy
+addresses (`site`, `rack`, `vlan` or `classes` without `view`) keep opening the Network view.
+
+- **Levels** (ADR 0051, `GET /api/v1/topology/map`): all sites (with the Internet and the unplaced
+  devices), a site (its rooms and areas), a room (its racks on the floor plan, plus the devices
+  declared in no rack), a rack (its devices at their unit), the unplaced devices. `level=room` with
+  a site id is the site floor. The address is `?level=&id=&sel=&rot=`; a bad address falls back to
+  the world with a notice.
+- **Drawing**: SVG isometric boxes with three shades, soft shadows and a health lamp; labels are
+  dropped (caption first) when they would overlap, and reappear on hover or focus. Colours are the
+  `--trica-iso-*` tokens (every theme defines them); no inline style.
+- **Moving**: click opens a place; the `i` badge or Space selects (side panel); Enter opens; arrows
+  move between places; Escape closes the panel, then goes up; `+ - 0`, wheel and drag zoom and pan;
+  the two turn buttons rotate by quarter turns (`rot`). Lines are not focusable: the links table under
+  the map (first 50 rows) opens each one in the panel.
+- **Traffic**: with live data, each measured line carries one animated dash lane per direction (speed
+  = rate class, width = capacity, colour = utilisation, as in the Network view); at most 150 lanes,
+  the busiest. Nothing moves with `prefers-reduced-motion`, with the "Animate the traffic" switch
+  off, or when the page is hidden. The map is refreshed every 30 s when live data are on, never
+  otherwise.
+- **Chunk**: the map does not import the graph engine (`graph.ts`, Cytoscape); a test reads the
+  sources and fails if it does.
+- **Tests**: `src/topology/map/*.test.ts(x)` (geometry, layout, flows, navigation, address, page on the
+  recorded API answers `testdata/map-api.json`), `e2e/topology-map.spec.ts` (every level in both
+  themes with axe and no CSP violation, drill by mouse and keyboard, flow animations present and
+  absent under reduced motion, a rack of 96 devices drawn in under a second).
 
 ### Topology: what the graph relies on
 

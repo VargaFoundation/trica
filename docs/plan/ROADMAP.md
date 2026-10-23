@@ -27,6 +27,6 @@ One story = one PR, squashed.
 | 4 | Equipment collectors | Arista eAPI, MikroTik API, pfSense REST, Redfish (iLO 4/5, iDRAC), MAAS, Kubernetes; cabling deduction from LLDP and MAC tables | One `Fake*` per integration on anonymised recorded responses; a compatibility matrix per version |
 | 5 | Linux agent | Packages, services, listeners, connections, LLDP, SMART/NVMe; static binary, packages, DaemonSet; remote update in waves with rollback | CI benchmark under 50 MB and 1 % of a core; rollback test |
 | 6 | API, search, MCP | Dynamic REST/OpenAPI, query language, text and historical search, saved queries, MCP tools, OIDC, tokens, RBAC, chained audit | Benchmarks (criterion 6); MCP questions (criterion 4) |
-| 7 | UI | Global search, object page with provenance and timeline, rack elevations, room plan, L2 topology, discrepancies, proposals, collection health | Playwright and axe (AA); a rack renders in under 1 s |
+| 7 | UI | Global search, object page with provenance and timeline, rack elevations, room plan, L2 topology, isometric topology map, discrepancies, proposals, collection health | Playwright and axe (AA); a rack renders in under 1 s |
 | 8 | Packaging and operations | Helm chart, compose, backup and restore, release pipeline (signed images, SBOM, chart OCI), getting-started, deployment, security and SDK docs | Nightly end-to-end on kind against a simulated lab |
 | 9 | First deployment | A real site, criteria 1 to 5 measured there | Measured numbers recorded in `STATUS.md` |

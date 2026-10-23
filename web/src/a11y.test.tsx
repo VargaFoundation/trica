@@ -1,9 +1,10 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { expectNoA11yViolations } from "./test/axe";
 import { APPROVER, ID, page, READER } from "./test/fixtures";
-import { defaultRoutes, mockApi, problem, renderApp, type Opts } from "./test/support";
+import { defaultRoutes, mockApi, problem, renderApp, type Call, type Opts } from "./test/support";
+import { MAPS } from "./topology/map/testdata/maps";
 
 /** Lets the secondary lookups (schema labels, linked object names) land before the audit. */
 const settle = () => new Promise((r) => setTimeout(r, 60));
@@ -55,6 +56,25 @@ describe("accessibility audit (axe-core, WCAG 2.2 A and AA rules)", () => {
     await screen.findByRole("link", { name: "#12" });
     await expectNoA11yViolations();
   });
+
+  const maps: [string, Opts][] = [
+    ["the world", { at: "/topology" }],
+    ["a site", { at: "/topology?level=site&id=%3Cparis%3E" }],
+    ["a room", { at: "/topology?level=room&id=%3Croom%3E", theme: "dark" }],
+    ["a rack", { at: "/topology?level=rack&id=%3Cr1%3E&sel=%3Cswa%3E" }],
+    ["the unplaced devices", { at: "/topology?level=unplaced", theme: "dark" }],
+    ["a room, in French", { at: "/topology?level=room&id=%3Croom%3E", locale: "fr" }],
+  ];
+  it.each(maps)("the topology map of %s has no violation", async (_name, opts) => {
+    mockApi({
+      ...defaultRoutes(APPROVER),
+      "GET /topology/map": (c: Call) => MAPS[(c.query.get("level") ?? "global") as keyof typeof MAPS],
+    });
+    renderApp(opts);
+    await waitFor(() => expect(document.querySelector('.iso-svg[data-state="drawn"]')).not.toBeNull(), { timeout: 8000 });
+    await settle();
+    await expectNoA11yViolations();
+  }, 20_000);
 
   it("an error state has no violation", async () => {
     mockApi({ ...defaultRoutes(), "GET /discrepancies": problem(500, "internal", "database is down") });

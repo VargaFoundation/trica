@@ -78,6 +78,21 @@ const PAIRS: [string, string, number][] = [
   ["trica-graph-health-ok", "trica-graph-node", 3],
   ["trica-graph-health-warn", "trica-graph-node", 3],
   ["trica-graph-health-crit", "trica-graph-node", 3],
+  // The isometric map: labels on the floor, on the halo behind them and on every shaded face.
+  ...(["floor", "label-bg", "top", "top-hi", "south", "east", "neutral-top", "neutral-south", "neutral-east"] as const).map(
+    (k): [string, string, number] => ["trica-graph-ink", `trica-iso-${k}`, 4.5],
+  ),
+  // Lines and health outlines on the floor, health outlines on a raised top face.
+  ...(["util-normal", "util-warn", "util-crit", "down", "util-unknown", "health-ok", "health-warn", "health-crit"] as const).map(
+    (k): [string, string, number] => [`trica-graph-${k}`, "trica-iso-floor", 3],
+  ),
+  ...(["health-ok", "health-warn", "health-crit"] as const).map((k): [string, string, number] => [`trica-graph-${k}`, "trica-iso-top", 3]),
+  ["trica-graph-health-ok", "trica-iso-top-hi", 3],
+  ["trica-iso-edge", "trica-iso-floor", 3],
+  ["trica-iso-neutral-edge", "trica-iso-floor", 3],
+  // The small caption under a label is drawn in the muted ink, on the label halo or the floor.
+  ["trica-ink-muted", "trica-iso-label-bg", 4.5],
+  ["trica-ink-muted", "trica-iso-floor", 4.5],
 ];
 
 describe.each([
@@ -127,6 +142,6 @@ describe("the stylesheets", () => {
   });
 
   it("loads no font: the system stacks only (ADR 0018)", () => {
-    expect(`${css}\n${app}`).not.toMatch(/@font-face|@import|url\(/);
+    expect(`${css}\n${app}`).not.toMatch(/@font-face|@import|url\((?!#)/);
   });
 });
