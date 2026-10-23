@@ -322,11 +322,21 @@ func buildNetwork(inv *inventory) {
 			}
 		}
 	}
+	var firstSrv int
 	for i := 0; i < servers; i++ {
 		srv := mk(fmt.Sprintf("srv-f%03d", i+1))
+		if i == 0 {
+			firstSrv = srv
+		}
 		inv.wire("cabled_to", sp2.of(srv), sp2.of(lf[i%leaves]), lldp, "observed", obj{})
 		inv.wire("neighbor_of", sp2.of(srv), sp2.of(lf[(i+1)%leaves]), lldp, "observed", obj{"protocol": "lldp"})
 	}
+	// Uplinks a controller reports without any port (ADR 0060, 0062): the first
+	// server to a spine no cable reaches it through (drawn as a line of its own),
+	// and the first leaf to a spine its cable already joins it to (carried by
+	// that cable's line).
+	inv.wire("uplinked_to", firstSrv, sp[0], "unifi:e2e", "observed", obj{})
+	inv.wire("uplinked_to", lf[0], sp[0], "unifi:e2e", "observed", obj{})
 }
 
 func problem(w http.ResponseWriter, status int, slug, title string) {

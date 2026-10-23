@@ -8,6 +8,10 @@
 //    (high | medium | low); another source may write it observed or declared;
 //  - `neighbor_of` is an LLDP/CDP adjacency seen from one port;
 //  - a port is an `interface` whose parent is a device (or a module of one);
+//  - `uplinked_to` joins two devices, no port: a controller says which device
+//    another one reaches the network through (ADR 0060); it is drawn as a
+//    device-level line, only where no port-level link joins the same two
+//    devices (ADR 0062);
 //  - `member_of` puts an interface in a VLAN, or a port in an aggregate (LAG:
 //    member_of from an interface to an interface); `mounted_in` puts a device in a rack;
 //  - two switches of one MLAG pair share `mlag_domain`.
@@ -18,7 +22,7 @@
 import type { RelationEnd, RelationLink } from "../api/types";
 import { SEVERITY, type Health } from "../inventory/health";
 
-export const LINK_TYPES = ["cabled_to", "connects", "neighbor_of"] as const;
+export const LINK_TYPES = ["cabled_to", "connects", "neighbor_of", "uplinked_to"] as const;
 export const CONTEXT_TYPES = ["mounted_in", "member_of"] as const;
 
 /** How well a link is known: the confidence the relation was stored with. */
@@ -28,7 +32,10 @@ export const LINK_CLASSES: readonly LinkClass[] = ["declared", "observed", "dedu
 export type Level = "high" | "medium" | "low";
 export const LEVELS: readonly Level[] = ["high", "medium", "low"];
 
-export type LinkKind = "cable" | "cabled_to" | "neighbor_of";
+export type LinkKind = "cable" | "cabled_to" | "neighbor_of" | "uplinked_to";
+
+/** An uplink names two devices and no port: the ends of its row carry no port name. */
+export const isUplink = (r: Pick<LinkRow, "kind">): boolean => r.kind === "uplinked_to";
 
 export interface Port {
   /** The interface object. */
@@ -66,7 +73,7 @@ export interface DeviceInfo {
 
 /** Everything the page loaded, as the API gave it. */
 export interface TopologyInput {
-  /** cabled_to, connects and neighbor_of. */
+  /** cabled_to, connects, neighbor_of and uplinked_to. */
   links: readonly RelationLink[];
   /** mounted_in and member_of. */
   context: readonly RelationLink[];
@@ -146,6 +153,25 @@ export function buildTopology(input: TopologyInput): Topology {
       cableLabel.set(l.from_id, l.from.display);
       continue;
     }
+    if (l.type === "uplinked_to") {
+      if (l.from.type !== "device" || l.to.type !== "device") {
+        skipped.ends++;
+        continue;
+      }
+      const klass = classOf(l.confidence);
+      // The ends are the devices themselves: never remapped to a parent, as a port is.
+      const dev = (e: RelationEnd): Port => ({ id: e.id, name: "", deviceId: e.id });
+      rows.push({
+        key: `uplinked_to:${l.id}`,
+        kind: "uplinked_to",
+        klass,
+        level: klass === "deduced" ? level(l.attributes?.level) : undefined,
+        source: l.source,
+        a: dev(l.from),
+        b: dev(l.to),
+      });
+      continue;
+    }
     if (l.type !== "cabled_to" && l.type !== "neighbor_of") continue;
     if (!isPort(l.from) || !isPort(l.to)) {
       skipped.ends++;
@@ -218,7 +244,10 @@ export function buildTopology(input: TopologyInput): Topology {
   }
   // A device is in the site its interfaces say; a port's site is the one of its device.
   for (const l of input.links) {
-    for (const e of [l.from, l.to]) if (e.parent_id && e.site_id && !siteOf.has(e.parent_id)) siteOf.set(e.parent_id, e.site_id);
+    for (const e of [l.from, l.to]) {
+      if (e.parent_id && e.site_id && !siteOf.has(e.parent_id)) siteOf.set(e.parent_id, e.site_id);
+      if (e.type === "device" && e.site_id && !siteOf.has(e.id)) siteOf.set(e.id, e.site_id);
+    }
   }
 
   const known = new Map(input.devices.map((d) => [d.id, d]));
@@ -284,6 +313,13 @@ export interface Edge {
    * members between the two devices; unfolded, one line per member.
    */
   lag?: { group: string; name: string; folded: boolean };
+  /**
+   * A device-level uplink (ADR 0062), oriented: `source` is the device,
+   * `target` the one it reaches the network through. It stands for no port.
+   */
+  uplink?: boolean;
+  /** Uplinks between the same two devices that this port-level line stands for: not drawn on their own. */
+  uplinks?: LinkRow[];
 }
 
 /** Two switches of one MLAG pair, drawn inside one box. */
@@ -300,6 +336,8 @@ export interface Graph {
   loops: number;
   /** MLAG pairs among the nodes (a domain shared by at least two of them). */
   groups?: Group[];
+  /** Uplinks not drawn on their own because a port-level line joins the same two devices. */
+  covered?: number;
 }
 
 export interface GraphOptions {
@@ -320,7 +358,15 @@ export function toGraph(t: Topology, rows: readonly LinkRow[], opts: GraphOption
   const pairsOf = new Map<string, Set<string>>();
   const used = new Set<string>();
   let loops = 0;
+  const uplinks: LinkRow[] = [];
+  // The first port-level line of each unordered device pair: what an uplink between them is attached to.
+  const lineOf = new Map<string, Edge>();
+  const pairKey = (x: string, y: string) => (x <= y ? `${x}|${y}` : `${y}|${x}`);
   for (const r of rows) {
+    if (isUplink(r)) {
+      uplinks.push(r);
+      continue;
+    }
     const [s, d] = r.a.deviceId <= r.b.deviceId ? [r.a.deviceId, r.b.deviceId] : [r.b.deviceId, r.a.deviceId];
     used.add(s).add(d);
     if (s === d) {
@@ -339,7 +385,9 @@ export function toGraph(t: Topology, rows: readonly LinkRow[], opts: GraphOption
       if (opts.expanded?.has(group)) {
         // Unfolded: each member is its own line, still keyed by its group so that it can be folded again.
         const id = `${s}|${d}|${r.klass}|${lvl ?? ""}|row:${r.key}`;
-        edges.set(id, { id, source: s, target: d, klass: r.klass, level: lvl, count: 1, rows: [r], lag: { group, name, folded: false } });
+        const e: Edge = { id, source: s, target: d, klass: r.klass, level: lvl, count: 1, rows: [r], lag: { group, name, folded: false } };
+        edges.set(id, e);
+        if (!lineOf.has(pairKey(s, d))) lineOf.set(pairKey(s, d), e);
         continue;
       }
       lag = { group, name, folded: true };
@@ -352,6 +400,29 @@ export function toGraph(t: Topology, rows: readonly LinkRow[], opts: GraphOption
     e.count = pairs.size;
     (e.rows ??= []).push(r);
     edges.set(id, e);
+    if (!lineOf.has(pairKey(s, d))) lineOf.set(pairKey(s, d), e);
+  }
+  // An uplink between two devices a visible port-level line already joins is that line's, not a second one.
+  let covered = 0;
+  for (const r of uplinks) {
+    const from = r.a.deviceId;
+    const to = r.b.deviceId;
+    used.add(from).add(to);
+    if (from === to) {
+      loops++;
+      continue;
+    }
+    const line = lineOf.get(pairKey(from, to));
+    if (line) {
+      (line.uplinks ??= []).push(r);
+      covered++;
+      continue;
+    }
+    const lvl = r.klass === "deduced" ? (r.level ?? undefined) : undefined;
+    const id = `${from}|${to}|uplink|${r.klass}|${lvl ?? ""}`;
+    const e = edges.get(id) ?? { id, source: from, target: to, klass: r.klass, level: lvl, count: 1, rows: [], uplink: true };
+    (e.rows ??= []).push(r);
+    edges.set(id, e);
   }
   const nodes = [...used].map((id) => t.nodes.get(id)).filter((n): n is Node => n !== undefined);
   const byDomain = new Map<string, string[]>();
@@ -360,5 +431,5 @@ export function toGraph(t: Topology, rows: readonly LinkRow[], opts: GraphOption
     .filter(([, members]) => members.length >= 2)
     .map(([domain, members]) => ({ id: `mlag:${domain}`, domain, members: members.sort() }))
     .sort((a, b) => a.id.localeCompare(b.id));
-  return { nodes, edges: [...edges.values()], loops, groups };
+  return { nodes, edges: [...edges.values()], loops, groups, covered };
 }

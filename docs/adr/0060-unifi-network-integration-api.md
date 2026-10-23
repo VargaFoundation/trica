@@ -71,7 +71,7 @@ What the specification gives, and what it does not:
 
 - The console's two WAN ports appear twice: the cloud's `eth8`/`eth9` and the console's `Port 9`,
   `Port 10`; the API gives no port role to match them.
-- `uplinked_to` is not drawn on the topology page (follow-up issue); port-level adjacency needs
+- `uplinked_to` is drawn on the topology page as a device-level line (ADR 0062); port-level adjacency needs
   either the unofficial legacy endpoint (not in the official documentation, needs a real console to
   record) or a later API version (follow-up issue).
 - Evidence stays `recorded` (one value per module); the `Tested` entry says synthesised, never run.

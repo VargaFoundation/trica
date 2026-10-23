@@ -62,3 +62,5 @@ in a document"; the PNG is the primary export.
 - Chassis module ports are resolved through the module list, and patch-panel front/rear ports are not
   followed: a cable through a patch panel shows as two links. Neither is a schema change here.
 - Deduced `level` and `evidence` are read by convention until the deducer lands.
+- `uplinked_to` (device to device, no port) is also mapped, as a device-level line where no port-level
+  link joins the two devices (ADR 0062).

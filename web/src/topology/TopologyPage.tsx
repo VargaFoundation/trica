@@ -6,13 +6,14 @@ import { ObjectLink } from "../components/ObjectLink";
 import { ExportButtons } from "../export/ExportButtons";
 import { useI18n, type MessageKey } from "../i18n";
 import { usePageTitle } from "../usePageTitle";
-import { draw, EDGE_STYLE, graphEnv, UTIL_CLASSES, type Drawing, type LiveStyle } from "./graph";
+import { draw, EDGE_STYLE, graphEnv, UPLINK_STYLE, UTIL_CLASSES, type Drawing, type LiveStyle } from "./graph";
 import { edgeLive, formatBps, formatUtil, lagLabel, liveLabel, rowLive, utilClass, widthOf } from "./live";
 import { DetailsPanel, LiveStatus, type Selection } from "./LivePanel";
 import { useLiveTopology, LIVE_OFF } from "./useLiveTopology";
 import {
   ALL_CLASSES,
   filterRows,
+  isUplink,
   LINK_CLASSES,
   toGraph,
   type Graph,
@@ -103,6 +104,8 @@ function Topo({ data }: { data: TopologyData }) {
     if (!live.enabled) return null;
     const out = new Map<string, LiveStyle>();
     for (const e of graph.edges) {
+      // An uplink names no port: no figure, and no "not measured" grey over its class colour (ADR 0062).
+      if (e.uplink) continue;
       const l = edgeLive(e, live.links);
       out.set(e.id, {
         util: utilClass(l),
@@ -158,7 +161,7 @@ function Topo({ data }: { data: TopologyData }) {
         <p>{narrowed ? t("topology.emptyFiltered") : t("topology.empty")}</p>
       ) : (
         <>
-          <Legend live={live.enabled} />
+          <Legend live={live.enabled} uplinks={graph.edges.some((e) => e.uplink)} />
           <div className={selected ? "topology-stage with-panel" : "topology-stage"}>
             <GraphView
               graph={graph}
@@ -266,7 +269,7 @@ function Filters({ f }: { f: ReturnType<typeof useFilters> }) {
 
 const LEGEND_DASH: Record<LinkClass, string | undefined> = { declared: undefined, observed: "2 4", deduced: "8 4" };
 
-function Legend({ live }: { live: boolean }) {
+function Legend({ live, uplinks }: { live: boolean; uplinks: boolean }) {
   const { t } = useI18n();
   return (
     <>
@@ -279,6 +282,15 @@ function Legend({ live }: { live: boolean }) {
             <span>{t(`topology.legend.${c}`)}</span>
           </li>
         ))}
+        {uplinks ? (
+          <li>
+            <svg width="44" height="10" aria-hidden="true" focusable="false">
+              <line className="legend-line-uplink" x1="1" y1="5" x2="37" y2="5" strokeWidth={UPLINK_STYLE.width} strokeDasharray={UPLINK_STYLE.dash.join(" ")} />
+              <path className="legend-arrow-uplink" d="M43 5 L36 1.5 L36 8.5 Z" />
+            </svg>
+            <span>{t("topology.legend.uplink")}</span>
+          </li>
+        ) : null}
       </ul>
       {live ? (
         <ul className="topology-legend" aria-label={t("topology.live.legend")}>
@@ -330,6 +342,7 @@ function GraphView({
   // The labels are read when the drawing is made; a language change redraws.
   const levelText = (l: string) => t(`topology.level.${l}` as MessageKey);
   const deducedText = t("topology.level.unknown");
+  const uplinkText = t("topology.uplink.label");
   // The handlers change with every render; the drawing calls the latest ones.
   const handlers = useRef({ onSelect, onToggleLag });
   const latest = useRef({ liveStyles, flow, selected });
@@ -346,6 +359,7 @@ function GraphView({
       graph,
       {
         deduced: deducedText,
+        uplink: uplinkText,
         level: levelText,
         lag: (e) => `${e.lag?.name ?? ""} (${e.count}×)`,
         group: (domain) => t("topology.group", { domain }),
@@ -374,7 +388,7 @@ function GraphView({
     };
     // levelText and t only change with the language, which deducedText follows.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [graph, deducedText]);
+  }, [graph, deducedText, uplinkText]);
 
   useEffect(() => drawingRef.current?.live(liveStyles), [liveStyles, drawingRef]);
   useEffect(() => drawingRef.current?.flow(flow), [flow, drawingRef]);
@@ -447,7 +461,7 @@ function LinksTable({
   // The line each link is drawn on: the keyboard way to the same details as a click in the drawing.
   const edgeOf = useMemo(() => {
     const m = new Map<string, string>();
-    for (const e of graph.edges) for (const r of e.rows ?? []) m.set(r.key, e.id);
+    for (const e of graph.edges) for (const r of [...(e.rows ?? []), ...(e.uplinks ?? [])]) m.set(r.key, e.id);
     return m;
   }, [graph]);
   const nameOf = (id: string) => topology.nodes.get(id)?.name ?? id;
@@ -476,10 +490,10 @@ function LinksTable({
           {sorted.map((r) => (
             <tr key={r.key} data-class={r.klass}>
               <td data-label={t("topology.col.from")}>
-                <End device={{ id: r.a.deviceId, name: nameOf(r.a.deviceId) }} port={r.a} />
+                <End device={{ id: r.a.deviceId, name: nameOf(r.a.deviceId) }} port={isUplink(r) ? undefined : r.a} />
               </td>
               <td data-label={t("topology.col.to")}>
-                <End device={{ id: r.b.deviceId, name: nameOf(r.b.deviceId) }} port={r.b} />
+                <End device={{ id: r.b.deviceId, name: nameOf(r.b.deviceId) }} port={isUplink(r) ? undefined : r.b} />
               </td>
               <td data-label={t("topology.col.class")}>{t(`topology.class.${r.klass}`)}</td>
               <td data-label={t("topology.col.detail")}>{detailOf(r, t)}</td>
@@ -503,7 +517,11 @@ function LinksTable({
                   <button
                     type="button"
                     className="button"
-                    aria-label={t("topology.panel.showLabel", { from: nameOf(r.a.deviceId), fromPort: r.a.name, to: nameOf(r.b.deviceId), toPort: r.b.name })}
+                    aria-label={
+                      isUplink(r)
+                        ? t("topology.panel.showUplinkLabel", { from: nameOf(r.a.deviceId), to: nameOf(r.b.deviceId) })
+                        : t("topology.panel.showLabel", { from: nameOf(r.a.deviceId), fromPort: r.a.name, to: nameOf(r.b.deviceId), toPort: r.b.name })
+                    }
                     onClick={() => onSelect({ kind: "edge", id: edgeOf.get(r.key) as string })}
                   >
                     {t("topology.panel.show")}
@@ -521,12 +539,23 @@ function LinksTable({
 }
 
 /** A device and the port on it, each a link to its own page. */
-function End({ device, port }: { device: { id: string; name: string }; port: { id: string; name: string } }) {
+function End({ device, port }: { device: { id: string; name: string }; port?: { id: string; name: string } }) {
+  const { t } = useI18n();
   return (
     <>
       <ObjectLink id={device.id} display={device.name} />
-      {" / "}
-      <ObjectLink id={port.id} display={port.name} />
+      {port === undefined ? (
+        <>
+          {" / "}
+          <span className="hint">{t("topology.port.unknown")}</span>
+        </>
+      ) : null}
+      {port ? (
+        <>
+          {" / "}
+          <ObjectLink id={port.id} display={port.name} />
+        </>
+      ) : null}
     </>
   );
 }

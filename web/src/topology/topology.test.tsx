@@ -124,7 +124,7 @@ describe("the topology page", () => {
   it("asks for the three kinds of link and the two kinds of context, and names no object one by one", async () => {
     const api = await open();
     const types = api.calls.filter((c) => c.path === "/relations").map((c) => c.query.get("type"));
-    expect(types.sort()).toEqual(["cabled_to,connects,neighbor_of", "mounted_in,member_of"]);
+    expect(types.sort()).toEqual(["cabled_to,connects,neighbor_of,uplinked_to", "mounted_in,member_of"]);
     // The table links carry their names: no request per device or port.
     expect(api.calls.filter((c) => /^\/objects\/[^/]+$/.test(c.path) && !c.path.endsWith("/me")).length).toBe(0);
   });

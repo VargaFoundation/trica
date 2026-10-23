@@ -92,9 +92,20 @@ function EdgeDetails({ selection, graph, topology, live, expanded, onToggleLag }
   const folded = e.lag?.folded ? e.lag : undefined;
   const total = live.enabled ? edgeLive(e, live.links) : undefined;
   const now = useNow(5000);
+  if (e.uplink) {
+    const r = rows[0];
+    return (
+      <>
+        <h3>{t("topology.panel.uplink", { from: name(e.source), to: name(e.target) })}</h3>
+        <p>{t(`topology.class.${e.klass}`)}</p>
+        <p>{t("topology.panel.uplinkWhat", { from: name(e.source), to: name(e.target), source: r?.source ?? "" })}</p>
+        <p className="hint">{t("topology.panel.uplinkNoLive")}</p>
+      </>
+    );
+  }
   return (
     <>
-      <h3>{t("topology.panel.link", { from: name(e.source), to: name(e.target) })}</h3>
+      <h3>{t("topology.panel.link",{ from: name(e.source), to: name(e.target) })}</h3>
       <p>{t(`topology.class.${e.klass}`)}</p>
       {folded ? (
         <p>
@@ -117,6 +128,11 @@ function EdgeDetails({ selection, graph, topology, live, expanded, onToggleLag }
         </p>
       ) : null}
       {total && rows.length > 1 ? <Figures from={name(e.source)} to={name(e.target)} out={total.out} back={total.back} util={total.util} speed={total.speedMbps} /> : null}
+      {(e.uplinks ?? []).map((u) => (
+        <p key={u.key} className="hint">
+          {t("topology.panel.alsoUplink", { from: name(u.a.deviceId), to: name(u.b.deviceId), source: u.source })}
+        </p>
+      ))}
       <ul className="topology-panel-links">
         {rows.map((r) => {
           const forward = r.a.deviceId === e.source;

@@ -15,7 +15,7 @@ import cytoscape, {
 } from "cytoscape";
 import elk from "cytoscape-elk";
 import type { Raster } from "../export/download";
-import { textWidth, type Figure, type Shape } from "../export/vectorPdf";
+import { textWidth, type Figure, type Point, type Shape, type Stroke } from "../export/vectorPdf";
 import { kindOf } from "../inventory/kind";
 import { TOPOLOGY_ICONS, iconUrl, type IconTheme } from "./icons";
 import type { Graph, LinkClass } from "./model";
@@ -134,12 +134,20 @@ export const EDGE_STYLE: Record<
   deduced: { color: PAPER_PALETTE.deduced, style: "dashed", width: 2 },
 };
 
-/** Text of an edge: the level of a deduced link, the number of links when there are several. */
+/**
+ * A device-level uplink (ADR 0062) is told apart by its line (dash-dot, wider
+ * than a deduced dash), by an arrow towards the uplink device and by its
+ * label, never by its colour: that stays the confidence's.
+ */
+export const UPLINK_STYLE = { width: 2, dash: [10, 3, 2, 3] } as const;
+
+/** Text of an edge: "uplink (port unknown)", the level of a deduced link, the number of links when there are several. */
 export function edgeLabel(
-  e: { klass: LinkClass; level?: string; count: number },
+  e: { klass: LinkClass; level?: string; count: number; uplink?: boolean },
   text: EdgeText,
 ): string {
   const parts: string[] = [];
+  if (e.uplink && text.uplink) parts.push(text.uplink);
   if (e.klass === "deduced")
     parts.push(e.level ? text.level(e.level) : text.deduced);
   if (e.count > 1) parts.push(`×${e.count}`);
@@ -149,6 +157,8 @@ export function edgeLabel(
 export interface EdgeText {
   /** Label of a deduced link whose level is unknown. */
   deduced: string;
+  /** Label of a device-level uplink ("uplink (port unknown)"). */
+  uplink?: string;
   level: (l: string) => string;
   /** Label of an aggregate's line ("Po11 (2×10G)"). */
   lag?: (e: Graph["edges"][number]) => string;
@@ -200,6 +210,7 @@ export function toElements(g: Graph, text: EdgeText): ElementDefinition[] {
         count: e.count,
         label: e.lag?.folded ? (text.lag?.(e) ?? e.lag.name) : edgeLabel(e, text),
         lag: e.lag?.group ?? "",
+        uplink: e.uplink ? true : undefined,
       },
     })),
   ];
@@ -307,6 +318,21 @@ export function stylesheetFor(p: Palette, icons: IconTheme = "light"): Styleshee
   })),
   // The live overlay: the width says the throughput, the colour the utilisation; the line style still says the confidence.
   { selector: "edge.live", style: { width: "data(lw)" } },
+  // A device-level uplink: dash-dot and an arrow to the uplink device, after the class rules so that the colour stays the class's.
+  {
+    selector: "edge[?uplink]",
+    style: {
+      "line-style": "dashed",
+      "line-dash-pattern": [...UPLINK_STYLE.dash],
+      width: UPLINK_STYLE.width,
+      "target-arrow-shape": "triangle",
+      "arrow-scale": 0.9,
+    },
+  },
+  ...(Object.keys(EDGE_STYLE) as LinkClass[]).map((k) => ({
+    selector: `edge[?uplink][klass = "${k}"]`,
+    style: { "target-arrow-color": p[k] },
+  })),
   ...UTIL_CLASSES.map((c) => ({ selector: `edge.live-${c}`, style: { "line-color": utilColor[c] } })),
   // Down is not told by the colour alone: a bar across each end.
   {
@@ -469,11 +495,31 @@ const NODE_HEIGHT = 26;
 const EDGE_FONT = 10;
 /** How far apart two lines between the same devices are drawn: cytoscape's own step. */
 const PARALLEL_STEP = 40;
-const DASH: Record<"solid" | "dotted" | "dashed", number[] | undefined> = {
+const DASH: Record<"solid" | "dotted" | "dashed" | "dashdot", number[] | undefined> = {
   solid: undefined,
   dotted: [1, 4],
   dashed: [6, 4],
+  dashdot: [...UPLINK_STYLE.dash],
 };
+const ARROW_SIZE = 8;
+
+/** Where the ray from a box's centre towards a point leaves the box. */
+export function boxEdge(box: { x: number; y: number; w: number; h: number }, towards: Point): Point {
+  const dx = towards.x - box.x;
+  const dy = towards.y - box.y;
+  if (dx === 0 && dy === 0) return { x: box.x, y: box.y };
+  const k = Math.min(dx === 0 ? Infinity : box.w / 2 / Math.abs(dx), dy === 0 ? Infinity : box.h / 2 / Math.abs(dy));
+  return { x: box.x + dx * k, y: box.y + dy * k };
+}
+
+/** An arrowhead as two short strokes ending on `tip`, for a line that arrives from `from`. */
+export function arrowHead(tip: Point, from: Point, stroke: Stroke, size = ARROW_SIZE): Shape[] {
+  const angle = Math.atan2(tip.y - from.y, tip.x - from.x);
+  return [-1, 1].map((side): Shape => {
+    const a = angle + Math.PI + side * (Math.PI / 7);
+    return { kind: "line", from: tip, to: { x: tip.x + size * Math.cos(a), y: tip.y + size * Math.sin(a) }, stroke: { ...stroke, dash: undefined } };
+  });
+}
 const MARGIN = 20;
 
 /**
@@ -503,6 +549,8 @@ export function figureOf(cy: Core): Figure {
 
   const lines: Shape[] = [];
   const labels: Shape[] = [];
+  // Each arrowhead is drawn once the boxes are: it ends on the border of the box it points at.
+  const arrows: { target: string; via?: Point; source: string; stroke: Stroke }[] = [];
   const bounds: { x: number; y: number }[] = nodes.flatMap((n) => [
     { x: n.x - n.w / 2, y: n.y - n.h / 2 },
     { x: n.x + n.w / 2, y: n.y + n.h / 2 },
@@ -524,7 +572,12 @@ export function figureOf(cy: Core): Figure {
       };
       const via = offset === 0 ? undefined : { x: 2 * mid.x - (from.x + to.x) / 2, y: 2 * mid.y - (from.y + to.y) / 2 };
       const style = EDGE_STYLE[e.data("klass") as LinkClass] ?? EDGE_STYLE.declared;
-      lines.push({ kind: "line", from, to, via, stroke: { color: style.color, width: style.width, dash: DASH[style.style] } });
+      const uplink = Boolean(e.data("uplink"));
+      const stroke: Stroke = uplink
+        ? { color: style.color, width: UPLINK_STYLE.width, dash: DASH.dashdot }
+        : { color: style.color, width: style.width, dash: DASH[style.style] };
+      lines.push({ kind: "line", from, to, via, stroke });
+      if (uplink) arrows.push({ target: e.target().id(), source: e.source().id(), via, stroke: { ...stroke, dash: undefined } });
       if (via) bounds.push(via);
       const label = String(e.data("label") ?? "");
       if (label) {
@@ -549,6 +602,13 @@ export function figureOf(cy: Core): Figure {
     { kind: "text", at: { x: n.x, y: n.y }, text: n.label, size: NODE_FONT, color: PAPER_PALETTE.ink },
   ]);
 
+  const heads = arrows.flatMap((a) => {
+    const target = at.get(a.target);
+    const source = at.get(a.source);
+    if (!target || !source) return [];
+    return arrowHead(boxEdge(target, a.via ?? source), a.via ?? source, a.stroke);
+  });
+
   // The page starts a margin away from the leftmost and topmost ink.
   const xs = bounds.map((p) => p.x);
   const ys = bounds.map((p) => p.y);
@@ -557,7 +617,7 @@ export function figureOf(cy: Core): Figure {
   const dx = MARGIN - minX;
   const dy = MARGIN - minY;
   const move = (p: { x: number; y: number }) => ({ x: p.x + dx, y: p.y + dy });
-  const shapes = [...lines, ...boxes, ...labels].map((sh): Shape => {
+  const shapes = [...lines, ...boxes, ...heads, ...labels].map((sh): Shape => {
     if (sh.kind === "line") return { ...sh, from: move(sh.from), to: move(sh.to), via: sh.via && move(sh.via) };
     if (sh.kind === "box") return { ...sh, x: sh.x + dx, y: sh.y + dy };
     return { ...sh, at: move(sh.at) };

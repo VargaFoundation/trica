@@ -92,6 +92,7 @@ The schema has no `connected_to` or `link` relation; the page reads what it has 
 | `cabled_to` (interface to interface) | a link | the relation's own confidence |
 | `connects` (cable to interface, `end` a or b) | one link per cable that has exactly two interface ends | the weakest of its two ends |
 | `neighbor_of` (LLDP adjacency) | a link | the relation's own confidence |
+| `uplinked_to` (device to device, no port) | a device-level line, dash-dot with an arrow to the uplink, only when no visible port-level link joins the two devices (ADR 0062) | the relation's own confidence |
 | `mounted_in`, `member_of` (interface to VLAN) | not drawn: they feed the rack and VLAN filters | |
 | `member_of` (interface to interface: a port in an aggregate) | the members of one LAG between the same two devices are one line, "Po11 (2×10G)" | each member's own |
 
@@ -103,6 +104,15 @@ The schema has no `connected_to` or `link` relation; the page reads what it has 
 - **Deduced cables.** A deducer writes `cabled_to` with a `level` (`high`, `medium`, `low`) and an
   `evidence` (`lldp`, `lldp_one_sided`, `mac_table`) attribute (`internal/deduce`, ADR 0010). They
   are shown when present; without them the link is "deduced" with no level.
+- **Uplinks** (ADR 0062). `uplinked_to` (the UniFi collector, ADR 0060) names the device another
+  one reaches the network through and no port. It is drawn as one line between the two devices:
+  dash-dot, an arrow towards the uplink, labelled "uplink (port unknown)", in the colour of its
+  confidence; the legend has an entry only while one is drawn. Where a visible port-level line
+  (cable, `cabled_to`, `neighbor_of`) already joins the same two devices there is no second line:
+  the uplink is shown in that line's details, and a class filter that hides the port-level line
+  brings the uplink back. The table lists every uplink with "port unknown" for each port; its
+  "Show" button opens the line that carries it. The VLAN filter drops uplinks (a VLAN belongs to
+  ports). An uplink is never measured: it has no live colour and no figures.
 - **Nodes are devices.** A port on a chassis module belongs to the module's device. A link between
   two ports of one device is not drawn (counted in a note, kept in the table). A port whose device
   is not listed is a dashed grey node named by the start of its id. Several links between the same
@@ -156,7 +166,8 @@ the page's own script).
 - The PDF is one page at the figure's size (1 CSS px = 0.75 pt, at most 200 inches a side).
   - **Topology: drawn as lines, boxes and text** (ADR 0037). The names and labels can be selected
     and searched, and the drawing stays sharp when zoomed. The font is Helvetica, which every PDF
-    viewer has; characters outside Latin-1 are printed `?`. The boxes are sized for that font, so the
+    viewer has; characters outside Latin-1 are printed `?`. An uplink's line keeps its dash-dot
+    pattern and label, and ends in an arrowhead on the box it points at (ADR 0062). The boxes are sized for that font, so the
     page is close to the screen but not identical.
   - **Rack: a picture**, the same sheet as the PNG in a JPEG: its text cannot be selected.
 - Files are named `trica-rack-<name>.png` and `trica-topology-<date>.png`; a failure is said in

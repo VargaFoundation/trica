@@ -1,0 +1,189 @@
+{
+  "devices": [
+    {
+      "attributes": {
+        "mgmt_ip": "192.0.2.10",
+        "name": "sw-a1",
+        "os_version": "4.20.7M",
+        "role": "switch",
+        "serial": "JPE-SW-A1",
+        "vendor": "Acme"
+      },
+      "created_at": "2026-03-01T00:00:00Z",
+      "display": "sw-a1",
+      "first_seen": "2026-03-01T00:00:00Z",
+      "id": "device:sw-a1",
+      "last_seen": "2026-03-01T00:00:00Z",
+      "observed": true,
+      "site_id": "site:paris-1",
+      "status": "active",
+      "type": "device"
+    },
+    {
+      "attributes": {
+        "name": "ap-01",
+        "role": "access_point",
+        "serial": "AP-01-SN"
+      },
+      "created_at": "2026-03-01T00:00:00Z",
+      "display": "ap-01",
+      "first_seen": "2026-03-01T00:00:00Z",
+      "id": "device:ap-01",
+      "last_seen": "2026-03-01T00:00:00Z",
+      "observed": true,
+      "site_id": "site:paris-1",
+      "status": "active",
+      "type": "device"
+    },
+    {
+      "attributes": {
+        "name": "srv-01",
+        "os_version": "6.1.0",
+        "primary_ip": "198.51.100.21",
+        "role": "server",
+        "serial": "SRV-01-SN"
+      },
+      "created_at": "2026-03-01T00:00:00Z",
+      "display": "srv-01",
+      "first_seen": "2026-03-01T00:00:00Z",
+      "id": "device:srv-01",
+      "last_seen": "2026-03-01T00:00:00Z",
+      "observed": true,
+      "site_id": "site:lyon-1",
+      "status": "active",
+      "type": "device"
+    },
+    {
+      "attributes": {
+        "name": "sw-a2",
+        "role": "switch",
+        "serial": "JPE-SW-A2"
+      },
+      "created_at": "2026-03-01T00:00:00Z",
+      "display": "sw-a2",
+      "first_seen": "2026-03-01T00:00:00Z",
+      "id": "device:sw-a2",
+      "last_seen": "2026-03-01T00:00:00Z",
+      "observed": true,
+      "site_id": "site:paris-1",
+      "status": "active",
+      "type": "device"
+    }
+  ],
+  "links": [
+    {
+      "confidence": "observed",
+      "from": {
+        "display": "Ethernet1",
+        "id": "device:sw-a1/interface:Ethernet1",
+        "parent_id": "device:sw-a1",
+        "site_id": "site:paris-1",
+        "type": "interface"
+      },
+      "from_id": "device:sw-a1/interface:Ethernet1",
+      "id": 0,
+      "source": "lldp:test",
+      "to": {
+        "display": "Ethernet1",
+        "id": "device:sw-a2/interface:Ethernet1",
+        "parent_id": "device:sw-a2",
+        "site_id": "site:paris-1",
+        "type": "interface"
+      },
+      "to_id": "device:sw-a2/interface:Ethernet1",
+      "type": "cabled_to",
+      "valid_from": "2026-03-01T00:00:00Z"
+    },
+    {
+      "confidence": "observed",
+      "from": {
+        "display": "ap-01",
+        "id": "device:ap-01",
+        "site_id": "site:paris-1",
+        "type": "device"
+      },
+      "from_id": "device:ap-01",
+      "id": 0,
+      "source": "unifi:office-lan",
+      "to": {
+        "display": "sw-a2",
+        "id": "device:sw-a2",
+        "site_id": "site:paris-1",
+        "type": "device"
+      },
+      "to_id": "device:sw-a2",
+      "type": "uplinked_to",
+      "valid_from": "2026-03-01T00:00:00Z"
+    },
+    {
+      "confidence": "observed",
+      "from": {
+        "display": "srv-01",
+        "id": "device:srv-01",
+        "site_id": "site:lyon-1",
+        "type": "device"
+      },
+      "from_id": "device:srv-01",
+      "id": 0,
+      "source": "unifi:office-lan",
+      "to": {
+        "display": "sw-a1",
+        "id": "device:sw-a1",
+        "site_id": "site:paris-1",
+        "type": "device"
+      },
+      "to_id": "device:sw-a1",
+      "type": "uplinked_to",
+      "valid_from": "2026-03-01T00:00:00Z"
+    },
+    {
+      "confidence": "observed",
+      "from": {
+        "display": "sw-a2",
+        "id": "device:sw-a2",
+        "site_id": "site:paris-1",
+        "type": "device"
+      },
+      "from_id": "device:sw-a2",
+      "id": 0,
+      "source": "unifi:office-lan",
+      "to": {
+        "display": "sw-a1",
+        "id": "device:sw-a1",
+        "site_id": "site:paris-1",
+        "type": "device"
+      },
+      "to_id": "device:sw-a1",
+      "type": "uplinked_to",
+      "valid_from": "2026-03-01T00:00:00Z"
+    }
+  ],
+  "sites": [
+    {
+      "attributes": {
+        "code": "LYO1",
+        "name": "lyon-1"
+      },
+      "created_at": "2026-03-01T00:00:00Z",
+      "display": "lyon-1",
+      "id": "site:lyon-1",
+      "observed": false,
+      "site_id": "site:lyon-1",
+      "status": "active",
+      "type": "site"
+    },
+    {
+      "attributes": {
+        "code": "PAR1",
+        "name": "paris-1"
+      },
+      "created_at": "2026-03-01T00:00:00Z",
+      "display": "paris-1",
+      "id": "site:paris-1",
+      "observed": false,
+      "site_id": "site:paris-1",
+      "status": "active",
+      "type": "site"
+    }
+  ]
+}

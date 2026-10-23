@@ -1493,6 +1493,12 @@ a.floor-rack:focus-visible {
 .legend-line-deduced {
   stroke: var(--trica-graph-deduced);
 }
+.legend-line-uplink {
+  stroke: var(--trica-graph-ink);
+}
+.legend-arrow-uplink {
+  fill: var(--trica-graph-ink);
+}
 /* The live overlay (ADR 0041): its legend, its age, the side panel. */
 .legend-live-normal {
   stroke: var(--trica-graph-util-normal);
