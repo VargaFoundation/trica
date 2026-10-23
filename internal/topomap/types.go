@@ -33,7 +33,12 @@ const (
 const (
 	MediumPhysical = "physical"
 	MediumTunnel   = "tunnel"
-	MediumUplink   = "uplink"
+	// MediumUplink is an Internet access (routes_via), not the device uplink.
+	MediumUplink = "uplink"
+	// MediumUplinkedTo is the device uplink of ADR 0062 (uplinked_to): a
+	// controller names the device another one reaches the network through,
+	// and no port (ADR 0051, amendment of #185).
+	MediumUplinkedTo = "uplinked_to"
 )
 
 // Ids of the pseudo places.
@@ -183,6 +188,7 @@ type MapKinds struct {
 	NeighborOf int `json:"neighbor_of"`
 	Tunnel     int `json:"tunnel"`
 	Uplink     int `json:"uplink"`
+	UplinkedTo int `json:"uplinked_to"`
 }
 
 // MapTunnel describes the tunnels an edge carries.
@@ -216,6 +222,9 @@ type MapMember struct {
 	BPort      MapPlace `json:"b_port"`
 	Kind       string   `json:"kind"`
 	Confidence string   `json:"confidence"`
+	// Toward is, on an uplinked_to member, the end the uplink device is on
+	// (a or b), after the edge orients its members.
+	Toward string `json:"toward,omitempty"`
 }
 
 // MapEdge is every link between two nodes of one medium.
@@ -238,6 +247,9 @@ type MapEdge struct {
 	BToABps         *float64 `json:"b_to_a_bps,omitempty"`
 	// Util is the busier direction over the capacity, when both are known.
 	Util *float64 `json:"util,omitempty"`
+	// Toward is, on an uplinked_to edge, the end the uplink devices are on:
+	// a, b or both.
+	Toward string `json:"toward,omitempty"`
 	// Oper is up, down, partial or unknown.
 	Oper string `json:"oper"`
 	// Measured is true when some link has live values.

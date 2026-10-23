@@ -2142,6 +2142,13 @@ label.check {
 .iso-edge.m-tunnel .iso-edge-base {
   stroke-dasharray: 10 4 2 4;
 }
+/* The arrowhead of a device uplink, towards the device the other one reaches the network through. */
+.iso-edge-arrow {
+  fill: var(--trica-graph-util-unknown);
+  stroke: var(--trica-iso-label-bg);
+  stroke-width: 1;
+  pointer-events: none;
+}
 .iso-edge-x {
   fill: var(--trica-graph-down);
   stroke: var(--trica-iso-label-bg);

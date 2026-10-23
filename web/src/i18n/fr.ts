@@ -1046,6 +1046,8 @@ export const fr: Record<MessageKey, string> = {
   "topology.map.medium.physical": "Câble",
   "topology.map.medium.tunnel": "Tunnel",
   "topology.map.medium.uplink": "Accès Internet",
+  "topology.map.medium.uplinked_to": "Remontée (port inconnu)",
+  "topology.map.legend.uplinkedTo": "Remontée : un contrôleur nomme l'équipement par lequel un autre accède au réseau, pas les ports (trait tiret-point-point, flèche vers l'équipement de remontée)",
   "topology.map.oper.up": "Actif",
   "topology.map.oper.down": "Coupé",
   "topology.map.oper.partial": "Partiellement coupé",

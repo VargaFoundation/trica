@@ -58,8 +58,9 @@ in the page.
 
 - An inventory with only UniFi data shows a topology. A pair of devices has one line whatever the
   number of sources that say how they are connected.
-- A server-side map, if one lands (the isometric map of #150), reads its own relation types: it does
-  not draw `uplinked_to` until it is taught to; that is a follow-up, not part of this page.
+- The server-side map (the isometric map of #150) draws `uplinked_to` too, with the same
+  deduplication rule and as a medium of its own: see the amendment "`uplinked_to` on the map (#185)"
+  of ADR 0051.
 - The class filter has no separate "uplinks" toggle: an uplink is hidden with its class, or with a
   VLAN filter.
 - Two uplinks in opposite directions between the same two devices are two lines.

@@ -7,7 +7,7 @@ const edge = (id: string, ab: number | undefined, ba: number | undefined, extra:
   a: "a",
   b: "b",
   medium: "physical",
-  kinds: { cable: 0, cabled_to: 1, neighbor_of: 0, tunnel: 0, uplink: 0 },
+  kinds: { cable: 0, cabled_to: 1, neighbor_of: 0, tunnel: 0, uplink: 0, uplinked_to: 0 },
   links: 1,
   confidence: "declared",
   capacity_partial: false,

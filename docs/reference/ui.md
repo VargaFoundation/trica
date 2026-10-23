@@ -108,12 +108,20 @@ addresses (`site`, `rack`, `vlan` or `classes` without `view`) keep opening the 
   the busiest. Nothing moves with `prefers-reduced-motion`, with the "Animate the traffic" switch
   off, or when the page is hidden. The map is refreshed every 30 s when live data are on, never
   otherwise.
+- **Device uplinks** (ADR 0051, amendment of #185). `uplinked_to` is drawn as an edge of its own
+  medium, "Uplink (port unknown)": dash-dot-dot (the tunnel's is dash-dot), an arrowhead towards
+  the uplink device, shifted 8 px off the arc a cable between the same two places shares, in the
+  grey of an unmeasured line. It is drawn only when no port-level link the caller can read joins
+  the two devices, and never measured (the panel says "An uplink names no port: there is nothing to
+  measure."). The legend lists it only while one is drawn. The map has no export.
 - **Chunk**: the map does not import the graph engine (`graph.ts`, Cytoscape); a test reads the
   sources and fails if it does.
 - **Tests**: `src/topology/map/*.test.ts(x)` (geometry, layout, flows, navigation, address, page on the
-  recorded API answers `testdata/map-api.json`), `e2e/topology-map.spec.ts` (every level in both
+  recorded API answers `testdata/map-api.json`; `uplinked.test.tsx` for the device uplink: arrowheads,
+  dash, legend, table and panel in both languages with axe), `e2e/topology-map.spec.ts` (every level in both
   themes with axe and no CSP violation, drill by mouse and keyboard, flow animations present and
-  absent under reduced motion, a rack of 96 devices drawn in under a second).
+  absent under reduced motion, a rack of 96 devices drawn in under a second, a device uplink drawn
+  with its arrow, legend entry and table row).
 
 ### Topology: what the graph relies on
 
@@ -144,7 +152,8 @@ The schema has no `connected_to` or `link` relation; the page reads what it has 
   the uplink is shown in that line's details, and a class filter that hides the port-level line
   brings the uplink back. The table lists every uplink with "port unknown" for each port; its
   "Show" button opens the line that carries it. The VLAN filter drops uplinks (a VLAN belongs to
-  ports). An uplink is never measured: it has no live colour and no figures.
+  ports). An uplink is never measured: it has no live colour and no figures. The isometric map
+  draws them too (see "Device uplinks" in the map section).
 - **Nodes are devices.** A port on a chassis module belongs to the module's device. A link between
   two ports of one device is not drawn (counted in a note, kept in the table). A port whose device
   is not listed is a dashed grey node named by the start of its id. Several links between the same

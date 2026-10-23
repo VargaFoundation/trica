@@ -70,6 +70,8 @@ export interface SceneEdge {
   lanes: SceneLane[];
   util: ReturnType<typeof edgeUtilClass>;
   mid: Pt;
+  /** Arrowheads (polygon points) of an uplinked_to edge, one per end its uplink devices are on. */
+  arrows: string[];
 }
 
 export interface Scene {
@@ -178,7 +180,7 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
 }
 
 /** A quadratic arc between two points, bowed to one side; `shift` moves it sideways. */
-export function arc(a: Pt, b: Pt, shift = 0, reverse = false): { d: string; mid: Pt } {
+export function arc(a: Pt, b: Pt, shift = 0, reverse = false): { d: string; mid: Pt; c: Pt; ends: [Pt, Pt] } {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
@@ -193,7 +195,27 @@ export function arc(a: Pt, b: Pt, shift = 0, reverse = false): { d: string; mid:
   return {
     d: `M${fmt(from.x)},${fmt(from.y)}Q${fmt(c.x)},${fmt(c.y)} ${fmt(to.x)},${fmt(to.y)}`,
     mid: { x: fmt(0.25 * sa.x + 0.5 * c.x + 0.25 * sb.x), y: fmt(0.25 * sa.y + 0.5 * c.y + 0.25 * sb.y) },
+    c,
+    ends: [sa, sb],
   };
+}
+
+/** The dash-dot-dot of a device uplink (the tunnel's dash-dot is taken) and how far it sits off the arc a cable shares. */
+export const UPLINKED_DASH = "10 3 2 3 2 3";
+export const UPLINKED_SHIFT = 8;
+
+/** The points of an arrowhead whose tip is `tip`, pointing along the tangent `tip - ctrl`. */
+export function arrowHead(tip: Pt, ctrl: Pt, size = 8): string {
+  const dx = tip.x - ctrl.x;
+  const dy = tip.y - ctrl.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  const bx = tip.x - ux * size * 1.4;
+  const by = tip.y - uy * size * 1.4;
+  const l = { x: bx - uy * size * 0.55, y: by + ux * size * 0.55 };
+  const r = { x: bx + uy * size * 0.55, y: by - ux * size * 0.55 };
+  return [tip, l, r].map((p) => `${fmt(p.x)},${fmt(p.y)}`).join(" ");
 }
 
 export const LANE_GAP = 3;
@@ -301,14 +323,20 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
     const a = at.get(e.a);
     const b = at.get(e.b);
     if (!a || !b) continue;
-    const base = arc(a.port, b.port);
+    const uplinked = e.medium === "uplinked_to";
+    const base = arc(a.port, b.port, uplinked ? UPLINKED_SHIFT : 0);
+    const arrows: string[] = [];
+    if (uplinked) {
+      if (e.toward === "a" || e.toward === "both") arrows.push(arrowHead(base.ends[0], base.c));
+      if (e.toward === "b" || e.toward === "both") arrows.push(arrowHead(base.ends[1], base.c));
+    }
     const lanes: SceneLane[] = [];
     if (e.measured) {
       // Two lanes side by side: a to b on one side of the line, b to a on the other, each drawn in its own direction.
       lanes.push({ dir: "ab", d: arc(a.port, b.port, -LANE_GAP).d });
       lanes.push({ dir: "ba", d: arc(a.port, b.port, LANE_GAP, true).d });
     }
-    edges.push({ edge: e, d: base.d, lanes, util: edgeUtilClass(e), mid: base.mid });
+    edges.push({ edge: e, d: base.d, lanes, util: edgeUtilClass(e), mid: base.mid, arrows });
   }
   const frame = layout.frame ? frameScene(layout.frame, layout, rot) : undefined;
   const bounds = union(

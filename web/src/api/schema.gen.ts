@@ -3384,6 +3384,7 @@ export interface components {
             members: components["schemas"]["MapMember"][];
             members_truncated: boolean;
             oper: string;
+            toward?: string;
             tunnel?: components["schemas"]["MapTunnel"];
             uplink?: components["schemas"]["MapUplink"];
             util?: number;
@@ -3412,6 +3413,7 @@ export interface components {
             neighbor_of: number;
             tunnel: number;
             uplink: number;
+            uplinked_to: number;
         };
         MapLive: {
             enabled: boolean;
@@ -3427,6 +3429,7 @@ export interface components {
             b_port: components["schemas"]["MapPlace"];
             confidence: string;
             kind: string;
+            toward?: string;
         };
         MapMount: {
             face?: string;

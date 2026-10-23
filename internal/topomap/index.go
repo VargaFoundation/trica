@@ -53,10 +53,11 @@ type Index struct {
 	// ambiguous lists the devices mounted in several racks.
 	ambiguous map[string]bool
 
-	links   []*link
-	noPlace []string
-	tunnels []*tunnelItem
-	uplinks []*uplinkItem
+	links      []*link
+	noPlace    []string
+	tunnels    []*tunnelItem
+	uplinks    []*uplinkItem
+	devUplinks []*devUplink
 
 	auth sync.Map // id -> string, the memoised AuthSite
 }
@@ -192,6 +193,7 @@ func newIndex(snap *graph.Snapshot) *Index {
 	ix.collectLinks(ids)
 	ix.collectTunnels(ids)
 	ix.collectUplinks(ids)
+	ix.collectDeviceUplinks(ids)
 	return ix
 }
 
@@ -773,5 +775,30 @@ func (ix *Index) collectUplinks(ids []string) {
 			}
 		}
 		ix.uplinks = append(ix.uplinks, u)
+	}
+}
+
+// ------------------------------------------------------- device uplinks
+
+// devUplink is one uplinked_to relation (ADR 0062): from reaches the network
+// through to; no port is named.
+type devUplink struct {
+	from, to string
+	rank     int
+}
+
+func (ix *Index) collectDeviceUplinks(ids []string) {
+	for _, id := range ids {
+		n := ix.Snap.Nodes[id]
+		if n.Type != "device" || n.Status == graph.StatusAbsent {
+			continue
+		}
+		for _, e := range ix.Snap.Out[id] {
+			t := ix.Snap.Nodes[e.To]
+			if e.Type != "uplinked_to" || t == nil || t.Type != "device" || t.Status == graph.StatusAbsent || e.To == id {
+				continue
+			}
+			ix.devUplinks = append(ix.devUplinks, &devUplink{from: id, to: e.To, rank: rankOf(e.Confidence)})
+		}
 	}
 }

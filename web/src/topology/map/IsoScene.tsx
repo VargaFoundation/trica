@@ -5,7 +5,7 @@ import { prefersReducedMotion } from "../../motion";
 import { capacityWidth, planFlows, type Direction, type SpeedClass } from "./flow";
 import type { IsoBox, Rot } from "./iso";
 import { nextSpot, type Arrow } from "./nav";
-import { buildScene, type SceneEdge, type SceneFrame, type SceneItem } from "./scene";
+import { buildScene, UPLINKED_DASH, type SceneEdge, type SceneFrame, type SceneItem } from "./scene";
 
 export interface IsoSceneProps {
   map: TopologyMap;
@@ -334,7 +334,10 @@ export function IsoScene(p: IsoSceneProps) {
             >
               <path className="iso-edge-hit" d={e.d} />
               <path className="iso-edge-casing" d={e.d} strokeWidth={w + 3} />
-              <path className="iso-edge-base" d={e.d} strokeWidth={w} strokeDasharray={e.util === "down" ? "5 4" : conf} />
+              <path className="iso-edge-base" d={e.d} strokeWidth={w} strokeDasharray={e.edge.medium === "uplinked_to" ? UPLINKED_DASH : e.util === "down" ? "5 4" : conf} />
+              {e.arrows.map((pts, i) => (
+                <polygon key={i} className="iso-edge-arrow" points={pts} />
+              ))}
               {e.util === "down" ? <circle className="iso-edge-x" cx={e.mid.x} cy={e.mid.y} r="5" /> : null}
               {e.lanes.map((l) => {
                 const cls = lane?.get(l.dir);

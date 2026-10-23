@@ -87,5 +87,32 @@ tunnels, uplinks); nothing combined the two, and the live overlay (ADR 0041) is 
   `located_in` elsewhere and a device placed in two sites.
 - A device in no rack is drawn in the place it is `located_in`; a rack, even one outside any site,
   always takes precedence, as for the rights.
-- `uplinked_to` (the device-level line of ADR 0062) is not drawn on the map yet; it is tracked
-  in a follow-up issue.
+- `uplinked_to` (the device-level line of ADR 0062) is drawn: see the next amendment.
+
+## Amendment: `uplinked_to` on the map (#185)
+
+- **A medium of its own, `uplinked_to`.** The name `uplink` already means an Internet access
+  (`routes_via`), so the device uplink is the fourth medium, with a kind counter
+  `kinds.uplinked_to`. It is aggregated per pair of places exactly like the other media (rules 3
+  and 4): two devices in the same node add to that node's `internal_links`. Only device-to-device
+  relations between devices that are not absent count.
+- **Deduplication, decided per view (ADR 0062).** An uplink is dropped when a port-level link the
+  caller can read (cable, `cabled_to` or `neighbor_of`, both ports and both devices readable)
+  joins the same two devices. It is then neither drawn nor counted ("one adjacency is one link",
+  rule 5). A caller who cannot read the interfaces therefore sees the uplink instead: this reveals
+  nothing, since both devices are readable.
+- **Rights.** Both devices must be readable (they are the only objects an uplink has: it names no
+  port).
+- **No live data.** There is no port to measure: the edge is `oper: "unknown"`, with no rates, no
+  capacity, `capacity_partial` false and `measured` false, whatever the live values are keyed by.
+- **Direction.** `toward` on an edge says which end the uplink devices are on: `a`, `b` or `both`
+  (two uplinks in opposite directions). It is computed over every link, so the 50-member cap does
+  not change it. Members of an uplink edge have empty ports, `kind: "uplinked_to"` and the same
+  `toward` (`a` or `b`); they are oriented with the edge, like all members.
+- **Drawn without relying on colour.** Dash-dot-dot (`10 3 2 3 2 3`; the tunnel already uses
+  dash-dot), an arrowhead on each `toward` end, and a sideways shift of 8 px so that the line does
+  not sit on a cable or a tunnel between the same two places. The colour stays the grey of every
+  unmeasured line. The legend gets an entry only while such an edge is drawn; the table and the
+  panel say "Uplink (port unknown)", and the panel "An uplink names no port: there is nothing to
+  measure."
+- The map has no export and no filter, so there is nothing to carry over.
