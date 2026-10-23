@@ -28,6 +28,13 @@
           "state": "DOWN",
           "type": "1"
         }
+      },
+      {
+        "idx": 8,
+        "state": "UP",
+        "connector": "RJ45",
+        "maxSpeedMbps": 1000,
+        "speedMbps": 1000
       }
     ]
   },

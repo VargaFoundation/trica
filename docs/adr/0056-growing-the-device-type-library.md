@@ -93,6 +93,13 @@ rules of the loader and the matcher stood in the way:
    to itself or a duplicate result. Rejected: a variant file (its slug or name clashes with the
    upstream copy), naming ports per model in the collector (it would copy upstream's error into
    observations), and normalising at match time (nothing compares interfaces with templates yet).*
+   *Amended (#177): a model is renamed only when upstream's names or labels number every wired
+   interface exactly once from 1 to N (`SFP+ 25`, `Port 1 (PoE+)`, `10G Port 9`); a repeated or
+   missing number (`SFP 1` after `Port 24`, an unnumbered `MGMT`, `eth0`, `WAN`/`LAN1`) leaves the
+   model as upstream names it, listed in the test with its reason. 40 models are renamed, 46 wait
+   for a recorded console. A renamed interface without a label keeps its upstream name as label.
+   Neither the Network API (`idx`: integer, minimum 1, no description) nor the tech specs number
+   ports, so that `idx` is the printed number stays an assumption.*
 
 ## Consequences
 
@@ -100,8 +107,8 @@ rules of the loader and the matcher stood in the way:
 - The Ubiquiti and Synology DiskStation models are 0 U: they are in the inventory with their
   ports and weight, but they have no place on a rack elevation (a mounted one draws as an assumed
   1 U, flagged).
-- Seven UniFi models have their interface templates renamed by the overlay (#173); other UniFi
-  families still differ from `Port <idx>`.
+- 40 UniFi models have their interface templates renamed by the overlay (#173, #177); 46 still
+  differ from `Port <idx>` (#177).
 - A UniFi collector must report the display name as `model` and the shortname as `part_number`.
   A name that matches neither is the case to add to the overlay.
 - Part numbers that upstream gives to two models stop matching by part number alone (the names

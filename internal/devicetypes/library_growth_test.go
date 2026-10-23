@@ -1,11 +1,14 @@
 package devicetypes_test
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -280,9 +283,81 @@ func TestOverlayRenamesInterfaces(t *testing.T) {
 	}
 }
 
-// The UniFi Network collector names a port "Port <idx>" (ADR 0060). The
-// templates of the models whose upstream names differ carry that name, so
-// that an observed interface and its template are the same string (#173).
+// The unlabelled interface that an overlay renames keeps its old name as its
+// label; a label upstream wrote stays (#177).
+func TestOverlayRenamedInterfaceKeepsItsOldNameAsLabel(t *testing.T) {
+	const acme = "manufacturer: Acme\nmodel: Box 1\nslug: acme-box-1\nu_height: 1\ninterfaces:\n  - name: Port 1 (PoE+)\n    type: 1000base-t\n  - name: e2\n    type: 1000base-t\n    label: Second\n"
+	models, err := devicetypes.Load(fstest.MapFS{
+		"lib/Acme/box1.yaml":     file([]byte(acme)),
+		"lib/overlays/Acme.yaml": file([]byte("manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {Port 1 (PoE+): Port 1, e2: Port 2}\n")),
+	}, "lib")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := models[0].Ports
+	if p[0].Name != "Port 1" || p[0].Label != "Port 1 (PoE+)" {
+		t.Errorf("unlabelled interface: %+v, want Port 1 labelled with its old name", p[0])
+	}
+	if p[1].Name != "Port 2" || p[1].Label != "Second" {
+		t.Errorf("labelled interface: %+v, want Port 2 keeping its label", p[1])
+	}
+}
+
+// blockedPortNames lists the UniFi models of the library whose upstream
+// interface names do not number every wired interface exactly once from 1 to N.
+// They stay as upstream names them: renaming them would be a guess about the
+// "idx" the Integration API reports (#177). Each entry says what is missing.
+var blockedPortNames = map[string]string{}
+
+func init() {
+	const (
+		gateway = "role names or Linux names (WAN, LAN1, eth0), no printed numbering: needs a recorded device detail and which physical port was plugged in"
+		ap      = "single-port access point named eth0 / lan0 / Ethernet: needs one recorded device detail"
+		repeat  = "numbering restarts after the RJ45 ports (SFP 1, SFP+ 1, GbE 1): needs the idx the console gives the SFP ports"
+		other   = "unnumbered or role names; not known to be listed with ports by the Integration API"
+	)
+	for _, s := range []string{
+		"ubiquiti-unifi-cloud-gateway-max", "ubiquiti-unifi-cloud-gateway-fiber", "ubiquiti-unifi-gateway-lite",
+		"ubiquiti-unifi-gateway-max", "ubiquiti-unifi-gateway-pro", "ubiquiti-unifi-express-7", "ubiquiti-unifi-express-ux",
+		"ubiquiti-usg", "ubiquiti-unifi-security-gateway-pro",
+	} {
+		blockedPortNames[s] = gateway
+	}
+	for _, s := range []string{
+		"ubiquiti-u6-plus", "ubiquiti-u6-enterprise", "ubiquiti-u6-lr", "ubiquiti-u6-lite", "ubiquiti-u6-mesh",
+		"ubiquiti-u7-long-range", "ubiquiti-u7-pro-xgs", "ubiquiti-uap-ac-lr", "ubiquiti-uap-ac-lite", "ubiquiti-uap-nanohd",
+	} {
+		blockedPortNames[s] = ap
+	}
+	blockedPortNames["ubiquiti-u6-iw"] = "eth0 uplink plus eth1..4 labelled 1..4: needs the idx of the uplink"
+	blockedPortNames["ubiquiti-uap-ac-pro"] = "eth0 and eth1: needs the idx of the uplink"
+	for _, s := range []string{
+		"ubiquiti-unifi-pro-max-16", "ubiquiti-unifi-pro-max-16-poe", "ubiquiti-unifi-switch-pro-xg-8-poe",
+		"ubiquiti-unifi-switch-24-gen1", "ubiquiti-unifi-switch-48-gen1", "ubiquiti-unifi-switch-24-poe-250w-gen1",
+		"ubiquiti-unifi-switch-48-poe-500w-gen1", "ubiquiti-unifi-switch-24-gen2", "ubiquiti-unifi-switch-24-poe-gen2",
+		"ubiquiti-unifi-switch-16-poe-gen2",
+	} {
+		blockedPortNames[s] = repeat
+	}
+	blockedPortNames["ubiquiti-unifi-wan-switch-rj45"] = "MGMT is unnumbered and Port1..3 follow: needs whether the console lists MGMT and at which idx"
+	blockedPortNames["ubiquiti-usp-pdu-pro"] = "named Port 21..24, not 1..N: whether the console uses those numbers is unknown"
+	blockedPortNames["ubiquiti-es-48-lite"] = "an EdgeSwitch (0/1..), not a UniFi Network device"
+	for _, s := range []string{
+		"ubiquiti-usp-pdu-hd", "ubiquiti-ups-2u-eu", "ubiquiti-ups-2u-us", "ubiquiti-unifi-protect-network-video-recorder",
+		"ubiquiti-unifi-protect-network-video-recorder-pro", "ubiquiti-unifi-unvr-g2-pro", "ubiquiti-enterprise-network-video-recorder",
+		"ubiquiti-unas-pro", "ubiquiti-cloud-key-gen2", "ubiquiti-cloud-key-gen2-plus", "ubiquiti-ckg2-rm",
+		"ubiquiti-unifi-application-server",
+	} {
+		blockedPortNames[s] = other
+	}
+}
+
+// The UniFi Network collector names a port "Port <idx>" (ADR 0060). A model's
+// templates are named so when, and only when, upstream's own names or labels
+// number every wired interface exactly once from 1 to N: the rule of #177,
+// applied to the raw upstream files so that it sees the names before the
+// overlay. It does not prove that idx is the printed number (README point 9
+// of internal/collect/unifi/testdata).
 func TestUniFiPortTemplatesAreNamedAsTheConsoleNamesThem(t *testing.T) {
 	models, err := devicetypes.Default()
 	if err != nil {
@@ -292,63 +367,122 @@ func TestUniFiPortTemplatesAreNamedAsTheConsoleNamesThem(t *testing.T) {
 	for _, m := range models {
 		by[m.Slug] = m
 	}
-	ifaces := func(m *devicetypes.Model) []string {
-		var out []string
-		for _, p := range m.Ports {
-			if p.Group == "interface" {
-				out = append(out, p.Name)
+	type iface struct {
+		Name  string `yaml:"name"`
+		Type  string `yaml:"type"`
+		Label string `yaml:"label"`
+	}
+	wired := func(in []iface) []iface {
+		var out []iface
+		for _, i := range in {
+			if !strings.HasPrefix(i.Type, "ieee802.11") && i.Type != "other-wireless" {
+				out = append(out, i)
 			}
 		}
 		return out
 	}
-	for slug, n := range map[string]int{
-		"ubiquiti-udm":                                     5,
-		"ubiquiti-unifi-dream-machine-pro":                 11,
-		"ubiquiti-unifi-dream-machine-pro-special-edition": 11,
-		"ubiquiti-unifi-dream-machine-pro-max":             11,
-		"ubiquiti-unifi-dream-router-7":                    5,
-	} {
-		m := by[slug]
+	labelled := regexp.MustCompile(`^Port\s*(\d+)\b`)
+	named := regexp.MustCompile(`^[Pp]ort ?\.?(\d+)(?: \(PoE[^)]*\)| - SFP\+)?$`)
+	prefixed := regexp.MustCompile(`^(?:SFP\+|SFP28|SFP|QSFP28|GbE|2\.5 GbE|2\.5G Port|10G Port|SFP28 Port|QSFP28 Port) (\d+)$`)
+	number := func(i iface) int {
+		for _, re := range []struct {
+			re  *regexp.Regexp
+			src string
+		}{{labelled, i.Label}, {named, i.Name}, {prefixed, i.Name}} {
+			if m := re.re.FindStringSubmatch(re.src); m != nil {
+				n, _ := strconv.Atoi(m[1])
+				return n
+			}
+		}
+		return 0
+	}
+	var files []string
+	for _, ext := range []string{"yaml", "yml"} {
+		f, err := filepath.Glob("library/Ubiquiti/*." + ext)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files = append(files, f...)
+	}
+	if len(files) < 90 {
+		t.Fatalf("only %d upstream Ubiquiti files", len(files))
+	}
+	renamed, blocked, seen := 0, 0, map[string]bool{}
+	for _, f := range files {
+		data, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var up struct {
+			Slug       string  `yaml:"slug"`
+			Interfaces []iface `yaml:"interfaces"`
+		}
+		if err := yaml.Unmarshal(data, &up); err != nil {
+			t.Fatalf("%s: %v", f, err)
+		}
+		m := by[up.Slug]
 		if m == nil {
-			t.Errorf("%s: no such model", slug)
+			t.Errorf("%s: no loaded model %q", f, up.Slug)
 			continue
 		}
-		var want []string
-		for i := 1; i <= n; i++ {
-			want = append(want, fmt.Sprintf("Port %d", i))
+		seen[up.Slug] = true
+		wi := wired(up.Interfaces)
+		var got []devicetypes.Port
+		for _, p := range m.Ports {
+			if p.Group == "interface" && !strings.HasPrefix(p.Type, "ieee802.11") && p.Type != "other-wireless" {
+				got = append(got, p)
+			}
 		}
-		if got := ifaces(m); !slices.Equal(got, want) {
-			t.Errorf("%s: interfaces %v, want %v", slug, got, want)
+		complete := len(wi) > 0
+		for k, i := range wi {
+			if number(i) != k+1 {
+				complete = false
+			}
+		}
+		reason, isBlocked := blockedPortNames[up.Slug]
+		if !complete {
+			blocked++
+			if !isBlocked {
+				t.Errorf("%s: upstream does not number its interfaces 1..%d and the model is not in blockedPortNames", up.Slug, len(wi))
+			}
+			for k, i := range wi {
+				if k >= len(got) || got[k].Name != i.Name {
+					t.Errorf("%s: interface %d is renamed without evidence (upstream %q)", up.Slug, k+1, i.Name)
+				}
+			}
+			continue
+		}
+		if isBlocked {
+			t.Errorf("%s: numbered 1..%d by upstream but still listed as blocked (%s)", up.Slug, len(wi), reason)
+		}
+		if len(got) != len(wi) {
+			t.Errorf("%s: %d interfaces, upstream has %d", up.Slug, len(got), len(wi))
+			continue
+		}
+		changed := false
+		for k, i := range wi {
+			want := fmt.Sprintf("Port %d", k+1)
+			if got[k].Name != want {
+				t.Errorf("%s: interface %d is %q, want %q (upstream %q, label %q)", up.Slug, k+1, got[k].Name, want, i.Name, i.Label)
+			}
+			if i.Name != want {
+				changed = true
+				if wantLabel := cmp.Or(i.Label, i.Name); got[k].Label != wantLabel {
+					t.Errorf("%s: %s has label %q, want %q", up.Slug, want, got[k].Label, wantLabel)
+				}
+			}
+		}
+		if changed {
+			renamed++
 		}
 	}
-	for _, slug := range []string{"ubiquiti-unifi-switch-pro-max-24", "ubiquiti-unifi-switch-pro-max-24-poe"} {
-		m := by[slug]
-		if m == nil {
-			t.Errorf("%s: no such model", slug)
-			continue
-		}
-		got := ifaces(m)
-		for _, want := range []string{"Port 25", "Port 26"} {
-			if !slices.Contains(got, want) {
-				t.Errorf("%s: no %q in %v", slug, want, got)
-			}
-		}
-		for _, bad := range []string{"SFP+ 25", "SFP+ 26"} {
-			if slices.Contains(got, bad) {
-				t.Errorf("%s: still has %q", slug, bad)
-			}
+	for slug, reason := range blockedPortNames {
+		if !seen[slug] {
+			t.Errorf("blockedPortNames lists %s (%s), which is not an upstream Ubiquiti model", slug, reason)
 		}
 	}
-	dotted := regexp.MustCompile(`^port\.\d+$`)
-	for _, m := range models {
-		if m.Vendor != "Ubiquiti" {
-			continue
-		}
-		for _, name := range ifaces(m) {
-			if dotted.MatchString(name) {
-				t.Errorf("%s: interface %q, the console names it Port N", m.Slug, name)
-			}
-		}
+	if renamed != 40 || blocked != 46 || len(blockedPortNames) != 46 {
+		t.Errorf("%d models renamed, %d blocked (%d in the table), want 40 and 46: a model moved, say why in #177", renamed, blocked, len(blockedPortNames))
 	}
 }
 

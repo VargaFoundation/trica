@@ -122,8 +122,10 @@ func applyOverlays(fsys fs.FS, root string, models []*Model) error {
 
 // renameInterfaces renames the interface templates of m, old name to new,
 // all at once from the original names (a swap is allowed). Only interfaces
-// are touched: a power port with the same name stays as it is. Type, label
-// and mgmt_only are kept.
+// are touched: a power port with the same name stays as it is. Type and
+// mgmt_only are kept, and so is the label; an interface that upstream does not
+// label gets its old name as label, so that "Port 1 (PoE+)" renamed "Port 1"
+// still says what upstream said of it (#177).
 func renameInterfaces(m *Model, names map[string]string) error {
 	if len(names) == 0 {
 		return nil
@@ -152,6 +154,9 @@ func renameInterfaces(m *Model, names map[string]string) error {
 			continue
 		}
 		if nw, ok := names[p.Name]; ok {
+			if ports[i].Label == "" {
+				ports[i].Label = p.Name
+			}
 			ports[i].Name = strings.TrimSpace(nw)
 		}
 		if seen[ports[i].Name] {
