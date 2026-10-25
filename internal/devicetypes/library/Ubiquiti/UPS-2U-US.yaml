@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UPS 2U (US)
 slug: ubiquiti-ups-2u-us
 part_number: UPS-2U-US
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [UPS25]
 u_height: 2
 is_full_depth: false
 front_image: true

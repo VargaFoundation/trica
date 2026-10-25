@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: U6 In-Wall
 slug: ubiquiti-u6-iw
 part_number: U6-IW
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [UAIW6, U6IW]
 u_height: 0
 comments: |
   [Access Point U6 In-Wall](https://store.ui.com/products/access-point-wifi-6-in-wall)

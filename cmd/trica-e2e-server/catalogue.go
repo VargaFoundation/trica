@@ -1,7 +1,7 @@
 package main
 
 // The catalogue rack: r23 in lyon-1, a sample of the device-type catalogue
-// (docs/reference/devicetypes.md, "Catalogue"): upstream photographs and faces
+// (docs/reference/devicetypes.md, "Catalogue"): pictures and faces
 // the project drew, servers, switches, a firewall, storage and power, every
 // one healthy so that a screenshot shows the faces and nothing else.
 const (

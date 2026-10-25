@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: U7 Long-Range
 slug: ubiquiti-u7-long-range
 part_number: U7-LR
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [G7LRv2]
 u_height: 0
 is_full_depth: false
 airflow: passive

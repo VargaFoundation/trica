@@ -1,6 +1,6 @@
 # ADR-0020: Device-type library in the netbox devicetype-library format
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10); superseded in part by [ADR 0063](0063-the-device-type-library-is-tricas-data.md) (§1 "dropped in unchanged and contributable", §2)
 - **Concerns**: `internal/devicetypes`, the `device_type` schema type, the `instance_of` relation
 
 ## Context

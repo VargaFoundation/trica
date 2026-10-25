@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch Flex Mini
 slug: ubiquiti-unifi-switch-flex-mini
 part_number: USW-Flex-Mini
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USMINI, USMINI2]
 comments: |
   107.16 x 70.15 x 21.17 mm (4.22 x 2.76 x 0.83")
 u_height: 0
@@ -10,8 +12,10 @@ is_full_depth: false
 weight: 150
 weight_unit: g
 airflow: passive
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
-  - name: Port 1 (PoE IN)
+  - name: Port 1
+    label: Port 1 (PoE IN)
     type: 1000base-t
     poe_mode: pd
     poe_type: type2-ieee802.3at

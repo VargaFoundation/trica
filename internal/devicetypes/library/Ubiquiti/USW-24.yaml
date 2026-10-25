@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch 24 Gen2
 slug: ubiquiti-unifi-switch-24-gen2
 part_number: USW-24
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USL24, USL24B]
 weight: 2.8
 weight_unit: kg
 airflow: passive

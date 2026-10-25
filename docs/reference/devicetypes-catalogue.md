@@ -4,7 +4,7 @@
 
 Every one of the 523 models of the embedded library, by manufacturer (see [the library](devicetypes.md)).
 
-**U** is the rack height (0: occupies no rack unit, a desktop or wall device). **Front** and **Rear**: NetBox = upstream CC0 photograph, drawn = schematic face drawn by the project, — = none. ↳ marks a chassis variant (`variant_of`). **SKUs** are the `part_numbers` that match a device by part number.
+**U** is the rack height (0: occupies no rack unit, a desktop or wall device). **Front** and **Rear**: picture = a picture of the unit, drawn = schematic face drawn by the project, — = none. ↳ marks a chassis variant (`variant_of`). **SKUs** are the `part_numbers` that match a device by part number.
 
 ## APC (13 models)
 
@@ -28,26 +28,26 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 
 | Model | Slug | U | Front | Rear | SKUs |
 |---|---|---|---|---|---|
-| Arista DCS-7050CX3-32S-F | `arista-dcs-7050cx3-32s-f` | 1 | NetBox | NetBox |  |
-| Arista DCS-7050QX-32S | `arista-dcs-7050qx-32s` | 1 | NetBox | drawn |  |
-| Arista DCS-7050SX-64-F | `arista-dcs-7050sx-64-f` | 1 | NetBox | drawn |  |
-| Arista DCS-7050SX-64-R | `arista-dcs-7050sx-64-r` | 1 | NetBox | drawn |  |
-| Arista DCS-7050SX3-48YC8-F | `arista-dcs-7050sx3-48yc8-f` | 1 | NetBox | NetBox |  |
-| Arista DCS-7050TX-48 | `arista-dcs-7050tx-48` | 1 | NetBox | drawn |  |
-| Arista DCS-7050TX-64 | `arista-dcs-7050tx-64` | 1 | NetBox | drawn |  |
+| Arista DCS-7050CX3-32S-F | `arista-dcs-7050cx3-32s-f` | 1 | picture | picture |  |
+| Arista DCS-7050QX-32S | `arista-dcs-7050qx-32s` | 1 | picture | drawn |  |
+| Arista DCS-7050SX-64-F | `arista-dcs-7050sx-64-f` | 1 | picture | drawn |  |
+| Arista DCS-7050SX-64-R | `arista-dcs-7050sx-64-r` | 1 | picture | drawn |  |
+| Arista DCS-7050SX3-48YC8-F | `arista-dcs-7050sx3-48yc8-f` | 1 | picture | picture |  |
+| Arista DCS-7050TX-48 | `arista-dcs-7050tx-48` | 1 | picture | drawn |  |
+| Arista DCS-7050TX-64 | `arista-dcs-7050tx-64` | 1 | picture | drawn |  |
 | Arista DCS-7050TX3-48C8-F | `arista-dcs-7050tx3-48c8-f` | 1 | — | — |  |
 | Arista DCS-7050TX3-48C8-R | `arista-dcs-7050tx3-48c8-r` | 1 | — | — |  |
-| Arista DCS-7060CX-32S-F | `arista-dcs-7060cx-32s-f` | 1 | NetBox | NetBox |  |
-| Arista DCS-7060CX-32S-R | `arista-dcs-7060cx-32s-r` | 1 | NetBox | NetBox |  |
+| Arista DCS-7060CX-32S-F | `arista-dcs-7060cx-32s-f` | 1 | picture | picture |  |
+| Arista DCS-7060CX-32S-R | `arista-dcs-7060cx-32s-r` | 1 | picture | picture |  |
 | Arista DCS-7060CX2-32S-F | `arista-dcs-7060cx2-32s-f` | 1 | — | — |  |
 | Arista DCS-7060CX2-32S-R | `arista-dcs-7060cx2-32s-r` | 1 | — | — |  |
-| Arista DCS-7280CR2-60-F | `arista-dcs-7280cr2-60-f` | 1 | NetBox | NetBox |  |
-| Arista DCS-7280CR3-32P4-F | `arista-dcs-7280cr3-32p4-f` | 1 | NetBox | NetBox |  |
-| Arista DCS-7280QR-C36-F | `arista-dcs-7280qr-c36-f` | 1 | NetBox | — |  |
+| Arista DCS-7280CR2-60-F | `arista-dcs-7280cr2-60-f` | 1 | picture | picture |  |
+| Arista DCS-7280CR3-32P4-F | `arista-dcs-7280cr3-32p4-f` | 1 | picture | picture |  |
+| Arista DCS-7280QR-C36-F | `arista-dcs-7280qr-c36-f` | 1 | picture | — |  |
 | Arista DCS-7280SE-64-F | `arista-dcs-7280se-64-f` | 1 | drawn | drawn |  |
 | Arista DCS-7280SE-64-R | `arista-dcs-7280se-64-r` | 1 | drawn | drawn |  |
-| Arista DCS-7280SR-48C6-F | `arista-dcs-7280sr-48c6-f` | 1 | NetBox | drawn |  |
-| Arista DCS-7280SR-48C6-R | `arista-dcs-7280sr-48c6-r` | 1 | NetBox | drawn |  |
+| Arista DCS-7280SR-48C6-F | `arista-dcs-7280sr-48c6-f` | 1 | picture | drawn |  |
+| Arista DCS-7280SR-48C6-R | `arista-dcs-7280sr-48c6-r` | 1 | picture | drawn |  |
 | Arista DCS-7280SR3-48YC8-F | `arista-dcs-7280sr3-48yc8-f` | 1 | — | — |  |
 | Arista DCS-7280SR3-48YC8-R | `arista-dcs-7280sr3-48yc8-r` | 1 | — | — |  |
 
@@ -63,8 +63,8 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Cisco Catalyst 9300-24P | `cisco-c9300-24p` | 1 | — | — |  |
 | Cisco Catalyst 9300-24T | `cisco-c9300-24t` | 1 | drawn | drawn |  |
 | Cisco Catalyst 9300-24U | `cisco-c9300-24u` | 1 | — | — |  |
-| Cisco Catalyst 9300-48P | `cisco-c9300-48p` | 1 | NetBox | NetBox |  |
-| Cisco Catalyst 9300-48T | `cisco-c9300-48t` | 1 | NetBox | NetBox |  |
+| Cisco Catalyst 9300-48P | `cisco-c9300-48p` | 1 | picture | picture |  |
+| Cisco Catalyst 9300-48T | `cisco-c9300-48t` | 1 | picture | picture |  |
 | Cisco Catalyst 9300-48U | `cisco-c9300-48u` | 1 | — | — |  |
 | Cisco Catalyst 9300L-48P-4X | `cisco-c9300l-48p-4x` | 1 | — | — |  |
 | Cisco Catalyst 9500-48Y4C | `cisco-c9500-48y4c` | 1 | — | — |  |
@@ -72,11 +72,11 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Cisco Nexus C3064PQ-10GX | `cisco-n3k-c3064pq-10gx` | 1 | drawn | drawn |  |
 | Cisco Nexus 93108TC-FX | `cisco-n9k-c93108tc-fx` | 1 | — | — |  |
 | Cisco Nexus 93180YC-FX | `cisco-n9k-c93180yc-fx` | 1 | — | — |  |
-| Cisco Nexus 9372PX | `cisco-n9k-c9372px` | 1 | NetBox | NetBox |  |
-| Cisco Catalyst 2960X-24TS-L | `cisco-ws-c2960x-24ts-l` | 1 | NetBox | drawn |  |
-| Cisco Catalyst 2960X-48FPS-L | `cisco-ws-c2960x-48fps-l` | 1 | NetBox | drawn |  |
-| Cisco Catalyst 2960X-48TD-L | `cisco-ws-c2960x-48td-l` | 1 | NetBox | drawn |  |
-| Cisco Catalyst 2960X-48TS-L | `cisco-ws-c2960x-48ts-l` | 1 | NetBox | drawn |  |
+| Cisco Nexus 9372PX | `cisco-n9k-c9372px` | 1 | picture | picture |  |
+| Cisco Catalyst 2960X-24TS-L | `cisco-ws-c2960x-24ts-l` | 1 | picture | drawn |  |
+| Cisco Catalyst 2960X-48FPS-L | `cisco-ws-c2960x-48fps-l` | 1 | picture | drawn |  |
+| Cisco Catalyst 2960X-48TD-L | `cisco-ws-c2960x-48td-l` | 1 | picture | drawn |  |
+| Cisco Catalyst 2960X-48TS-L | `cisco-ws-c2960x-48ts-l` | 1 | picture | drawn |  |
 | Cisco Catalyst 3750X-24T-S | `cisco-ws-c3750x-24t-s` | 1 | drawn | drawn |  |
 | Cisco Catalyst 3750X-48P-S | `cisco-ws-c3750x-48p-s` | 1 | drawn | drawn |  |
 | Cisco Catalyst 3850-24T-S | `cisco-ws-c3850-24t-s` | 1 | drawn | drawn |  |
@@ -108,25 +108,25 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Dell PowerEdge R420 | `dell-poweredge-r420` | 1 | — | — |  |
 | ↳ Dell PowerEdge R420 4 x 3.5in hot-plug | `dell-poweredge-r420-4lff-hot-plug` | 1 | drawn | drawn |  |
 | ↳ Dell PowerEdge R420 8 x 2.5in | `dell-poweredge-r420-8sff` | 1 | drawn | drawn |  |
-| Dell PowerEdge R430 | `dell-poweredge-r430` | 1 | NetBox | NetBox |  |
+| Dell PowerEdge R430 | `dell-poweredge-r430` | 1 | picture | picture |  |
 | ↳ Dell PowerEdge R430 10 x 2.5in | `dell-poweredge-r430-10sff` | 1 | drawn | drawn |  |
 | ↳ Dell PowerEdge R430 4 x 3.5in hot-plug | `dell-poweredge-r430-4lff` | 1 | drawn | drawn |  |
 | ↳ Dell PowerEdge R430 8 x 2.5in | `dell-poweredge-r430-8sff` | 1 | drawn | drawn |  |
-| Dell PowerEdge R440 | `dell-poweredge-r440` | 1 | NetBox | NetBox |  |
+| Dell PowerEdge R440 | `dell-poweredge-r440` | 1 | picture | picture |  |
 | Dell PowerEdge R450 | `dell-poweredge-r450` | 1 | — | — |  |
 | Dell PowerEdge R520 | `dell-poweredge-r520` | 2 | — | — |  |
 | ↳ Dell PowerEdge R520 4 x 3.5in hot-plug | `dell-poweredge-r520-4lff` | 2 | drawn | drawn |  |
 | ↳ Dell PowerEdge R520 8 x 3.5in | `dell-poweredge-r520-8lff` | 2 | drawn | drawn |  |
-| Dell PowerEdge R530 | `dell-poweredge-r530` | 2 | NetBox | NetBox |  |
-| Dell PowerEdge R540 | `dell-poweredge-r540` | 2 | NetBox | NetBox |  |
+| Dell PowerEdge R530 | `dell-poweredge-r530` | 2 | picture | picture |  |
+| Dell PowerEdge R540 | `dell-poweredge-r540` | 2 | picture | picture |  |
 | Dell PowerEdge R550 | `dell-poweredge-r550` | 2 | — | — |  |
-| Dell PowerEdge R620 | `dell-poweredge-r620` | 1 | NetBox | NetBox |  |
+| Dell PowerEdge R620 | `dell-poweredge-r620` | 1 | picture | picture |  |
 | ↳ Dell PowerEdge R620 10 x 2.5in | `dell-poweredge-r620-10sff` | 1 | drawn | drawn |  |
 | ↳ Dell PowerEdge R620 8 x 2.5in | `dell-poweredge-r620-8sff` | 1 | drawn | drawn |  |
-| Dell PowerEdge R630 | `dell-poweredge-r630` | 1 | NetBox | NetBox |  |
+| Dell PowerEdge R630 | `dell-poweredge-r630` | 1 | picture | picture |  |
 | ↳ Dell PowerEdge R630 10 x 2.5in | `dell-poweredge-r630-10sff` | 1 | drawn | drawn |  |
 | ↳ Dell PowerEdge R630 8 x 2.5in | `dell-poweredge-r630-8sff` | 1 | drawn | drawn |  |
-| Dell PowerEdge R640 | `dell-poweredge-r640` | 1 | NetBox | NetBox |  |
+| Dell PowerEdge R640 | `dell-poweredge-r640` | 1 | picture | picture |  |
 | ↳ Dell PowerEdge R640 10 x 2.5in | `dell-poweredge-r640-10sff` | 1 | drawn | drawn |  |
 | ↳ Dell PowerEdge R640 4 x 3.5in hot-plug | `dell-poweredge-r640-4lff` | 1 | drawn | drawn |  |
 | ↳ Dell PowerEdge R640 8 x 2.5in | `dell-poweredge-r640-8sff` | 1 | drawn | drawn |  |
@@ -135,11 +135,11 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | ↳ Dell PowerEdge R650 4 x 3.5in hot-plug | `dell-poweredge-r650-4lff` | 1 | drawn | drawn |  |
 | ↳ Dell PowerEdge R650 8 x 2.5in | `dell-poweredge-r650-8sff` | 1 | drawn | drawn |  |
 | Dell PowerEdge R650xs | `dell-poweredge-r650xs` | 1 | — | — |  |
-| Dell PowerEdge R6515 | `dell-poweredge-r6515` | 1 | NetBox | NetBox |  |
+| Dell PowerEdge R6515 | `dell-poweredge-r6515` | 1 | picture | picture |  |
 | Dell PowerEdge R6525 | `dell-poweredge-r6525` | 1 | — | — |  |
 | Dell PowerEdge R660 | `dell-poweredge-r660` | 1 | — | — |  |
 | Dell PowerEdge R660xs | `dell-poweredge-r660xs` | 1 | — | — |  |
-| Dell PowerEdge R720 | `dell-poweredge-r720` | 2 | NetBox | NetBox |  |
+| Dell PowerEdge R720 | `dell-poweredge-r720` | 2 | picture | picture |  |
 | ↳ Dell PowerEdge R720 16 x 2.5in | `dell-poweredge-r720-16sff` | 2 | drawn | drawn |  |
 | ↳ Dell PowerEdge R720 8 x 3.5in | `dell-poweredge-r720-8lff` | 2 | drawn | drawn |  |
 | ↳ Dell PowerEdge R720 8 x 2.5in | `dell-poweredge-r720-8sff` | 2 | drawn | drawn |  |
@@ -150,7 +150,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | ↳ Dell PowerEdge R730 16 x 2.5in | `dell-poweredge-r730-16sff` | 2 | drawn | drawn |  |
 | ↳ Dell PowerEdge R730 8 x 3.5in | `dell-poweredge-r730-8lff` | 2 | drawn | drawn |  |
 | ↳ Dell PowerEdge R730 8 x 2.5in | `dell-poweredge-r730-8sff` | 2 | drawn | drawn |  |
-| Dell PowerEdge R730xd | `dell-poweredge-r730xd` | 2 | NetBox | NetBox |  |
+| Dell PowerEdge R730xd | `dell-poweredge-r730xd` | 2 | picture | picture |  |
 | ↳ Dell PowerEdge R730xd 12 x 3.5in | `dell-poweredge-r730xd-12lff` | 2 | drawn | drawn |  |
 | ↳ Dell PowerEdge R730xd 24 x 2.5in | `dell-poweredge-r730xd-24sff` | 2 | drawn | drawn |  |
 | Dell PowerEdge R740 | `dell-poweredge-r740` | 2 | — | — |  |
@@ -161,9 +161,9 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | ↳ Dell PowerEdge R740xd 12 x 3.5in | `dell-poweredge-r740xd-12lff` | 2 | drawn | drawn |  |
 | ↳ Dell PowerEdge R740xd 24 x 2.5in | `dell-poweredge-r740xd-24sff` | 2 | drawn | drawn |  |
 | Dell PowerEdge R740xd2 | `dell-poweredge-r740xd2` | 2 | — | — |  |
-| Dell PowerEdge R750 | `dell-poweredge-r750` | 2 | NetBox | NetBox |  |
+| Dell PowerEdge R750 | `dell-poweredge-r750` | 2 | picture | picture |  |
 | Dell PowerEdge R750xs | `dell-poweredge-r750xs` | 2 | — | — |  |
-| Dell PowerEdge R7515 | `dell-poweredge-r7515` | 2 | NetBox | NetBox |  |
+| Dell PowerEdge R7515 | `dell-poweredge-r7515` | 2 | picture | picture |  |
 | Dell PowerEdge R7525 | `dell-poweredge-r7525` | 2 | — | — |  |
 | Dell PowerEdge R760 | `dell-poweredge-r760` | 2 | — | — |  |
 | Dell PowerEdge R760xs | `dell-poweredge-r760xs` | 2 | — | — |  |
@@ -173,7 +173,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 
 | Model | Slug | U | Front | Rear | SKUs |
 |---|---|---|---|---|---|
-| Eaton 5PX1500iRT | `eaton-5px1500irt` | 2 | NetBox | NetBox |  |
+| Eaton 5PX1500iRT | `eaton-5px1500irt` | 2 | picture | picture |  |
 | Eaton 5PX2200IRT | `eaton-5px2200irt` | 2 | — | — |  |
 | Eaton 5PX3000IRT2U | `eaton-5px3000irt2u` | 2 | drawn | drawn |  |
 | Eaton 9PX 1000i RT 2U | `eaton-9px-1000i-rt-2u` | 2 | — | — |  |
@@ -184,7 +184,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 
 | Model | Slug | U | Front | Rear | SKUs |
 |---|---|---|---|---|---|
-| Fortinet FortiGate 100F | `fortinet-fg-100f` | 1 | NetBox | drawn |  |
+| Fortinet FortiGate 100F | `fortinet-fg-100f` | 1 | picture | drawn |  |
 | Fortinet FortiGate 200F | `fortinet-fg-200f` | 1 | drawn | drawn |  |
 | Fortinet FortiGate 400E | `fortinet-fg-400e` | 1 | — | — |  |
 | Fortinet FortiGate 400F | `fortinet-fg-400f` | 1 | — | — |  |
@@ -217,14 +217,14 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | HPE Alletra 6000 | `hpe-alletra-6000` | 4 | — | — |  |
 | HPE Alletra 6070 | `hpe-alletra-6070` | 4 | — | — |  |
 | HPE Apollo R4200 Chassis | `hpe-apollo-r4200-chassis` | 2 | — | — |  |
-| HPE Aruba 2530-24G | `hpe-aruba-2530-24g` | 1 | NetBox | drawn |  |
-| HPE Aruba 2530-48G | `hpe-aruba-2530-48g` | 1 | NetBox | drawn |  |
+| HPE Aruba 2530-24G | `hpe-aruba-2530-24g` | 1 | picture | drawn |  |
+| HPE Aruba 2530-48G | `hpe-aruba-2530-48g` | 1 | picture | drawn |  |
 | HPE Aruba 2540-24G-4SFP+ | `hpe-aruba-2540-24g-4sfpp` | 1 | — | — |  |
 | HPE Aruba 2540-48G-4SFP+ | `hpe-aruba-2540-48g-4sfpp` | 1 | — | — |  |
 | HPE Aruba 2920-24G | `hpe-aruba-2920-24g` | 1 | — | — |  |
 | HPE Aruba 2920-48G | `hpe-aruba-2920-48g` | 1 | — | — |  |
-| HPE Aruba 2930F-24G-4SFP+ | `hpe-aruba-2930f-24g-4sfpp` | 1 | NetBox | drawn |  |
-| HPE Aruba 2930F-48G-4SFP+ | `hpe-aruba-2930f-48g-4sfpp` | 1 | NetBox | drawn |  |
+| HPE Aruba 2930F-24G-4SFP+ | `hpe-aruba-2930f-24g-4sfpp` | 1 | picture | drawn |  |
+| HPE Aruba 2930F-48G-4SFP+ | `hpe-aruba-2930f-48g-4sfpp` | 1 | picture | drawn |  |
 | HPE Aruba 2930M-24G | `hpe-aruba-2930m-24g` | 1 | — | — |  |
 | HPE Aruba 2930M-24G-PoE+ | `hpe-aruba-2930m-24g-poep` | 1 | — | — |  |
 | HPE Aruba 2930M-48G | `hpe-aruba-2930m-48g` | 1 | — | — |  |
@@ -289,7 +289,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | HPE ProLiant DL180 Gen9 8SFF | `hpe-proliant-dl180-gen9-8sff` | 2 | drawn | drawn | 754523-B21, 833973-B21 |
 | HPE ProLiant DL20 Gen10 | `hpe-proliant-dl20-gen10` | 1 | — | — |  |
 | HPE ProLiant DL20 Gen11 | `hpe-proliant-dl20-gen11` | 1 | — | — |  |
-| HPE ProLiant DL20 Gen9 | `hpe-proliant-dl20-gen9` | 1 | NetBox | — |  |
+| HPE ProLiant DL20 Gen9 | `hpe-proliant-dl20-gen9` | 1 | picture | — |  |
 | HPE ProLiant DL320 Gen11 | `hpe-proliant-dl320-gen11` | 1 | — | — |  |
 | HPE ProLiant DL320e Gen8 | `hpe-proliant-dl320e-gen8` | 1 | — | — |  |
 | HPE ProLiant DL325 Gen10 | `hpe-proliant-dl325-gen10` | 1 | — | — |  |
@@ -297,12 +297,12 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | HPE ProLiant DL325 Gen10 Plus v2 | `hpe-proliant-dl325-gen10-plus-v2` | 1 | — | — |  |
 | HPE ProLiant DL325 Gen11 | `hpe-proliant-dl325-gen11` | 1 | — | — |  |
 | HPE ProLiant DL345 Gen11 | `hpe-proliant-dl345-gen11` | 2 | — | — |  |
-| HPE ProLiant DL360 Gen10 | `hpe-proliant-dl360-gen10` | 1 | NetBox | NetBox |  |
+| HPE ProLiant DL360 Gen10 | `hpe-proliant-dl360-gen10` | 1 | picture | picture |  |
 | ↳ HPE ProLiant DL360 Gen10 4LFF | `hpe-proliant-dl360-gen10-4lff` | 1 | drawn | drawn | 867958-B21, P19765-B21 |
 | ↳ HPE ProLiant DL360 Gen10 8SFF | `hpe-proliant-dl360-gen10-8sff` | 1 | drawn | drawn | 867959-B21, P19766-B21, P56949-B21, P56950-B21 |
-| HPE ProLiant DL360 Gen10 Plus | `hpe-proliant-dl360-gen10-plus` | 1 | NetBox | NetBox |  |
+| HPE ProLiant DL360 Gen10 Plus | `hpe-proliant-dl360-gen10-plus` | 1 | picture | picture |  |
 | HPE ProLiant DL360 Gen11 | `hpe-proliant-dl360-gen11` | 1 | — | — |  |
-| HPE ProLiant DL360 Gen9 | `hpe-proliant-dl360-gen9` | 1 | NetBox | NetBox |  |
+| HPE ProLiant DL360 Gen9 | `hpe-proliant-dl360-gen9` | 1 | picture | picture |  |
 | ↳ HPE ProLiant DL360 Gen9 4LFF | `hpe-proliant-dl360-gen9-4lff` | 1 | drawn | drawn | 755259-B21 |
 | ↳ HPE ProLiant DL360 Gen9 8SFF | `hpe-proliant-dl360-gen9-8sff` | 1 | drawn | drawn | 755258-B21 |
 | HPE ProLiant DL360e Gen8 | `hpe-proliant-dl360e-gen8` | 1 | — | — |  |
@@ -312,7 +312,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | ↳ HPE ProLiant DL360p Gen8 8SFF | `hpe-proliant-dl360p-gen8-8sff` | 1 | drawn | drawn | 654081-B21 |
 | HPE ProLiant DL365 Gen10 | `hpe-proliant-dl365-gen10` | 1 | — | — |  |
 | HPE ProLiant DL365 Gen11 | `hpe-proliant-dl365-gen11` | 1 | — | — |  |
-| HPE ProLiant DL380 Gen10 | `hpe-proliant-dl380-gen10` | 2 | NetBox | NetBox |  |
+| HPE ProLiant DL380 Gen10 | `hpe-proliant-dl380-gen10` | 2 | picture | picture |  |
 | ↳ HPE ProLiant DL380 Gen10 12LFF | `hpe-proliant-dl380-gen10-12lff` | 2 | drawn | drawn | 868705-B21, P19718-B21 |
 | ↳ HPE ProLiant DL380 Gen10 24SFF | `hpe-proliant-dl380-gen10-24sff` | 2 | drawn | drawn | 868704-B21, P19719-B21 |
 | ↳ HPE ProLiant DL380 Gen10 24SFF NVMe | `hpe-proliant-dl380-gen10-24sff-nvme` | 2 | drawn | drawn |  |
@@ -325,14 +325,14 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | ↳ HPE ProLiant DL380 Gen9 12LFF | `hpe-proliant-dl380-gen9-12lff` | 2 | drawn | drawn | 719061-B21 |
 | ↳ HPE ProLiant DL380 Gen9 24SFF | `hpe-proliant-dl380-gen9-24sff` | 2 | drawn | drawn | 767032-B21 |
 | ↳ HPE ProLiant DL380 Gen9 8SFF | `hpe-proliant-dl380-gen9-8sff` | 2 | drawn | drawn | 719064-B21 |
-| HPE ProLiant DL380e Gen8 | `hpe-proliant-dl380e-gen8` | 2 | NetBox | NetBox |  |
-| HPE ProLiant DL380p Gen8 | `hpe-proliant-dl380p-gen8` | 2 | NetBox | NetBox |  |
+| HPE ProLiant DL380e Gen8 | `hpe-proliant-dl380e-gen8` | 2 | picture | picture |  |
+| HPE ProLiant DL380p Gen8 | `hpe-proliant-dl380p-gen8` | 2 | picture | picture |  |
 | ↳ HPE ProLiant DL380p Gen8 12LFF | `hpe-proliant-dl380p-gen8-12lff` | 2 | drawn | drawn | 665552-B21 |
 | ↳ HPE ProLiant DL380p Gen8 25SFF | `hpe-proliant-dl380p-gen8-25sff` | 2 | drawn | drawn | 665554-B21 |
 | ↳ HPE ProLiant DL380p Gen8 8LFF | `hpe-proliant-dl380p-gen8-8lff` | 2 | drawn | drawn | 665553-B21 |
 | ↳ HPE ProLiant DL380p Gen8 8SFF | `hpe-proliant-dl380p-gen8-8sff` | 2 | drawn | drawn | 653200-B21 |
 | HPE ProLiant DL385 Gen10 | `hpe-proliant-dl385-gen10` | 2 | — | — |  |
-| HPE ProLiant DL385 Gen10 Plus v2 | `hpe-proliant-dl385-gen10-plus-v2` | 2 | NetBox | NetBox |  |
+| HPE ProLiant DL385 Gen10 Plus v2 | `hpe-proliant-dl385-gen10-plus-v2` | 2 | picture | picture |  |
 | HPE ProLiant DL385 Gen11 | `hpe-proliant-dl385-gen11` | 2 | — | — |  |
 | HPE ProLiant DL385p Gen8 | `hpe-proliant-dl385p-gen8` | 2 | — | — |  |
 | HPE ProLiant DL560 Gen10 | `hpe-proliant-dl560-gen10` | 2 | — | — |  |
@@ -371,16 +371,16 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Model | Slug | U | Front | Rear | SKUs |
 |---|---|---|---|---|---|
 | Juniper EX2200-24T-4G | `juniper-ex2200-24t-4g` | 1 | drawn | drawn |  |
-| Juniper EX2200-48T-4G | `juniper-ex2200-48t-4g` | 1 | NetBox | drawn |  |
+| Juniper EX2200-48T-4G | `juniper-ex2200-48t-4g` | 1 | picture | drawn |  |
 | Juniper EX2300-24T | `juniper-ex2300-24t` | 1 | — | — |  |
 | Juniper EX2300-48P | `juniper-ex2300-48p` | 1 | — | — |  |
 | Juniper EX3300-48T | `juniper-ex3300-48t` | 1 | drawn | drawn |  |
 | Juniper EX3400-24T | `juniper-ex3400-24t` | 1 | — | — |  |
 | Juniper EX3400-48P | `juniper-ex3400-48p` | 1 | — | — |  |
-| Juniper EX4300-48P | `juniper-ex4300-48p` | 1 | NetBox | NetBox |  |
+| Juniper EX4300-48P | `juniper-ex4300-48p` | 1 | picture | picture |  |
 | Juniper EX4300-48T | `juniper-ex4300-48t` | 1 | drawn | drawn |  |
 | Juniper EX4400-48T | `juniper-ex4400-48t` | 1 | — | — |  |
-| Juniper QFX5100-48S-6Q | `juniper-qfx5100-48s-6q` | 1 | NetBox | NetBox |  |
+| Juniper QFX5100-48S-6Q | `juniper-qfx5100-48s-6q` | 1 | picture | picture |  |
 | Juniper QFX5120-48Y-AFO2 | `juniper-qfx5120-48y-afo2` | 1 | — | — |  |
 | Juniper SRX300 | `juniper-srx300` | 1 | — | — |  |
 | Juniper SRX345 | `juniper-srx345` | 1 | — | — |  |
@@ -390,11 +390,11 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Model | Slug | U | Front | Rear | SKUs |
 |---|---|---|---|---|---|
 | Lenovo System x3550 M5 | `lenovo-system-x3550-m5` | 1 | — | — |  |
-| Lenovo System x3650 M5 | `lenovo-system-x3650-m5` | 2 | NetBox | NetBox |  |
+| Lenovo System x3650 M5 | `lenovo-system-x3650-m5` | 2 | picture | picture |  |
 | Lenovo ThinkSystem SR630 | `lenovo-thinksystem-sr630` | 1 | — | — |  |
 | Lenovo ThinkSystem SR630 V2 | `lenovo-thinksystem-sr630-v2` | 1 | — | — |  |
 | Lenovo ThinkSystem SR630 V3 | `lenovo-thinksystem-sr630-v3` | 1 | — | — |  |
-| Lenovo ThinkSystem SR650 | `lenovo-thinksystem-sr650` | 2 | NetBox | NetBox |  |
+| Lenovo ThinkSystem SR650 | `lenovo-thinksystem-sr650` | 2 | picture | picture |  |
 | Lenovo ThinkSystem SR650 V2 | `lenovo-thinksystem-sr650-v2` | 2 | — | — |  |
 | Lenovo ThinkSystem SR650 V3 | `lenovo-thinksystem-sr650-v3` | 2 | — | — |  |
 | Lenovo ThinkSystem SR665 | `lenovo-thinksystem-sr665` | 2 | — | — |  |
@@ -403,19 +403,19 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 
 | Model | Slug | U | Front | Rear | SKUs |
 |---|---|---|---|---|---|
-| MikroTik CCR1009-7G-1C-1S+ | `mikrotik-ccr1009-7g-1c-1s-plus` | 1 | NetBox | — |  |
+| MikroTik CCR1009-7G-1C-1S+ | `mikrotik-ccr1009-7g-1c-1s-plus` | 1 | picture | — |  |
 | MikroTik CCR1036-8G-2S+ | `mikrotik-ccr1036-8g-2s-plus` | 1 | — | — |  |
-| MikroTik CCR2004-16G-2S+ | `mikrotik-ccr2004-16g-2s-plus` | 1 | NetBox | NetBox |  |
+| MikroTik CCR2004-16G-2S+ | `mikrotik-ccr2004-16g-2s-plus` | 1 | picture | picture |  |
 | MikroTik CCR2004-1G-12S+2XS | `mikrotik-ccr2004-1g-12s-plus-2xs` | 1 | — | — |  |
-| MikroTik CCR2116-12G-4S+ | `mikrotik-ccr2116-12g-4s-plus` | 1 | NetBox | NetBox |  |
+| MikroTik CCR2116-12G-4S+ | `mikrotik-ccr2116-12g-4s-plus` | 1 | picture | picture |  |
 | MikroTik CCR2216-1G-12XS-2XQ | `mikrotik-ccr2216-1g-12xs-2xq` | 1 | — | — |  |
 | MikroTik CRS305-1G-4S+IN | `mikrotik-crs305-1g-4s-plus-in` | 1 | — | — |  |
 | MikroTik CRS309-1G-8S+IN | `mikrotik-crs309-1g-8s-plus-in` | 1 | — | — |  |
 | MikroTik CRS312-4C+8XG-RM | `mikrotik-crs312-4c-plus-8xg-rm` | 1 | drawn | drawn |  |
-| MikroTik CRS317-1G-16S+RM | `mikrotik-crs317-1g-16s-plus-rm` | 1 | NetBox | — |  |
-| MikroTik CRS326-24G-2S+RM | `mikrotik-crs326-24g-2s-plus-rm` | 1 | NetBox | — |  |
+| MikroTik CRS317-1G-16S+RM | `mikrotik-crs317-1g-16s-plus-rm` | 1 | picture | — |  |
+| MikroTik CRS326-24G-2S+RM | `mikrotik-crs326-24g-2s-plus-rm` | 1 | picture | — |  |
 | MikroTik CRS326-24S+2Q+RM | `mikrotik-crs326-24s-plus-2q-plus-rm` | 1 | drawn | drawn |  |
-| MikroTik CRS328-24P-4S+RM | `mikrotik-crs328-24p-4s-plus-rm` | 1 | NetBox | drawn |  |
+| MikroTik CRS328-24P-4S+RM | `mikrotik-crs328-24p-4s-plus-rm` | 1 | picture | drawn |  |
 | MikroTik CRS354-48G-4S+2Q+RM | `mikrotik-crs354-48g-4s-plus-2q-plus-rm` | 1 | drawn | drawn |  |
 | MikroTik CRS354-48P-4S+2Q+RM | `mikrotik-crs354-48p-4s-plus-2q-plus-rm` | 1 | drawn | drawn |  |
 | MikroTik CRS504-4XQ-IN | `mikrotik-crs504-4xq-in` | 1 | — | — |  |
@@ -463,7 +463,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Supermicro SuperServer 1029U-TR4T | `supermicro-sys-1029u-tr4t` | 1 | — | — |  |
 | Supermicro SuperServer 2029U-E1CR25M | `supermicro-sys-2029u-e1cr25m` | 2 | — | — |  |
 | Supermicro SuperServer 6028R-TR | `supermicro-sys-6028r-tr` | 2 | — | — |  |
-| Supermicro SuperServer 6029P-TR | `supermicro-sys-6029p-tr` | 2 | NetBox | NetBox |  |
+| Supermicro SuperServer 6029P-TR | `supermicro-sys-6029p-tr` | 2 | picture | picture |  |
 | Supermicro SuperServer 6029U-TR4T+ | `supermicro-sys-6029u-tr4t-plus` | 2 | — | — |  |
 
 ## Synology (42 models)
@@ -488,7 +488,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Synology DS925+ | `synology-ds925-plus` | 0 | — | — |  |
 | Synology FS6400 | `synology-fs6400` | 2 | — | — |  |
 | Synology RS1219+ | `synology-rs1219-plus` | 2 | — | — |  |
-| Synology RS1221+ | `synology-rs1221-plus` | 2 | NetBox | drawn |  |
+| Synology RS1221+ | `synology-rs1221-plus` | 2 | picture | drawn |  |
 | Synology RS1221RP+ | `synology-rs1221rp-plus` | 2 | — | — |  |
 | Synology RS1619xs+ | `synology-rs1619xs-plus` | 1 | — | — |  |
 | Synology RS214 | `synology-rs214` | 1 | — | — |  |
@@ -501,7 +501,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Synology RS2423RP+II | `synology-rs2423rp-plus-ii` | 2 | — | — |  |
 | Synology RS3614xs+ | `synology-rs3614xs-plus` | 2 | — | — |  |
 | Synology RS3617RPxs | `synology-rs3617rpxs` | 2 | — | — |  |
-| Synology RS3621xs+ | `synology-rs3621xs-plus` | 2 | NetBox | NetBox |  |
+| Synology RS3621xs+ | `synology-rs3621xs-plus` | 2 | picture | picture |  |
 | Synology RS422+ | `synology-rs422-plus` | 1 | — | — |  |
 | Synology RS815 | `synology-rs815` | 1 | — | — |  |
 | Synology RS815+ | `synology-rs815-plus` | 1 | — | — |  |
@@ -523,7 +523,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Ubiquiti E7 | `ubiquiti-e7` | 0 | — | — | E7 |
 | Ubiquiti Enterprise Campus Aggregation | `ubiquiti-enterprise-campus-aggregation` | 1 | — | — | ECSAGG |
 | Ubiquiti Enterprise Campus Switch 24-Port PoE | `ubiquiti-enterprise-campus-switch-24-port-poe` | 1 | — | — | ECS24P, EAS24P |
-| Ubiquiti Enterprise Fortress Gateway | `ubiquiti-enterprise-fortress-gateway` | 1 | NetBox | NetBox | EFG, UDMENT |
+| Ubiquiti Enterprise Fortress Gateway | `ubiquiti-enterprise-fortress-gateway` | 1 | picture | picture | EFG, UDMENT |
 | Ubiquiti Enterprise Network Video Recorder | `ubiquiti-enterprise-network-video-recorder` | 4 | — | — | ENVR |
 | Ubiquiti EdgeSwitch 48 Lite | `ubiquiti-es-48-lite` | 1 | drawn | drawn |  |
 | Ubiquiti U6 Enterprise | `ubiquiti-u6-enterprise` | 0 | — | — | U6ENT |
@@ -554,9 +554,9 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Ubiquiti UniFi Cloud Gateway Fiber | `ubiquiti-unifi-cloud-gateway-fiber` | 0 | — | — | UCGFIBER, UCGF |
 | Ubiquiti UniFi Cloud Gateway Max | `ubiquiti-unifi-cloud-gateway-max` | 0 | — | — | UCGMAX |
 | Ubiquiti UniFi Cloud Gateway Ultra | `ubiquiti-unifi-cloud-gateway-ultra` | 0 | — | — | UDRULT, UCG-Ultra, UDR-Pro, UDR-Ultra |
-| Ubiquiti UniFi Dream Machine Pro | `ubiquiti-unifi-dream-machine-pro` | 1 | NetBox | NetBox | UDMPRO, UDMP |
-| Ubiquiti UniFi Dream Machine Pro Max | `ubiquiti-unifi-dream-machine-pro-max` | 1 | NetBox | NetBox | UDMPROMAX |
-| Ubiquiti UniFi Dream Machine Pro Special Edition | `ubiquiti-unifi-dream-machine-pro-special-edition` | 1 | NetBox | NetBox | UDMPROSE, UDM-SE |
+| Ubiquiti UniFi Dream Machine Pro | `ubiquiti-unifi-dream-machine-pro` | 1 | picture | picture | UDMPRO, UDMP |
+| Ubiquiti UniFi Dream Machine Pro Max | `ubiquiti-unifi-dream-machine-pro-max` | 1 | picture | picture | UDMPROMAX |
+| Ubiquiti UniFi Dream Machine Pro Special Edition | `ubiquiti-unifi-dream-machine-pro-special-edition` | 1 | picture | picture | UDMPROSE, UDM-SE |
 | Ubiquiti UniFi Dream Router 7 | `ubiquiti-unifi-dream-router-7` | 0 | — | — | UDR7 |
 | Ubiquiti UniFi Express 7 | `ubiquiti-unifi-express-7` | 0 | — | — | UX7, UXMAX |
 | Ubiquiti UniFi Express (UX) | `ubiquiti-unifi-express-ux` | 0 | — | — | UX, UEX |
@@ -575,15 +575,15 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Ubiquiti UniFi Switch 24 Gen2 | `ubiquiti-unifi-switch-24-gen2` | 1 | drawn | drawn | USL24, USL24B |
 | Ubiquiti UniFi Switch 24 PoE 250W Gen1 | `ubiquiti-unifi-switch-24-poe-250w-gen1` | 1 | — | — | US24P250, S224250 |
 | Ubiquiti UniFi Switch 24 PoE Gen2 | `ubiquiti-unifi-switch-24-poe-gen2` | 1 | — | — | USL24P, USL24PB |
-| Ubiquiti UniFi Switch 24 Pro | `ubiquiti-unifi-switch-24-pro` | 1 | NetBox | NetBox | US24PRO2 |
+| Ubiquiti UniFi Switch 24 Pro | `ubiquiti-unifi-switch-24-pro` | 1 | picture | picture | US24PRO2 |
 | Ubiquiti UniFi Switch 24 Pro PoE Gen2 | `ubiquiti-unifi-switch-24-pro-poe-gen2` | 1 | — | — | US24PRO, USLP24P |
 | Ubiquiti UniFi Switch 48 Gen1 | `ubiquiti-unifi-switch-48-gen1` | 1 | — | — | US48 |
 | Ubiquiti UniFi Switch 48 Gen2 | `ubiquiti-unifi-switch-48-gen2` | 1 | drawn | drawn | USL48, USL48B |
 | Ubiquiti UniFi Switch 48 PoE 500W Gen1 | `ubiquiti-unifi-switch-48-poe-500w-gen1` | 1 | — | — | US48P500, S248500 |
 | Ubiquiti UniFi Switch 48 PoE Gen2 | `ubiquiti-unifi-switch-48-poe-gen2` | 1 | — | — | USL48P, USL48PB |
 | Ubiquiti UniFi Switch 48 Pro | `ubiquiti-unifi-switch-48-pro` | 1 | — | — | US48PRO2 |
-| Ubiquiti UniFi Switch 48 Pro PoE Gen2 | `ubiquiti-unifi-switch-48-pro-poe-gen2` | 1 | NetBox | NetBox | US48PRO, USLP48P |
-| Ubiquiti UniFi Switch Aggregation | `ubiquiti-unifi-switch-aggregation` | 1 | NetBox | drawn | USL8A |
+| Ubiquiti UniFi Switch 48 Pro PoE Gen2 | `ubiquiti-unifi-switch-48-pro-poe-gen2` | 1 | picture | picture | US48PRO, USLP48P |
+| Ubiquiti UniFi Switch Aggregation | `ubiquiti-unifi-switch-aggregation` | 1 | picture | drawn | USL8A |
 | Ubiquiti UniFi Switch Enterprise 24 PoE | `ubiquiti-unifi-switch-enterprise-24-poe` | 1 | — | — | US624P |
 | Ubiquiti UniFi Switch Enterprise 48 PoE | `ubiquiti-unifi-switch-enterprise-48-poe` | 1 | — | — | US648P |
 | Ubiquiti UniFi Switch Flex | `ubiquiti-unifi-switch-flex` | 0 | — | — | USF5P |
@@ -595,7 +595,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Ubiquiti UniFi Switch Pro HD 24 | `ubiquiti-unifi-switch-pro-hd-24` | 1 | — | — | USPH24 |
 | Ubiquiti UniFi Switch Pro HD 24 PoE | `ubiquiti-unifi-switch-pro-hd-24-poe` | 1 | — | — | USPH24P |
 | Ubiquiti UniFi Switch Pro Max 24 | `ubiquiti-unifi-switch-pro-max-24` | 1 | — | — | USPM24 |
-| Ubiquiti UniFi Switch Pro Max 24 PoE | `ubiquiti-unifi-switch-pro-max-24-poe` | 1 | NetBox | NetBox | USPM24P |
+| Ubiquiti UniFi Switch Pro Max 24 PoE | `ubiquiti-unifi-switch-pro-max-24-poe` | 1 | picture | picture | USPM24P |
 | Ubiquiti UniFi Switch Pro Max 48 | `ubiquiti-unifi-switch-pro-max-48` | 1 | — | — | USPM48 |
 | Ubiquiti UniFi Switch Pro Max 48 PoE | `ubiquiti-unifi-switch-pro-max-48-poe` | 1 | — | — | USPM48P |
 | Ubiquiti UniFi Switch Pro XG 10 PoE | `ubiquiti-unifi-switch-pro-xg-10-poe` | 1 | — | — | USPXG10P |

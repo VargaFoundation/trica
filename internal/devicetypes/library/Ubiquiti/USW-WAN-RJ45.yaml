@@ -4,6 +4,8 @@ model: Unifi WAN Switch RJ45
 slug: ubiquiti-unifi-wan-switch-rj45
 description: U10 GbE WAN Switch linking two Shadow Mode High Availability UniFi Gateways to a single ISP.
 part_number: USW-WAN-RJ45
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [WRS3]
 u_height: 1.0
 is_full_depth: false
 weight: 2.3

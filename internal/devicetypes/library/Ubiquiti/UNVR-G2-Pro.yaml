@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Protect Network Video Recorder G2 Pro
 slug: ubiquiti-unifi-unvr-g2-pro
 part_number: UNVR-G2-Pro
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [UNVRAI8]
 u_height: 2
 is_full_depth: true
 airflow: front-to-rear

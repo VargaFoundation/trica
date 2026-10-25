@@ -4,9 +4,9 @@
 #
 # A chassis of the Dell PowerEdge R730: 8 x 2.5in drive bays, from the Owner's Manual
 # (front view / supported configurations). Rack height, depth, airflow and port templates
-# are those of the upstream model Dell/PowerEdge-R730.yaml (netbox-community/devicetype-library, CC0-1.0); power supplies from the manual's back panel.
+# are those of the model Dell/PowerEdge-R730.yaml of this library; power supplies from the manual's back panel.
 # Dell reports no chassis part number (the Redfish SKU is the service tag): no part_numbers;
-# a device reporting "PowerEdge R730" gets the upstream model, this variant is picked by hand.
+# a device reporting "PowerEdge R730" gets the generic model, this variant is picked by hand.
 manufacturer: Dell
 model: PowerEdge R730 8 x 2.5in
 slug: dell-poweredge-r730-8sff

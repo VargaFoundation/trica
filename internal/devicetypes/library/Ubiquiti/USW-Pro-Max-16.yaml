@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Pro Max 16
 slug: ubiquiti-unifi-pro-max-16
 part_number: USW-Pro-Max-16
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USPM16]
 comments: |
   UniFi Pro Max 16 (Non-PoE), 4x 2.5GbE RJ45, 12 GbE RJ45, 2x 10G SFP+, RGB Port Illumination
   Dimensions: 325.1 x 160 x 43.7 mm (12.8 x 6.3 x 1.7")

@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: Enterprise Campus Aggregation
 slug: ubiquiti-enterprise-campus-aggregation
 part_number: ECS-Aggregation
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [ECSAGG]
 comments: |
   [Enterprise Campus Aggregation](https://store.ui.com/products/ecs-aggregation)
 
@@ -20,116 +22,171 @@ weight_unit: kg
 airflow: front-to-rear
 front_image: true
 rear_image: true
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
   # SFP28 ports (25/10G, 1-48)
-  - name: SFP28 Port 1
+  - name: Port 1
+    label: SFP28 Port 1
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 2
+  - name: Port 2
+    label: SFP28 Port 2
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 3
+  - name: Port 3
+    label: SFP28 Port 3
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 4
+  - name: Port 4
+    label: SFP28 Port 4
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 5
+  - name: Port 5
+    label: SFP28 Port 5
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 6
+  - name: Port 6
+    label: SFP28 Port 6
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 7
+  - name: Port 7
+    label: SFP28 Port 7
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 8
+  - name: Port 8
+    label: SFP28 Port 8
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 9
+  - name: Port 9
+    label: SFP28 Port 9
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 10
+  - name: Port 10
+    label: SFP28 Port 10
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 11
+  - name: Port 11
+    label: SFP28 Port 11
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 12
+  - name: Port 12
+    label: SFP28 Port 12
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 13
+  - name: Port 13
+    label: SFP28 Port 13
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 14
+  - name: Port 14
+    label: SFP28 Port 14
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 15
+  - name: Port 15
+    label: SFP28 Port 15
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 16
+  - name: Port 16
+    label: SFP28 Port 16
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 17
+  - name: Port 17
+    label: SFP28 Port 17
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 18
+  - name: Port 18
+    label: SFP28 Port 18
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 19
+  - name: Port 19
+    label: SFP28 Port 19
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 20
+  - name: Port 20
+    label: SFP28 Port 20
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 21
+  - name: Port 21
+    label: SFP28 Port 21
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 22
+  - name: Port 22
+    label: SFP28 Port 22
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 23
+  - name: Port 23
+    label: SFP28 Port 23
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 24
+  - name: Port 24
+    label: SFP28 Port 24
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 25
+  - name: Port 25
+    label: SFP28 Port 25
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 26
+  - name: Port 26
+    label: SFP28 Port 26
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 27
+  - name: Port 27
+    label: SFP28 Port 27
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 28
+  - name: Port 28
+    label: SFP28 Port 28
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 29
+  - name: Port 29
+    label: SFP28 Port 29
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 30
+  - name: Port 30
+    label: SFP28 Port 30
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 31
+  - name: Port 31
+    label: SFP28 Port 31
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 32
+  - name: Port 32
+    label: SFP28 Port 32
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 33
+  - name: Port 33
+    label: SFP28 Port 33
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 34
+  - name: Port 34
+    label: SFP28 Port 34
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 35
+  - name: Port 35
+    label: SFP28 Port 35
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 36
+  - name: Port 36
+    label: SFP28 Port 36
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 37
+  - name: Port 37
+    label: SFP28 Port 37
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 38
+  - name: Port 38
+    label: SFP28 Port 38
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 39
+  - name: Port 39
+    label: SFP28 Port 39
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 40
+  - name: Port 40
+    label: SFP28 Port 40
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 41
+  - name: Port 41
+    label: SFP28 Port 41
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 42
+  - name: Port 42
+    label: SFP28 Port 42
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 43
+  - name: Port 43
+    label: SFP28 Port 43
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 44
+  - name: Port 44
+    label: SFP28 Port 44
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 45
+  - name: Port 45
+    label: SFP28 Port 45
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 46
+  - name: Port 46
+    label: SFP28 Port 46
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 47
+  - name: Port 47
+    label: SFP28 Port 47
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 48
+  - name: Port 48
+    label: SFP28 Port 48
     type: 25gbase-x-sfp28
   # QSFP28 ports (100/40G, 49-54)
-  - name: QSFP28 Port 49
+  - name: Port 49
+    label: QSFP28 Port 49
     type: 100gbase-x-qsfp28
-  - name: QSFP28 Port 50
+  - name: Port 50
+    label: QSFP28 Port 50
     type: 100gbase-x-qsfp28
-  - name: QSFP28 Port 51
+  - name: Port 51
+    label: QSFP28 Port 51
     type: 100gbase-x-qsfp28
-  - name: QSFP28 Port 52
+  - name: Port 52
+    label: QSFP28 Port 52
     type: 100gbase-x-qsfp28
-  - name: QSFP28 Port 53
+  - name: Port 53
+    label: QSFP28 Port 53
     type: 100gbase-x-qsfp28
-  - name: QSFP28 Port 54
+  - name: Port 54
+    label: QSFP28 Port 54
     type: 100gbase-x-qsfp28
 module-bays:
   - name: PSU 1

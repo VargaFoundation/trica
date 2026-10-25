@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch 24 Pro
 slug: ubiquiti-unifi-switch-24-pro
 part_number: USW-Pro-24
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [US24PRO2]
 comments: |
   UniFi Switch 24 Pro (50W), (24) Gigabit, (1-16) Gigabit, (17-24) Gigabit, (2) SFP+
 
@@ -16,6 +18,7 @@ rear_image: true
 weight: 7.9
 weight_unit: lb
 airflow: front-to-rear
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
   - name: Port 1
     type: 1000base-t
@@ -65,9 +68,11 @@ interfaces:
     type: 1000base-t
   - name: Port 24
     type: 1000base-t
-  - name: Port 25 - SFP+
+  - name: Port 25
+    label: Port 25 - SFP+
     type: 10gbase-x-sfpp
-  - name: Port 26 - SFP+
+  - name: Port 26
+    label: Port 26 - SFP+
     type: 10gbase-x-sfpp
 power-ports:
   - name: Input

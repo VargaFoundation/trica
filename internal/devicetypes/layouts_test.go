@@ -38,8 +38,8 @@ func TestEmbeddedLayoutsFitTheirDrawings(t *testing.T) {
 			if math.Abs(l.WidthMM-w) > 0.01 || math.Abs(l.HeightMM-h) > 0.01 {
 				t.Errorf("%s: %gx%g, the drawing is %gx%g", l.Path, l.WidthMM, l.HeightMM, w, h)
 			}
-			if l.Origin != devicetypes.OriginLocal || m.Image(face).Origin != devicetypes.OriginLocal {
-				t.Errorf("%s: origin %s over an image of origin %s", l.Path, l.Origin, m.Image(face).Origin)
+			if l.Origin != devicetypes.OriginTrica || !m.Image(face).Drawn {
+				t.Errorf("%s: origin %s over an image that is not drawn (origin %s)", l.Path, l.Origin, m.Image(face).Origin)
 			}
 		}
 	}
@@ -118,7 +118,7 @@ func TestEmbeddedLayoutsFitTheirDrawings(t *testing.T) {
 	}
 	// A photograph has no layout: nobody measured it.
 	if l := ix.BySlug("hpe-proliant-dl360-gen9").Layout(devicetypes.Front); l != nil {
-		t.Errorf("an upstream photograph got a layout: %s", l.Path)
+		t.Errorf("a picture got a layout: %s", l.Path)
 	}
 }
 
@@ -228,7 +228,7 @@ func TestOperatorLayouts(t *testing.T) {
 		t.Errorf("rear layout %+v, want the operator's", got)
 	}
 	box2 := ix.BySlug("acme-box-2")
-	if box2.Origin != devicetypes.OriginOperator || box2.Layout(devicetypes.Front) == nil || box2.Layout(devicetypes.Front).Origin != devicetypes.OriginLocal {
+	if box2.Origin != devicetypes.OriginOperator || box2.Layout(devicetypes.Front) == nil || box2.Layout(devicetypes.Front).Origin != devicetypes.OriginTrica {
 		t.Errorf("the operator's model lost the embedded layout of its slug: %+v", box2.Layout(devicetypes.Front))
 	}
 	if got := ix.BySlug("acme-box-3").Layout(devicetypes.Front); got == nil || got.Origin != devicetypes.OriginOperator {

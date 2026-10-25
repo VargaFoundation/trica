@@ -1,11 +1,10 @@
 ---
-# Written by the trica project (Apache-2.0), not taken from the upstream
-# library, which has no DCS-7280SE-64 (it has the -68 and -72). Built from the
+# Written by the trica project (Apache-2.0). The library has no other
+# DCS-7280SE-64 (it has the -68 and -72). Built from the
 # Arista 7280E data sheet: 1U, 48 x 1/10GbE SFP+ and 4 x 40GbE QSFP+, two
 # hot-swap power supplies, front-to-rear (-F) or rear-to-front (-R) airflow.
 # The depth is taken from the DCS-7280SE-68 of the same family; the weight,
-# 10.0 kg, is the data sheet's model comparison. Same format as the upstream
-# files, so it can be contributed upstream as is. The face images are trica
+# 10.0 kg, is the data sheet's model comparison. The face images are trica
 # drawings (CC0-1.0, sources in drawings/): 48 SFP+ in three groups of 16,
 # QSFP+ 49-52, management, console and USB on the port side; PS1, four fans
 # and PS2 on the other.

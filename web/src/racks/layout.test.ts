@@ -35,7 +35,7 @@ describe("layoutRack", () => {
     ]);
   });
 
-  it("draws a device's front on the face it is mounted from and its rear on the other (NetBox's convention)", () => {
+  it("draws a device's front on the face it is mounted from and its rear on the other", () => {
     const img = { frontImage: "F", rearImage: "R" };
     const rear = layoutRack(42, [dev("sw", 3, 1, { face: "rear", fullDepth: true, ...img })]);
     expect(slotImage(rear.rear[0] as Slot)).toBe("F");

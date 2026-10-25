@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch Pro XG Aggregation
 slug: ubiquiti-unifi-switch-pro-xg-aggregation
 part_number: USW-Pro-XG-Aggregation
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USWPXGAGG]
 comments: |
   UniFi Switch Pro XG Aggregation, 25G 32-Port Managed Aggregation Switch, 200W, (32) SFP28.
 
@@ -15,70 +17,103 @@ rear_image: false
 weight: 15.7
 weight_unit: lb
 airflow: front-to-rear
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
-  - name: SFP28 1
+  - name: Port 1
+    label: SFP28 1
     type: 25gbase-x-sfp28
-  - name: SFP28 2
+  - name: Port 2
+    label: SFP28 2
     type: 25gbase-x-sfp28
-  - name: SFP28 3
+  - name: Port 3
+    label: SFP28 3
     type: 25gbase-x-sfp28
-  - name: SFP28 4
+  - name: Port 4
+    label: SFP28 4
     type: 25gbase-x-sfp28
-  - name: SFP28 5
+  - name: Port 5
+    label: SFP28 5
     type: 25gbase-x-sfp28
-  - name: SFP28 6
+  - name: Port 6
+    label: SFP28 6
     type: 25gbase-x-sfp28
-  - name: SFP28 7
+  - name: Port 7
+    label: SFP28 7
     type: 25gbase-x-sfp28
-  - name: SFP28 8
+  - name: Port 8
+    label: SFP28 8
     type: 25gbase-x-sfp28
-  - name: SFP28 9
+  - name: Port 9
+    label: SFP28 9
     type: 25gbase-x-sfp28
-  - name: SFP28 10
+  - name: Port 10
+    label: SFP28 10
     type: 25gbase-x-sfp28
-  - name: SFP28 11
+  - name: Port 11
+    label: SFP28 11
     type: 25gbase-x-sfp28
-  - name: SFP28 12
+  - name: Port 12
+    label: SFP28 12
     type: 25gbase-x-sfp28
-  - name: SFP28 13
+  - name: Port 13
+    label: SFP28 13
     type: 25gbase-x-sfp28
-  - name: SFP28 14
+  - name: Port 14
+    label: SFP28 14
     type: 25gbase-x-sfp28
-  - name: SFP28 15
+  - name: Port 15
+    label: SFP28 15
     type: 25gbase-x-sfp28
-  - name: SFP28 16
+  - name: Port 16
+    label: SFP28 16
     type: 25gbase-x-sfp28
-  - name: SFP28 17
+  - name: Port 17
+    label: SFP28 17
     type: 25gbase-x-sfp28
-  - name: SFP28 18
+  - name: Port 18
+    label: SFP28 18
     type: 25gbase-x-sfp28
-  - name: SFP28 19
+  - name: Port 19
+    label: SFP28 19
     type: 25gbase-x-sfp28
-  - name: SFP28 20
+  - name: Port 20
+    label: SFP28 20
     type: 25gbase-x-sfp28
-  - name: SFP28 21
+  - name: Port 21
+    label: SFP28 21
     type: 25gbase-x-sfp28
-  - name: SFP28 22
+  - name: Port 22
+    label: SFP28 22
     type: 25gbase-x-sfp28
-  - name: SFP28 23
+  - name: Port 23
+    label: SFP28 23
     type: 25gbase-x-sfp28
-  - name: SFP28 24
+  - name: Port 24
+    label: SFP28 24
     type: 25gbase-x-sfp28
-  - name: SFP28 25
+  - name: Port 25
+    label: SFP28 25
     type: 25gbase-x-sfp28
-  - name: SFP28 26
+  - name: Port 26
+    label: SFP28 26
     type: 25gbase-x-sfp28
-  - name: SFP28 27
+  - name: Port 27
+    label: SFP28 27
     type: 25gbase-x-sfp28
-  - name: SFP28 28
+  - name: Port 28
+    label: SFP28 28
     type: 25gbase-x-sfp28
-  - name: SFP28 29
+  - name: Port 29
+    label: SFP28 29
     type: 25gbase-x-sfp28
-  - name: SFP28 30
+  - name: Port 30
+    label: SFP28 30
     type: 25gbase-x-sfp28
-  - name: SFP28 31
+  - name: Port 31
+    label: SFP28 31
     type: 25gbase-x-sfp28
-  - name: SFP28 32
+  - name: Port 32
+    label: SFP28 32
     type: 25gbase-x-sfp28
 power-ports:
   - name: Universal AC input

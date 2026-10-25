@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch Pro Aggregation
 slug: ubiquiti-unifi-switch-pro-aggregation
 part_number: USW-Pro-Aggregation
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USAGGPRO]
 comments: |
   UniFi Switch Pro Aggregation, 10G 28-Port and 25G 4-Port Managed Aggregation Switch, 100W, (28) SFP+ (4) SFP28.
 
@@ -15,70 +17,103 @@ rear_image: true
 weight: 10.4
 weight_unit: lb
 airflow: front-to-rear
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
-  - name: SFP+ 1
+  - name: Port 1
+    label: SFP+ 1
     type: 10gbase-x-sfpp
-  - name: SFP+ 2
+  - name: Port 2
+    label: SFP+ 2
     type: 10gbase-x-sfpp
-  - name: SFP+ 3
+  - name: Port 3
+    label: SFP+ 3
     type: 10gbase-x-sfpp
-  - name: SFP+ 4
+  - name: Port 4
+    label: SFP+ 4
     type: 10gbase-x-sfpp
-  - name: SFP+ 5
+  - name: Port 5
+    label: SFP+ 5
     type: 10gbase-x-sfpp
-  - name: SFP+ 6
+  - name: Port 6
+    label: SFP+ 6
     type: 10gbase-x-sfpp
-  - name: SFP+ 7
+  - name: Port 7
+    label: SFP+ 7
     type: 10gbase-x-sfpp
-  - name: SFP+ 8
+  - name: Port 8
+    label: SFP+ 8
     type: 10gbase-x-sfpp
-  - name: SFP+ 9
+  - name: Port 9
+    label: SFP+ 9
     type: 10gbase-x-sfpp
-  - name: SFP+ 10
+  - name: Port 10
+    label: SFP+ 10
     type: 10gbase-x-sfpp
-  - name: SFP+ 11
+  - name: Port 11
+    label: SFP+ 11
     type: 10gbase-x-sfpp
-  - name: SFP+ 12
+  - name: Port 12
+    label: SFP+ 12
     type: 10gbase-x-sfpp
-  - name: SFP+ 13
+  - name: Port 13
+    label: SFP+ 13
     type: 10gbase-x-sfpp
-  - name: SFP+ 14
+  - name: Port 14
+    label: SFP+ 14
     type: 10gbase-x-sfpp
-  - name: SFP+ 15
+  - name: Port 15
+    label: SFP+ 15
     type: 10gbase-x-sfpp
-  - name: SFP+ 16
+  - name: Port 16
+    label: SFP+ 16
     type: 10gbase-x-sfpp
-  - name: SFP+ 17
+  - name: Port 17
+    label: SFP+ 17
     type: 10gbase-x-sfpp
-  - name: SFP+ 18
+  - name: Port 18
+    label: SFP+ 18
     type: 10gbase-x-sfpp
-  - name: SFP+ 19
+  - name: Port 19
+    label: SFP+ 19
     type: 10gbase-x-sfpp
-  - name: SFP+ 20
+  - name: Port 20
+    label: SFP+ 20
     type: 10gbase-x-sfpp
-  - name: SFP+ 21
+  - name: Port 21
+    label: SFP+ 21
     type: 10gbase-x-sfpp
-  - name: SFP+ 22
+  - name: Port 22
+    label: SFP+ 22
     type: 10gbase-x-sfpp
-  - name: SFP+ 23
+  - name: Port 23
+    label: SFP+ 23
     type: 10gbase-x-sfpp
-  - name: SFP+ 24
+  - name: Port 24
+    label: SFP+ 24
     type: 10gbase-x-sfpp
-  - name: SFP+ 25
+  - name: Port 25
+    label: SFP+ 25
     type: 10gbase-x-sfpp
-  - name: SFP+ 26
+  - name: Port 26
+    label: SFP+ 26
     type: 10gbase-x-sfpp
-  - name: SFP+ 27
+  - name: Port 27
+    label: SFP+ 27
     type: 10gbase-x-sfpp
-  - name: SFP+ 28
+  - name: Port 28
+    label: SFP+ 28
     type: 10gbase-x-sfpp
-  - name: SFP28 29
+  - name: Port 29
+    label: SFP28 29
     type: 25gbase-x-sfp28
-  - name: SFP28 30
+  - name: Port 30
+    label: SFP28 30
     type: 25gbase-x-sfp28
-  - name: SFP28 31
+  - name: Port 31
+    label: SFP28 31
     type: 25gbase-x-sfp28
-  - name: SFP28 32
+  - name: Port 32
+    label: SFP28 32
     type: 25gbase-x-sfp28
 power-ports:
   - name: Universal AC input

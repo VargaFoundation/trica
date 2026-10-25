@@ -401,9 +401,9 @@ func TestOfficePortsAreTemplatesOfTheirModel(t *testing.T) {
 }
 
 // The edge set reaches the models the office does not: a USW-Ultra reporting
-// ports 1 and 8 (8 is the PoE-in port upstream names "Port 8 (PoE IN)"), a
+// ports 1 and 8 (8 is the PoE-in port the model file names "Port 8 (PoE IN)"), a
 // device the library does not have, and the UXG Pro, which is still named by
-// role upstream and listed as blocked (#177): its ports are asserted NOT to be
+// role in its model file and listed as blocked (#177): its ports are asserted NOT to be
 // templates, so that renaming it fails here until this line moves. The U6 LR of
 // the set produces no port (a 404 detail, an id that is not a UUID, no MAC), so
 // it cannot be checked on this set.

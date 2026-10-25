@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch 16 PoE Gen2
 slug: ubiquiti-unifi-switch-16-poe-gen2
 part_number: USW-16-POE
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USL16P, USL16PB]
 comments: |
   UniFi Switch 16 PoE (18W + max. 42W PoE), Gen2, (16) Gigabit, (1-8) Gigabit PoE+ IEEE 802.3af/at, (2) SFP
 

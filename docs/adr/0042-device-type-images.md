@@ -1,6 +1,6 @@
 # ADR-0042: Device-type face images, the operator's directory, and how the page shows them
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10); amended by [ADR 0063](0063-the-device-type-library-is-tricas-data.md) (image origin: `drawn`)
 - **Concerns**: `internal/devicetypes` (images, `Open`, `devicetypes.extra_dir`), `internal/api`
   (`GET /device-types/{slug}/{face}`, `GET /racks/{id}/contents`), `internal/store`
   (`DescendantValues`), `internal/wiring`, `web/src/racks`, `web/src/export/rackCanvas.ts`,

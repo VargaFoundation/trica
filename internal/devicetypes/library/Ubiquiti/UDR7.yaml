@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Dream Router 7
 slug: ubiquiti-unifi-dream-router-7
 part_number: UDR7
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [UDR7]
 u_height: 0
 is_full_depth: false
 airflow: passive
@@ -14,21 +16,22 @@ power-ports:
     type: iec-60320-c6
     maximum_draw: 26
     description: 100-240VAC/50-60 Hz
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
-  - name: port.1
+  - name: Port 1
     type: 2.5gbase-t
     label: Port 1 - LAN (PoE)
     poe_mode: pse
     poe_type: type1-ieee802.3af
-  - name: port.2
+  - name: Port 2
     type: 2.5gbase-t
     label: Port 2 - LAN
-  - name: port.3
+  - name: Port 3
     type: 2.5gbase-t
     label: Port 3 - LAN
-  - name: port.4
+  - name: Port 4
     type: 2.5gbase-t
     label: Port 4 - LAN
-  - name: port.5
+  - name: Port 5
     type: 10gbase-x-sfpp
     label: Port 5 - WAN

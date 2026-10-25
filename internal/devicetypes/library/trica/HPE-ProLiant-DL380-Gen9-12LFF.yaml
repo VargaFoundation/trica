@@ -5,7 +5,7 @@
 # The 12LFF chassis of the HPE ProLiant DL380 Gen9, from its QuickSpecs (c04346247): drive
 # cage and configure-to-order SKUs from the CTO table (Network Choice and BC models included);
 # front and rear legends for the faces. Rack height, depth, airflow and port templates are
-# those of the upstream model HPE/ProLiant-DL380-Gen9.yaml (netbox-community/devicetype-library, CC0-1.0).
+# those of the model HPE/ProLiant-DL380-Gen9.yaml of this library.
 manufacturer: HPE
 model: ProLiant DL380 Gen9 12LFF
 slug: hpe-proliant-dl380-gen9-12lff

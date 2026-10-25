@@ -152,12 +152,12 @@ func TestChoicesOfAVagueName(t *testing.T) {
 
 func TestParseVariantOf(t *testing.T) {
 	const head = "manufacturer: Dell\nmodel: X\nslug: x\nu_height: 1\n"
-	m, err := devicetypes.Parse([]byte(head+"variant_of: dell-x-base\n"), devicetypes.OriginLocal, "x.yaml")
+	m, err := devicetypes.Parse([]byte(head+"variant_of: dell-x-base\n"), devicetypes.OriginTrica, "x.yaml")
 	if err != nil || m.VariantOf != "dell-x-base" {
 		t.Fatalf("%+v %v", m, err)
 	}
 	for _, bad := range []string{"variant_of: Not A Slug\n", "variant_of: x\n"} {
-		if _, err := devicetypes.Parse([]byte(head+bad), devicetypes.OriginLocal, "x.yaml"); err == nil {
+		if _, err := devicetypes.Parse([]byte(head+bad), devicetypes.OriginTrica, "x.yaml"); err == nil {
 			t.Errorf("%q accepted", bad)
 		}
 	}

@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch Pro Max 24
 slug: ubiquiti-unifi-switch-pro-max-24
 part_number: USW-Pro-Max-24
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USPM24]
 comments: |
   UniFi Switch 24 Pro Max (non-PoE) with total non-blocking throughput of 56 Gbps. Features (16) Gigabit Ethernet ports, (8) 1/2.5GbE ports, and (2) 10G SFP+ uplink ports.
 
@@ -15,6 +17,7 @@ airflow: front-to-rear
 is_full_depth: false
 front_image: true
 rear_image: true
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
   # Gigabit Ethernet ports (1-16)
   - name: Port 1
@@ -67,9 +70,11 @@ interfaces:
   - name: Port 24
     type: 2.5gbase-t
   # SFP+ uplink ports (25-26)
-  - name: SFP+ 25
+  - name: Port 25
+    label: SFP+ 25
     type: 10gbase-x-sfpp
-  - name: SFP+ 26
+  - name: Port 26
+    label: SFP+ 26
     type: 10gbase-x-sfpp
 power-ports:
   - name: AC Input

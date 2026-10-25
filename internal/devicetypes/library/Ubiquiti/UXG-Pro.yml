@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Gateway Pro
 slug: ubiquiti-unifi-gateway-pro
 part_number: UXG-Pro
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [UXGPRO]
 comments: '[UniFi Gateway Pro](https://dl.ui.com/ds/uxg-pro_ds.pdf)'
 u_height: 1
 is_full_depth: false

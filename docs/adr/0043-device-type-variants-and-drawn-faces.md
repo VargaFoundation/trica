@@ -1,6 +1,6 @@
 # ADR-0043: Chassis variants by part number, and device faces drawn by the project
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10); superseded in part by [ADR 0063](0063-the-device-type-library-is-tricas-data.md) (§4, the image origin: a drawn image is `drawn`, every embedded image has the origin `trica`)
 - **Concerns**: `internal/devicetypes` (`part_numbers`, `Find`, image origin, `drawings/`),
   `scripts/devicetype-faces`, `cmd/trica-e2e-server` (rack r21). Builds on ADR 0020 (library,
   matching) and ADR 0042 (images).

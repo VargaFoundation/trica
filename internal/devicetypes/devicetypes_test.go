@@ -26,7 +26,7 @@ u_height: 1
 
 func mustParse(t *testing.T, y string) *devicetypes.Model {
 	t.Helper()
-	m, err := devicetypes.Parse([]byte(y), devicetypes.OriginLocal, "x.yaml")
+	m, err := devicetypes.Parse([]byte(y), devicetypes.OriginTrica, "x.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,8 +55,8 @@ func TestEmbeddedLibraryLoadsAndIsValid(t *testing.T) {
 			t.Errorf("%s: no port template", m.Path)
 		}
 	}
-	if origins[devicetypes.OriginUpstream] == 0 || origins[devicetypes.OriginLocal] == 0 {
-		t.Errorf("origins %v: want upstream and local models", origins)
+	if len(origins) != 1 || origins[devicetypes.OriginTrica] != len(models) {
+		t.Errorf("origins %v: want every model to be %q", origins, devicetypes.OriginTrica)
 	}
 	for _, v := range []string{"Arista", "MikroTik", "HPE", "Dell", "Netgate", "Generic", "Ubiquiti", "Synology"} {
 		if !vendors[v] {
@@ -84,7 +84,7 @@ func TestParseRejectsInvalidFiles(t *testing.T) {
 		"u_height not text": "manufacturer: V\nmodel: A\nslug: a\nu_height: tall\n",
 	}
 	for name, y := range cases {
-		if _, err := devicetypes.Parse([]byte(y), devicetypes.OriginLocal, "x.yaml"); err == nil {
+		if _, err := devicetypes.Parse([]byte(y), devicetypes.OriginTrica, "x.yaml"); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
 	}
@@ -94,7 +94,7 @@ func TestParseRejectsInvalidFiles(t *testing.T) {
 	}
 }
 
-// u_height 0 is what upstream writes for a desktop, wall or ceiling model: the
+// u_height 0 is what a model file writes for a desktop, wall or ceiling model: the
 // model occupies no rack unit (ADR 0056). It is a value, not a missing one.
 func TestParseAcceptsZeroU(t *testing.T) {
 	m := mustParse(t, "manufacturer: V\nmodel: A\nslug: a\nu_height: 0\n")
@@ -106,7 +106,7 @@ func TestParseAcceptsZeroU(t *testing.T) {
 	}
 }
 
-func TestParseConvertsUpstreamValues(t *testing.T) {
+func TestParseConvertsUnits(t *testing.T) {
 	m := mustParse(t, `
 manufacturer: Acme
 model: Box 1
@@ -186,7 +186,7 @@ func TestLoadRefusesDuplicateSlugAndBadFile(t *testing.T) {
 	if err != nil || len(ms) != 2 {
 		t.Fatalf("%v %d", err, len(ms))
 	}
-	if ms[0].Origin != devicetypes.OriginUpstream || ms[1].Origin != devicetypes.OriginLocal {
+	if ms[0].Origin != devicetypes.OriginTrica || ms[1].Origin != devicetypes.OriginTrica {
 		t.Fatalf("origins %s %s", ms[0].Origin, ms[1].Origin)
 	}
 }
@@ -217,8 +217,8 @@ func TestMatching(t *testing.T) {
 		{"vendor repeated, punctuation differs from slug", "MikroTik", "MikroTik CRS326-24G-2S+RM", "", "mikrotik-crs326-24g-2s-plus-rm", devicetypes.ByModel},
 		{"long vendor name repeated", "Hewlett Packard Enterprise", "Hewlett Packard Enterprise ProLiant DL380 Gen9", "", "hpe-proliant-dl380-gen9", devicetypes.ByModel},
 		{"part number only", "HPE", "unknown chassis", "673648-B21", "hpe-proliant-dl360p-gen8", devicetypes.ByPartNumber},
-		// The upstream part number of the DL360 Gen10 is the 8SFF NC CTO SKU: the chassis variant that lists it wins.
-		{"variant sku over upstream part number", "HPE", "ProLiant DL360 Gen10", "P19766-B21", "hpe-proliant-dl360-gen10-8sff", devicetypes.BySKU},
+		// The part number of the DL360 Gen10 is the 8SFF NC CTO SKU: the chassis variant that lists it wins.
+		{"variant sku over part number", "HPE", "ProLiant DL360 Gen10", "P19766-B21", "hpe-proliant-dl360-gen10-8sff", devicetypes.BySKU},
 		{"slug as model", "MikroTik", "mikrotik-crs326-24g-2s-plus-rm", "", "mikrotik-crs326-24g-2s-plus-rm", devicetypes.ByModel},
 		{"airflow variant", "Arista Networks", "DCS-7050SX3-48YC8", "", "arista-dcs-7050sx3-48yc8", devicetypes.ByVariant},
 		{"own model", "Generic", "Generic 1U pfSense appliance", "", "generic-1u-pfsense-appliance", devicetypes.ByModel},

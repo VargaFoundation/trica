@@ -4,6 +4,8 @@ model: UniFi Dream Machine Pro Max
 slug: ubiquiti-unifi-dream-machine-pro-max
 airflow: front-to-rear
 part_number: UDM-PRO-MAX
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [UDMPROMAX]
 comments: |
   UniFi Dream Machine Pro Max
 
@@ -17,38 +19,40 @@ front_image: true
 rear_image: true
 weight: 10.4
 weight_unit: lb
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
-  - name: port.1
+  - name: Port 1
     type: 1000base-t
     label: Port 1 - LAN
-  - name: port.2
+  - name: Port 2
     type: 1000base-t
     label: Port 2 - LAN
-  - name: port.3
+  - name: Port 3
     type: 1000base-t
     label: Port 3 - LAN
-  - name: port.4
+  - name: Port 4
     type: 1000base-t
     label: Port 4 - LAN
-  - name: port.5
+  - name: Port 5
     type: 1000base-t
     label: Port 5 - LAN
-  - name: port.6
+  - name: Port 6
     type: 1000base-t
     label: Port 6 - LAN
-  - name: port.7
+  - name: Port 7
     type: 1000base-t
     label: Port 7 - LAN
-  - name: port.8
+  - name: Port 8
     type: 1000base-t
     label: Port 8 - LAN
-  - name: port.9
+  - name: Port 9
     type: 2.5gbase-t
     label: Port 9 - WAN 1
-  - name: port.10
+  - name: Port 10
     type: 10gbase-x-sfpp
     label: Port 10 - SFP+ WAN 2
-  - name: port.11
+  - name: Port 11
+    label: port.11
     type: 10gbase-x-sfpp
 power-ports:
   - name: Input

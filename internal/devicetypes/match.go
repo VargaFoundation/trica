@@ -81,7 +81,7 @@ var variantSuffix = regexp.MustCompile(`(?i)-[FR]$`)
 type Index struct {
 	byKey map[string][]*Model // vendorKey + "|" + key
 	// bySKU indexes the part_numbers lists, apart from byKey: a variant
-	// SKU must not make a name or the upstream part_number ambiguous.
+	// SKU must not make a name or the model's part_number ambiguous.
 	bySKU map[string][]*Model
 	// variants are the airflow-less base models synthesised from -F / -R
 	// families whose members agree on everything but the airflow.
@@ -167,7 +167,7 @@ func agree(fam []*Model) bool {
 // or nil. A part number listed in one model's part_numbers wins: it names
 // the exact variant of the chassis, which the model name does not (HPE
 // reports "ProLiant DL380 Gen9" for the 8SFF and the 24SFF alike). Then the
-// name, then the upstream part_number, then the airflow family. A name or
+// name, then the model's part_number, then the airflow family. A name or
 // SKU that fits several different models is ambiguous and matches none: a
 // wrong U height or picture is worse than a missing one.
 func (ix *Index) Find(vendor, model, partNumber string) *Match {

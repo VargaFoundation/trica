@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Application Server
 slug: ubiquiti-unifi-application-server
 part_number: UAS-XG
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [UAS, UASXG]
 comments: |
   10G Rack-Mountable UniFi Application Server, (2) 1/10G LAN, (1) 1G IPMI LAN, (1) VGA rear, (2) USB 3.0 rear, (2) USB 2.0 front
 

@@ -73,9 +73,9 @@ func TestSKURules(t *testing.T) {
 	if m := ix.Find("HPE", "X Gen1", "111-B21"); m == nil || m.Model != small || m.How != devicetypes.BySKU {
 		t.Fatalf("SKU in part_numbers: %+v, want x-8 by sku", m)
 	}
-	// The upstream part_number keeps its place, after the name.
+	// The model's part_number keeps its place, after the name.
 	if m := ix.Find("HPE", "", "000-B21"); m == nil || m.Model != generic || m.How != devicetypes.ByPartNumber {
-		t.Fatalf("upstream part number: %+v, want x by part_number", m)
+		t.Fatalf("part number: %+v, want x by part_number", m)
 	}
 	if m := ix.Find("HPE", "unknown", "333-B21"); m != nil {
 		t.Fatalf("unknown SKU matched %s", m.Model.Slug)
@@ -105,7 +105,7 @@ func TestParseReadsPartNumbers(t *testing.T) {
 		minimal + "part_numbers:\n  - A\n  - A\n",
 		minimal + "part_numbers: A\n",
 	} {
-		if _, err := devicetypes.Parse([]byte(bad), devicetypes.OriginLocal, "x.yaml"); err == nil {
+		if _, err := devicetypes.Parse([]byte(bad), devicetypes.OriginTrica, "x.yaml"); err == nil {
 			t.Errorf("accepted %q", bad)
 		}
 	}
@@ -137,9 +137,10 @@ func TestEmbeddedSKUsAreUnique(t *testing.T) {
 	}
 }
 
-// An upstream model's image with an SVG source under drawings/ is the
-// project's; the operator's photograph still wins over it.
-func TestDrawingMarksTheImageAsTheProjects(t *testing.T) {
+// An embedded image with an SVG source under drawings/ is Drawn, whatever its
+// model; every embedded image has the origin trica, and the operator's
+// picture still wins over it, with the origin operator and not Drawn.
+func TestADrawingMarksTheImageDrawn(t *testing.T) {
 	lib := fstest.MapFS{
 		"lib/Acme/box.yaml": file([]byte(acme)),
 		"lib/Acme/two.yaml": file([]byte("manufacturer: Acme\nmodel: Box 2\nslug: acme-box-2\nu_height: 1\n")),
@@ -156,18 +157,25 @@ func TestDrawingMarksTheImageAsTheProjects(t *testing.T) {
 	}
 	ix := devicetypes.NewIndex(l.Models)
 	one := ix.BySlug("acme-box-1")
-	if one.FrontImage.Origin != devicetypes.OriginLocal || one.RearImage.Origin != devicetypes.OriginUpstream {
-		t.Fatalf("front %s rear %s, want trica (drawn) and upstream", one.FrontImage.Origin, one.RearImage.Origin)
+	if !one.FrontImage.Drawn || one.RearImage.Drawn {
+		t.Fatalf("front drawn %v rear drawn %v, want true and false", one.FrontImage.Drawn, one.RearImage.Drawn)
 	}
-	if two := ix.BySlug("acme-box-2"); two.FrontImage.Origin != devicetypes.OriginUpstream {
-		t.Fatalf("no drawing: origin %s", two.FrontImage.Origin)
+	if two := ix.BySlug("acme-box-2"); two.FrontImage.Drawn {
+		t.Fatal("no drawing, and the image is marked drawn")
+	}
+	for _, m := range l.Models {
+		for _, img := range []*devicetypes.Image{m.FrontImage, m.RearImage} {
+			if img != nil && img.Origin != devicetypes.OriginTrica {
+				t.Fatalf("%s: embedded image of origin %s, want %s", m.Slug, img.Origin, devicetypes.OriginTrica)
+			}
+		}
 	}
 	l, err = devicetypes.OpenFS(lib, "lib", fstest.MapFS{"elevation-images/Acme/acme-box-1.front.png": file(png)})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := devicetypes.NewIndex(l.Models).BySlug("acme-box-1").FrontImage.Origin; got != devicetypes.OriginOperator {
-		t.Fatalf("operator photograph: origin %s", got)
+	if got := devicetypes.NewIndex(l.Models).BySlug("acme-box-1").FrontImage; got.Origin != devicetypes.OriginOperator || got.Drawn {
+		t.Fatalf("operator picture: origin %s, drawn %v", got.Origin, got.Drawn)
 	}
 }
 
@@ -175,8 +183,7 @@ var viewBox = regexp.MustCompile(`viewBox="0 0 ([\d.]+) ([\d.]+)"`)
 
 // Every drawing has its PNG in the library, 1000 px wide, with the
 // proportions of a 19-inch panel of the model's height, and the model it
-// is named after; every image of a trica model is a drawing (or the
-// operator's). Regenerate with scripts/devicetype-faces/generate.mjs --png.
+// is named after; every image of a model under trica/ is a drawing. Regenerate with scripts/devicetype-faces/generate.mjs --png.
 func TestDrawingsMatchTheirImagesAndModels(t *testing.T) {
 	ix := defaultIndex(t)
 	lib := os.DirFS("library")
@@ -194,8 +201,8 @@ func TestDrawingsMatchTheirImagesAndModels(t *testing.T) {
 			return fmt.Errorf("%s: no model %s of %s", p, slug, vendor)
 		}
 		img := m.Image(face)
-		if img == nil || img.ContentType != "image/png" || img.Origin != devicetypes.OriginLocal {
-			return fmt.Errorf("%s: image %+v, want a PNG of origin trica", p, img)
+		if img == nil || img.ContentType != "image/png" || !img.Drawn || img.Origin != devicetypes.OriginTrica {
+			return fmt.Errorf("%s: image %+v, want a drawn PNG of origin trica", p, img)
 		}
 		svg, err := fs.ReadFile(lib, p)
 		if err != nil {
@@ -225,10 +232,10 @@ func TestDrawingsMatchTheirImagesAndModels(t *testing.T) {
 	for _, m := range ix.Models() {
 		for _, face := range []string{devicetypes.Front, devicetypes.Rear} {
 			img := m.Image(face)
-			if img == nil || m.Origin != devicetypes.OriginLocal || img.Origin == devicetypes.OriginLocal {
+			if img == nil || !strings.HasPrefix(m.Path, "trica/") || img.Drawn {
 				continue
 			}
-			t.Errorf("%s %s: a trica model's image of origin %s has no drawing", m.Slug, face, img.Origin)
+			t.Errorf("%s %s: the image of a model under trica/ has no drawing", m.Slug, face)
 		}
 	}
 }

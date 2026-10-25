@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: Enterprise Campus Switch 24-Port PoE
 slug: ubiquiti-enterprise-campus-switch-24-port-poe
 part_number: ECS-24-PoE
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [ECS24P, EAS24P]
 comments: |
   [Enterprise Campus Switch 24-Port PoE](https://store.ui.com/products/ecs-24-poe)
 
@@ -22,109 +24,136 @@ weight_unit: kg
 airflow: front-to-rear
 front_image: true
 rear_image: true
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
   # 2.5G PoE+++ RJ45 ports (1-8)
-  - name: 2.5G Port 1
+  - name: Port 1
+    label: 2.5G Port 1
     type: 2.5gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 2.5G Port 2
+  - name: Port 2
+    label: 2.5G Port 2
     type: 2.5gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 2.5G Port 3
+  - name: Port 3
+    label: 2.5G Port 3
     type: 2.5gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 2.5G Port 4
+  - name: Port 4
+    label: 2.5G Port 4
     type: 2.5gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 2.5G Port 5
+  - name: Port 5
+    label: 2.5G Port 5
     type: 2.5gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 2.5G Port 6
+  - name: Port 6
+    label: 2.5G Port 6
     type: 2.5gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 2.5G Port 7
+  - name: Port 7
+    label: 2.5G Port 7
     type: 2.5gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 2.5G Port 8
+  - name: Port 8
+    label: 2.5G Port 8
     type: 2.5gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
   # 10G PoE+++ RJ45 ports (9-24)
-  - name: 10G Port 9
+  - name: Port 9
+    label: 10G Port 9
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 10
+  - name: Port 10
+    label: 10G Port 10
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 11
+  - name: Port 11
+    label: 10G Port 11
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 12
+  - name: Port 12
+    label: 10G Port 12
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 13
+  - name: Port 13
+    label: 10G Port 13
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 14
+  - name: Port 14
+    label: 10G Port 14
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 15
+  - name: Port 15
+    label: 10G Port 15
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 16
+  - name: Port 16
+    label: 10G Port 16
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 17
+  - name: Port 17
+    label: 10G Port 17
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 18
+  - name: Port 18
+    label: 10G Port 18
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 19
+  - name: Port 19
+    label: 10G Port 19
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 20
+  - name: Port 20
+    label: 10G Port 20
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 21
+  - name: Port 21
+    label: 10G Port 21
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 22
+  - name: Port 22
+    label: 10G Port 22
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 23
+  - name: Port 23
+    label: 10G Port 23
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
-  - name: 10G Port 24
+  - name: Port 24
+    label: 10G Port 24
     type: 10gbase-t
     poe_mode: pse
     poe_type: type4-ieee802.3bt
   # 25G SFP28 ports (25-26)
-  - name: SFP28 Port 25
+  - name: Port 25
+    label: SFP28 Port 25
     type: 25gbase-x-sfp28
-  - name: SFP28 Port 26
+  - name: Port 26
+    label: SFP28 Port 26
     type: 25gbase-x-sfp28
 module-bays:
   - name: PSU 1

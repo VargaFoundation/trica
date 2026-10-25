@@ -1,7 +1,6 @@
 // Package devicetypes is the device-type library: models of equipment (rack
-// height, depth, airflow, weight, port templates) in the file format of the
-// netbox-community/devicetype-library, so that upstream files can be dropped in
-// unchanged.
+// height, depth, airflow, weight, port templates) in trica's model-file format
+// (docs/reference/devicetypes.md).
 //
 // The library only ever speaks through the reconciliation engine: Batch turns
 // the models that match known devices into a declared sdk.Batch (device_type
@@ -20,11 +19,9 @@ import (
 
 // Origin of a model.
 const (
-	// OriginUpstream: a file vendored from netbox-community/devicetype-library
-	// (CC0-1.0, see NOTICE).
-	OriginUpstream = "netbox-devicetype-library"
-	// OriginLocal: a model written by the trica project.
-	OriginLocal = "trica"
+	// OriginTrica: a model, image or layout of the library embedded in the
+	// binary.
+	OriginTrica = "trica"
 	// OriginOperator: a model or an image from the operator's directory
 	// (devicetypes.extra_dir), read at start, not embedded.
 	OriginOperator = "operator"
@@ -37,19 +34,19 @@ type Model struct {
 	Model      string `json:"model"`
 	PartNumber string `json:"part_number,omitempty"`
 	// PartNumbers are the vendor part numbers (SKUs) of this exact variant
-	// of a chassis, a trica extension of the upstream format: a device whose
+	// of a chassis, a key of the format: a device whose
 	// part number is one of them matches this model before any name does,
 	// so that "ProLiant DL360 Gen9" + 755258-B21 picks the 8SFF chassis.
 	PartNumbers []string `json:"part_numbers,omitempty"`
 	// VariantOf is the slug of the generic model this one is a chassis
-	// variant of, a trica extension (ADR 0048): the models that share it, and
+	// variant of (ADR 0048): the models that share it, and
 	// the generic model itself, are what a person chooses among when the
 	// device does not say which chassis it is. Without it the variants are
 	// found by name (see Index.Choices).
 	VariantOf string `json:"variant_of,omitempty"`
 	// UHeight is the rack height in U. 0 means the model occupies no rack
-	// unit (a desktop NAS, a wall access point, a vertical PDU), the upstream
-	// meaning (ADR 0056).
+	// unit (a desktop NAS, a wall access point, a vertical PDU), as in the
+	// rack-elevation convention (ADR 0056).
 	UHeight   float64 `json:"u_height"`
 	FullDepth bool    `json:"full_depth"`
 	// Airflow uses the trica schema spelling (front_to_rear).
@@ -127,7 +124,7 @@ type rawModel struct {
 	PowerOutlets       []rawPort `yaml:"power-outlets"`
 	FrontPorts         []rawPort `yaml:"front-ports"`
 	RearPorts          []rawPort `yaml:"rear-ports"`
-	// FrontImage and RearImage are booleans upstream: the image exists at
+	// FrontImage and RearImage are booleans in a model file: the image exists at
 	// elevation-images/<manufacturer>/<slug>.<face>.<ext>. They are decoded so
 	// that a malformed value fails, and otherwise not trusted: Open looks for
 	// the file whatever they say.
@@ -137,7 +134,7 @@ type rawModel struct {
 
 var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 
-// airflows maps the upstream spelling to the trica schema enum.
+// airflows maps the model-file spelling to the trica schema enum.
 var airflows = map[string]string{
 	"front-to-rear": "front_to_rear",
 	"rear-to-front": "rear_to_front",
@@ -148,7 +145,7 @@ var airflows = map[string]string{
 	"mixed":         "mixed",
 }
 
-// toKg converts a weight; the unit must be one the upstream format defines.
+// toKg converts a weight; the unit must be one the format defines.
 var toKg = map[string]float64{
 	"kg": 1,
 	"g":  0.001,
@@ -157,8 +154,7 @@ var toKg = map[string]float64{
 }
 
 // Parse decodes and validates one model file. Keys the library does not use
-// (comments, module bays...) are ignored, so upstream files parse
-// unchanged; the keys it does use are strictly checked.
+// (comments, module bays...) are ignored; the keys it does use are strictly checked.
 func Parse(data []byte, origin, path string) (*Model, error) {
 	var r rawModel
 	if err := yaml.Unmarshal(data, &r); err != nil {

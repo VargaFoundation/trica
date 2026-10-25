@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch 24 Pro PoE Gen2
 slug: ubiquiti-unifi-switch-24-pro-poe-gen2
 part_number: USW-Pro-24-POE
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [US24PRO, USLP24P]
 comments: |
   UniFi Switch 24 Pro PoE (50W + max. 400W PoE), Gen2, (24) Gigabit, (1-16) Gigabit PoE+ IEEE 802.3af/at, (17-24) Gigabit 60W PoE++ IEEE 802.3bt, (2) SFP+
 
@@ -15,6 +17,7 @@ rear_image: true
 weight: 9.7
 weight_unit: lb
 airflow: front-to-rear
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
   - name: Port 1
     type: 1000base-t
@@ -112,9 +115,11 @@ interfaces:
     type: 1000base-t
     poe_mode: pse
     poe_type: type3-ieee802.3bt
-  - name: SFP+ 25
+  - name: Port 25
+    label: SFP+ 25
     type: 10gbase-x-sfpp
-  - name: SFP+ 26
+  - name: Port 26
+    label: SFP+ 26
     type: 10gbase-x-sfpp
 power-ports:
   - name: Input

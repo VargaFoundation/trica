@@ -99,7 +99,7 @@ function flexLomBay(x, y, caption = { dx: 0, dy: 15.8 }) {
 // (slot 1 full height, 2 and 3 low profile), two Flexible Slot power
 // supplies, video connector, embedded 4x1GbE, dedicated iLO, optional
 // serial port, two USB 3.0, UID LED, optional FlexibleLOM bay. The left to
-// right order follows the CC0 picture of the netbox devicetype-library.
+// right order follows the CC0 picture in elevation-images/HPE/.
 export function dl360Gen9Rear() {
   const c = rearChassis(1, 434.7);
   let s = c.svg;
@@ -225,8 +225,8 @@ export function dl380Gen9Rear() {
 // riser (867807-B21) "can be connected to an 8SFF NVMe drive cage in box 3".
 // Controls: power button and system power LED, health LED, NIC status, UID
 // button, iLO front service port, USB 3.0, serial label pull tag. Box 1 is the
-// left one, Box 3 the one beside the controls: the order of the CC0 picture of
-// the netbox devicetype-library (UMB in Box 1, drives beside the controls).
+// left one, Box 3 the one beside the controls: the order of the CC0 picture in
+// elevation-images/HPE/ (UMB in Box 1, drives beside the controls).
 // iLO names a bay by box and bay: 1I:3:5, Box=3:Bay=5, or 3:5 for an NVMe
 // drive; the spots are named <box>:<bay>.
 
@@ -273,7 +273,7 @@ export const dl380Gen10Front24SFFNVMe = () => dl380Gen10Front("24SFF with 8 NVMe
 // Supply bay 1" and "bay 2", VGA, embedded 4 x 1GbE, dedicated iLO port, two
 // USB 3.0, unit ID LED, FlexibleLOM ports. The legend numbers them around the
 // panel: the risers along the top, then bay 1, bay 2, VGA, NIC, iLO, USB, UID,
-// FlexibleLOM from right to left; the CC0 picture of the netbox library has
+// FlexibleLOM from right to left; the CC0 picture in elevation-images/HPE/ has
 // the same order, power supply bay 1 on the far right. Six fans, hot-plug,
 // are inside the chassis: not on a face. Positions are schematic.
 export function dl380Gen10Rear() {
@@ -498,8 +498,8 @@ export function r330Rear() {
 // (RJ-45), one USB port; 7050SX data sheet: the same counts for the
 // 7050SX-64. Three groups of 16 SFP+ (two rows of eight, odd on top), QSFP+
 // 49-52 in two columns, management over console, USB and the status LEDs
-// on the right, as on the CC0 pictures of the 7050SX-64 and the 7280SE-68 in
-// the netbox devicetype-library.
+// on the right, as on the CC0 pictures of the 7050SX-64 (elevation-images/Arista/)
+// and of the 7280SE-68 (ADR 0063).
 export function aristaPortSide(model) {
   const c = chassis(1, 444.5);
   let s = c.svg;
@@ -549,7 +549,7 @@ export function aristaPortSide(model) {
 // hot-swap power supplies (1+1), four hot-swap fans (N+1), reversible
 // airflow, colour-coded modules (the 7050X data sheet: blue for
 // rear-to-front; red here for front-to-rear). PSU1, four fans, PSU2, as on
-// the CC0 rear picture of the 7280SE-68 in the netbox devicetype-library.
+// the CC0 rear picture of the 7280SE-68 (ADR 0063).
 export function aristaPowerSide(model, airflow) {
   const c = rearChassis(1, 444.5);
   let s = c.svg;

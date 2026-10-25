@@ -4,7 +4,7 @@
 #
 # NetApp DS2246 disk shelf, from the NetApp installation and service guide for DS4246,
 # DS2246, DS4486 and DS4243 shelves: 2U, 24 x 2.5in drives, 2 power supplies, two IOM6
-# modules (two SAS ports and two ACP ports each). Upstream has no DS2246.
+# modules (two SAS ports and two ACP ports each).
 manufacturer: NetApp
 model: DS2246
 slug: netapp-ds2246

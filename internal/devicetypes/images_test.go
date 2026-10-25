@@ -19,61 +19,64 @@ var (
 
 func file(b []byte) *fstest.MapFile { return &fstest.MapFile{Data: b} }
 
-// The embedded library: each image belongs to a model and is found by the
-// upstream naming convention; a model without a file has no image. An image
-// with an SVG source under drawings/ is the project's, even for an upstream
-// model; the others of an upstream model come from upstream.
+// The embedded library: each image belongs to a model and is found by its
+// manufacturer, slug and face; a model without a file has no image. Every
+// embedded image has the origin trica; one with an SVG source under
+// drawings/ is Drawn, the others are pictures of the unit.
 func TestEmbeddedImagesAreFoundByTheirName(t *testing.T) {
 	ix := defaultIndex(t)
 	const (
-		up    = devicetypes.OriginUpstream
-		local = devicetypes.OriginLocal
-		jpeg  = "image/jpeg"
-		pngT  = "image/png"
+		picture = false
+		drawn   = true
+		jpeg    = "image/jpeg"
+		pngT    = "image/png"
 	)
-	type img struct{ ct, origin string }
+	type img struct {
+		ct    string
+		drawn bool
+	}
 	none := img{}
 	cases := []struct {
 		slug        string
 		front, rear img
 	}{
-		{"hpe-proliant-dl360-gen9", img{jpeg, up}, img{jpeg, up}},
-		{"hpe-proliant-dl380-gen10", img{pngT, up}, img{pngT, up}},
-		// Upstream fronts, trica rears.
-		{"arista-dcs-7050sx-64-f", img{pngT, up}, img{pngT, local}},
-		{"arista-dcs-7050sx-64-r", img{pngT, up}, img{pngT, local}},
+		{"hpe-proliant-dl360-gen9", img{jpeg, picture}, img{jpeg, picture}},
+		{"hpe-proliant-dl380-gen10", img{pngT, picture}, img{pngT, picture}},
+		// Pictures at the front, drawn rears.
+		{"arista-dcs-7050sx-64-f", img{pngT, picture}, img{pngT, drawn}},
+		{"arista-dcs-7050sx-64-r", img{pngT, picture}, img{pngT, drawn}},
 		// The base model of an airflow family shows its first variant.
-		{"arista-dcs-7050sx-64", img{pngT, up}, img{pngT, local}},
-		{"arista-dcs-7280se-64", img{pngT, local}, img{pngT, local}},
-		// Upstream models trica drew.
-		{"mikrotik-crs354-48g-4s-plus-2q-plus-rm", img{pngT, local}, img{pngT, local}},
-		// trica models and their drawings.
-		{"hpe-proliant-dl360-gen9-8sff", img{pngT, local}, img{pngT, local}},
-		{"hpe-proliant-dl380-gen9-8sff", img{pngT, local}, img{pngT, local}},
-		{"hpe-proliant-dl380-gen9-24sff", img{pngT, local}, img{pngT, local}},
-		{"hpe-proliant-dl180-gen9-8sff", img{pngT, local}, img{pngT, local}},
-		{"hpe-proliant-dl180-gen9-8lff", img{pngT, local}, img{pngT, local}},
-		{"hpe-proliant-dl180-gen9-12lff", img{pngT, local}, img{pngT, local}},
-		{"dell-poweredge-r330-8sff", img{pngT, local}, img{pngT, local}},
-		{"dell-poweredge-r330-4lff-hot-plug", img{pngT, local}, img{pngT, local}},
-		{"dell-poweredge-r330-4lff-cabled", img{pngT, local}, img{pngT, local}},
-		{"arista-dcs-7280se-64-f", img{pngT, local}, img{pngT, local}},
-		{"arista-dcs-7280se-64-r", img{pngT, local}, img{pngT, local}},
-		{"hpe-proliant-dl360-gen10", img{pngT, up}, img{pngT, up}},
-		// Catalogue: upstream photographs, and faces drawn for upstream and trica models.
-		{"dell-poweredge-r730xd", img{pngT, up}, img{pngT, up}},
-		{"cisco-ws-c2960x-48ts-l", img{pngT, up}, img{pngT, local}},
-		{"dell-poweredge-r730xd-12lff", img{pngT, local}, img{pngT, local}},
-		{"hpe-proliant-dl380-gen10-24sff", img{pngT, local}, img{pngT, local}},
-		{"apc-smt1500rmi2u", img{pngT, local}, img{pngT, local}},
+		{"arista-dcs-7050sx-64", img{pngT, picture}, img{pngT, drawn}},
+		{"arista-dcs-7280se-64", img{pngT, drawn}, img{pngT, drawn}},
+		// Models whose faces the project drew.
+		{"mikrotik-crs354-48g-4s-plus-2q-plus-rm", img{pngT, drawn}, img{pngT, drawn}},
+		// Models written from vendor documents and their drawings.
+		{"hpe-proliant-dl360-gen9-8sff", img{pngT, drawn}, img{pngT, drawn}},
+		{"hpe-proliant-dl380-gen9-8sff", img{pngT, drawn}, img{pngT, drawn}},
+		{"hpe-proliant-dl380-gen9-24sff", img{pngT, drawn}, img{pngT, drawn}},
+		{"hpe-proliant-dl180-gen9-8sff", img{pngT, drawn}, img{pngT, drawn}},
+		{"hpe-proliant-dl180-gen9-8lff", img{pngT, drawn}, img{pngT, drawn}},
+		{"hpe-proliant-dl180-gen9-12lff", img{pngT, drawn}, img{pngT, drawn}},
+		{"dell-poweredge-r330-8sff", img{pngT, drawn}, img{pngT, drawn}},
+		{"dell-poweredge-r330-4lff-hot-plug", img{pngT, drawn}, img{pngT, drawn}},
+		{"dell-poweredge-r330-4lff-cabled", img{pngT, drawn}, img{pngT, drawn}},
+		{"arista-dcs-7280se-64-f", img{pngT, drawn}, img{pngT, drawn}},
+		{"arista-dcs-7280se-64-r", img{pngT, drawn}, img{pngT, drawn}},
+		{"hpe-proliant-dl360-gen10", img{pngT, picture}, img{pngT, picture}},
+		// Catalogue: pictures, and drawn faces.
+		{"dell-poweredge-r730xd", img{pngT, picture}, img{pngT, picture}},
+		{"cisco-ws-c2960x-48ts-l", img{pngT, picture}, img{pngT, drawn}},
+		{"dell-poweredge-r730xd-12lff", img{pngT, drawn}, img{pngT, drawn}},
+		{"hpe-proliant-dl380-gen10-24sff", img{pngT, drawn}, img{pngT, drawn}},
+		{"apc-smt1500rmi2u", img{pngT, drawn}, img{pngT, drawn}},
 		{"dell-poweredge-r730", none, none},
-		// ADR 0056: the upstream faces of the rack-mounted UniFi gateways and
+		// ADR 0056: the pictures of the rack-mounted UniFi gateways and
 		// of the USW Pro Max 24 PoE; the other UniFi models have none.
-		{"ubiquiti-unifi-dream-machine-pro-max", img{pngT, up}, img{pngT, up}},
-		{"ubiquiti-unifi-dream-machine-pro", img{pngT, up}, img{pngT, up}},
-		{"ubiquiti-unifi-dream-machine-pro-special-edition", img{pngT, up}, img{pngT, up}},
-		{"ubiquiti-enterprise-fortress-gateway", img{pngT, up}, img{pngT, up}},
-		{"ubiquiti-unifi-switch-pro-max-24-poe", img{pngT, up}, img{pngT, up}},
+		{"ubiquiti-unifi-dream-machine-pro-max", img{pngT, picture}, img{pngT, picture}},
+		{"ubiquiti-unifi-dream-machine-pro", img{pngT, picture}, img{pngT, picture}},
+		{"ubiquiti-unifi-dream-machine-pro-special-edition", img{pngT, picture}, img{pngT, picture}},
+		{"ubiquiti-enterprise-fortress-gateway", img{pngT, picture}, img{pngT, picture}},
+		{"ubiquiti-unifi-switch-pro-max-24-poe", img{pngT, picture}, img{pngT, picture}},
 		{"ubiquiti-u7-pro", none, none},
 		{"synology-ds1821-plus", none, none},
 		// No picture: the variant is not known from the name alone.
@@ -91,7 +94,10 @@ func TestEmbeddedImagesAreFoundByTheirName(t *testing.T) {
 			i := m.Image(face)
 			got := none
 			if i != nil {
-				got = img{i.ContentType, i.Origin}
+				got = img{i.ContentType, i.Drawn}
+				if i.Origin != devicetypes.OriginTrica {
+					t.Errorf("%s %s: origin %s, want %s", c.slug, face, i.Origin, devicetypes.OriginTrica)
+				}
 				if len(i.Data) == 0 || len(i.Data) > devicetypes.MaxImageBytes || !strings.HasPrefix(i.ETag, `"`) {
 					t.Errorf("%s %s: %d bytes, etag %s", c.slug, face, len(i.Data), i.ETag)
 				}
@@ -101,7 +107,7 @@ func TestEmbeddedImagesAreFoundByTheirName(t *testing.T) {
 			}
 		}
 	}
-	if m := ix.BySlug("arista-dcs-7280se-64-r"); m == nil || m.Origin != devicetypes.OriginLocal || m.UHeight != 1 || m.Airflow != "rear_to_front" {
+	if m := ix.BySlug("arista-dcs-7280se-64-r"); m == nil || m.Origin != devicetypes.OriginTrica || m.UHeight != 1 || m.Airflow != "rear_to_front" {
 		t.Fatalf("7280SE-64-R: %+v, want a 1U project model, rear to front", m)
 	}
 	if m := ix.Find("Arista Networks", "DCS-7280SE-64", ""); m == nil || m.How != devicetypes.ByVariant || m.Model.UHeight != 1 {
@@ -150,7 +156,7 @@ func TestOperatorDirectoryOverridesTheLibrary(t *testing.T) {
 	if box2.Origin != devicetypes.OriginOperator || box2.UHeight != 2 {
 		t.Fatalf("box 2 %+v, want the operator's model", box2)
 	}
-	if box2.RearImage == nil || box2.RearImage.Origin != devicetypes.OriginUpstream {
+	if box2.RearImage == nil || box2.RearImage.Origin != devicetypes.OriginTrica || box2.RearImage.Drawn {
 		t.Fatalf("the operator's model lost the embedded image of its slug: %+v", box2.RearImage)
 	}
 	if ix.BySlug("mine-shelf") == nil || len(l.Models) != 3 {
@@ -201,8 +207,8 @@ func TestParseChecksTheImageKeys(t *testing.T) {
 	for _, y := range []string{minimal + "front_image: true\nrear_image: false\n", minimal} {
 		mustParse(t, y)
 	}
-	if _, err := devicetypes.Parse([]byte(minimal+"front_image: acme.png\n"), devicetypes.OriginLocal, "x.yaml"); err == nil {
-		t.Fatal("front_image must be a boolean, as upstream")
+	if _, err := devicetypes.Parse([]byte(minimal+"front_image: acme.png\n"), devicetypes.OriginTrica, "x.yaml"); err == nil {
+		t.Fatal("front_image must be a boolean")
 	}
 }
 
