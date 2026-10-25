@@ -52,7 +52,7 @@ type Choice struct {
 	// Match is the library's match (Find), or nil.
 	Match *Match
 	// Certain: the match names the exact chassis. A part number listed by one
-	// model is certain; a name, a mounting suffix or an upstream part number
+	// model is certain; a name, a mounting suffix or a part number
 	// is certain unless another model's variant_of names it (ADR 0056).
 	Certain bool
 	// Reason is the match kind (sku, model, mounting, part_number) when

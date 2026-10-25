@@ -2,6 +2,8 @@
 manufacturer: Ubiquiti
 model: Switch Enterprise 8 PoE
 part_number: USW-Enterprise-8-PoE
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [US68P]
 slug: ubiquiti-usw-enterprise-8-poe
 comments: '[Switch Enterprise 8 PoE Datasheet](https://dl.ui.com/ds/usw-enterprise-8-poe_ds)'
 u_height: 0
@@ -12,6 +14,7 @@ power-ports:
   - name: PSU1
     type: iec-60320-c14
     maximum_draw: 200
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
   - name: Port 1
     type: 2.5gbase-t
@@ -45,7 +48,9 @@ interfaces:
     type: 2.5gbase-t
     poe_mode: pse
     poe_type: type2-ieee802.3at
-  - name: SFP+ 9
+  - name: Port 9
+    label: SFP+ 9
     type: 10gbase-x-sfpp
-  - name: SFP+ 10
+  - name: Port 10
+    label: SFP+ 10
     type: 10gbase-x-sfpp

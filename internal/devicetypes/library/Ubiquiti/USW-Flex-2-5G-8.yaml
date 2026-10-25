@@ -11,6 +11,7 @@ weight: 395
 weight_unit: g
 airflow: passive
 is_full_depth: false
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
   - name: Port 1
     type: 2.5gbase-t
@@ -28,7 +29,8 @@ interfaces:
     type: 2.5gbase-t
   - name: Port 8
     type: 2.5gbase-t
-  - name: Port 9 (PoE+)
+  - name: Port 9
+    label: Port 9 (PoE+)
     type: 10gbase-t
     poe_mode: pd
     poe_type: type3-ieee802.3bt

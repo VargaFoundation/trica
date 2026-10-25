@@ -2,6 +2,8 @@
 manufacturer: Ubiquiti
 model: AC Professional
 part_number: UAP-AC-PRO
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [U7PG2]
 slug: ubiquiti-uap-ac-pro
 u_height: 0
 is_full_depth: false

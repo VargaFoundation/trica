@@ -1,6 +1,6 @@
 # ADR-0056: Growing the device-type library: 0 U models, a certainty rule by `variant_of`, shortnames in an overlay
 
-- **Status**: accepted (2026-10)
+- **Status**: accepted (2026-10); superseded in part by [ADR 0063](0063-the-device-type-library-is-tricas-data.md) (§1 "the files stay unchanged", §3, §5, and the mechanism of the #173 and #177 amendments)
 - **Concerns**: `internal/devicetypes` (`Parse`, `Load`, `Index.Choices`, the new overlays),
   `internal/api` (rack contents), `scripts/devicetype-library/`, `docs/reference/devicetypes.md`
   and `devicetypes-catalogue.md`. Amends ADR 0020 (format, subset) and ADR 0048 (certainty). Builds

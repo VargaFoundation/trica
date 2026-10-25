@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Cloud Gateway Max
 slug: ubiquiti-unifi-cloud-gateway-max
 part_number: UCG-Max
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [UCGMAX]
 u_height: 0
 is_full_depth: false
 airflow: passive

@@ -1,8 +1,8 @@
 # Device-type library
 
-Models of equipment (rack height, depth, weight, airflow, port templates) in the file format
-of [netbox-community/devicetype-library](https://github.com/netbox-community/devicetype-library).
-Decision and licence evidence: [ADR 0020](../adr/0020-device-type-library.md).
+Models of equipment (rack height, depth, weight, airflow, port templates) in trica's model-file
+format (below), maintained in this repository ([ADR 0063](../adr/0063-the-device-type-library-is-tricas-data.md)).
+Format and matching: [ADR 0020](../adr/0020-device-type-library.md).
 
 ## What a device gets
 
@@ -31,37 +31,38 @@ is closed (history keeps it) and a new one opened.
 | Case and punctuation ignored | `dcs 7050tx 48` = `DCS-7050TX-48`; the slug is accepted as a name too |
 | A `+` is the word `plus` (#159) | `DS218+` = `DS218 Plus` = `ds218-plus`, which is not `DS218`; `CRS326-24G-2S+RM` and its slug are one key; `Aruba 2930M-24G-PoE Plus` finds the `PoE+` model |
 | Vendor spellings aliased | `Arista Networks`, `HP`, `Hewlett Packard Enterprise`, `Dell Inc.`, `Dell EMC`, `Routerboard`, `Ubiquiti Inc.`, `Ubiquiti Networks`, `UBNT`, `UniFi`, `Synology Inc.` |
-| A UniFi shortname the overlay lists (`library/overlays/Ubiquiti.yaml`, [ADR 0056](../adr/0056-growing-the-device-type-library.md)) | `USW Pro Max 24 PoE` + `USPM24P` = `ubiquiti-unifi-switch-pro-max-24-poe`, matched `by sku`; so are `Express 7` + `UX7` or `AC Pro` + `U7PG2`, whose names upstream does not say |
+| A UniFi shortname listed in the model's `part_numbers` ([ADR 0056](../adr/0056-growing-the-device-type-library.md)) | `USW Pro Max 24 PoE` + `USPM24P` = `ubiquiti-unifi-switch-pro-max-24-poe`, matched `by sku`; so are `Express 7` + `UX7` or `AC Pro` + `U7PG2`, whose names no model file says |
 | Vendor repeated in the model is dropped | `Dell PowerEdge R640` |
-| Then the part number | `673648-B21` (the upstream part number of the DL360p Gen8) |
+| Then the part number | `673648-B21` (the part number of the DL360p Gen8) |
 | Airflow variants | `DCS-7050SX3-48YC8` matches the `-F` model only if all variants agree on everything but airflow; airflow and part number are then left out |
 | Ambiguous name, or a SKU listed by two models | matches nothing (the SKU then leaves the decision to the name) |
 | No vendor | matches nothing |
 | Another source declared the device's model (a person who chose the chassis, a declaration file) | the library claims no `instance_of` for that device and withdraws its own; it still describes the declared model ([ADR 0048](../adr/0048-choosing-the-chassis-variant.md)) |
 
-A SKU wins over a name, so a shortname the overlay lists for one model is that model's even when
-another model's upstream part number looks alike (`U7LR` is the AC LR's code, upstream's U7
+A SKU wins over a name, so a shortname listed for one model is that model's even when
+another model's part number looks alike (`U7LR` is the AC LR's code, the U7
 Long-Range is `U7-LR`). **What a collector should report** for a UniFi device: vendor `Ubiquiti`,
 the display name as `model` (`UDM Pro Max`, `U7 Pro`) and the shortname the controller gives as
 `part_number` (`UDMPROMAX`, `U7PRO`). A device whose reported names match nothing is the case to
-add to the overlay, with its source. The overlay is part of the embedded library: an operator's
-`extra_dir` has none.
+add to the `part_numbers` of its model file, with its source. The shortnames are part of the
+embedded library: an operator's `extra_dir` model replaces the whole model, shortnames included.
 
-The overlay can also rename interface templates (`interface_names`, old name to new, [ADR 0056](../adr/0056-growing-the-device-type-library.md)
-amended by #173 and #177). The UniFi Network collector names every port `Port <idx>`
-([ADR 0060](../adr/0060-unifi-network-integration-api.md)). A model is renamed to match only when
-upstream's own names or labels number **every wired interface exactly once, from 1 to N** (`port.N`
+The interface templates of 40 UniFi models are named the way the console names its ports
+([ADR 0056](../adr/0056-growing-the-device-type-library.md) amended by #173 and #177, the files
+themselves since ADR 0063). The UniFi Network collector names every port `Port <idx>`
+([ADR 0060](../adr/0060-unifi-network-integration-api.md)). A model is named so only when
+its own names or labels number **every wired interface exactly once, from 1 to N** (`port.N`
 labelled `Port N - ...` on the UDM family and the UDR7, `SFP+ 25`, `SFP28 49`, `10G Port 9`,
 `Port 1 (PoE+)`): 40 models, the UDM family, the UDR7 and 35 switches and aggregation switches
 (the USW Pro, Pro Max, Pro XG, Pro HD, Enterprise, Lite, Flex, Flex 2.5G, Ultra, the aggregation
-switches, the Enterprise Campus switches and the US-16-XG). A renamed interface that upstream does
-not label keeps its upstream name as label (`Port 1 (PoE+)` becomes `Port 1`, label `Port 1 (PoE+)`),
-so the PoE hint is not lost. The upstream files stay unchanged. The rule rests on an assumption
+switches, the Enterprise Campus switches and the US-16-XG). A renamed interface keeps its former
+name as `label` (`Port 1 (PoE+)` becomes `Port 1`, label `Port 1 (PoE+)`), so the PoE hint is not
+lost and the label is the evidence of the rename. The rule rests on an assumption
 nothing proves yet: that `idx` is the number printed on the faceplate (the API documents it as an
 integer of at least 1 and says no more; the tech specs do not number ports; see point 9 of
-`internal/collect/unifi/testdata/README.md`). A model whose numbering repeats or skips stays as
-upstream names it, listed with its reason in `blockedPortNames` of the test (46 models, see
-Not covered). The report to upstream is drafted in issue #173 and was not filed.
+`internal/collect/unifi/testdata/README.md`). A model whose numbering repeats or skips keeps
+the names its file gives, listed with its reason in `blockedPortNames` of the test (46 models, see
+Not covered).
 
 ## How sure a match is, and the variants a person can choose
 
@@ -92,28 +93,22 @@ the generic one's; its value must be a slug other than the file's own.
 ## Adding a model to the embedded library
 
 To run with your own models without a rebuild, see "Your own models and images" below. To add
-one to trica itself, drop a file under `internal/devicetypes/library/<Vendor>/<model>.yaml` (upstream files as
-they are; models written here go in `library/trica/`). Required: `manufacturer`, `model`,
+one to trica itself, drop a file under `internal/devicetypes/library/<Vendor>/<model>.yaml` (a model written from
+vendor documents goes in `library/trica/`). Required: `manufacturer`, `model`,
 `slug` (lowercase, digits, `.`, `-`), `u_height` from 0 to 100: **0 means the model occupies no
-rack unit** (a DiskStation, an access point, a wall reader; upstream's meaning, [ADR 0056](../adr/0056-growing-the-device-type-library.md)),
+rack unit** (a DiskStation, an access point, a wall reader; the rack-elevation convention, [ADR 0056](../adr/0056-growing-the-device-type-library.md)),
 and a mounted device of such a model is drawn with the height of its own `u_height`, else as an
 assumed 1 U and flagged. `weight_unit` is one of `kg`, `g`,
 `lb`, `oz`. `airflow` is one of `front-to-rear`, `rear-to-front`, `left-to-right`,
 `right-to-left`, `side-to-rear`, `passive`, `mixed`. `go test ./internal/devicetypes/` loads
 and validates every file; an invalid one fails the load.
 
-**Copying an upstream file.** List it in `scripts/devicetype-library/selection.txt`
-(`<Vendor>/<file>`), then run `scripts/devicetype-library/fetch.sh add <commit>`: it downloads the
-file unchanged, checks its git blob against the one the upstream tree lists at that commit, and
-records the path, commit and blob in `library/upstream.tsv`. `fetch.sh verify [--upstream]`
-re-checks the copies; `TestUpstreamFilesAreUnchanged` fails when a file of a vendor directory
-differs from the manifest or is not in it (a model of your own goes in `library/trica/`). A file is
-selected when it is valid for the loader, has at least one port, is not a child device (a blade, a
-controller), has a slug no model uses, and is found by its own name
+A model is accepted when it is valid for the loader, has at least one port, is not a child device
+(a blade, a controller), has a slug no model uses, and is found by its own name
 (`TestEveryModelIsFoundByItsOwnName`). After adding models, `go test ./internal/devicetypes/ -run
 TestCatalogueListIsCurrent -update` regenerates [the catalogue list](devicetypes-catalogue.md).
 
-`part_numbers` (a trica extension, ignored by upstream tools) lists the vendor SKUs of one
+`part_numbers` (a key of the format) lists the vendor SKUs of one
 chassis variant, configure-to-order and pre-configured: a server reporting one of them gets
 that model whatever its model name says. Use it when a vendor reports one name for several
 chassis (HPE: `ProLiant DL180 Gen9` for the 8SFF, 8LFF and 12LFF cages), take the SKUs from the
@@ -130,20 +125,20 @@ vendor's tables only, and cite them in the file. A SKU must be listed by one mod
 | `hpe-proliant-dl360-gen10-4lff` / `-8sff` | 867958-B21, P19765-B21 / 867959-B21, P19766-B21, P56949-B21, P56950-B21 |
 | `hpe-proliant-dl380-gen10-8lff` / `-12lff` / `-8sff` / `-24sff` | 868706-B21, P19717-B21 / 868705-B21, P19718-B21 / 868703-B21, P19720-B21, P56969-B21, P56970-B21 / 868704-B21, P19719-B21 |
 | The Dell variants of the catalogue (below) | none, like the R330: the page offers the chassis to choose from |
-| `dell-poweredge-r330-8sff` / `-4lff-hot-plug` / `-4lff-cabled` | none: Dell reports no chassis part number (the Redfish `SKU` is the service tag); a device reporting `PowerEdge R330` gets the upstream model, without picture, and its page says the variant is not certain and offers the three chassis to choose from ([ADR 0048](../adr/0048-choosing-the-chassis-variant.md)). For a whole fleet of one chassis, copy the PNG of your variant to `elevation-images/Dell/dell-poweredge-r330.front.png` (and `.rear.png`) in your directory instead, see below |
+| `dell-poweredge-r330-8sff` / `-4lff-hot-plug` / `-4lff-cabled` | none: Dell reports no chassis part number (the Redfish `SKU` is the service tag); a device reporting `PowerEdge R330` gets the generic model, without picture, and its page says the variant is not certain and offers the three chassis to choose from ([ADR 0048](../adr/0048-choosing-the-chassis-variant.md)). For a whole fleet of one chassis, copy the PNG of your variant to `elevation-images/Dell/dell-poweredge-r330.front.png` (and `.rear.png`) in your directory instead, see below |
 
 ## Face images
 
 A model may have an image of each face. Decision: [ADR 0042](../adr/0042-device-type-images.md).
 
-- **Where.** `elevation-images/<manufacturer>/<slug>.<face>.<ext>`, the upstream convention:
+- **Where.** `elevation-images/<manufacturer>/<slug>.<face>.<ext>`:
   `<manufacturer>` and `<slug>` exactly as in the model file, `<face>` `front` or `rear`, `<ext>`
   `png`, `jpg`, `jpeg` or `webp` (in that order of preference when there are several). SVG is
   refused: served from the application's origin it could carry script. At most 2 MiB a file; the
   content must be what the extension says.
-- **The `front_image` / `rear_image` keys** of a model file are booleans upstream ("upstream has
-  an image"). They must be booleans; they are not trusted: the file is looked up whatever they
-  say, so an upstream file that says `true` for an image we do not vendor simply has none, and a
+- **The `front_image` / `rear_image` keys** of a model file are booleans ("the model has an
+  image"). They must be booleans; they are not trusted: the file is looked up whatever they
+  say, so a file that says `true` for an image the library does not hold simply has none, and a
   photograph added without editing the model file is used.
 - **Served by** `GET /api/v1/device-types/{slug}/{front|rear}` (read right, bearer token like
   every API call; `Cache-Control: private, max-age=3600` and a strong `ETag`, `304` on
@@ -155,11 +150,11 @@ A model may have an image of each face. Decision: [ADR 0042](../adr/0042-device-
   its first variant (`-F`).
 
 Embedded images and their licences are listed in `internal/devicetypes/library/README.md`.
-Faces upstream has no picture of are **drawn by the project** ([ADR 0043](../adr/0043-device-type-variants-and-drawn-faces.md)):
+Faces with no picture are **drawn by the project** ([ADR 0043](../adr/0043-device-type-variants-and-drawn-faces.md)):
 schematic, vendor-neutral, from the vendors' published counts and layouts, CC0-1.0. Their SVG
 sources are in `library/drawings/`, the generator in `scripts/devicetype-faces/`
 (`node scripts/devicetype-faces/generate.mjs --png`, in the Playwright image the e2e suite
-pins); such an image reports the origin `trica` even for an upstream model.
+pins); such an image is `drawn`; every embedded image has the origin `trica` and a picture of a unit is not `drawn`.
 
 ## Where the parts sit
 
@@ -183,8 +178,8 @@ device draws them with the parts the collectors report (`GET /objects/{id}/faces
   no other field, no two spots of one kind with the same name.
 - `kind` is `bay`, `psu`, `fan`, `port` or `slot`; `name` is how the device numbers that place,
   which is what the rules below read.
-- The project's layouts are generated with its drawings (`scripts/devicetype-faces`). Upstream
-  photographs have none; the object page shows them without spots.
+- The project's layouts are generated with its drawings (`scripts/devicetype-faces`). Pictures
+  have none; the object page shows them without spots.
 
 | Part | Goes in | From |
 |---|---|---|
@@ -255,11 +250,11 @@ The embedded library is a **catalogue of the models people actually rack**: the 
 switches, firewalls, storage and power that sell most on the refurbished and data-centre market,
 each with its front and rear face where one could be had, and each chassis variant of a server as
 its own model. 523 models (HPE 151, Dell 81, Ubiquiti 101, Synology 42, 14 other manufacturers);
-169 have faces (113 NetBox photographs, 220 faces drawn by the project); 66 are 0 U (desktop and wall
+169 have faces (113 pictures, 220 faces drawn by the project); 66 are 0 U (desktop and wall
 devices, see "Adding a model"). [ADR 0056](../adr/0056-growing-the-device-type-library.md) took the
-library from 199 to 519 models, copying 317 upstream files at master
-`4a87296236ab01f624b42de578a5f7720d0255fe` (licence checked 2026-10-23) and writing three models;
-#159 copied the four files that differ only by a `+` (Synology DS218, DS218+, RS815, RS815+) at the same commit.
+library from 199 to 519 models, adding 317 model files and writing three;
+#159 added the four files that differ only by a `+` (Synology DS218, DS218+, RS815, RS815+).
+Where the model files and pictures came from is recorded once, in ADR 0063.
 
 ### How the models were chosen
 
@@ -281,9 +276,9 @@ ADR 0056 added what the owner's own equipment is and what sits next to it: **HPE
 to Gen12 (DL, ML, DX, Microserver, SimpliVity, Apollo R4200, Synergy frame), MSA, StoreEasy,
 StoreOnce, StoreEver and Alletra storage, the Aruba CX 6000 to 8360 switches, ArubaOS-S 2540,
 2920 and 2930M, and four Aruba access points (HPE 20 to 128 files); **Synology** every
-RackStation and DiskStation upstream has (the four files that only differ by a `+` came with
+RackStation and DiskStation of the vendor's range (the four files that only differ by a `+` came with
 #159), and the DS1821+, plus the DS3617xs written here from its data sheet; **Ubiquiti** every UniFi cloud
-gateway, UniFi switch, U7 and U6 access point, NVR, NAS, controller, UPS and PDU upstream has,
+gateway, UniFi switch, U7 and U6 access point, NVR, NAS, controller, UPS and PDU of the range,
 plus the UniFi Access Door Hub and G2 Reader Pro written here from the tech specs; and the
 popular models of the other manufacturers already present (Dell PowerEdge R250 to R940,
 Cisco C9200L, C9300 and Nexus 9300, Juniper EX and SRX, Arista 7050 and 7280, MikroTik CCR and
@@ -291,12 +286,10 @@ CRS, FortiGate, APC, Eaton, Lenovo ThinkSystem, Supermicro, QNAP, Netgate, Fujit
 
 ### Where each face comes from
 
-1. **NetBox photograph** — the model file and its picture from
-   [netbox-community/devicetype-library](https://github.com/netbox-community/devicetype-library),
-   CC0-1.0 (licence checked through the GitHub API on 2026-10-19), master at
-   `9510b3cc3c9fca781ec09b61ef5ca2f3a00cdb39`, scaled to at most 1000 pixels wide and recompressed
-   (PNG to a 256-colour palette, JPEG at quality 85); the list is in `library/README.md`.
-2. **Drawn by the project** — where upstream has no picture of that exact model or chassis, a
+1. **Picture** — the model file and a picture of the unit, CC0-1.0, scaled to at most 1000 pixels
+   wide and recompressed (PNG to a 256-colour palette, JPEG at quality 85); the list is in
+   `library/README.md`.
+2. **Drawn by the project** — where there is no picture of that exact model or chassis, a
    schematic face generated by `scripts/devicetype-faces/catalogue.mjs` from **facts only**: drive
    bay counts per chassis (Dell Owner's Manuals, HPE QuickSpecs), port counts and groups (the model
    file and the vendor's data sheet), power supplies, fans and slots. Never traced from a vendor
@@ -323,17 +316,17 @@ variant's slug extends it, and that every variant has both faces.
   (Network Choice and BC models included), so a server reporting one is matched `by sku`.
 - **Dell**: no chassis part number exists (the Redfish `SKU` is the service tag): a device reporting
   `PowerEdge R730xd` gets the base model; the variant is picked by hand.
-- **Not split** (one model, upstream picture or none): Lenovo, Supermicro, Fujitsu, the HPE Gen10 Plus,
+- **Not split** (one model, a picture or none): Lenovo, Supermicro, Fujitsu, the HPE Gen10 Plus,
   DL20, DL60 and DL385 servers.
 
 ### Size
 
 Everything under `library/` is embedded in the binary. The catalogue brought it from 1.1 MB to
 10.6 MB; ADR 0056 to 11.7 MB: 8.2 MB of face images (333 files, at most 1000 pixels wide and 256 KiB
-each), 2.6 MB of SVG sources of the drawings (the loader reads them to tell a drawn face from an
-upstream one), 0.8 MB of model files, overlay and manifest. The 317 added models bring only ten
-faces (the rack-mounted UniFi gateways and the USW Pro Max 24 PoE, from upstream): every upstream
-picture of the added models would break the budget. `TestCatalogueImagesFitTheBudget` holds the
+each), 2.6 MB of SVG sources of the drawings (the loader reads them to tell a drawn face from a
+picture), 0.8 MB of model files. The 317 added models bring only ten
+faces (the rack-mounted UniFi gateways and the USW Pro Max 24 PoE): a picture of every
+added model would break the budget. `TestCatalogueImagesFitTheBudget` holds the
 whole library under **15 MiB**; past that, the plan is a catalogue pack outside the binary (the
 faces of the catalogue in a directory loaded as `devicetypes.extra_dir`, or an OCI artifact), with
 the models of the project's own racks kept embedded. Drawn PNG are reduced to a palette by `pngquant` in the generator
@@ -348,14 +341,14 @@ library and `TestCatalogueListIsCurrent` fails when it is out of date (`go test
 
 ## Not covered
 
-- Models upstream has that the library does not take: children (blades, controllers, Synergy
+- Models the library does not take: children (blades, controllers, Synergy
   modules), enclosures without a port (the D2600/D2700/D3600/D3700 shelves, MSA 2050 and 3600,
   Apollo R2x00, c7000, Primera, Nimble, CX 6405/6410), Gen5 to Gen7 servers, airMAX, UISP and
   UniFi Protect cameras, and the Aruba 8325 and 8360 back-to-front editions (only the
-  front-to-back ones are copied).
+  front-to-back ones are in the library).
 - A name glued to `plus` (`DS218plus`) matches, but offers only its own model as candidate; a
-  device that drops the `+` its model has loses the match; the DS218+ has no face (upstream has
-  pictures, but the image budget does not allow them).
+  device that drops the `+` its model has loses the match; the DS218+ has no face (pictures
+  exist, but the image budget does not allow them).
 - UniFi families whose template names still differ from the collector's `Port <idx>` (46 models,
   finding #177). Each waits for a recorded console, and what it lacks is:
   - gateways (UCG-Max and Fiber, UXG Lite, Max and Pro, UX, UX7, USG, USG-Pro-4): role names
@@ -374,8 +367,8 @@ library and `TestCatalogueListIsCurrent` fails when it is out of date (`go test
   The `eth8` and `eth9` the cloud collector gives the console's WAN ports are an observed name,
   not a template.
 - UniFi shortnames that the fingerprint database does not list (the USW-Flex-2.5G family, the
-  CKG2-RM), and operator overlays in `extra_dir`.
-- Part numbers upstream gives to two models (HPE `P19766-B21`, `P56707-B21`, `R4U28A`; Lenovo
+  CKG2-RM).
+- Part numbers that two models share (HPE `P19766-B21`, `P56707-B21`, `R4U28A`; Lenovo
   `7X0x`, `7Z7x`, `7D7x`) match by name only.
 - A 0 U device has no place on the elevation; it draws as an assumed 1 U when mounted.
 

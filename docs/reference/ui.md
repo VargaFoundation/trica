@@ -39,8 +39,8 @@ From the schema as it is (`internal/schema/builtin.yaml`): the `mounted_in` rela
 `facing`; the room carries `width_mm`, `depth_mm` and `tile_mm` (the side of a tile, 600 when not
 set; ADR 0030).
 
-- **Mounted from the rear** means the device's front faces the rear of the rack (NetBox's
-  convention, and the airflow check's): the rear elevation shows its front (a switch's ports), the
+- **Mounted from the rear** means the device's front faces the rear of the rack (the usual
+  rack-elevation convention, and the airflow check's): the rear elevation shows its front (a switch's ports), the
   front elevation its rear.
 - A **full-depth** device is drawn on its face and as a dashed shadow on the other; it blocks both.
   A **shallow** device is a dashed outline with its name on the other face: the unit reads as used

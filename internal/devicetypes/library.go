@@ -10,45 +10,29 @@ import (
 	"strings"
 )
 
-// The vendored library. Directories named after a manufacturer hold files
-// copied unchanged from netbox-community/devicetype-library (CC0-1.0);
-// the directory "trica" holds models written by this project, "overlays" the
-// shortnames this project adds to upstream models (ADR 0056), and
-// "elevation-images" the face illustrations (see library/README.md).
+// The embedded library: the vendor directories hold model files, "trica" the
+// models written from vendor documents, "elevation-images" the face pictures,
+// "drawings" the SVG sources of the faces the project drew, "layouts" the spots
+// of a face (see library/README.md).
 //
 //go:embed library
 var embedded embed.FS
-
-// localDir is the directory of project-written models.
-const localDir = "trica"
 
 // Load parses every .yaml file under root of fsys, one directory per vendor.
 // The first invalid file fails the load: a half-loaded library would silently
 // miss devices. Slugs must be unique. Images are not read: see Open.
 func Load(fsys fs.FS, root string) ([]*Model, error) {
-	models, err := loadModels(fsys, root, func(p string) string {
-		if strings.HasPrefix(p, path.Join(root, localDir)+"/") {
-			return OriginLocal
-		}
-		return OriginUpstream
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err := applyOverlays(fsys, root, models); err != nil {
-		return nil, err
-	}
-	return models, nil
+	return loadModels(fsys, root, OriginTrica)
 }
 
-func loadModels(fsys fs.FS, root string, originOf func(string) string) ([]*Model, error) {
+func loadModels(fsys fs.FS, root, origin string) ([]*Model, error) {
 	var out []*Model
 	seen := map[string]string{}
 	err := fs.WalkDir(fsys, root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if p != root && (strings.HasPrefix(d.Name(), ".") || (d.IsDir() && (d.Name() == ImageDir || d.Name() == DrawingDir || d.Name() == LayoutDir || d.Name() == OverlayDir))) {
+		if p != root && (strings.HasPrefix(d.Name(), ".") || (d.IsDir() && (d.Name() == ImageDir || d.Name() == DrawingDir || d.Name() == LayoutDir))) {
 			// Hidden entries are skipped: a Kubernetes volume holds its files
 			// twice, under a hidden ..<timestamp> directory and as links.
 			if d.IsDir() {
@@ -63,7 +47,7 @@ func loadModels(fsys fs.FS, root string, originOf func(string) string) ([]*Model
 		if err != nil {
 			return err
 		}
-		m, err := Parse(data, originOf(p), strings.TrimPrefix(p, root+"/"))
+		m, err := Parse(data, origin, strings.TrimPrefix(p, root+"/"))
 		if err != nil {
 			return err
 		}
@@ -136,11 +120,12 @@ func OpenFS(lib fs.FS, root string, extra fs.FS) (*Library, error) {
 	used := map[string]bool{}
 	for _, m := range models {
 		for _, face := range []string{Front, Rear} {
-			img, err := readImage(lib, root, m, face, embeddedImageOrigin(lib, root, m, face))
+			img, err := readImage(lib, root, m, face, OriginTrica)
 			if err != nil {
 				return nil, err
 			}
 			if img != nil {
+				img.Drawn = drawn(lib, root, m, face)
 				used[img.Path] = true
 			}
 			m.setImage(face, img)
@@ -159,7 +144,7 @@ func OpenFS(lib fs.FS, root string, extra fs.FS) (*Library, error) {
 	// same face, or the load fails.
 	for _, m := range models {
 		for _, face := range []string{Front, Rear} {
-			l, err := readLayout(lib, root, m, face, OriginLocal)
+			l, err := readLayout(lib, root, m, face, OriginTrica)
 			if err != nil {
 				return nil, err
 			}
@@ -190,7 +175,7 @@ func OpenFS(lib fs.FS, root string, extra fs.FS) (*Library, error) {
 	// operator model keeps the embedded images of the slug it replaces:
 	// replacing a model file must not lose its drawing), then its images
 	// over every model's.
-	own, err := loadModels(extra, ".", func(string) string { return OriginOperator })
+	own, err := loadModels(extra, ".", OriginOperator)
 	if err != nil {
 		return nil, fmt.Errorf("devicetypes.extra_dir: %w", err)
 	}
@@ -253,19 +238,11 @@ func OpenFS(lib fs.FS, root string, extra fs.FS) (*Library, error) {
 	return out, nil
 }
 
-// embeddedImageOrigin is the origin of an embedded image. An image drawn by
-// the project has its source beside it, drawings/<manufacturer>/<slug>.<face>.svg,
-// and comes from the project even when its model is an upstream file (the
-// CRS354 upstream has no picture of). Otherwise an image of an upstream model
-// comes from upstream, an image of a project model from the project.
-func embeddedImageOrigin(lib fs.FS, root string, m *Model, face string) string {
-	if _, err := fs.Stat(lib, path.Join(root, drawingPath(m, face))); err == nil {
-		return OriginLocal
-	}
-	if m.Origin == OriginLocal {
-		return OriginLocal
-	}
-	return OriginUpstream
+// drawn reports whether an embedded image is one the project drew: its SVG
+// source is beside it, drawings/<manufacturer>/<slug>.<face>.svg.
+func drawn(lib fs.FS, root string, m *Model, face string) bool {
+	_, err := fs.Stat(lib, path.Join(root, drawingPath(m, face)))
+	return err == nil
 }
 
 // overlay returns base with the models of own added, a model of own replacing

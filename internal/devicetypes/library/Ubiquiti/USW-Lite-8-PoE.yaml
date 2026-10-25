@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch Lite 8 PoE
 slug: ubiquiti-unifi-switch-lite-8-poe
 part_number: USW-Lite-8-PoE
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USL8LP, USL8LPB]
 weight: 295
 weight_unit: g
 airflow: passive

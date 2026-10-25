@@ -662,8 +662,8 @@ const hpeOutputs = hpe.flatMap(([model, u, variants, rear]) =>
   }),
 );
 
-// Network, storage and power models without an upstream picture (or with a
-// port side only). Port counts and groups: the model file (upstream, from the
+// Network, storage and power models without a picture (or with a
+// port side only). Port counts and groups: the model file (from the
 // vendor's data sheet) and the data sheet named beside each entry.
 const sw = (title, groups, extra = {}) => () => switchFront({ title, groups, ...extra });
 const swr = (title, extra) => () => switchRear({ title, ...extra });
@@ -678,13 +678,13 @@ const network = [
   ["Cisco", "cisco-ws-c3850-48p-s", sw("Cisco WS-C3850-48P-S", [{ kind: "rj45", n: 48 }, { kind: "sfp", n: 4 }], { side: "left", label: "WS-C3850-48P-S" }), swr("Cisco WS-C3850-48P-S", { psus: 2, fans: 3, stack: 2, psuW: 80 })],
   // Catalyst 9300 data sheet: 24 x 1G, network module slot, two supplies, three fans, StackWise-480.
   ["Cisco", "cisco-c9300-24t", sw("Cisco C9300-24T", [{ kind: "rj45", n: 24 }, { kind: "sfp", n: 4 }], { side: "left", label: "C9300-24T" }), swr("Cisco C9300-24T", { psus: 2, fans: 3, stack: 2, psuW: 80 })],
-  // Catalyst 2960-X data sheet: one fixed supply (C14), fixed fans; the rear the netbox pictures lack.
+  // Catalyst 2960-X data sheet: one fixed supply (C14), fixed fans; the rear the pictures lack.
   ...["24ts-l", "48ts-l", "48fps-l", "48td-l"].map((m) => ["Cisco", `cisco-ws-c2960x-${m}`, null, swr(`Cisco WS-C2960X-${m.toUpperCase()}`, { inlets: 1, grilles: m.startsWith("48fps") ? 2 : 1 })]),
   // Nexus 3048 data sheet: 48 x 1GbE, 4 x 10G SFP+, two supplies, one fan tray (4 fans), mgmt and console.
   ["Cisco", "cisco-n3k-c3048tp-1ge", sw("Cisco N3K-C3048TP-1GE", [{ kind: "rj45", n: 48 }, { kind: "sfp", n: 4 }], { side: "right", label: "N3K-C3048TP-1GE" }), swr("Cisco N3K-C3048TP-1GE", { psus: 2, fans: 1, psuW: 70 })],
   // Nexus 3064-X data sheet: 48 x SFP+, 4 x QSFP+, two supplies, one fan tray.
   ["Cisco", "cisco-n3k-c3064pq-10gx", sw("Cisco N3K-C3064PQ-10GX", [{ kind: "sfp", n: 48 }, { kind: "qsfp", n: 4 }], { side: "right", label: "N3K-C3064PQ-10GX" }), swr("Cisco N3K-C3064PQ-10GX", { psus: 2, fans: 1, psuW: 70 })],
-  // Arista 7050QX-32S, 7050TX-64, 7280SR-48C6: two supplies, four fans (data sheets); rears the netbox pictures lack.
+  // Arista 7050QX-32S, 7050TX-64, 7280SR-48C6: two supplies, four fans (data sheets); rears the pictures lack.
   ["Arista", "arista-dcs-7050qx-32s", null, swr("Arista DCS-7050QX-32S", { psus: 2, fans: 4, fansLeft: false, psuW: 74 })],
   ["Arista", "arista-dcs-7050tx-64", null, swr("Arista DCS-7050TX-64", { psus: 2, fans: 4, psuW: 74 })],
   ["Arista", "arista-dcs-7050tx-48", null, swr("Arista DCS-7050TX-48", { psus: 2, fans: 4, psuW: 74 })],
@@ -734,7 +734,7 @@ const storage = [
 const storageOutputs = storage.flatMap(([vendor, slug, front, rear]) => [...(front ? [[vendor, slug, "front", front]] : []), [vendor, slug, "rear", rear]]);
 
 // Power: APC Smart-UPS (SMT, SMX, SRT) and switched rack PDUs (AP79xx),
-// Eaton 5PX; outlets, inputs and ports from the model files (upstream, from
+// Eaton 5PX; outlets, inputs and ports from the model files (from
 // the vendors' data sheets) and the user manuals.
 const power = [
   ["APC", "apc-smt1500rmi2u", () => upsFront({ title: "APC SMT1500RMI2U", label: "Smart-UPS 1500" }), () => upsRear({ title: "APC SMT1500RMI2U", input: "c14", groups: [{ c13: 2 }, { c13: 2 }], slot: "SmartSlot" })],

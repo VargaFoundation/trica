@@ -2,6 +2,8 @@
 manufacturer: Ubiquiti
 model: USP PDU HD
 part_number: USP-PDU-HD
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USPPDUHD]
 slug: ubiquiti-usp-pdu-hd
 u_height: 0  # 0U, mounted at the back of the rack
 is_full_depth: false

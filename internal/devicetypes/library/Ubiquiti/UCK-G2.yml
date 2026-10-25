@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: Cloud Key Gen2
 slug: ubiquiti-cloud-key-gen2
 part_number: uck-g2
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [UCKG2]
 comments: |
   Unifi Cloud Key Generation 2
 

@@ -5,7 +5,7 @@
 # A chassis of the Dell PowerEdge R330, from the Owner's Manual (Rev. A03):
 # 482.4 x 42.4 mm (434.0 mm without the ears), 666.2 mm deep without the bezel;
 # two 10/100/1000 ports, serial, optional iDRAC port card, up to two 350 W
-# redundant supplies. Upstream's PowerEdge-R330 (vendored as is) stays the model
+# redundant supplies. The generic PowerEdge-R330 stays the model
 # a device reporting "PowerEdge R330" matches: Dell reports no chassis part
 # number (its Redfish SKU is the service tag), so a variant is only picked by
 # its own name or by an operator's model file (see the library README). The manual's

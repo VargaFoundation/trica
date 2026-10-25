@@ -1,20 +1,14 @@
 package devicetypes_test
 
 import (
-	"cmp"
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
-	"testing/fstest"
 	"time"
-
-	"go.yaml.in/yaml/v3"
 
 	"github.com/VargaFoundation/trica/internal/devicetypes"
 	"github.com/VargaFoundation/trica/internal/store"
@@ -46,12 +40,12 @@ func TestCollectorNamesMatchTheLibrary(t *testing.T) {
 		{"Ubiquiti", "UXG Pro", "UXGPRO", "ubiquiti-unifi-gateway-pro", devicetypes.BySKU, false},
 		{"Ubiquiti", "EFG", "EFG", "ubiquiti-enterprise-fortress-gateway", devicetypes.BySKU, false},
 		{"Ubiquiti", "UDR7", "UDR7", "ubiquiti-unifi-dream-router-7", devicetypes.BySKU, true},
-		// The display name alone is enough when it is upstream's name, a
+		// The display name alone is enough when it is the model's own name, a
 		// part number or a slug.
 		{"Ubiquiti", "UDM Pro Max", "", "ubiquiti-unifi-dream-machine-pro-max", devicetypes.ByModel, false},
 		{"Ubiquiti", "U7 Pro", "", "ubiquiti-u7-pro", devicetypes.ByModel, true},
 		{"Ubiquiti", "USW Pro Max 24 PoE", "", "ubiquiti-unifi-switch-pro-max-24-poe", devicetypes.ByModel, false},
-		// UniFi Access: not upstream, written by trica, SKU first.
+		// UniFi Access: written by trica, SKU first.
 		{"Ubiquiti", "UA Hub Door", "UAH-DOOR", "ubiquiti-ua-hub-door", devicetypes.BySKU, true},
 		{"Ubiquiti", "UA Hub Door", "", "ubiquiti-ua-hub-door", devicetypes.ByModel, true},
 		{"Ubiquiti", "UA G2 Pro", "", "ubiquiti-ua-g2-pro", devicetypes.ByModel, true},
@@ -116,7 +110,7 @@ func TestUniFiRecordedPairsResolve(t *testing.T) {
 		{"USW Pro Max 24 PoE", "USPM24P", "ubiquiti-unifi-switch-pro-max-24-poe"},
 		{"UA Hub Door", "UAH-DOOR", "ubiquiti-ua-hub-door"},
 		{"UA G2 Pro", "UA-G2-PRO", "ubiquiti-ua-g2-pro"},
-		// Display names no upstream name or part number says.
+		// Display names no model name or part number says.
 		{"Express 7", "UX7", "ubiquiti-unifi-express-7"},
 		{"AC Pro", "U7PG2", "ubiquiti-uap-ac-pro"},
 		{"UCG Ultra", "UDRULT", "ubiquiti-unifi-cloud-gateway-ultra"},
@@ -137,175 +131,41 @@ func TestUniFiRecordedPairsResolve(t *testing.T) {
 	}
 }
 
-// Every shortname of the overlay file finds its model by SKU, whichever name
-// the device reports: the file is what the collectors will rely on.
-func TestOverlayShortnamesResolve(t *testing.T) {
-	data, err := os.ReadFile("library/" + devicetypes.OverlayDir + "/Ubiquiti.yaml")
+// Every part_numbers entry of a UniFi model finds that model by SKU, whichever
+// name the device reports: the files are what the collectors rely on. A part
+// number two models share is ambiguous and matches neither, which fails here.
+func TestEveryPartNumberFindsItsModel(t *testing.T) {
+	models, err := devicetypes.Default()
 	if err != nil {
 		t.Fatal(err)
 	}
-	var o struct {
-		Manufacturer string `yaml:"manufacturer"`
-		Models       []struct {
-			Slug        string   `yaml:"slug"`
-			PartNumbers []string `yaml:"part_numbers"`
-		} `yaml:"models"`
-	}
-	if err := yaml.Unmarshal(data, &o); err != nil {
-		t.Fatal(err)
-	}
-	ix := defaultIndex(t)
-	shortnames := 0
-	for _, e := range o.Models {
-		for _, sn := range e.PartNumbers {
+	ix := devicetypes.NewIndex(models)
+	withSKUs, shortnames := 0, 0
+	for _, m := range models {
+		if m.Vendor != "Ubiquiti" || len(m.PartNumbers) == 0 {
+			continue
+		}
+		withSKUs++
+		for _, sn := range m.PartNumbers {
 			shortnames++
-			m := ix.Find(o.Manufacturer, "", sn)
-			if m == nil || m.Model.Slug != e.Slug || m.How != devicetypes.BySKU {
-				t.Errorf("%s: shortname %s gives %+v, want %s by sku", e.Slug, sn, m, e.Slug)
+			got := ix.Find(m.Vendor, "", sn)
+			if got == nil || got.Model.Slug != m.Slug || got.How != devicetypes.BySKU {
+				t.Errorf("%s: shortname %s gives %+v, want %s by sku", m.Slug, sn, got, m.Slug)
 			}
 			// A model name the device repeats does not change it.
-			if m := ix.Find(o.Manufacturer, ix.BySlug(e.Slug).Model, sn); m == nil || m.Model.Slug != e.Slug {
-				t.Errorf("%s: shortname %s with the upstream name gives %+v", e.Slug, sn, m)
+			if got := ix.Find(m.Vendor, m.Model, sn); got == nil || got.Model.Slug != m.Slug || got.How != devicetypes.BySKU {
+				t.Errorf("%s: shortname %s with the model name gives %+v", m.Slug, sn, got)
 			}
 		}
 	}
-	if len(o.Models) < 90 || shortnames < 120 {
-		t.Errorf("overlay lists %d models and %d shortnames, want the UniFi catalogue's (at least 90 and 120)", len(o.Models), shortnames)
+	if withSKUs < 90 || shortnames < 120 {
+		t.Errorf("%d Ubiquiti models list %d shortnames, want the UniFi catalogue's (at least 90 and 120)", withSKUs, shortnames)
 	}
 }
 
-func TestOverlaysThatFailTheLoad(t *testing.T) {
-	const acme = "manufacturer: Acme\nmodel: Box 1\nslug: acme-box-1\nu_height: 1\ninterfaces:\n  - name: e1\n    type: 1000base-t\n    label: First\n  - name: e2\npower-ports:\n  - name: e1\n"
-	const two = "manufacturer: Acme\nmodel: Box 2\nslug: acme-box-2\nu_height: 1\npart_numbers: [B2-LOCAL]\n"
-	const other = "manufacturer: Other\nmodel: Thing\nslug: other-thing\nu_height: 1\n"
-	lib := func(overlay string) fstest.MapFS {
-		return fstest.MapFS{
-			"lib/Acme/box1.yaml":          file([]byte(acme)),
-			"lib/Acme/box3.yaml":          file([]byte("manufacturer: Acme\nmodel: Box 3\nslug: acme-box-3\nu_height: 1\npart_numbers: [B3-HELD]\n")),
-			"lib/Other/thing.yaml":        file([]byte(other)),
-			"lib/trica/Acme-Box-2.yaml":   file([]byte(two)),
-			"lib/overlays/Acme.yaml":      file([]byte(overlay)),
-			"lib/overlays/notes.txt":      file([]byte("not an overlay")),
-			"lib/overlays/.hidden.yaml":   file([]byte("garbage: [")),
-			"lib/overlays/sub/inner.yaml": file([]byte("garbage: [")),
-		}
-	}
-	bad := map[string]struct{ overlay, want string }{
-		"unknown slug":                   {"manufacturer: Acme\nmodels:\n  - slug: acme-nope\n    part_numbers: [X1]\n", "no model has the slug"},
-		"other manufacturer":             {"manufacturer: Acme\nmodels:\n  - slug: other-thing\n    part_numbers: [X1]\n", "Other model"},
-		"project model":                  {"manufacturer: Acme\nmodels:\n  - slug: acme-box-2\n    part_numbers: [X1]\n", "not an upstream model"},
-		"no part number":                 {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: []\n", "lists no part number"},
-		"empty part number":              {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [X1, ' ']\n", "empty part number"},
-		"duplicate once plus is spelled": {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [B1+, B1 Plus]\n", "already listed"},
-		"duplicate once normal":          {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [UDM-SE, UDMSE]\n", "already listed"},
-		"listed by another model":        {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [b3 held]\n", "already listed by acme-box-3"},
-		"unknown key":                    {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [X1]\n    note: hi\n", "field note"},
-		"not yaml":                       {"manufacturer: [unclosed\n", "overlays/Acme.yaml"},
-		"unknown interface":              {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e9: x}\n", `no interface is named "e9"`},
-		"power port is not an interface": {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {PSU: x}\n", "no interface is named"},
-		"rename onto a kept name":        {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: e2}\n", `interface "e2" would be named twice`},
-		"rename to nothing":              {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: ' '}\n", "to nothing"},
-		"rename to itself":               {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: e1}\n", "to itself"},
-		"two ends renamed alike":         {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: z, e2: z}\n", `would be named twice`},
-		"duplicate key":                  {"manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: a, e1: b}\n", "already defined"},
-		"rename on a project model":      {"manufacturer: Acme\nmodels:\n  - slug: acme-box-2\n    interface_names: {e1: a}\n", "not an upstream model"},
-	}
-	for name, c := range bad {
-		_, err := devicetypes.Load(lib(c.overlay), "lib")
-		if err == nil || !strings.Contains(err.Error(), c.want) {
-			t.Errorf("%s: error %v, want one saying %q", name, err, c.want)
-		}
-	}
-	// A valid overlay is not read as a model, and appends its part numbers.
-	models, err := devicetypes.Load(lib("manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    part_numbers: [X1, 'X-2']\n  - slug: acme-box-3\n    part_numbers: [X3]\n"), "lib")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(models) != 4 {
-		t.Fatalf("%d models, want the 4 model files (the overlay is not one)", len(models))
-	}
-	got := map[string][]string{}
-	for _, m := range models {
-		got[m.Slug] = m.PartNumbers
-	}
-	if !slices.Equal(got["acme-box-1"], []string{"X1", "X-2"}) || !slices.Equal(got["acme-box-3"], []string{"B3-HELD", "X3"}) || !slices.Equal(got["acme-box-2"], []string{"B2-LOCAL"}) {
-		t.Fatalf("part numbers %v", got)
-	}
-	if m := devicetypes.NewIndex(models).Find("Acme", "", "x2"); m == nil || m.Model.Slug != "acme-box-1" || m.How != devicetypes.BySKU {
-		t.Fatalf("an overlay shortname: %+v, want acme-box-1 by sku", m)
-	}
-	// No overlays directory: nothing to apply.
-	if _, err := devicetypes.Load(fstest.MapFS{"lib/Acme/box1.yaml": file([]byte(acme))}, "lib"); err != nil {
-		t.Fatal(err)
-	}
-}
-
-// An overlay renames interface templates (ADR 0056, #173): at once, so that a
-// swap works, only interfaces, and an entry may do nothing else.
-func TestOverlayRenamesInterfaces(t *testing.T) {
-	const acme = "manufacturer: Acme\nmodel: Box 1\nslug: acme-box-1\nu_height: 1\ninterfaces:\n  - name: e1\n    type: 1000base-t\n    label: First\n  - name: e2\n    mgmt_only: true\npower-ports:\n  - name: e1\n"
-	load := func(overlay string) *devicetypes.Model {
-		t.Helper()
-		models, err := devicetypes.Load(fstest.MapFS{
-			"lib/Acme/box1.yaml":     file([]byte(acme)),
-			"lib/overlays/Acme.yaml": file([]byte(overlay)),
-		}, "lib")
-		if err != nil {
-			t.Fatal(err)
-		}
-		return models[0]
-	}
-	names := func(m *devicetypes.Model, group string) string {
-		var out []string
-		for _, p := range m.Ports {
-			if p.Group == group {
-				out = append(out, p.Name)
-			}
-		}
-		return strings.Join(out, ",")
-	}
-	m := load("manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: e2, e2: e1}\n")
-	if got := names(m, "interface"); got != "e2,e1" {
-		t.Fatalf("interfaces %q after a swap, want e2,e1", got)
-	}
-	if p := m.Ports[0]; p.Type != "1000base-t" || p.Label != "First" {
-		t.Fatalf("type and label are kept: %+v", p)
-	}
-	if p := m.Ports[1]; !p.MgmtOnly {
-		t.Fatalf("mgmt_only is kept: %+v", p)
-	}
-	if got := names(m, "power"); got != "e1" {
-		t.Fatalf("the power port %q must not be renamed", got)
-	}
-	m = load("manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {e1: ' Port 1 '}\n")
-	if got := names(m, "interface"); got != "Port 1,e2" {
-		t.Fatalf("interfaces %q, want a trimmed Port 1,e2", got)
-	}
-}
-
-// The unlabelled interface that an overlay renames keeps its old name as its
-// label; a label upstream wrote stays (#177).
-func TestOverlayRenamedInterfaceKeepsItsOldNameAsLabel(t *testing.T) {
-	const acme = "manufacturer: Acme\nmodel: Box 1\nslug: acme-box-1\nu_height: 1\ninterfaces:\n  - name: Port 1 (PoE+)\n    type: 1000base-t\n  - name: e2\n    type: 1000base-t\n    label: Second\n"
-	models, err := devicetypes.Load(fstest.MapFS{
-		"lib/Acme/box1.yaml":     file([]byte(acme)),
-		"lib/overlays/Acme.yaml": file([]byte("manufacturer: Acme\nmodels:\n  - slug: acme-box-1\n    interface_names: {Port 1 (PoE+): Port 1, e2: Port 2}\n")),
-	}, "lib")
-	if err != nil {
-		t.Fatal(err)
-	}
-	p := models[0].Ports
-	if p[0].Name != "Port 1" || p[0].Label != "Port 1 (PoE+)" {
-		t.Errorf("unlabelled interface: %+v, want Port 1 labelled with its old name", p[0])
-	}
-	if p[1].Name != "Port 2" || p[1].Label != "Second" {
-		t.Errorf("labelled interface: %+v, want Port 2 keeping its label", p[1])
-	}
-}
-
-// blockedPortNames lists the UniFi models of the library whose upstream
-// interface names do not number every wired interface exactly once from 1 to N.
-// They stay as upstream names them: renaming them would be a guess about the
+// blockedPortNames lists the UniFi models of the library whose interface names
+// do not number every wired interface exactly once from 1 to N.
+// They keep the names their files give: renaming them would be a guess about the
 // "idx" the Integration API reports (#177). Each entry says what is missing.
 var blockedPortNames = map[string]string{}
 
@@ -353,42 +213,26 @@ func init() {
 }
 
 // The UniFi Network collector names a port "Port <idx>" (ADR 0060). A model's
-// templates are named so when, and only when, upstream's own names or labels
-// number every wired interface exactly once from 1 to N: the rule of #177,
-// applied to the raw upstream files so that it sees the names before the
-// overlay. It does not prove that idx is the printed number (README point 9
-// of internal/collect/unifi/testdata).
+// templates are named so when, and only when, its own names or labels number
+// every wired interface exactly once from 1 to N: the rule of #177, applied to
+// the model files themselves (ADR 0063), where the label of a renamed
+// interface keeps the name it had before and is the evidence. It does not
+// prove that idx is the printed number (README point 9 of
+// internal/collect/unifi/testdata).
 func TestUniFiPortTemplatesAreNamedAsTheConsoleNamesThem(t *testing.T) {
 	models, err := devicetypes.Default()
 	if err != nil {
 		t.Fatal(err)
 	}
-	by := map[string]*devicetypes.Model{}
-	for _, m := range models {
-		by[m.Slug] = m
-	}
-	type iface struct {
-		Name  string `yaml:"name"`
-		Type  string `yaml:"type"`
-		Label string `yaml:"label"`
-	}
-	wired := func(in []iface) []iface {
-		var out []iface
-		for _, i := range in {
-			if !strings.HasPrefix(i.Type, "ieee802.11") && i.Type != "other-wireless" {
-				out = append(out, i)
-			}
-		}
-		return out
-	}
 	labelled := regexp.MustCompile(`^Port\s*(\d+)\b`)
 	named := regexp.MustCompile(`^[Pp]ort ?\.?(\d+)(?: \(PoE[^)]*\)| - SFP\+)?$`)
 	prefixed := regexp.MustCompile(`^(?:SFP\+|SFP28|SFP|QSFP28|GbE|2\.5 GbE|2\.5G Port|10G Port|SFP28 Port|QSFP28 Port) (\d+)$`)
-	number := func(i iface) int {
+	// ev is the number a text says, 0 when it numbers nothing.
+	ev := func(s string) int {
 		for _, re := range []struct {
 			re  *regexp.Regexp
 			src string
-		}{{labelled, i.Label}, {named, i.Name}, {prefixed, i.Name}} {
+		}{{labelled, s}, {named, s}, {prefixed, s}} {
 			if m := re.re.FindStringSubmatch(re.src); m != nil {
 				n, _ := strconv.Atoi(m[1])
 				return n
@@ -396,81 +240,44 @@ func TestUniFiPortTemplatesAreNamedAsTheConsoleNamesThem(t *testing.T) {
 		}
 		return 0
 	}
-	var files []string
-	for _, ext := range []string{"yaml", "yml"} {
-		f, err := filepath.Glob("library/Ubiquiti/*." + ext)
-		if err != nil {
-			t.Fatal(err)
-		}
-		files = append(files, f...)
-	}
-	if len(files) < 90 {
-		t.Fatalf("only %d upstream Ubiquiti files", len(files))
-	}
 	renamed, blocked, seen := 0, 0, map[string]bool{}
-	for _, f := range files {
-		data, err := os.ReadFile(f)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var up struct {
-			Slug       string  `yaml:"slug"`
-			Interfaces []iface `yaml:"interfaces"`
-		}
-		if err := yaml.Unmarshal(data, &up); err != nil {
-			t.Fatalf("%s: %v", f, err)
-		}
-		m := by[up.Slug]
-		if m == nil {
-			t.Errorf("%s: no loaded model %q", f, up.Slug)
+	for _, m := range models {
+		if !strings.HasPrefix(m.Path, "Ubiquiti/") {
 			continue
 		}
-		seen[up.Slug] = true
-		wi := wired(up.Interfaces)
-		var got []devicetypes.Port
+		seen[m.Slug] = true
+		var wi []devicetypes.Port
 		for _, p := range m.Ports {
 			if p.Group == "interface" && !strings.HasPrefix(p.Type, "ieee802.11") && p.Type != "other-wireless" {
-				got = append(got, p)
+				wi = append(wi, p)
 			}
 		}
-		complete := len(wi) > 0
-		for k, i := range wi {
-			if number(i) != k+1 {
+		complete, changed := len(wi) > 0, false
+		for k, p := range wi {
+			if p.Name != fmt.Sprintf("Port %d", k+1) || (ev(p.Label) != 0 && ev(p.Label) != k+1) {
 				complete = false
 			}
+			if p.Label != p.Name && ev(p.Label) == k+1 {
+				changed = true
+			}
 		}
-		reason, isBlocked := blockedPortNames[up.Slug]
+		reason, isBlocked := blockedPortNames[m.Slug]
 		if !complete {
 			blocked++
 			if !isBlocked {
-				t.Errorf("%s: upstream does not number its interfaces 1..%d and the model is not in blockedPortNames", up.Slug, len(wi))
+				t.Errorf("%s: its interfaces are not named Port 1..%d with the evidence of their labels and the model is not in blockedPortNames", m.Slug, len(wi))
 			}
-			for k, i := range wi {
-				if k >= len(got) || got[k].Name != i.Name {
-					t.Errorf("%s: interface %d is renamed without evidence (upstream %q)", up.Slug, k+1, i.Name)
+			// A partial rename: an interface named Port k whose label says it
+			// is the k-th, in a model that is not renamed as a whole.
+			for k, p := range wi {
+				if p.Name == fmt.Sprintf("Port %d", k+1) && p.Label != p.Name && ev(p.Label) == k+1 {
+					t.Errorf("%s: interface %d is renamed %q (label %q) but the model is blocked", m.Slug, k+1, p.Name, p.Label)
 				}
 			}
 			continue
 		}
 		if isBlocked {
-			t.Errorf("%s: numbered 1..%d by upstream but still listed as blocked (%s)", up.Slug, len(wi), reason)
-		}
-		if len(got) != len(wi) {
-			t.Errorf("%s: %d interfaces, upstream has %d", up.Slug, len(got), len(wi))
-			continue
-		}
-		changed := false
-		for k, i := range wi {
-			want := fmt.Sprintf("Port %d", k+1)
-			if got[k].Name != want {
-				t.Errorf("%s: interface %d is %q, want %q (upstream %q, label %q)", up.Slug, k+1, got[k].Name, want, i.Name, i.Label)
-			}
-			if i.Name != want {
-				changed = true
-				if wantLabel := cmp.Or(i.Label, i.Name); got[k].Label != wantLabel {
-					t.Errorf("%s: %s has label %q, want %q", up.Slug, want, got[k].Label, wantLabel)
-				}
-			}
+			t.Errorf("%s: named Port 1..%d with evidence but still listed as blocked (%s)", m.Slug, len(wi), reason)
 		}
 		if changed {
 			renamed++
@@ -478,7 +285,7 @@ func TestUniFiPortTemplatesAreNamedAsTheConsoleNamesThem(t *testing.T) {
 	}
 	for slug, reason := range blockedPortNames {
 		if !seen[slug] {
-			t.Errorf("blockedPortNames lists %s (%s), which is not an upstream Ubiquiti model", slug, reason)
+			t.Errorf("blockedPortNames lists %s (%s), which is not a Ubiquiti model", slug, reason)
 		}
 	}
 	if renamed != 40 || blocked != 46 || len(blockedPortNames) != 46 {

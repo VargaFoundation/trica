@@ -1,6 +1,6 @@
 ---
-# Written by the trica project (Apache-2.0), not taken from the upstream
-# library. Same format, so it can be contributed upstream as is.
+# Written by the trica project (Apache-2.0), from no vendor document: a
+# generic appliance.
 manufacturer: Generic
 model: Generic 1U pfSense appliance
 slug: generic-1u-pfsense-appliance

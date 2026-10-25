@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Gateway Lite
 slug: ubiquiti-unifi-gateway-lite
 part_number: UXG-Lite
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [UXG, UXG-Lite]
 comments: '[UniFi Gateway Lite](https://techspecs.ui.com/unifi/cloud-keys-gateways/uxg-lite)'
 u_height: 0
 airflow: passive

@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch Ultra
 slug: ubiquiti-unifi-switch-ultra
 part_number: USW-Ultra
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USM8P]
 weight: 320
 weight_unit: g
 airflow: passive
@@ -24,6 +26,7 @@ comments: |
   Dimensions: 203 x 76 x 33 mm (8 x 3 x 1.3")
 u_height: 0
 is_full_depth: false
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
   - name: Port 1
     type: 1000base-t
@@ -53,7 +56,8 @@ interfaces:
     type: 1000base-t
     poe_mode: pse
     poe_type: type2-ieee802.3at
-  - name: Port 8 (PoE IN)
+  - name: Port 8
+    label: Port 8 (PoE IN)
     type: 1000base-t
     poe_mode: pd
     poe_type: type3-ieee802.3bt

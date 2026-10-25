@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch Pro XG 10 PoE
 slug: ubiquiti-unifi-switch-pro-xg-10-poe
 part_number: USW-Pro-XG-10-PoE
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USPXG10P]
 u_height: 1
 is_full_depth: false
 airflow: front-to-rear
@@ -14,6 +16,7 @@ comments: |
   Dimensions: 442.4 x 285 x 44 mm
 
   [UniFi Switch Pro XG 10 PoE Techspecs](https://eu.store.ui.com/eu/en/category/switching-professional-max-xg/products/usw-pro-xg-10-poe)
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
   - name: Port 1
     type: 10gbase-t
@@ -55,9 +58,11 @@ interfaces:
     type: 10gbase-t
     poe_mode: pse
     poe_type: type3-ieee802.3bt
-  - name: SFP+ 11
+  - name: Port 11
+    label: SFP+ 11
     type: 10gbase-x-sfpp
-  - name: SFP+ 12
+  - name: Port 12
+    label: SFP+ 12
     type: 10gbase-x-sfpp
 power-ports:
   - name: Universal AC input

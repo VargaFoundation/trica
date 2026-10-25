@@ -2,6 +2,8 @@
 manufacturer: Ubiquiti
 model: USG
 slug: ubiquiti-usg
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USG, UGWHD4]
 weight: 366
 weight_unit: g
 airflow: passive

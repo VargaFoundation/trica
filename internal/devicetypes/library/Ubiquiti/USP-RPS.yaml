@@ -4,6 +4,8 @@ model: UniFi SmartPower RPS
 slug: ubiquiti-unifi-smartpower-rps
 airflow: front-to-rear
 part_number: USP-RPS
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USPRPS]
 comments: |
   [UniFi Power Backup Techspecs](https://techspecs.ui.com/unifi/power-tech/usp-rps)
 

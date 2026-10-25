@@ -7,7 +7,7 @@ import type { Health as SharedHealth } from "../inventory/health";
 // `mounted_in` (position = the lowest U it occupies, face = front | rear);
 // its height is the u_height of its device type, and a full_depth device
 // occupies both faces whichever one it is mounted from. Mounted from the rear
-// means the device's front faces the rear of the rack (NetBox's convention, and
+// means the device's front faces the rear of the rack (the usual rack-elevation convention, and
 // the airflow check's, ADR 0049): a switch whose ports face the hot aisle is
 // mounted from the rear, and the rear elevation shows its ports.
 

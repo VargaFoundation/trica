@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch Pro XG 24
 slug: ubiquiti-unifi-switch-pro-xg-24
 part_number: USW-Pro-XG-24
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USWPXG24]
 u_height: 1
 is_full_depth: false
 airflow: front-to-rear
@@ -14,6 +16,7 @@ comments: |
   Dimensions: 442.4 x 285 x 44 mm
 
   [UniFi Switch Pro XG 24 Techspecs](https://eu.store.ui.com/eu/en/category/switching-professional-max-xg/products/usw-pro-xg-24)
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
   - name: Port 1
     type: 10gbase-t
@@ -63,9 +66,11 @@ interfaces:
     type: 2.5gbase-t
   - name: Port 24
     type: 2.5gbase-t
-  - name: SFP28 25
+  - name: Port 25
+    label: SFP28 25
     type: 25gbase-x-sfp28
-  - name: SFP28 26
+  - name: Port 26
+    label: SFP28 26
     type: 25gbase-x-sfp28
 power-ports:
   - name: Universal AC input

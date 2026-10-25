@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch Pro HD 24
 slug: ubiquiti-unifi-switch-pro-hd-24
 part_number: USW-Pro-HD-24
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USPH24]
 u_height: 1
 is_full_depth: false
 airflow: front-to-rear
@@ -14,6 +16,7 @@ comments: |
   Dimensions: 442 x 285 x 44 mm
 
   [UniFi Switch Pro HD 24 Techspecs](https://store.ui.com/us/en/category/switching-professional-max-xg/products/usw-pro-hd-24)
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
   - name: Port 1
     type: 2.5gbase-t
@@ -63,13 +66,17 @@ interfaces:
     type: 10gbase-t
   - name: Port 24
     type: 10gbase-t
-  - name: SFP+ 25
+  - name: Port 25
+    label: SFP+ 25
     type: 10gbase-x-sfpp
-  - name: SFP+ 26
+  - name: Port 26
+    label: SFP+ 26
     type: 10gbase-x-sfpp
-  - name: SFP+ 27
+  - name: Port 27
+    label: SFP+ 27
     type: 10gbase-x-sfpp
-  - name: SFP+ 28
+  - name: Port 28
+    label: SFP+ 28
     type: 10gbase-x-sfpp
 power-ports:
   - name: Universal AC input

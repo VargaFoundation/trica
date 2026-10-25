@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: Enterprise Network Video Recorder
 slug: ubiquiti-enterprise-network-video-recorder
 part_number: ENVR
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [ENVR]
 airflow: front-to-rear
 comments: |
   Enterprise-grade 4U NVR with 16 bays for high-capacity video storage.

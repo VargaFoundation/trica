@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Protect Network Video Recorder
 slug: ubiquiti-unifi-protect-network-video-recorder
 part_number: UNVR
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [UNVR4]
 airflow: front-to-rear
 comments: |
   Network Video Recorder with four bays.

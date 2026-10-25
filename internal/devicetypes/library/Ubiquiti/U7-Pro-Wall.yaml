@@ -2,6 +2,8 @@
 manufacturer: Ubiquiti
 model: U7 Pro Wall
 part_number: U7-Pro-Wall
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [U7PIW, U7-Pro-IW, U7-Pro-W]
 slug: ubiquiti-u7-pro-wall
 u_height: 0
 is_full_depth: false

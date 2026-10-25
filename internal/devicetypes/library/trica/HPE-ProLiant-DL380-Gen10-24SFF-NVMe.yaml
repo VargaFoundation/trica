@@ -12,7 +12,7 @@
 # matches the 24SFF model and a person chooses this one on the device (ADR
 # 0048); being a variant of the 24SFF model, that choice is no part-number
 # conflict. Rack height, depth, airflow and port templates are those of the
-# upstream model HPE/ProLiant-DL380-Gen10.yaml (netbox-community/devicetype-library, CC0-1.0).
+# model HPE/ProLiant-DL380-Gen10.yaml of this library.
 manufacturer: HPE
 model: ProLiant DL380 Gen10 24SFF NVMe
 slug: hpe-proliant-dl380-gen10-24sff-nvme

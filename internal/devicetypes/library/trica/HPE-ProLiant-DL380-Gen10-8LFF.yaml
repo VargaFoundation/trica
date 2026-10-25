@@ -5,7 +5,7 @@
 # The 8LFF chassis of the HPE ProLiant DL380 Gen10, from its QuickSpecs (a00008180enw): drive
 # cage and configure-to-order SKUs from the CTO table (Network Choice and BC models included);
 # front and rear legends for the faces. Rack height, depth, airflow and port templates are
-# those of the upstream model HPE/ProLiant-DL380-Gen10.yaml (netbox-community/devicetype-library, CC0-1.0).
+# those of the model HPE/ProLiant-DL380-Gen10.yaml of this library.
 manufacturer: HPE
 model: ProLiant DL380 Gen10 8LFF
 slug: hpe-proliant-dl380-gen10-8lff

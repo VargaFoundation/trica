@@ -3,6 +3,8 @@ manufacturer: Ubiquiti
 model: UniFi Switch Pro XG 48 PoE
 slug: ubiquiti-unifi-switch-pro-xg-48-poe
 part_number: USW-Pro-XG-48-PoE
+# part_numbers: UniFi shortnames, Ubiquiti fingerprint database (static.ui.com/fingerprint/ui/public.json, read 2026-10-23), ADR 0056.
+part_numbers: [USWPXG48P]
 u_height: 1
 is_full_depth: false
 airflow: front-to-rear
@@ -14,6 +16,7 @@ comments: |
   Dimensions: 442 x 480 x 44 mm
 
   [UniFi Switch Pro XG 48 PoE Techspecs](https://eu.store.ui.com/eu/en/category/switching-professional-max-xg/products/usw-pro-xg-48-poe)
+# Interfaces named "Port N" as the UniFi Network console numbers them (ADR 0060, #177); the former name is kept as the label.
 interfaces:
   - name: Port 1
     type: 2.5gbase-t
@@ -207,13 +210,17 @@ interfaces:
     type: 10gbase-t
     poe_mode: pse
     poe_type: type3-ieee802.3bt
-  - name: SFP28 49
+  - name: Port 49
+    label: SFP28 49
     type: 25gbase-x-sfp28
-  - name: SFP28 50
+  - name: Port 50
+    label: SFP28 50
     type: 25gbase-x-sfp28
-  - name: SFP28 51
+  - name: Port 51
+    label: SFP28 51
     type: 25gbase-x-sfp28
-  - name: SFP28 52
+  - name: Port 52
+    label: SFP28 52
     type: 25gbase-x-sfp28
 power-ports:
   - name: Universal AC input
