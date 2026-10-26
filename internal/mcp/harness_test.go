@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -342,6 +343,17 @@ func toolNames(t testing.TB, cs *gosdk.ClientSession) []string {
 	var out []string
 	for _, tool := range res.Tools {
 		out = append(out, tool.Name)
+	}
+	return out
+}
+
+// names lists each item's display up to the " · " its type's display template
+// adds after the name: what a test means by "which drive".
+func names(t testing.TB, v any, path ...any) []string {
+	t.Helper()
+	out := displays(t, v, path...)
+	for i, d := range out {
+		out[i], _, _ = strings.Cut(d, " · ")
 	}
 	return out
 }

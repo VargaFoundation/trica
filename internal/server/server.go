@@ -138,6 +138,15 @@ func (s *Server) Run(ctx context.Context) error {
 		Metrics: s.metrics.reg,
 	}
 
+	// Stored display names follow the schema's display rules (ADR 0065); the
+	// engine rewrites those of the types whose rule changed since last start.
+	// A failure leaves the old names, which is cosmetic: it is logged, not fatal.
+	if n, err := deps.Engine.RecomputeDisplays(ctx, s.log); err != nil {
+		s.log.Error("display names not recomputed", "error", err.Error())
+	} else if n > 0 {
+		s.log.Info("display names recomputed", "objects", n)
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {

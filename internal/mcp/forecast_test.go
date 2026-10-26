@@ -112,7 +112,7 @@ func TestForecastThreshold(t *testing.T) {
 		if got := num(t, d, "summary", "by_type", "disk"); got != 3 {
 			t.Errorf("by_type: %d", got)
 		}
-		if got := displays(t, d, "items"); !slices.Equal(got, []string{"ssd-soon", "ssd-bent", "ssd-fast"}) {
+		if got := names(t, d, "items"); !slices.Equal(got, []string{"ssd-soon", "ssd-bent", "ssd-fast"}) {
 			t.Fatalf("items %v", got)
 		}
 		if got := str(t, d, "summary", "direction"); got != "rising" {
@@ -147,7 +147,7 @@ func TestForecastThreshold(t *testing.T) {
 
 	t.Run("a drive already past the threshold is reported as such, not as a forecast", func(t *testing.T) {
 		d := forecast(nil)
-		if got := displays(t, d, "already_crossed"); !slices.Equal(got, []string{"ssd-crossed"}) {
+		if got := names(t, d, "already_crossed"); !slices.Equal(got, []string{"ssd-crossed"}) {
 			t.Fatalf("already_crossed %v", got)
 		}
 		near(t, "crossed value", fnum(t, d, "already_crossed", 0, "value"), 85, 0)
@@ -156,14 +156,14 @@ func TestForecastThreshold(t *testing.T) {
 		}
 		// At the threshold itself counts as reached.
 		at := forecast(m{"threshold": 85})
-		if got := displays(t, at, "already_crossed"); !slices.Equal(got, []string{"ssd-crossed"}) {
+		if got := names(t, at, "already_crossed"); !slices.Equal(got, []string{"ssd-crossed"}) {
 			t.Errorf("a value equal to the threshold: %v", got)
 		}
 	})
 
 	t.Run("too little history is listed and counted, never dropped", func(t *testing.T) {
 		d := forecast(nil)
-		got := displays(t, d, "insufficient_history")
+		got := names(t, d, "insufficient_history")
 		slices.Sort(got)
 		if !slices.Equal(got, []string{"ssd-one", "ssd-short"}) {
 			t.Fatalf("insufficient_history %v", got)
@@ -174,7 +174,7 @@ func TestForecastThreshold(t *testing.T) {
 			}
 		}
 		// The one-point drive says it has one value, the short one that its history is under a day.
-		for i, name := range displays(t, d, "insufficient_history") {
+		for i, name := range names(t, d, "insufficient_history") {
 			reason := str(t, d, "insufficient_history", i, "reason")
 			if name == "ssd-one" && (!strings.Contains(reason, "one value") || num(t, d, "insufficient_history", i, "points") != 1) {
 				t.Errorf("ssd-one: %q", reason)
@@ -192,7 +192,7 @@ func TestForecastThreshold(t *testing.T) {
 			t.Errorf("no_trend %d", got)
 		}
 		for _, list := range []string{"items", "already_crossed", "insufficient_history"} {
-			for _, n := range displays(t, d, list) {
+			for _, n := range names(t, d, list) {
 				if n == "ssd-flat" || n == "ssd-down" {
 					t.Errorf("%s is in %s", n, list)
 				}
@@ -202,23 +202,23 @@ func TestForecastThreshold(t *testing.T) {
 		if got := num(t, d, "summary", "beyond_horizon"); got != 0 {
 			t.Errorf("beyond_horizon with a 10-year horizon: %d", got)
 		}
-		if got := displays(t, d, "items"); !slices.Contains(got, "ssd-slow") || slices.Contains(got, "ssd-flat") {
+		if got := names(t, d, "items"); !slices.Contains(got, "ssd-slow") || slices.Contains(got, "ssd-flat") {
 			t.Errorf("items %v", got)
 		}
 	})
 
 	t.Run("the horizon decides what is reported", func(t *testing.T) {
 		d := forecast(m{"horizon_days": 30})
-		if got := displays(t, d, "items"); !slices.Equal(got, []string{"ssd-soon", "ssd-bent"}) {
+		if got := names(t, d, "items"); !slices.Equal(got, []string{"ssd-soon", "ssd-bent"}) {
 			t.Errorf("30 days: %v", got)
 		}
 		if got := num(t, d, "summary", "beyond_horizon"); got != 2 {
 			t.Errorf("30 days: beyond_horizon %d", got)
 		}
-		if got := displays(t, forecast(m{"horizon_days": 9}), "items"); len(got) != 0 {
+		if got := names(t, forecast(m{"horizon_days": 9}), "items"); len(got) != 0 {
 			t.Errorf("9 days: %v", got)
 		}
-		if got := displays(t, forecast(m{"horizon_days": 11}), "items"); !slices.Equal(got, []string{"ssd-soon"}) {
+		if got := names(t, forecast(m{"horizon_days": 11}), "items"); !slices.Equal(got, []string{"ssd-soon"}) {
 			t.Errorf("11 days: %v", got)
 		}
 		// The default is about six months.
@@ -233,7 +233,7 @@ func TestForecastThreshold(t *testing.T) {
 	t.Run("the window restricts the history the line is fitted to", func(t *testing.T) {
 		d := forecast(m{"window_days": 30})
 		// Only ssd-soon (2 points) and ssd-bent (3 points) have two points in the last 30 days.
-		if got := displays(t, d, "items"); !slices.Equal(got, []string{"ssd-bent", "ssd-soon"}) {
+		if got := names(t, d, "items"); !slices.Equal(got, []string{"ssd-bent", "ssd-soon"}) {
 			t.Fatalf("items %v", got)
 		}
 		if got := num(t, d, "items", 0, "points"); got != 3 {
@@ -258,7 +258,7 @@ func TestForecastThreshold(t *testing.T) {
 		}
 		// 90 -> 80 -> 70 over 100 days: -0.2 per day, 40 left in 150 days.
 		d := falling(40)
-		if got := displays(t, d, "items"); !slices.Equal(got, []string{"ssd-fast"}) {
+		if got := names(t, d, "items"); !slices.Equal(got, []string{"ssd-fast"}) {
 			t.Fatalf("falling to 40: %v (%v)", got, d["summary"])
 		}
 		near(t, "slope", fnum(t, d, "items", 0, "slope_per_day"), -0.2, 1e-9)
@@ -267,18 +267,18 @@ func TestForecastThreshold(t *testing.T) {
 			t.Errorf("direction %q", str(t, d, "summary", "direction"))
 		}
 		// Falling to 100: the drive is already below it.
-		if got := displays(t, falling(100), "already_crossed"); !slices.Equal(got, []string{"ssd-fast"}) {
+		if got := names(t, falling(100), "already_crossed"); !slices.Equal(got, []string{"ssd-fast"}) {
 			t.Errorf("falling to 100: %v", got)
 		}
 		// Equal to the threshold counts as reached, in this direction too.
-		if got := displays(t, falling(70), "already_crossed"); !slices.Equal(got, []string{"ssd-fast"}) {
+		if got := names(t, falling(70), "already_crossed"); !slices.Equal(got, []string{"ssd-fast"}) {
 			t.Errorf("falling to 70: %v", got)
 		}
 		// The same attribute read as rising: 70 is already past 40, and a falling line never reaches 90.
 		rising := func(threshold float64) map[string]any {
 			return ok(t, cs, "forecast_threshold", m{"type": "disk", "attribute": "spare_pct", "threshold": threshold}).Data
 		}
-		if got := displays(t, rising(40), "already_crossed"); !slices.Equal(got, []string{"ssd-fast"}) {
+		if got := names(t, rising(40), "already_crossed"); !slices.Equal(got, []string{"ssd-fast"}) {
 			t.Errorf("rising to 40: %v", got)
 		}
 		r := rising(90)
@@ -288,18 +288,18 @@ func TestForecastThreshold(t *testing.T) {
 		// A wear that only falls reaches a low threshold when asked falling.
 		w := ok(t, cs, "forecast_threshold", m{"type": "disk", "attribute": "wear_pct", "threshold": 10, "direction": "falling", "horizon_days": 365,
 			"filters": []m{{"attribute": "media", "op": "eq", "value": "ssd"}}}).Data
-		if got := displays(t, w, "items"); !slices.Equal(got, []string{"ssd-down"}) {
+		if got := names(t, w, "items"); !slices.Equal(got, []string{"ssd-down"}) {
 			t.Errorf("a falling wear toward 10: %v", got)
 		}
 	})
 
 	t.Run("the population is selected like filter_objects", func(t *testing.T) {
 		all := ok(t, cs, "forecast_threshold", m{"type": "disk", "attribute": "wear_pct", "threshold": 80}).Data
-		if got := displays(t, all, "items"); !slices.Contains(got, "hdd-fast") || num(t, all, "summary", "matching") != 10 {
+		if got := names(t, all, "items"); !slices.Contains(got, "hdd-fast") || num(t, all, "summary", "matching") != 10 {
 			t.Errorf("without the media filter: %v %v", got, all["summary"])
 		}
 		hdd := ok(t, cs, "forecast_threshold", m{"type": "disk", "attribute": "wear_pct", "threshold": 80, "query": "media:hdd"}).Data
-		if got := displays(t, hdd, "items"); !slices.Equal(got, []string{"hdd-fast"}) {
+		if got := names(t, hdd, "items"); !slices.Equal(got, []string{"hdd-fast"}) {
 			t.Errorf("TQL narrowing: %v", got)
 		}
 		// Objects without the attribute are not part of the population.
@@ -325,7 +325,7 @@ func TestForecastThreshold(t *testing.T) {
 
 	t.Run("the answer is paginated, summary first", func(t *testing.T) {
 		d := forecast(m{"limit": 1, "offset": 1})
-		if got := displays(t, d, "items"); !slices.Equal(got, []string{"ssd-bent"}) {
+		if got := names(t, d, "items"); !slices.Equal(got, []string{"ssd-bent"}) {
 			t.Fatalf("page %v", got)
 		}
 		if num(t, d, "summary", "total") != 3 || num(t, d, "summary", "returned") != 1 || dig(t, d, "summary", "truncated") != true || num(t, d, "summary", "next_offset") != 2 {
@@ -464,7 +464,7 @@ func TestForecastScanBound(t *testing.T) {
 		if dig(t, d, "summary", "scan_truncated") != true {
 			t.Errorf("the summary must say the scan was cut: %v", d["summary"])
 		}
-		if got := displays(t, d, "items"); !slices.Equal(got, []string{"ssd-bent", "ssd-fast"}) {
+		if got := names(t, d, "items"); !slices.Equal(got, []string{"ssd-bent", "ssd-fast"}) {
 			t.Errorf("items %v", got)
 		}
 	})
@@ -477,7 +477,7 @@ func TestForecastCrossingIsNeverInThePast(t *testing.T) {
 	// 70 -> 85 -> 79: the fitted line is above 80 today, yet the drive reads 79.
 	e.disk(now, "srv-01", "ssd-late", "ssd", reading{days(100), 70, 0}, reading{days(50), 85, 0}, reading{0, 79, 0})
 	d := ok(t, e.connect(e.as(tokReader)), "forecast_threshold", m{"type": "disk", "attribute": "wear_pct", "threshold": 80}).Data
-	if got := displays(t, d, "items"); !slices.Equal(got, []string{"ssd-late"}) {
+	if got := names(t, d, "items"); !slices.Equal(got, []string{"ssd-late"}) {
 		t.Fatalf("items %v (%v)", got, d["summary"])
 	}
 	if got := fnum(t, d, "items", 0, "days_to_cross"); got != 0 {

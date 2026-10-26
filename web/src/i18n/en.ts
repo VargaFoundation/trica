@@ -872,6 +872,7 @@ export const en = {
   "objects.type": "Type",
   "objects.anyType": "All types",
   "objects.site": "Site",
+  "objects.parentOrSite": "Parent / site",
   "objects.anySite": "All sites",
   "objects.health": "Health",
   "objects.status": "Presence",

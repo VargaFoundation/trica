@@ -2253,6 +2253,11 @@ export interface components {
              */
             speed_mhz?: number;
             /**
+             * Technology
+             * @description Memory generation (DDR4, DDR5, ...).
+             */
+            technology?: string;
+            /**
              * Uncorrected errors
              * @description Uncorrected ECC errors.
              */
@@ -4090,6 +4095,7 @@ export interface components {
             /** Format: date-time */
             last_seen?: string;
             observed: boolean;
+            parent?: components["schemas"]["ObjectRef"];
             parent_id?: string;
             site_id?: string;
             status: string;

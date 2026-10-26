@@ -175,7 +175,7 @@ var profileCases = []profileCase{
 				attrs: map[string]any{"cores": 8, "threads": 16, "health": "ok", "model": "Intel(R) Xeon(R) CPU E5-2640 v3 @ 2.60GHz"}},
 			// The NotPresent DIMM is skipped; the one in Warning keeps its health.
 			{ref: "dimm:PROC 2 DIMM 1", typ: "memory", parent: "dev", id: map[string]string{"name": "PROC 2 DIMM 1"},
-				attrs: map[string]any{"size_bytes": int64(16) << 30, "speed_mhz": 2133, "health": "warning", "model": "HMA42GR7MFR4N-TF"}},
+				attrs: map[string]any{"size_bytes": int64(16) << 30, "speed_mhz": 2133, "health": "warning", "model": "HMA42GR7MFR4N-TF", "technology": "DDR4"}},
 			// The controller serial is trimmed: the firmware pads it with spaces.
 			{ref: "ctl:Slot 0", typ: "module", parent: "dev", id: map[string]string{"name": "Slot 0", "serial": "SYNTH-P440AR-01"},
 				attrs: map[string]any{"kind": "storage_controller", "model": "HP Smart Array P440ar Controller", "firmware_version": "6.06", "health": "ok"}},
@@ -233,7 +233,7 @@ var profileCases = []profileCase{
 				"log_critical_count": 1, "log_warning_count": 1, "log_last_critical": "Drive Failure (Bay 2).", "log_last_critical_at": "2026-10-10T12:00:00Z",
 			}},
 			{ref: "dimm:PROC 1 DIMM 3", typ: "memory", parent: "dev", id: map[string]string{"name": "PROC 1 DIMM 3", "serial": "SYNTH-DIMM-0001"},
-				attrs: map[string]any{"size_bytes": int64(32) << 30, "speed_mhz": 2666, "model": "HMA84GR7CJR4N-WM"}},
+				attrs: map[string]any{"size_bytes": int64(32) << 30, "speed_mhz": 2666, "model": "HMA84GR7CJR4N-WM", "technology": "DDR4"}},
 			{ref: "ctl:DE00A000", typ: "module", parent: "dev", id: map[string]string{"serial": "SYNTH-P408IA-02"},
 				attrs: map[string]any{"kind": "storage_controller", "model": "HPE Smart Array P408i-a SR Gen10", "firmware_version": "2.62"}},
 			// Wear from the HPE OEM endurance counter; the empty bay 3 is not a disk.
@@ -955,6 +955,17 @@ func TestNew(t *testing.T) {
 		g.Address = addr
 		if _, err := New(g); err != nil {
 			t.Errorf("address %q: %v", addr, err)
+		}
+	}
+}
+
+func TestMemoryTechnology(t *testing.T) {
+	for in, want := range map[string]string{
+		"DDR4": "DDR4", "DDR4_SDRAM": "DDR4", "DDR4E_SDRAM": "DDR4", "ddr5": "DDR5", "DDR3_SDRAM\t": "DDR3",
+		"LPDDR5_SDRAM": "LPDDR5", "HBM2": "HBM2", "DRAM": "", "Unknown": "", "": "", "Other": "",
+	} {
+		if got := memoryTechnology(in); got != want {
+			t.Errorf("memoryTechnology(%q) = %q, want %q", in, got, want)
 		}
 	}
 }

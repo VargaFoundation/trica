@@ -75,12 +75,12 @@ questions:
       - {path: summary.already_crossed, equals: 1}
       - {path: summary.insufficient_history, equals: 1}
       - {path: summary.beyond_horizon, equals: 1}
-      - {path: "items.*.display", equals: [ssd-03a, ssd-05a]}
+      - {path: "items.*.display", equals: ["ssd-03a · NVME", "ssd-05a · SSD"]}
       - {path: items.0.points, equals: 3}
       - {path: items.0.days_to_cross, gte: 22}
       - {path: items.1.days_to_cross, gte: 134}
-      - {path: "already_crossed.*.display", equals: [ssd-09a]}
-      - {path: "insufficient_history.*.display", equals: [ssd-11a]}
+      - {path: "already_crossed.*.display", equals: ["ssd-09a · SSD"]}
+      - {path: "insufficient_history.*.display", equals: ["ssd-11a · SSD"]}
     caveat: "A straight-line estimate fitted to the values the inventory recorded (a value is recorded when it changes, so a drive that never changed has one point and is listed as insufficient_history), not a lifetime guarantee. The seed has the hard disk hdd-02a on the same trend: the media filter leaves it out. Six months is taken as 183 days. The specification places SSD wear forecasts in lot 2 (line 301): this tool answers the question on the history already stored, without the thermal and energy layers of that lot."
 
   - id: 5

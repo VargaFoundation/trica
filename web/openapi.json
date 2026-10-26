@@ -2971,6 +2971,16 @@
             },
             "x-trica-unit": "MHz"
           },
+          "technology": {
+            "description": "Memory generation (DDR4, DDR5, ...).",
+            "title": "Technology",
+            "type": "string",
+            "x-trica-kind": "string",
+            "x-trica-label": {
+              "en": "Technology",
+              "fr": "Technologie"
+            }
+          },
           "uncorrected_errors": {
             "description": "Uncorrected ECC errors.",
             "title": "Uncorrected errors",
@@ -7357,6 +7367,9 @@
           },
           "observed": {
             "type": "boolean"
+          },
+          "parent": {
+            "$ref": "#/components/schemas/ObjectRef"
           },
           "parent_id": {
             "type": "string"

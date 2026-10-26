@@ -81,12 +81,15 @@ type Attribute struct {
 
 // Type describes an object type.
 type Type struct {
-	Name        string   `yaml:"-" json:"name"`
-	Layer       string   `yaml:"layer" json:"layer"`
-	Label       Label    `yaml:"label" json:"label"`
-	Description string   `yaml:"description" json:"description"`
-	Display     string   `yaml:"display" json:"display"`
-	Parents     []string `yaml:"parents,omitempty" json:"parents,omitempty"`
+	Name        string `yaml:"-" json:"name"`
+	Layer       string `yaml:"layer" json:"layer"`
+	Label       Label  `yaml:"label" json:"label"`
+	Description string `yaml:"description" json:"description"`
+	Display     string `yaml:"display" json:"display"`
+	// DisplayTemplate, when set, builds the display name from several
+	// attributes (ADR 0065); Display stays the fallback when it renders empty.
+	DisplayTemplate string   `yaml:"display_template,omitempty" json:"display_template,omitempty"`
+	Parents         []string `yaml:"parents,omitempty" json:"parents,omitempty"`
 	// IdentityScope names the attribute whose value scopes the identifiers of
 	// the type (ADR 0036): the same address in two routing domains is two
 	// ip_address objects. It is given with the identity (Identify), never as a
@@ -217,6 +220,9 @@ func (r *Registry) Validate() error {
 			}
 		}
 		if err := validScope(t); err != nil {
+			return fmt.Errorf("type %s: %w", name, err)
+		}
+		if err := validateTemplate(t); err != nil {
 			return fmt.Errorf("type %s: %w", name, err)
 		}
 	}

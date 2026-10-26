@@ -43,18 +43,22 @@ func TestBuiltinEveryTypeIsIdentifiable(t *testing.T) {
 
 func TestParseRejects(t *testing.T) {
 	cases := map[string]string{
-		"bad kind":                   "types: {x: {attributes: {a: {kind: nope}}}}",
-		"enum no values":             "types: {x: {attributes: {a: {kind: enum}}}}",
-		"bad identity":               "types: {x: {attributes: {a: {kind: string, identity: maybe}}}}",
-		"series of a string":         "types: {x: {attributes: {a: {kind: string, series: true}}}}",
-		"bad name":                   "types: {X: {attributes: {}}}",
-		"unknown parent":             "types: {x: {parents: [y]}}",
-		"unknown end":                "types: {x: {}}\nrelations: {r: {from: [x], to: [y]}}",
-		"empty end":                  "types: {x: {}}\nrelations: {r: {from: [x], to: []}}",
-		"bad impact":                 "types: {x: {}}\nrelations: {r: {from: [x], to: [x], impact: sideways}}",
-		"searchable secret":          "types: {x: {attributes: {snmp_community: {kind: string, search: true}}}}",
-		"identifying secret":         "types: {x: {attributes: {api_token: {kind: string, identity: weak}}}}",
-		"searchable relation secret": "types: {x: {}}\nrelations: {r: {from: [x], to: [x], attributes: {Wifi_PSK: {kind: string, search: true}}}}",
+		"bad kind":                     "types: {x: {attributes: {a: {kind: nope}}}}",
+		"enum no values":               "types: {x: {attributes: {a: {kind: enum}}}}",
+		"bad identity":                 "types: {x: {attributes: {a: {kind: string, identity: maybe}}}}",
+		"series of a string":           "types: {x: {attributes: {a: {kind: string, series: true}}}}",
+		"bad name":                     "types: {X: {attributes: {}}}",
+		"unknown parent":               "types: {x: {parents: [y]}}",
+		"unknown end":                  "types: {x: {}}\nrelations: {r: {from: [x], to: [y]}}",
+		"empty end":                    "types: {x: {}}\nrelations: {r: {from: [x], to: []}}",
+		"bad impact":                   "types: {x: {}}\nrelations: {r: {from: [x], to: [x], impact: sideways}}",
+		"searchable secret":            "types: {x: {attributes: {snmp_community: {kind: string, search: true}}}}",
+		"identifying secret":           "types: {x: {attributes: {api_token: {kind: string, identity: weak}}}}",
+		"template unknown attribute":   "types: {x: {display_template: \"{nope}\", attributes: {a: {kind: string}}}}",
+		"template unknown formatter":   "types: {x: {display_template: \"{a|shout}\", attributes: {a: {kind: string}}}}",
+		"template unclosed":            "types: {x: {display_template: \"{a\", attributes: {a: {kind: string}}}}",
+		"template without placeholder": "types: {x: {display_template: \"plain\", attributes: {a: {kind: string}}}}",
+		"searchable relation secret":   "types: {x: {}}\nrelations: {r: {from: [x], to: [x], attributes: {Wifi_PSK: {kind: string, search: true}}}}",
 	}
 	for name, y := range cases {
 		if _, err := Parse([]byte(y), false); err == nil {

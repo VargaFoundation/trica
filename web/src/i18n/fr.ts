@@ -872,6 +872,7 @@ export const fr: Record<MessageKey, string> = {
   "objects.type": "Type",
   "objects.anyType": "Tous les types",
   "objects.site": "Site",
+  "objects.parentOrSite": "Parent / site",
   "objects.anySite": "Tous les sites",
   "objects.health": "Santé",
   "objects.status": "Présence",
