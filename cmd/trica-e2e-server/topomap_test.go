@@ -31,3 +31,41 @@ func TestMockMapDrawsTheDeviceUplinks(t *testing.T) {
 		}
 	}
 }
+
+// The rack level of r12 is the fixture of the UniFi-like look (web/e2e/topology-look.spec.ts):
+// a firewall with a model at the top, two switches, two servers, an aggregate
+// of two 40G links with live traffic, and speeds of several classes.
+func TestMockMapRackHasATreeWithAnAggregateAndLiveTraffic(t *testing.T) {
+	a := newAPI(func(string) bool { return true }).(*api)
+	m, err := topomap.IndexOf(a.mapSnapshot()).View(topomap.LevelRack, oid(idRack), topomap.Options{Live: a.mapLive()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	roles := map[string]string{}
+	for _, n := range m.Nodes {
+		if n.Kind == topomap.KindDevice {
+			roles[n.Display] = n.Role + "/" + n.Model
+		}
+	}
+	if roles["fw-paris"] != "firewall/ex-fw-100" || roles["sw-a1"] != "switch/ex-switch-48" || roles["srv-05"] != "server/ex-server" {
+		t.Errorf("devices of r12 = %v", roles)
+	}
+	var fw *topomap.MapEdge
+	for i, e := range m.Edges {
+		if e.Medium == topomap.MediumPhysical && e.Links == 2 && e.CapacityMbps == 80000 {
+			fw = &m.Edges[i]
+		}
+	}
+	if fw == nil || !fw.Measured || fw.AToBBps == nil || fw.Util == nil || len(fw.Members) != 2 {
+		t.Fatalf("no measured 2 x 40G aggregate in %+v", m.Edges)
+	}
+	speeds := map[float64]bool{}
+	for _, e := range m.Edges {
+		if e.Medium == topomap.MediumPhysical {
+			speeds[e.CapacityMbps] = true
+		}
+	}
+	if len(speeds) < 3 {
+		t.Errorf("the rack shows %d capacities, the look needs several: %v", len(speeds), speeds)
+	}
+}

@@ -292,6 +292,70 @@
     "iso-shadow": {
       "light": "#161616",
       "dark": "#000000"
+    },
+    "iso-ground": {
+      "light": "#ececec",
+      "dark": "#101012"
+    },
+    "iso-grid": {
+      "light": "#dcdcde",
+      "dark": "#24252a"
+    },
+    "iso-rim": {
+      "light": "#ffffff",
+      "dark": "#cfe4fb"
+    },
+    "iso-glass": {
+      "light": "#2b2c30",
+      "dark": "#0e0e10"
+    },
+    "iso-vent": {
+      "light": "#a0a2ab",
+      "dark": "#8b8d97"
+    },
+    "iso-window": {
+      "light": "#767884",
+      "dark": "#f1d38a"
+    },
+    "iso-roof": {
+      "light": "#e4e4e6",
+      "dark": "#232428"
+    },
+    "iso-tray": {
+      "light": "#8b919c",
+      "dark": "#5a5f68"
+    },
+    "iso-particle": {
+      "light": "#0f1720",
+      "dark": "#ffffff"
+    },
+    "iso-speed-100g": {
+      "light": "#a21caf",
+      "dark": "#f0abfc"
+    },
+    "iso-speed-40g": {
+      "light": "#6d28d9",
+      "dark": "#c4b5fd"
+    },
+    "iso-speed-10g": {
+      "light": "#1d6fb8",
+      "dark": "#7cc4fa"
+    },
+    "iso-speed-5g": {
+      "light": "#0f766e",
+      "dark": "#5eead4"
+    },
+    "iso-speed-1g": {
+      "light": "#5d6673",
+      "dark": "#b4bcc8"
+    },
+    "iso-speed-slow": {
+      "light": "#69707c",
+      "dark": "#8a919c"
+    },
+    "iso-speed-unknown": {
+      "light": "#767c86",
+      "dark": "#767c86"
     }
   },
   "fonts": {

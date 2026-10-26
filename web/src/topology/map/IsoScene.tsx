@@ -2,10 +2,11 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import type { MapNode, TopologyMap } from "../../api/types";
 import { useI18n, type MessageKey } from "../../i18n";
 import { prefersReducedMotion } from "../../motion";
-import { capacityWidth, planFlows, type Direction, type SpeedClass } from "./flow";
+import { IconGlyph } from "../../components/ui/icons";
+import { MAX_PARTICLES, PARTICLE_SECONDS, particleCount, planFlows, STATE_DASH, type Direction, type SpeedClass } from "./flow";
 import type { IsoBox, Rot } from "./iso";
 import { nextSpot, type Arrow } from "./nav";
-import { buildScene, MEDIUM_DASH, type SceneEdge, type SceneFrame, type SceneItem } from "./scene";
+import { buildScene, MEDIUM_DASH, type SceneBadge, type SceneEdge, type SceneFrame, type SceneItem } from "./scene";
 
 export interface IsoSceneProps {
   map: TopologyMap;
@@ -26,10 +27,9 @@ export interface IsoSceneProps {
   label: string;
 }
 
-const DASH: Record<string, string | undefined> = { declared: undefined, observed: "7 4", deduced: "2 5" };
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 6;
-const CLOUD = "M-20,8 a9,9 0 0 1 3,-17 a12,12 0 0 1 23,-4 a10,10 0 0 1 12,21 z";
+const CLOUD = "M-30,12 a12,12 0 0 1 4,-23 a17,17 0 0 1 33,-6 a14,14 0 0 1 17,29 z";
 
 function usePageHidden(): boolean {
   const [hidden, setHidden] = useState(() => typeof document !== "undefined" && document.hidden);
@@ -187,7 +187,7 @@ export function IsoScene(p: IsoSceneProps) {
       else p.onUp();
     } else if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowRight") {
       e.preventDefault();
-      const next = nextSpot(scene.items.map((i) => ({ id: i.id, at: i.iso.anchor })), it.id, e.key as Arrow);
+      const next = nextSpot(scene.items.map((i) => ({ id: i.id, at: i.navAt })), it.id, e.key as Arrow);
       if (next) {
         setCur(next);
         els.current.get(next)?.focus({ preventScroll: true });
@@ -203,11 +203,89 @@ export function IsoScene(p: IsoSceneProps) {
   const healthLabel = (n: MapNode) => t(`healthState.${n.health.worst}` as MessageKey);
   const summary = (n: MapNode): string | undefined => {
     const c = n.counts;
-    if (n.kind === "site") return `${tp("topology.map.count.rooms", c.rooms)} · ${tp("topology.map.count.racks", c.racks)}`;
+    if (n.kind === "site") return `${tp("topology.map.count.rooms", c.rooms)} · ${tp("topology.map.count.racks", c.racks)} · ${tp("topology.map.count.devices", c.devices)}`;
     if (n.kind === "room" || n.kind === "area") return tp("topology.map.count.racks", c.racks);
     if (n.kind === "rack") return tp("topology.map.count.devices", c.devices);
     return undefined;
   };
+
+  const moving = p.flowOn && !reduced && !hidden;
+  const edgeEl = (e: SceneEdge) => {
+    const lane = laneOf.get(e.edge.id);
+    return (
+      <g
+        key={e.edge.id}
+        className={`iso-edge u-${e.util} b-${e.band} st-${e.state} m-${e.edge.medium}${p.selected === e.edge.id ? " is-selected" : ""}${hotEdge(e)}`}
+        data-id={e.edge.id}
+        data-medium={e.edge.medium}
+        data-band={e.band}
+        data-state={e.state}
+        aria-hidden="true"
+        onPointerEnter={() => setHover(e.edge.id)}
+        onPointerLeave={() => setHover(undefined)}
+        onClick={(ev) => {
+          ev.stopPropagation();
+          p.onSelect(p.selected === e.edge.id ? undefined : e.edge.id);
+        }}
+      >
+        <path className="iso-edge-hit" d={e.d} />
+        <path className="iso-edge-halo" d={e.d} strokeWidth={e.width + 6} />
+        <path className="iso-edge-casing" d={e.d} strokeWidth={e.width + 3} />
+        <path className="iso-edge-base" d={e.d} strokeWidth={e.width} strokeDasharray={MEDIUM_DASH[e.edge.medium] ?? STATE_DASH[e.state]} />
+        {e.edge.medium === "tunnel" ? <path className="iso-edge-core" d={e.d} strokeWidth={Math.max(e.width - 2.4, 0.8)} strokeDasharray={MEDIUM_DASH.tunnel} /> : null}
+        {e.arrows.map((pts, i) => (
+          <polygon key={i} className="iso-edge-arrow" points={pts} />
+        ))}
+        {e.lanes.map((l) => {
+          const cls = lane?.get(l.dir);
+          if (!cls) return null;
+          const n = Math.min(particleCount(l.len, cls), MAX_PARTICLES);
+          const dur = PARTICLE_SECONDS[cls];
+          return (
+            <g key={l.dir} className={`iso-flow s${cls} ${l.dir}`}>
+              <path className={`iso-flow-glow s${cls} ${l.dir}`} d={l.d} strokeWidth={1.2} />
+              {Array.from({ length: n }, (_, k) => (
+                <circle key={k} className="iso-particle" r={Math.min(e.width, 4.4) * 0.42 + 1}>
+                  <animateMotion dur={`${dur}s`} begin={`-${((k * dur) / n).toFixed(2)}s`} repeatCount="indefinite" path={l.d} />
+                </circle>
+              ))}
+            </g>
+          );
+        })}
+        {e.pulse && moving ? (
+          <circle className="iso-pulse" r="3.2">
+            <animateMotion dur="3.6s" repeatCount="indefinite" path={e.d} />
+          </circle>
+        ) : null}
+      </g>
+    );
+  };
+  const badgeOf = (b: SceneBadge, cls: string) => (
+    <g key={cls} className={`iso-badge ${cls}`} transform={`translate(${b.x} ${b.y})`}>
+      <rect x={-b.w / 2} y="-8" width={b.w} height="15" rx="7.5" />
+      <text y="3.5" textAnchor="middle">
+        {b.text}
+      </text>
+    </g>
+  );
+  const edgeBadges = (e: SceneEdge) => {
+    const hot = hotEdge(e) === " is-hot" || p.selected === e.edge.id;
+    return (
+      <g key={e.edge.id} className={`iso-edge-badges${hot ? " is-hot" : ""}${e.portsShown ? " is-shown" : ""}${hotEdge(e) === " is-dim" ? " is-dim" : ""}`} data-for={e.edge.id} aria-hidden="true">
+        {e.ports.a ? badgeOf(e.ports.a, "iso-badge-port") : null}
+        {e.ports.b ? badgeOf(e.ports.b, "iso-badge-port b") : null}
+        {e.bundle ? badgeOf(e.bundle, "iso-badge-bundle") : null}
+        {e.state === "down" ? (
+          <g className="iso-badge-x" transform={`translate(${e.mid.x} ${e.mid.y})`}>
+            <circle r="7" />
+            <path d="M-3,-3L3,3M3,-3L-3,3" />
+          </g>
+        ) : null}
+      </g>
+    );
+  };
+  const floorEdges = scene.edges.filter((e) => e.floor);
+  const airEdges = scene.edges.filter((e) => !e.floor);
 
   return (
     <svg
@@ -228,7 +306,7 @@ export function IsoScene(p: IsoSceneProps) {
       onPointerUp={onUpPointer}
       onPointerCancel={onUpPointer}
       onClick={(e) => {
-        if (e.target === e.currentTarget || (e.target as Element).classList.contains("iso-plate")) {
+        if (e.target === e.currentTarget || (e.target as Element).classList.contains("iso-plate") || (e.target as Element).classList.contains("iso-ground")) {
           if (!suppress.current) p.onSelect(undefined);
         }
       }}
@@ -241,7 +319,18 @@ export function IsoScene(p: IsoSceneProps) {
           <stop className="iso-stop-hi" offset="0" />
           <stop className="iso-stop-lo" offset="1" />
         </linearGradient>
+        <radialGradient id="iso-ground-fade" gradientUnits="userSpaceOnUse" cx={scene.ground.cx} cy={scene.ground.cy} r={scene.ground.r}>
+          <stop offset="0.45" stopColor="#fff" />
+          <stop offset="1" stopColor="#000" />
+        </radialGradient>
+        <mask id="iso-ground-mask" maskUnits="userSpaceOnUse" x={scene.bounds.x0 - 400} y={scene.bounds.y0 - 400} width={scene.bounds.x1 - scene.bounds.x0 + 800} height={scene.bounds.y1 - scene.bounds.y0 + 800}>
+          <rect x={scene.bounds.x0 - 400} y={scene.bounds.y0 - 400} width={scene.bounds.x1 - scene.bounds.x0 + 800} height={scene.bounds.y1 - scene.bounds.y0 + 800} fill="url(#iso-ground-fade)" />
+        </mask>
       </defs>
+      <g className="iso-ground-layer" mask="url(#iso-ground-mask)" aria-hidden="true">
+        <polygon className="iso-ground" points={scene.ground.poly} />
+        <path className="iso-ground-grid" d={scene.ground.grid} />
+      </g>
       <g className="iso-plates">
         {scene.plates.map((pl) => (
           <g key={pl.id} className={pl.dashed ? "iso-plate-group is-dashed" : "iso-plate-group"}>
@@ -249,7 +338,14 @@ export function IsoScene(p: IsoSceneProps) {
             {pl.grid.length > 0 ? <path className="iso-grid" d={pl.grid.join("")} /> : null}
           </g>
         ))}
+        {scene.trays.map((t, i) => (
+          <g key={i} className="iso-tray">
+            <polygon className="iso-tray-side" points={t.south} />
+            <polygon className="iso-tray-top" points={t.top} />
+          </g>
+        ))}
       </g>
+      {floorEdges.length > 0 ? <g className="iso-edges iso-edges-floor">{floorEdges.map(edgeEl)}</g> : null}
       {scene.frame ? (
         <g className="iso-frame iso-frame-back">
           {scene.frame.back.map((b, i) => (
@@ -265,7 +361,7 @@ export function IsoScene(p: IsoSceneProps) {
               if (el) els.current.set(it.id, el);
               else els.current.delete(it.id);
             }}
-            className={`iso-item iso-${it.role} h-${it.node.health.worst}${p.selected === it.id ? " is-selected" : ""}${hover === it.id ? " is-hover" : ""}${it.drillable ? " is-drill" : ""}`}
+            className={`iso-item iso-${it.role} h-${it.node.health.worst}${p.selected === it.id ? " is-selected" : ""}${hover === it.id ? " is-hover" : ""}${it.drillable ? " is-drill" : ""}${it.card ? " has-card" : ""}`}
             data-id={it.id}
             data-kind={it.node.kind}
             data-i={n % 12}
@@ -283,24 +379,35 @@ export function IsoScene(p: IsoSceneProps) {
             onPointerEnter={() => setHover(it.id)}
             onPointerLeave={() => setHover(undefined)}
           >
-            {it.role !== "device" && it.role !== "shelf" && it.parts.length === 0 ? <polygon className="iso-shadow" points={it.iso.foot} transform="translate(12 8)" filter="url(#iso-blur)" /> : null}
-            <Faces item={it} />
-            {it.parts.map((b, i) => (
-              <Post key={i} box={b} />
-            ))}
-            {it.minis.map((m, i) => (
-              <g key={i} className="iso-mini">
-                <polygon className="iso-face iso-south" points={m.south} />
-                <polygon className="iso-face iso-east" points={m.east} />
-                <polygon className="iso-face iso-top" points={m.top} />
-              </g>
-            ))}
-            {it.role === "internet" ? <path className="iso-cloud" d={CLOUD} transform={`translate(${it.iso.anchor.x} ${it.iso.anchor.y - 18})`} /> : null}
-            {it.arrow ? <polygon className="iso-front" points={it.arrow} /> : null}
+            {it.parts.length === 0 ? (
+              it.role === "device" || it.role === "shelf" ? (
+                <polygon className="iso-shadow iso-shadow-flat" points={it.iso.foot} transform="translate(5 3)" />
+              ) : (
+                <polygon className="iso-shadow" points={it.iso.foot} transform="translate(12 8)" filter="url(#iso-blur)" />
+              )
+            ) : (
+              <polygon className="iso-shadow iso-shadow-flat" points={it.iso.foot} transform="translate(8 5)" />
+            )}
+            {it.leader ? <path className="iso-leader-line" d={it.leader} /> : null}
+            <g className="iso-lift">
+              <Body item={it} />
+              {it.parts.map((b, i) => (
+                <Post key={i} box={b} />
+              ))}
+              {it.role === "internet" ? (
+                <g transform={`translate(${it.iso.anchor.x} ${it.iso.anchor.y - 26})`}>
+                  <path className="iso-cloud-shadow" d={CLOUD} transform="translate(3 5)" />
+                  <path className="iso-cloud" d={CLOUD} />
+                </g>
+              ) : null}
+              {it.arrow ? <polygon className="iso-front" points={it.arrow} /> : null}
+              <polygon className="iso-hull" points={it.iso.hull} />
+            </g>
+            {it.card ? <Card item={it} /> : null}
             <g
               className="iso-info"
               aria-hidden="true"
-              transform={`translate(${it.iso.bounds.x1 - 4} ${it.iso.bounds.y0 + 2})`}
+              transform={`translate(${(it.card ? it.card.x + it.card.w : it.iso.bounds.x1) - 4} ${(it.card ? it.card.y : it.iso.bounds.y0) + 2})`}
               onClick={(e) => {
                 e.stopPropagation();
                 p.onSelect(p.selected === it.id ? undefined : it.id);
@@ -313,54 +420,19 @@ export function IsoScene(p: IsoSceneProps) {
         ))}
       </g>
       {scene.frame ? <FrameFront frame={scene.frame} /> : null}
-      <g className="iso-edges">
-        {scene.edges.map((e) => {
-          const lane = laneOf.get(e.edge.id);
-          const w = capacityWidth(e.edge.capacity_mbps);
-          const conf = DASH[e.edge.confidence];
-          return (
-            <g
-              key={e.edge.id}
-              className={`iso-edge u-${e.util} m-${e.edge.medium}${p.selected === e.edge.id ? " is-selected" : ""}${hotEdge(e)}`}
-              data-id={e.edge.id}
-              data-medium={e.edge.medium}
-              aria-hidden="true"
-              onPointerEnter={() => setHover(e.edge.id)}
-              onPointerLeave={() => setHover(undefined)}
-              onClick={(ev) => {
-                ev.stopPropagation();
-                p.onSelect(p.selected === e.edge.id ? undefined : e.edge.id);
-              }}
-            >
-              <path className="iso-edge-hit" d={e.d} />
-              <path className="iso-edge-casing" d={e.d} strokeWidth={w + 3} />
-              <path className="iso-edge-base" d={e.d} strokeWidth={w} strokeDasharray={MEDIUM_DASH[e.edge.medium] ?? (e.util === "down" ? "5 4" : conf)} />
-              {e.arrows.map((pts, i) => (
-                <polygon key={i} className="iso-edge-arrow" points={pts} />
-              ))}
-              {e.util === "down" ? <circle className="iso-edge-x" cx={e.mid.x} cy={e.mid.y} r="5" /> : null}
-              {e.lanes.map((l) => {
-                const cls = lane?.get(l.dir);
-                return cls ? (
-                  <g key={l.dir}>
-                    <path className={`iso-flow-glow s${cls} ${l.dir}`} d={l.d} strokeWidth={Math.min(w, 3) + 6} />
-                    <path className={`iso-flow s${cls} ${l.dir}`} d={l.d} strokeWidth={Math.min(w, 3) + 1} />
-                  </g>
-                ) : null;
-              })}
-            </g>
-          );
-        })}
-      </g>
+      <g className="iso-edges">{airEdges.map(edgeEl)}</g>
+      <g className="iso-badge-layer">{scene.edges.map(edgeBadges)}</g>
       <g className="iso-label-layer">
-        {scene.items.map((it) => (
-          <Label
-            key={it.id}
-            item={it}
-            shown={it.labelShown || hover === it.id || p.selected === it.id || focused === it.id}
-            sub={it.subShown && it.hasSub ? (it.sub ?? summary(it.node)) : undefined}
-          />
-        ))}
+        {scene.items.map((it) =>
+          it.card ? null : (
+            <Label
+              key={it.id}
+              item={it}
+              shown={it.labelShown || hover === it.id || p.selected === it.id || focused === it.id}
+              sub={it.subShown && it.hasSub ? (it.sub ?? summary(it.node)) : undefined}
+            />
+          ),
+        )}
       </g>
     </svg>
   );
@@ -404,14 +476,97 @@ function PlateFaces({ iso }: { iso: IsoBox }) {
   );
 }
 
-function Faces({ item }: { item: SceneItem }) {
-  const { iso } = item;
-  return (
+const LED_BLINK = new Set(["warning", "critical"]);
+
+/** The faces of a block and what is drawn on them: a building's roof and windows, a room's walls and name, a cabinet's door. */
+function Body({ item: it }: { item: SceneItem }) {
+  const { iso } = it;
+  const faces = (
     <>
       <polygon className="iso-face iso-south" points={iso.south} />
       <polygon className="iso-face iso-east" points={iso.east} />
       <polygon className="iso-face iso-top" points={iso.top} />
+      <polygon className="iso-rim" points={iso.top} />
     </>
+  );
+  return (
+    <>
+      {it.walls ? (
+        <g className="iso-wall iso-wall-back">
+          {it.walls.back.map((w, i) => (
+            <Wall key={i} box={w} />
+          ))}
+        </g>
+      ) : null}
+      {faces}
+      {it.roof ? <polygon className="iso-roof" points={it.roof} /> : null}
+      {it.plant ? <Wall box={it.plant} /> : null}
+      {it.windows.length > 0 ? <path className="iso-windows" d={it.windows.map((w) => `M${w.split(" ").join("L")}Z`).join("")} /> : null}
+      {it.floorText ? (
+        <text className="iso-floor-text" transform={it.floorText.transform} textAnchor="middle">
+          {it.floorText.text}
+        </text>
+      ) : null}
+      {it.cabinets.map((c, i) => (
+        <g key={i} className="iso-mini">
+          <polygon className="iso-face iso-south" points={c.iso.south} />
+          <polygon className="iso-face iso-east" points={c.iso.east} />
+          <polygon className="iso-face iso-top" points={c.iso.top} />
+          <polygon className="iso-glass" points={c.door} />
+        </g>
+      ))}
+      {it.walls ? (
+        <g className="iso-wall iso-wall-front">
+          {it.walls.front.map((w, i) => (
+            <Wall key={i} box={w} />
+          ))}
+        </g>
+      ) : null}
+      {it.ports ? <path className="iso-ports" d={it.ports} /> : null}
+      {it.door ? (
+        <g className="iso-door">
+          <polygon className="iso-glass" points={it.door.glass} />
+          <path className="iso-vents" d={it.door.vents} />
+          {it.door.leds.map((l, i) => (
+            <circle key={i} className={`iso-led l-${l.state}${LED_BLINK.has(l.state) ? " is-blink" : ""}`} cx={l.x} cy={l.y} r="1.7" />
+          ))}
+        </g>
+      ) : null}
+    </>
+  );
+}
+
+function Wall({ box }: { box: IsoBox }) {
+  return (
+    <g className="iso-wall-part">
+      <polygon className="iso-face iso-south" points={box.south} />
+      <polygon className="iso-face iso-east" points={box.east} />
+      <polygon className="iso-face iso-top" points={box.top} />
+    </g>
+  );
+}
+
+/** A linked device of a rack, as UniFi draws it: its role icon, its name and model, and its health. */
+function Card({ item }: { item: SceneItem }) {
+  const c = item.card;
+  if (!c) return null;
+  return (
+    <g className={`iso-card-box h-${item.node.health.worst}`} transform={`translate(${c.x} ${c.y})`}>
+      <rect className="iso-card-bg" width={c.w} height={c.h} rx="9" />
+      <circle className="iso-card-icon-bg" cx="22" cy={c.h / 2} r="14" />
+      <g className="iso-card-icon">
+        <IconGlyph name={c.icon} x={14} y={c.h / 2 - 8} size={16} />
+      </g>
+      <text className="iso-card-name" x="44" y={c.model ? 19 : 27}>
+        {c.name}
+      </text>
+      {c.model ? (
+        <text className="iso-card-model" x="44" y="34">
+          {c.model}
+        </text>
+      ) : null}
+      <circle className="iso-lamp" cx={c.w - 14} cy={c.h - 13} r="4" />
+    </g>
   );
 }
 

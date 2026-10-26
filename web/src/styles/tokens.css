@@ -108,6 +108,23 @@
   --trica-iso-neutral-edge: #b0b4ba;
   --trica-iso-shadow: #000000;
   --trica-iso-label-bg: #18191b;
+  /* The map's scene and link encoding (ADR 0066): ground, rim light, door glass, windows, cable trays, speed classes of a link. */
+  --trica-iso-ground: #17181b;
+  --trica-iso-grid: #2b2e34;
+  --trica-iso-rim: #cfe4fb;
+  --trica-iso-glass: #12202f;
+  --trica-iso-vent: #4f7cae;
+  --trica-iso-window: #f1d38a;
+  --trica-iso-roof: #2c4a73;
+  --trica-iso-tray: #5a5f68;
+  --trica-iso-particle: #ffffff;
+  --trica-iso-speed-100g: #f0abfc;
+  --trica-iso-speed-40g: #c4b5fd;
+  --trica-iso-speed-10g: #7cc4fa;
+  --trica-iso-speed-5g: #5eead4;
+  --trica-iso-speed-1g: #b4bcc8;
+  --trica-iso-speed-slow: #8a919c;
+  --trica-iso-speed-unknown: #767c86;
 }
 
 /* Not colours: one place for the type, the radii and the rhythm. */
@@ -212,6 +229,23 @@
   --trica-iso-neutral-edge: #60646c;
   --trica-iso-shadow: #1c2024;
   --trica-iso-label-bg: #ffffff;
+  /* The map's scene and link encoding (ADR 0066): ground, rim light, door glass, windows, cable trays, speed classes of a link. */
+  --trica-iso-ground: #e6e9ee;
+  --trica-iso-grid: #cfd4dc;
+  --trica-iso-rim: #ffffff;
+  --trica-iso-glass: #2a4466;
+  --trica-iso-vent: #8fb0d6;
+  --trica-iso-window: #5b86b8;
+  --trica-iso-roof: #c3d9f3;
+  --trica-iso-tray: #8b919c;
+  --trica-iso-particle: #0f1720;
+  --trica-iso-speed-100g: #a21caf;
+  --trica-iso-speed-40g: #6d28d9;
+  --trica-iso-speed-10g: #1d6fb8;
+  --trica-iso-speed-5g: #0f766e;
+  --trica-iso-speed-1g: #5d6673;
+  --trica-iso-speed-slow: #69707c;
+  --trica-iso-speed-unknown: #767c86;
 }
 :root[data-theme="light"] {
   --trica-shadow-raised: 0 1px 2px rgb(28 32 36 / 6%);
@@ -296,6 +330,23 @@
     --trica-iso-neutral-edge: #60646c;
     --trica-iso-shadow: #1c2024;
     --trica-iso-label-bg: #ffffff;
+    /* The map's scene and link encoding (ADR 0066): ground, rim light, door glass, windows, cable trays, speed classes of a link. */
+    --trica-iso-ground: #e6e9ee;
+    --trica-iso-grid: #cfd4dc;
+    --trica-iso-rim: #ffffff;
+    --trica-iso-glass: #2a4466;
+    --trica-iso-vent: #8fb0d6;
+    --trica-iso-window: #5b86b8;
+    --trica-iso-roof: #c3d9f3;
+    --trica-iso-tray: #8b919c;
+    --trica-iso-particle: #0f1720;
+    --trica-iso-speed-100g: #a21caf;
+    --trica-iso-speed-40g: #6d28d9;
+    --trica-iso-speed-10g: #1d6fb8;
+    --trica-iso-speed-5g: #0f766e;
+    --trica-iso-speed-1g: #5d6673;
+    --trica-iso-speed-slow: #69707c;
+    --trica-iso-speed-unknown: #767c86;
   }
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --trica-shadow-raised: 0 1px 2px rgb(28 32 36 / 6%);

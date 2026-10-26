@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MapEdge } from "../../api/types";
-import { capacityWidth, edgeUtilClass, MAX_LANES, planFlows, speedClass } from "./flow";
+import { edgeUtilClass, linkState, MAX_LANES, MAX_PARTICLES, PARTICLE_SECONDS, particleCount, planFlows, speedClass, STATE_DASH } from "./flow";
 
 const edge = (id: string, ab: number | undefined, ba: number | undefined, extra: Partial<MapEdge> = {}): MapEdge => ({
   id,
@@ -21,13 +21,29 @@ const edge = (id: string, ab: number | undefined, ba: number | undefined, extra:
 });
 const ON = { on: true, reduced: false, hidden: false };
 
-describe("line width", () => {
-  it("grows with the capacity, between 1.5 and 6 px", () => {
-    expect(capacityWidth(undefined)).toBe(1.5);
-    expect(capacityWidth(10)).toBe(1.5);
-    expect(capacityWidth(1000)).toBeGreaterThan(capacityWidth(100));
-    expect(capacityWidth(100_000)).toBeGreaterThan(capacityWidth(10_000));
-    expect(capacityWidth(10_000_000)).toBe(6);
+describe("what a line says of its link", () => {
+  it.each([
+    ["up", "up", undefined],
+    ["partial", "up", undefined],
+    ["down", "down", "6 4"],
+    ["unknown", "unknown", "1.5 5"],
+    ["anything else", "unknown", "1.5 5"],
+  ])("oper %s is %s, drawn with dashes %s", (oper, state, dash) => {
+    expect(linkState({ oper })).toBe(state);
+    expect(STATE_DASH[linkState({ oper })]).toBe(dash);
+  });
+});
+
+describe("particles of a lane", () => {
+  it("are one at least, more on a longer line and a busier one, never more than the cap", () => {
+    expect(particleCount(5, 1)).toBe(1);
+    expect(particleCount(300, 3)).toBeGreaterThan(particleCount(100, 3));
+    expect(particleCount(300, 5)).toBeGreaterThan(particleCount(300, 2));
+    expect(particleCount(1e5, 5)).toBe(MAX_PARTICLES);
+  });
+  it("cross the line faster as the rate grows", () => {
+    const secs = ([1, 2, 3, 4, 5] as const).map((c) => PARTICLE_SECONDS[c]);
+    expect([...secs].sort((a, b) => b - a)).toEqual(secs);
   });
 });
 

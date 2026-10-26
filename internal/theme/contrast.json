@@ -79,5 +79,21 @@
   ["graph-health-crit", "iso-floor", 3],
   ["graph-health-ok", "iso-top", 3],
   ["graph-health-warn", "iso-top", 3],
-  ["graph-health-crit", "iso-top", 3]
+  ["graph-health-crit", "iso-top", 3],
+  ["iso-speed-100g", "iso-floor", 3],
+  ["iso-speed-100g", "surface", 3],
+  ["iso-speed-40g", "iso-floor", 3],
+  ["iso-speed-40g", "surface", 3],
+  ["iso-speed-10g", "iso-floor", 3],
+  ["iso-speed-10g", "surface", 3],
+  ["iso-speed-5g", "iso-floor", 3],
+  ["iso-speed-5g", "surface", 3],
+  ["iso-speed-1g", "iso-floor", 3],
+  ["iso-speed-1g", "surface", 3],
+  ["iso-speed-slow", "iso-floor", 3],
+  ["iso-speed-slow", "surface", 3],
+  ["iso-speed-unknown", "iso-floor", 3],
+  ["iso-speed-unknown", "surface", 3],
+  ["iso-particle", "iso-floor", 3],
+  ["iso-vent", "iso-glass", 3]
 ]
