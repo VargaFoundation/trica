@@ -191,6 +191,8 @@ type memoryModule struct {
 	PartNumber          string
 	SerialNumber        string
 	DIMMStatus          string
+	MemoryDeviceType    string // Redfish standard: DDR4, DDR4_SDRAM, DDR5...
+	DIMMType            string // HPE iLO 4 spelling of the same
 	CapacityMiB         *int64
 	SizeMB              *int64
 	OperatingSpeedMhz   *int64

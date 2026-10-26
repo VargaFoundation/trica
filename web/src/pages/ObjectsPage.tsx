@@ -82,7 +82,7 @@ function ObjectRows({ items, siteName }: { items: ObjectView[]; siteName: (id?: 
         <tr>
           <th scope="col">{t("objects.name")}</th>
           <th scope="col">{t("objects.type")}</th>
-          <th scope="col">{t("objects.site")}</th>
+          <th scope="col">{t("objects.parentOrSite")}</th>
           <th scope="col">{t("objects.health")}</th>
           <th scope="col">{t("object.status")}</th>
           <th scope="col">{t("object.lastSeen")}</th>
@@ -102,8 +102,14 @@ function ObjectRows({ items, siteName }: { items: ObjectView[]; siteName: (id?: 
                 </span>
               </th>
               <td data-label={t("objects.type")}>{label}</td>
-              <td data-label={t("objects.site")}>
-                {site && o.site_id && o.site_id !== o.id ? <Link to={`/objects/${encodeURIComponent(o.site_id)}`}>{site}</Link> : site ?? <Empty />}
+              <td data-label={t("objects.parentOrSite")}>
+                {o.parent ? (
+                  <Link to={`/objects/${encodeURIComponent(o.parent.id)}`}>{o.parent.display}</Link>
+                ) : site && o.site_id && o.site_id !== o.id ? (
+                  <Link to={`/objects/${encodeURIComponent(o.site_id)}`}>{site}</Link>
+                ) : (
+                  site ?? <Empty />
+                )}
               </td>
               <td data-label={t("objects.health")}>{hasHealth ? <HealthPill value={healthOf(o)} /> : <Empty />}</td>
               <td data-label={t("object.status")}>

@@ -169,6 +169,7 @@ types:
     layer: physical
     label: {en: Power supply, fr: Alimentation}
     description: A power supply unit of a device.
+    display_template: "{name} · {capacity_w|watts} {model}"
     parents: [device]
     attributes:
       name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "PSU slot name."}
@@ -195,6 +196,7 @@ types:
     layer: physical
     label: {en: Disk, fr: Disque}
     description: A drive (SSD, NVMe, HDD). Wear and error counters feed the end-of-life forecasts.
+    display_template: "{name} · {media|media} {capacity_bytes|bytes} {model}"
     parents: [device, module]
     attributes:
       name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Device name or bay (sda, nvme0n1, Bay 3)."}
@@ -219,11 +221,13 @@ types:
     layer: physical
     label: {en: Memory module, fr: Barrette mémoire}
     description: A DIMM.
+    display_template: "{name} · {technology} {size_bytes|ram}"
     parents: [device]
     attributes:
       name: {kind: string, identity: weak, search: true, label: {en: Slot, fr: Emplacement}, description: "DIMM slot."}
       serial: {kind: string, identity: strong, search: true, label: {en: Serial number, fr: Numéro de série}, description: "DIMM serial number."}
       model: {kind: string, search: true, label: {en: Part number, fr: Référence}, description: "DIMM part number."}
+      technology: {kind: string, search: true, label: {en: Technology, fr: Technologie}, description: "Memory generation (DDR4, DDR5, ...)."}
       size_bytes: {kind: int, unit: B, label: {en: Size, fr: Taille}, description: "Capacity."}
       speed_mhz: {kind: int, unit: MHz, label: {en: Speed, fr: Fréquence}, description: "Operating speed."}
       health: {kind: enum, values: [ok, warning, critical, unknown, absent], label: {en: Health, fr: Santé}, description: "DIMM health."}
@@ -233,6 +237,7 @@ types:
     layer: physical
     label: {en: Processor, fr: Processeur}
     description: A CPU socket.
+    display_template: "{name} · {model|cpu}"
     parents: [device]
     attributes:
       name: {kind: string, identity: weak, search: true, label: {en: Socket, fr: Socket}, description: "Socket name."}

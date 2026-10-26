@@ -1,6 +1,7 @@
 package redfish
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/VargaFoundation/trica/pkg/sdk"
@@ -116,6 +117,9 @@ func (r *run) memory(s system) {
 			Identify("name", name).
 			Identify("serial", strings.TrimSpace(m.SerialNumber))
 		o.Set("model", strings.TrimSpace(m.PartNumber)).Set("health", partHealth(m.Status))
+		if tech := memoryTechnology(first(m.MemoryDeviceType, m.DIMMType)); tech != "" {
+			o.Set("technology", tech)
+		}
 		if size := first64(mib(m.CapacityMiB), mib(m.SizeMB)); size != nil {
 			o.Set("size_bytes", *size)
 			total += *size
@@ -127,6 +131,19 @@ func (r *run) memory(s system) {
 	if _, set := r.dev.Attributes["memory_bytes"]; !set && total > 0 {
 		r.dev.Set("memory_bytes", total)
 	}
+}
+
+var memoryTechRe = regexp.MustCompile(`^(LPDDR|DDR|HBM)(\d+)`)
+
+// memoryTechnology reduces a Redfish MemoryDeviceType (DDR4, DDR4_SDRAM,
+// DDR4E_SDRAM, LPDDR5_SDRAM, HBM2...) to the generation: DDR4, LPDDR5, HBM2.
+// Values that name no generation (DRAM, Other, Unknown) give "".
+func memoryTechnology(s string) string {
+	m := memoryTechRe.FindStringSubmatch(strings.ToUpper(strings.TrimSpace(s)))
+	if m == nil {
+		return ""
+	}
+	return m[1] + m[2]
 }
 
 func first64(values ...*int64) *int64 {

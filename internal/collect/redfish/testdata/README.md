@@ -72,3 +72,8 @@ a real BMC. Compare each against the web interface of one canary host.
 9. **Which BMC interface answers.** The one carrying the first usable IPv4 is
    named `bmc`; on a server with several, confirm that this is the one the
    inventory should call the management port.
+10. **DIMM technology spelling.** `technology` is read from `MemoryDeviceType`
+    (iLO 5, iDRAC) or `DIMMType` (iLO 4); both are synthesised here (`DDR4`
+    only, absent in the iDRAC 8 fixture). Real firmware also writes
+    `DDR4_SDRAM`, `DDR4E_SDRAM`, `LPDDR5_SDRAM` (the collector reduces them to
+    `DDR4`, `DDR4`, `LPDDR5`); check the value of one canary DIMM.

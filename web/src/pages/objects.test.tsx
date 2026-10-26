@@ -36,11 +36,33 @@ describe("all objects", () => {
     expect(q?.get("sort")).toBe("display");
     expect(q?.get("limit")).toBe("50");
     expect(row.querySelector('td[data-label="Type"]')).toHaveTextContent("Server");
-    expect(within(row.querySelector('td[data-label="Site"]') as HTMLElement).getByRole("link", { name: "paris-1" })).toHaveAttribute("href", `/objects/${ID.site}`);
+    expect(within(row.querySelector('td[data-label="Parent / site"]') as HTMLElement).getByRole("link", { name: "paris-1" })).toHaveAttribute("href", `/objects/${ID.site}`);
     expect(row.querySelector('td[data-label="Health"]')).toHaveTextContent("Warning");
     const old = (screen.getByRole("link", { name: "srv-old" })).closest("tr") as HTMLElement;
     expect(old.querySelector('td[data-label="Health"]')).toHaveTextContent("Absent");
     expect(screen.getByRole("status")).toHaveTextContent("3 objects");
+  });
+
+  it("names the parent of a component, in the column where a device shows its site", async () => {
+    const cpu: ObjectView = {
+      ...srv01,
+      id: "0a000000-0000-4000-8000-0000000000c1",
+      type: "cpu",
+      display: "Proc 1 · Intel Xeon E5-2695 v4 @ 2.10GHz",
+      attributes: { name: "Proc 1" },
+      parent_id: ID.srv01,
+      parent: { id: ID.srv01, type: "device", display: "srv-01" },
+      site_id: ID.site,
+    };
+    mockApi(routes([{ ...swA1 }, cpu]));
+    renderApp({ at: "/objects" });
+    const row = (await screen.findByRole("link", { name: cpu.display })).closest("tr") as HTMLElement;
+    const cell = row.querySelector('td[data-label="Parent / site"]') as HTMLElement;
+    expect(within(cell).getByRole("link", { name: "srv-01" })).toHaveAttribute("href", `/objects/${ID.srv01}`);
+    expect(within(cell).queryByRole("link", { name: "paris-1" })).toBeNull();
+    // A device without parent keeps its site.
+    const dev = screen.getByRole("link", { name: "sw-a1" }).closest("tr") as HTMLElement;
+    expect(within(dev.querySelector('td[data-label="Parent / site"]') as HTMLElement).getByRole("link", { name: "paris-1" })).toBeInTheDocument();
   });
 
   it("turns the filters of the address into a TQL query", async () => {

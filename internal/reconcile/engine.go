@@ -942,7 +942,9 @@ func (r *run) refreshDerived(ctx context.Context, id, typ string) error {
 }
 
 // DisplayAndSearch derives an object's display name and search text from its
-// current attributes.
+// current attributes. The display name is the type's display template when it
+// renders something (ADR 0065), else its display attribute, else the first
+// identifying attribute.
 func DisplayAndSearch(t *schema.Type, attrs map[string]json.RawMessage) (string, string) {
 	str := func(raw json.RawMessage) string {
 		var v any
@@ -964,7 +966,10 @@ func DisplayAndSearch(t *schema.Type, attrs map[string]json.RawMessage) (string,
 	}
 	display := ""
 	if t != nil {
-		display = str(attrs[t.Display])
+		display = t.RenderDisplay(func(k string) string { return str(attrs[k]) })
+		if display == "" {
+			display = str(attrs[t.Display])
+		}
 	}
 	var parts []string
 	for _, k := range sdk.SortedKeys(attrs) {

@@ -265,3 +265,47 @@ func TestLoadSchemaOverlays(t *testing.T) {
 		t.Fatal("server started with a broken overlay")
 	}
 }
+
+// Display names stored under an older rule are rewritten at start (ADR 0065).
+func TestStartRecomputesStoredDisplayNames(t *testing.T) {
+	t.Parallel()
+	cfg := testConfig(t)
+	feeder := Component{Name: "feeder", Run: func(ctx context.Context, d Deps) error {
+		b := sdk.NewBatch("test:feeder", sdk.ScopeFull)
+		b.Object("srv", "device").Identify("serial", "SN-S1").Identify("name", "srv1")
+		b.Object("cpu", "cpu").Identify("name", "Proc 1").In("srv").Set("model", "Intel(R) Xeon(R) CPU E5-2695 v4 @ 2.10GHz")
+		_, err := d.Engine.Apply(ctx, b, "", "")
+		<-ctx.Done()
+		return err
+	}}
+	_, stop := start(t, New(cfg, nil, "dev", feeder))
+	url, _ := cfg.DatabaseURL()
+	st, err := store.Open(context.Background(), url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	display := func() (d string) {
+		_ = st.Pool.QueryRow(context.Background(), `SELECT display FROM objects WHERE type = 'cpu'`).Scan(&d)
+		return d
+	}
+	deadline := time.Now().Add(patience)
+	for display() == "" && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if err := stop(); err != nil {
+		t.Fatal(err)
+	}
+	// Back to how the database was before templates existed.
+	if _, err := st.Pool.Exec(context.Background(), `UPDATE objects SET display = 'Proc 1' WHERE type = 'cpu'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.Pool.Exec(context.Background(), `DELETE FROM display_rules`); err != nil {
+		t.Fatal(err)
+	}
+	_, stop = start(t, New(cfg, nil, "dev"))
+	defer func() { _ = stop() }()
+	if got, want := display(), "Proc 1 · Intel Xeon E5-2695 v4 @ 2.10GHz"; got != want {
+		t.Fatalf("display after restart: %q, want %q", got, want)
+	}
+}

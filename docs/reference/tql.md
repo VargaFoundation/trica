@@ -46,7 +46,7 @@ A MAC, an IPv6 address or a URL is free text even though it contains `:`.
 | `type` | Object type: `type:device,vm` |
 | `status` | `active`, `absent`. Absent objects are hidden unless the query names `status` |
 | `id` | Object id |
-| `display` | Display name |
+| `display` | Display name as stored: for a cpu, memory module, disk or power supply it is the readable name built from a template (`Proc 1 · Intel Xeon E5-2695 v4 @ 2.10GHz`, ADR 0065); search the slot or the model with `name:` or free text, which also read the indexed attributes |
 | `first_seen`, `last_seen`, `created_at` | `2026-03-03`, RFC 3339, or relative: `-7d`, `-24h` |
 | `parent` | Id or display name of the parent: `type:disk parent:srv1` |
 | `site` | The site (id, name or code), what it contains, what is mounted there and what a person placed there (a device in no rack, `located_in`), with their parts: `type:disk site:par1` |

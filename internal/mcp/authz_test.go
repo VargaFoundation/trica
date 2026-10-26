@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/VargaFoundation/trica/internal/api"
+	"github.com/VargaFoundation/trica/pkg/sdk"
 )
 
 // Every call is authorized per object type and per site, as the REST API does.
@@ -121,6 +122,17 @@ func TestNamesAreResolvedOrRefused(t *testing.T) {
 		a := call(t, cs, "get_object", m{"object": "eth0"})
 		if !a.IsError || !strings.HasPrefix(a.Text, "invalid-request") || !strings.Contains(a.Text, "ambiguous") || !strings.Contains(a.Text, "parent/name") {
 			t.Fatalf("got %q", a.Text)
+		}
+	})
+	t.Run("a component is designated by its name, though its display says more", func(t *testing.T) {
+		b := sdk.NewBatch("redfish:ram-01", sdk.ScopeFull)
+		b.Object("srv", "device").Identify("serial", "RAM-01-SN").Identify("name", "ram-01").Set("role", "server")
+		b.Object("d1", "memory").Identify("name", "DIMM A1").Identify("serial", "D-A1").In("srv").Set("size_bytes", int64(17179869184)).Set("technology", "DDR4")
+		b.Object("d10", "memory").Identify("name", "DIMM A10").Identify("serial", "D-A10").In("srv").Set("size_bytes", int64(17179869184)).Set("technology", "DDR4")
+		res := e.apply(b)
+		got := ok(t, cs, "get_object", m{"object": "ram-01/DIMM A1"}).Data
+		if str(t, got, "id") != res.Objects["d1"] || str(t, got, "display") != "DIMM A1 · DDR4 16 GB" {
+			t.Errorf("resolved to %v", got)
 		}
 	})
 	t.Run("an unknown name is not found", func(t *testing.T) {

@@ -182,6 +182,27 @@ func (c *call) runSearch(q *tql.Query, label string, pp pageParams) error {
 	for i := range items {
 		items[i].SiteID = sites[items[i].ID]
 	}
+	// The parent of each item, named when the caller may read it, so that a
+	// list says what a component belongs to without a request per row.
+	var parentIDs []string
+	for _, it := range items {
+		if it.ParentID != nil {
+			parentIDs = append(parentIDs, *it.ParentID)
+		}
+	}
+	if len(parentIDs) > 0 {
+		refs, err := c.visibleRefs(parentIDs)
+		if err != nil {
+			return err
+		}
+		for i := range items {
+			if items[i].ParentID != nil {
+				if ref, ok := refs[*items[i].ParentID]; ok {
+					items[i].Parent = &ref
+				}
+			}
+		}
+	}
 	return c.json(200, SearchPage{
 		Summary: SearchSummary{Query: res.Query, Total: res.Total, ByType: res.ByType, Fuzzy: res.Fuzzy, TookMS: res.Took.Milliseconds()},
 		Total:   res.Total, Limit: res.Limit, Offset: res.Offset, Items: items,

@@ -143,7 +143,9 @@ func (t *tc) resolve(ref string) (*store.Object, error) {
 	}
 	var exact []*store.Object
 	for _, o := range res.Items {
-		if strings.EqualFold(o.Display, leaf) {
+		// The display of a component says more than its name (ADR 0065): the
+		// name attribute is what a "device/DIMM A1" reference designates.
+		if name, _ := o.Attrs["name"].(string); strings.EqualFold(o.Display, leaf) || strings.EqualFold(name, leaf) {
 			exact = append(exact, o)
 		}
 	}
