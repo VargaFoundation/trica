@@ -226,3 +226,22 @@ for (const theme of ["dark", "light"] as const) {
     });
   });
 }
+
+// lbc-nas, a DS1821+ in r21: a model of no rack unit stands on a shelf the height of its chassis
+// (166 mm: 4 U), its picture keeps its proportions inside it instead of being stretched over 278 px.
+test("a desktop NAS keeps its proportions on its shelf", async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 1200 });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await signInWithToken(page, `/racks/${ID.r21}`);
+  const slot = page.locator('svg[data-face="front"] a.rack-slot[aria-label^="lbc-nas,"]');
+  await expect(slot).toHaveAttribute("data-face-drawn", "image");
+  await expect(slot).toHaveAttribute("aria-label", /U1-U4/);
+  const box = await slot.locator("foreignObject").evaluate((e) => ({ w: Number(e.getAttribute("width")), h: Number(e.getAttribute("height")) }));
+  expect(box.h).toBeCloseTo(86, 3);
+  expect(box.w / box.h).toBeCloseTo(1000 / 484, 1);
+  expect(box.w).toBeLessThan(278);
+  if (SHOTS) {
+    await page.waitForTimeout(300);
+    await page.locator('svg[data-face="front"]').screenshot({ path: `${SHOTS}/rack-ds1821.png`, scale: "device" });
+  }
+});

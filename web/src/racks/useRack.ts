@@ -25,6 +25,7 @@ export async function loadRackContents(rackId: string, signal?: AbortSignal): Pr
         face: it.face === "rear" || it.face === "front" ? it.face : undefined,
         heightU: num(it.u_height),
         fullDepth: it.full_depth === true,
+        desktop: it.desktop === true,
         typeName: it.model_name || it.model?.display,
         role: it.role,
         health: it.health,

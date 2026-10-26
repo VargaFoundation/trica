@@ -6,7 +6,7 @@
 
 import { BODY, clipName, GUTTER, LABEL_X, PAD, STRIP_PX, UNIT_PX } from "../racks/RackElevation";
 import { faceKind, genericFace, type PrimClass } from "../racks/faces";
-import { formatRange, overallHealth, slotImage, type Health, type Slot } from "../racks/layout";
+import { containBox, formatRange, overallHealth, slotImage, type Health, type Slot } from "../racks/layout";
 import { canvasBlob, type Raster, type RasterFormat } from "./download";
 
 export const SHEET = {
@@ -169,7 +169,9 @@ function drawFace(ctx: Ctx, uHeight: number, slots: readonly Slot[], images?: Re
     if (image) {
       // The other face of a full-depth device is faded, as on screen.
       ctx.globalAlpha = slot.shadow ? 0.55 : 1;
-      ctx.drawImage(image, x, y + 1, w, h);
+      // A desktop device keeps its proportions on its shelf (ADR 0068); a rack unit's face fills it.
+      const box = slot.item.desktop ? containBox(w, h, (image as { width?: number }).width ?? 0, (image as { height?: number }).height ?? 0) : { x: 0, y: 0, width: w, height: h };
+      ctx.drawImage(image, x + box.x, y + 1 + box.y, box.width, box.height);
       ctx.globalAlpha = 1;
     } else if (!slot.shadow) {
       drawGenericFace(ctx, faceKind(slot.item.role), x, y + 1, w, h);

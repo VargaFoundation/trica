@@ -73,6 +73,18 @@ func TestEmbeddedLayoutsFitTheirDrawings(t *testing.T) {
 	has("arista-dcs-7280se-64-r", devicetypes.Front, devicetypes.SpotPort, "Ethernet1", "Ethernet48", "Ethernet52", "Management1")
 	has("arista-dcs-7280se-64-r", devicetypes.Rear, devicetypes.SpotFan, "1", "4")
 	has("mikrotik-crs354-48g-4s-plus-2q-plus-rm", devicetypes.Front, devicetypes.SpotPort, "ether1", "ether49", "sfp-sfpplus4", "qsfpplus2")
+	// DS1821+: eight trays on the front, the four LAN ports, the two of a
+	// PCIe card, both fans and the supply on the rear; a desktop model, 166 mm high.
+	has("synology-ds1821-plus", devicetypes.Front, devicetypes.SpotBay, "1", "2", "3", "4", "5", "6", "7", "8")
+	has("synology-ds1821-plus", devicetypes.Rear, devicetypes.SpotPort, "LAN 1", "LAN 2", "LAN 3", "LAN 4", "LAN 5", "LAN 6")
+	has("synology-ds1821-plus", devicetypes.Rear, devicetypes.SpotFan, "1", "2")
+	has("synology-ds1821-plus", devicetypes.Rear, devicetypes.SpotPSU, "1")
+	if m := ix.BySlug("synology-ds1821-plus"); m.UHeight != 0 || m.HeightMM != 166 || m.Racked() {
+		t.Errorf("DS1821+: u_height %g, height_mm %g; want a desktop model of 166 mm", m.UHeight, m.HeightMM)
+	}
+	if l := ix.BySlug("synology-ds1821-plus").Layout(devicetypes.Front); l == nil || l.WidthMM != 343 || l.HeightMM != 166 {
+		t.Errorf("DS1821+ front layout %+v, want 343 x 166 mm (the chassis, drawn at its own size)", l)
+	}
 	// DL380 Gen10 (QuickSpecs a00008180enw): the 8SFF CTO has its drives in
 	// Box 3, the box iLO names 3 (3:1 for an NVMe drive, 1I:3:1 for SAS);
 	// the NVMe cage takes the same bays; the 24SFF has the three boxes. The

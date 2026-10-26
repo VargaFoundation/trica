@@ -97,8 +97,10 @@ one to trica itself, drop a file under `internal/devicetypes/library/<Vendor>/<m
 vendor documents goes in `library/trica/`). Required: `manufacturer`, `model`,
 `slug` (lowercase, digits, `.`, `-`), `u_height` from 0 to 100: **0 means the model occupies no
 rack unit** (a DiskStation, an access point, a wall reader; the rack-elevation convention, [ADR 0056](../adr/0056-growing-the-device-type-library.md)),
-and a mounted device of such a model is drawn with the height of its own `u_height`, else as an
-assumed 1 U and flagged. `weight_unit` is one of `kg`, `g`,
+and a mounted device of such a model stands on a shelf ([ADR 0068](../adr/0068-desktop-devices-on-a-rack-shelf.md)): its
+own `u_height` if it declares one, else the shelf its chassis needs from the model's optional
+`height_mm` (`ceil(height_mm / 44.45)` U: 166 mm, a DS1821+, is 4 U), else an assumed 1 U and flagged;
+its face keeps its proportions inside that space. `weight_unit` is one of `kg`, `g`,
 `lb`, `oz`. `airflow` is one of `front-to-rear`, `rear-to-front`, `left-to-right`,
 `right-to-left`, `side-to-rear`, `passive`, `mixed`. `go test ./internal/devicetypes/` loads
 and validates every file; an invalid one fails the load.
@@ -184,10 +186,11 @@ device draws them with the parts the collectors report (`GET /objects/{id}/faces
 | Part | Goes in | From |
 |---|---|---|
 | `disk` | `bay` `<box>:<bay>` | its `slot`, then its name: `Port=1I:Box=3:Bay=5` (iLO 5), `1I:1:3` (iLO 4), `3:5` |
-| `disk` | `bay` `<n>` | `Solid State Disk 0:1:2` (iDRAC, last number), `Disk.Bay.2` (iDRAC FQDD), `Bay 2` |
+| `disk` | `bay` `<n>` | `Solid State Disk 0:1:2` (iDRAC, last number), `Disk.Bay.2` (iDRAC FQDD), `Bay 2`, `Drive 2` (Synology DSM's long name for a tray: the DSM id `sata1` does not say it, bays 1 and 7 may be empty) |
 | `psu` | `psu` `<n>` | the last number of its name, plus one when one of the device's power supplies is numbered 0 (iLO 5 counts from 0, the chassis from 1: `HpeServerPowerSupply 0` and `1` are bays 1 and 2; iLO 4 writes `HpServerPowerSupply 1` and `2`) |
 | `fan` | `fan` `<n>` | the first number of its name; only fans directly under the device (a power supply's fan is not on the face) |
 | `interface` (kind empty, `physical` or `bmc`) | `port` | its own name (`Ethernet12`, `ether3`), then without a breakout lane (`Ethernet49/1` → `Ethernet49`), `bmc` for the BMC, `nic<n>` for `eno<n>`, `NIC.Embedded.<n>-…`, `NIC.Integrated.1-<n>…` |
+| `interface` | `port` `LAN <n+1>` | `eth<n>` (Synology DSM numbers the ports of the box and of a PCIe card from `eth0`: `eth0` is LAN 1, `eth4` the first port of a 10 GbE card, LAN 5). A Linux host's `eth0` against a face without a "LAN 1" stays unplaced as an `os` name |
 | `interface` | `slot` `<n>` | `ens<n>` (and `ens<n>d<m>`), `NIC.Slot.<n>-…` |
 
 **One physical part, several names.** The BMC and the operating system report the same disk and
@@ -250,7 +253,7 @@ The embedded library is a **catalogue of the models people actually rack**: the 
 switches, firewalls, storage and power that sell most on the refurbished and data-centre market,
 each with its front and rear face where one could be had, and each chassis variant of a server as
 its own model. 523 models (HPE 151, Dell 81, Ubiquiti 101, Synology 42, 14 other manufacturers);
-169 have faces (113 pictures, 220 faces drawn by the project); 66 are 0 U (desktop and wall
+170 have faces (113 pictures, 222 faces drawn by the project); 66 are 0 U (desktop and wall
 devices, see "Adding a model"). [ADR 0056](../adr/0056-growing-the-device-type-library.md) took the
 library from 199 to 519 models, adding 317 model files and writing three;
 #159 added the four files that differ only by a `+` (Synology DS218, DS218+, RS815, RS815+).
@@ -370,7 +373,9 @@ library and `TestCatalogueListIsCurrent` fails when it is out of date (`go test
   CKG2-RM).
 - Part numbers that two models share (HPE `P19766-B21`, `P56707-B21`, `R4U28A`; Lenovo
   `7X0x`, `7Z7x`, `7D7x`) match by name only.
-- A 0 U device has no place on the elevation; it draws as an assumed 1 U when mounted.
+- A 0 U device has no place on the elevation of its own: mounted, it stands on a shelf (its own `u_height`,
+  else `height_mm` in whole U, else an assumed 1 U, ADR 0068). The model files do not carry a width or a
+  depth in mm; only `height_mm`, and only where a drawing was made at the chassis' own size.
 
 The server runs `Sync` at start, after the migrations, then every `deduce.interval`
 ([configuration](configuration.md)). Module bays are ignored; a model is picked by hand one

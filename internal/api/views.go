@@ -191,6 +191,11 @@ type RackItem struct {
 	Model     *ObjectRef `json:"model,omitempty"`
 	UHeight   *float64   `json:"u_height,omitempty"`
 	FullDepth bool       `json:"full_depth"`
+	// Desktop says the model occupies no rack unit (a desktop NAS on a
+	// shelf): UHeight is then the device's declared height, else the shelf
+	// height derived from the model's height in mm, and the face image is
+	// drawn at its own proportions inside that space (ADR 0068).
+	Desktop bool `json:"desktop,omitempty"`
 	// ModelName is the model's commercial name (its model attribute).
 	ModelName string `json:"model_name,omitempty"`
 	// Role is the device's role (server, switch, firewall...), when known:

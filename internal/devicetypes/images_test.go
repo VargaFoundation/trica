@@ -78,7 +78,7 @@ func TestEmbeddedImagesAreFoundByTheirName(t *testing.T) {
 		{"ubiquiti-enterprise-fortress-gateway", img{pngT, picture}, img{pngT, picture}},
 		{"ubiquiti-unifi-switch-pro-max-24-poe", img{pngT, picture}, img{pngT, picture}},
 		{"ubiquiti-u7-pro", none, none},
-		{"synology-ds1821-plus", none, none},
+		{"synology-ds1821-plus", img{pngT, drawn}, img{pngT, drawn}},
 		// No picture: the variant is not known from the name alone.
 		{"hpe-proliant-dl380-gen9", none, none},
 		{"dell-poweredge-r330", none, none},

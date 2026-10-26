@@ -8036,6 +8036,9 @@
           "airflow": {
             "$ref": "#/components/schemas/AirflowCheck"
           },
+          "desktop": {
+            "type": "boolean"
+          },
           "device": {
             "$ref": "#/components/schemas/ObjectRef"
           },
@@ -8269,6 +8272,9 @@
         "properties": {
           "airflow": {
             "$ref": "#/components/schemas/AirflowCheck"
+          },
+          "desktop": {
+            "type": "boolean"
           },
           "device": {
             "$ref": "#/components/schemas/ObjectRef"

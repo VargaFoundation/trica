@@ -473,7 +473,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | Synology DS1522+ | `synology-ds1522-plus` | 0 | — | — |  |
 | Synology DS1525+ | `synology-ds1525-plus` | 0 | — | — |  |
 | Synology DS1817+ | `synology-ds1817-plus` | 0 | — | — |  |
-| Synology DS1821+ | `synology-ds1821-plus` | 0 | — | — |  |
+| Synology DS1821+ | `synology-ds1821-plus` | 0 | drawn | drawn |  |
 | Synology DS1825+ | `synology-ds1825-plus` | 0 | — | — |  |
 | Synology DS218 | `synology-ds218` | 0 | — | — |  |
 | Synology DS218+ | `synology-ds218-plus` | 0 | — | — |  |

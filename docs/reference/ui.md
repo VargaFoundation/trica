@@ -65,7 +65,8 @@ set; ADR 0030).
   `!` and a note in the table; two racks on one tile, or racks outside the room's size, are flagged.
 - **Faces** (ADR 0042). A device shows its model's **front** image on the face it is mounted from (a
   rear-mounted switch shows its ports on the rear elevation) when the device-type
-  library (or the operator's `devicetypes.extra_dir`) has one, stretched to its U box; else a
+  library (or the operator's `devicetypes.extra_dir`) has one, stretched to its U box (a model that occupies no rack unit, a desktop NAS on a shelf, is not stretched:
+  its picture keeps its proportions, centred in the shelf, [ADR 0068](../adr/0068-desktop-devices-on-a-rack-shelf.md)); else a
   generic face drawn for its `role`: drive bays for a server, rows of ports for a switch or a
   router, a few ports and a red band for a firewall, drive carriers for storage and NAS, outlets
   for a PDU, a display and a grille for a UPS, keystone jacks for a patch panel, a blank plate with
@@ -254,7 +255,9 @@ for a caller who holds `propose` (`GET /me`); the API checks every write again.
   on both), a tile already holding a rack, a tile outside the room, a device whose height nobody
   says (checked and drawn as 1 U), a "new" device the engine recognises as one it has.
 - **Heights**: a device's height is its model's (`device_type.u_height`); when it has no known
-  model, the form asks for it and stores it on the device (`device.u_height`).
+  model, the form asks for it and stores it on the device (`device.u_height`). A model of height 0
+  (a desktop NAS) takes the device's own `u_height`, else the shelf its chassis needs from the
+  model's `height_mm` (ADR 0068).
 - **Moving** places the device in the new rack and withdraws *your* placement in the racks it
   leaves. A placement another source said (a collector, a colleague) stays: the form says so
   before anything is sent.

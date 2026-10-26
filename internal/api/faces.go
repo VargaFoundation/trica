@@ -1,6 +1,7 @@
 package api
 
 import (
+	"math"
 	"regexp"
 	"slices"
 	"strconv"
@@ -198,6 +199,7 @@ var (
 		regexp.MustCompile(`Disk (?:\d+):(?:\d+):(\d+)$`), // iDRAC: Solid State Disk 0:1:2 (bay last)
 		regexp.MustCompile(`Disk\.Bay\.(\d+)`),            // iDRAC FQDD
 		regexp.MustCompile(`^Bay (\d+)$`),
+		regexp.MustCompile(`^Drive (\d+)$`), // Synology DSM: the bay's long name
 	}
 
 	// The ports of a server, by the names an OS or a BMC gives them.
@@ -210,6 +212,9 @@ var (
 		regexp.MustCompile(`^ens(\d+)(?:d\d+)?$`), // systemd: a card in PCIe slot n
 		regexp.MustCompile(`^NIC\.Slot\.(\d+)-`),  // iDRAC
 	}
+	// Synology DSM names the ports of the box eth0..: LAN 1 is eth0, and the
+	// ports of a PCIe card follow (eth4 is LAN 5).
+	dsmLAN       = regexp.MustCompile(`^eth(\d+)$`)
 	trailingLane = regexp.MustCompile(`[/-]\d+$`)
 	// systemd: onboard device n, port k of one PCI function (eno49d1).
 	onboardNIC = regexp.MustCompile(`^eno(\d+)(?:d(\d+))?$`)
@@ -515,6 +520,11 @@ func interfaceSpots(name, kind string) []spotKey {
 	if kind == "bmc" {
 		out = append(out, spotKey{spotPort, "bmc"})
 	}
+	if m := dsmLAN.FindStringSubmatch(name); m != nil {
+		if n, err := strconv.Atoi(m[1]); err == nil {
+			out = append(out, spotKey{spotPort, "LAN " + strconv.Itoa(n+1)})
+		}
+	}
 	for _, re := range embeddedNIC {
 		if m := re.FindStringSubmatch(name); m != nil {
 			out = append(out, spotKey{spotPort, "nic" + trimZeros(m[1])})
@@ -526,4 +536,15 @@ func interfaceSpots(name, kind string) []spotKey {
 		}
 	}
 	return out
+}
+
+// shelfHeightU is the rack height, in whole U, of the shelf a desktop device
+// stands on: its chassis height in mm rounded up to a unit (44.45 mm). Nil when
+// the model does not say its height (the elevation then draws 1 U).
+func shelfHeightU(heightMM float64) *float64 {
+	if heightMM <= 0 {
+		return nil
+	}
+	u := math.Ceil(heightMM/44.45 - 1e-9)
+	return &u
 }

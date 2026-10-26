@@ -24,6 +24,11 @@ export interface Mounted {
   /** Height in U; absent when the device type is unknown: 1 U is drawn and flagged. */
   heightU?: number;
   fullDepth?: boolean;
+  /**
+   * The model occupies no rack unit (a desktop NAS on a shelf, ADR 0068): heightU is the
+   * shelf it stands on, and its face is drawn at its own proportions inside it.
+   */
+  desktop?: boolean;
   typeName?: string;
   /** The device's role (server, switch...): what a face without an image is drawn as. */
   role?: string;
@@ -66,6 +71,19 @@ export function overallHealth(m: Pick<Mounted, "health" | "partsHealth">): Healt
 export function slotImage(s: Pick<Slot, "item" | "shadow" | "behind">): string | undefined {
   if (s.behind) return undefined;
   return s.shadow ? s.item.rearImage : s.item.frontImage;
+}
+
+/**
+ * Where an image of bw x bh is drawn inside a box of w x h so that it keeps its
+ * proportions ("contain"): centred, as large as the box allows. A desktop device
+ * is not stretched over the shelf it stands on (ADR 0068).
+ */
+export function containBox(w: number, h: number, bw: number, bh: number): { x: number; y: number; width: number; height: number } {
+  if (!(bw > 0) || !(bh > 0)) return { x: 0, y: 0, width: w, height: h };
+  const k = Math.min(w / bw, h / bh);
+  const width = bw * k;
+  const height = bh * k;
+  return { x: (w - width) / 2, y: (h - height) / 2, width, height };
 }
 
 export type Issue = "overlap" | "outOfRange" | "assumedHeight" | "assumedFace";

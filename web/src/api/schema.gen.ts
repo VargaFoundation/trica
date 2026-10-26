@@ -4269,6 +4269,7 @@ export interface components {
         };
         RackItem: {
             airflow?: components["schemas"]["AirflowCheck"];
+            desktop?: boolean;
             device: components["schemas"]["ObjectRef"];
             face?: string;
             front_image?: string;
@@ -4338,6 +4339,7 @@ export interface components {
         };
         RemovedItem: {
             airflow?: components["schemas"]["AirflowCheck"];
+            desktop?: boolean;
             device: components["schemas"]["ObjectRef"];
             face?: string;
             front_image?: string;

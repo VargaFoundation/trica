@@ -655,10 +655,18 @@ func (c *call) rackItems(rack *store.Object, mounts []store.Relation) ([]RackIte
 			it.FrontImage, it.RearImage = s.faceImage(slug, "front"), s.faceImage(slug, "rear")
 			// A model a person just chose may not be described yet (the
 			// library's next pass does it): the library says its height.
-			if lm := s.libraryModel(slug); lm != nil && it.UHeight == nil {
+			lm := s.libraryModel(slug)
+			if lm != nil && it.UHeight == nil {
 				it.UHeight, it.FullDepth = positive(&lm.UHeight), lm.FullDepth
 				if it.ModelName == "" {
 					it.ModelName = lm.Model
+				}
+			}
+			if it.UHeight == nil && (lm != nil || number(attrs["u_height"]) != nil) {
+				// The model occupies no rack unit: a desktop device on a shelf (ADR 0068).
+				it.Desktop = true
+				if lm != nil {
+					it.UHeight = shelfHeightU(lm.HeightMM)
 				}
 			}
 		}
@@ -672,8 +680,8 @@ func (c *call) rackItems(rack *store.Object, mounts []store.Relation) ([]RackIte
 		// A device nobody knows the model of (a PDU, a shelf) can carry its
 		// own height; the model's wins when it has one. A model of height 0
 		// (a desktop NAS, a wall access point: ADR 0056) has none.
-		if it.UHeight == nil {
-			it.UHeight = positive(number(redactMap(d.Attrs)["u_height"]))
+		if own := positive(number(redactMap(d.Attrs)["u_height"])); own != nil && (it.UHeight == nil || it.Desktop) {
+			it.UHeight = own
 		}
 		check := checkView(airflow.Check(in))
 		it.Airflow = &check

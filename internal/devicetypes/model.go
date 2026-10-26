@@ -49,6 +49,10 @@ type Model struct {
 	// rack-elevation convention (ADR 0056).
 	UHeight   float64 `json:"u_height"`
 	FullDepth bool    `json:"full_depth"`
+	// HeightMM is the physical height of the chassis, when the model file
+	// says it (height_mm). A model that occupies no rack unit uses it to size
+	// the shelf it stands on in a rack elevation (ADR 0068).
+	HeightMM float64 `json:"height_mm,omitempty"`
 	// Airflow uses the trica schema spelling (front_to_rear).
 	Airflow  string  `json:"airflow,omitempty"`
 	WeightKg float64 `json:"weight_kg,omitempty"`
@@ -114,6 +118,7 @@ type rawModel struct {
 	VariantOf          string    `yaml:"variant_of"`
 	UHeight            *float64  `yaml:"u_height"`
 	IsFullDepth        *bool     `yaml:"is_full_depth"`
+	HeightMM           *float64  `yaml:"height_mm"`
 	Airflow            string    `yaml:"airflow"`
 	Weight             *float64  `yaml:"weight"`
 	WeightUnit         string    `yaml:"weight_unit"`
@@ -201,6 +206,12 @@ func Parse(data []byte, origin, path string) (*Model, error) {
 		m.PartNumbers = append(m.PartNumbers, pn)
 	}
 	m.UHeight = *r.UHeight
+	if r.HeightMM != nil {
+		if math.IsNaN(*r.HeightMM) || *r.HeightMM < 0 || *r.HeightMM > 5000 {
+			return fail("height_mm must be in [0, 5000]")
+		}
+		m.HeightMM = *r.HeightMM
+	}
 	m.FullDepth = r.IsFullDepth != nil && *r.IsFullDepth
 	if r.Airflow != "" {
 		a, ok := airflows[r.Airflow]

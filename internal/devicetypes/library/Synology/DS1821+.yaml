@@ -1,0 +1,38 @@
+---
+manufacturer: Synology
+model: DS1821+
+slug: synology-ds1821-plus
+part_number: DS1821+
+u_height: 0
+height_mm: 166
+is_full_depth: false
+airflow: front-to-rear
+weight: 6
+weight_unit: kg
+front_image: true
+rear_image: true
+comments: |-
+  8-bay desktop NAS (not rackable), expandable to 18 bays with two DX517 expansion units on its eSATA ports.
+  Physical dimensions: 166 mm x 343 mm x 243 mm (height x width x depth).
+  These figures, the port counts below and the fan size are written from memory of the vendor
+  specification sheet: the page was NOT fetched when this file was written, and the drawings were not
+  compared with a photograph (see the library README).
+  Four 1 GbE RJ45 (LAN 1-4), two eSATA (expansion), two USB 3.2 Gen 1, one PCIe 3.0 x8 slot
+  (optional 10 GbE / 25 GbE card: its ports are LAN 5 and LAN 6 on the drawing; DSM names them eth4 and eth5),
+  two M.2 2280 NVMe slots on the underside (SSD cache, not visible on either face).
+  Internal 250 W power supply, two 120 mm fans.
+  [Hardware Specifications](https://www.synology.com/en-us/products/DS1821+#specs)
+power-ports:
+  - name: PSU 1
+    type: iec-60320-c14
+    maximum_draw: 250
+    allocated_draw: 60
+interfaces:
+  - name: LAN 1
+    type: 1000base-t
+  - name: LAN 2
+    type: 1000base-t
+  - name: LAN 3
+    type: 1000base-t
+  - name: LAN 4
+    type: 1000base-t
