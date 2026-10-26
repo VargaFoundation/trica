@@ -1503,6 +1503,20 @@ a.floor-rack:focus-visible {
 .legend-line-deduced {
   stroke: var(--trica-graph-deduced);
 }
+.legend-speed-100g { stroke: var(--trica-iso-speed-100g); }
+.legend-speed-40g { stroke: var(--trica-iso-speed-40g); }
+.legend-speed-10g { stroke: var(--trica-iso-speed-10g); }
+.legend-speed-5g { stroke: var(--trica-iso-speed-5g); }
+.legend-speed-1g { stroke: var(--trica-iso-speed-1g); }
+.legend-speed-slow { stroke: var(--trica-iso-speed-slow); }
+.legend-speed-unknown { stroke: var(--trica-iso-speed-unknown); }
+.legend-line-down { stroke: var(--trica-graph-down); }
+.legend-line-unknown { stroke: var(--trica-graph-util-unknown); }
+.legend-badge {
+  fill: var(--trica-iso-label-bg);
+  stroke: var(--trica-accent);
+  stroke-width: 1;
+}
 .legend-line-uplink,
 .legend-line-tunnel {
   stroke: var(--trica-graph-ink);
@@ -1874,6 +1888,28 @@ label.check {
   stroke-dasharray: 6 5;
 }
 
+/* The ground: a plane under the scene, with a soft grid that a mask fades out. */
+.iso-ground {
+  fill: var(--trica-iso-ground);
+}
+.iso-ground-grid {
+  fill: none;
+  stroke: var(--trica-iso-grid);
+  stroke-width: 1;
+  opacity: 0.7;
+}
+.iso-tray-top {
+  fill: var(--trica-iso-tray);
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-width: 0.8;
+  opacity: 0.85;
+}
+.iso-tray-side {
+  fill: var(--trica-iso-neutral-south);
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-width: 0.8;
+}
+
 /* Boxes. */
 .iso-face {
   stroke: var(--trica-iso-edge);
@@ -1991,9 +2027,92 @@ label.check {
   opacity: 0.3;
   pointer-events: none;
 }
-.iso-cloud {
-  fill: var(--trica-graph-ink);
+.iso-shadow-flat {
+  opacity: 0.22;
+}
+.iso-rim {
+  fill: none;
+  stroke: var(--trica-iso-rim);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.iso-hull {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.iso-roof {
+  fill: var(--trica-iso-roof);
   opacity: 0.9;
+  pointer-events: none;
+}
+.iso-windows {
+  fill: var(--trica-iso-window);
+  opacity: 0.75;
+  pointer-events: none;
+}
+.iso-wall .iso-face {
+  stroke-opacity: 0.4;
+}
+.iso-wall .iso-top {
+  fill: var(--trica-iso-neutral-top);
+}
+.iso-wall .iso-south {
+  fill: var(--trica-iso-neutral-south);
+}
+.iso-wall .iso-east {
+  fill: var(--trica-iso-neutral-east);
+}
+.iso-floor-text {
+  fill: var(--trica-graph-ink);
+  font-family: var(--trica-font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  opacity: 0.5;
+  pointer-events: none;
+}
+.iso-glass {
+  fill: var(--trica-iso-glass);
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-opacity: 0.6;
+  stroke-width: 0.8;
+  pointer-events: none;
+}
+.iso-vents,
+.iso-ports {
+  fill: none;
+  stroke: var(--trica-iso-vent);
+  stroke-width: 1;
+  stroke-linecap: round;
+  opacity: 0.75;
+  pointer-events: none;
+}
+.iso-led {
+  fill: var(--trica-graph-util-unknown);
+  pointer-events: none;
+}
+.iso-led.l-ok {
+  fill: var(--trica-graph-health-ok);
+}
+.iso-led.l-warning {
+  fill: var(--trica-graph-health-warn);
+}
+.iso-led.l-critical {
+  fill: var(--trica-graph-health-crit);
+}
+.iso-cloud {
+  fill: var(--trica-iso-top);
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-width: 1.2;
+  pointer-events: none;
+}
+.iso-cloud-shadow {
+  fill: var(--trica-iso-shadow);
+  opacity: 0.25;
   pointer-events: none;
 }
 .iso-front {
@@ -2009,10 +2128,28 @@ label.check {
 .iso-item.is-drill {
   cursor: pointer;
 }
+.iso-lift {
+  transition: transform 0.15s var(--trica-easing);
+}
+.iso-item:hover .iso-lift,
+.iso-item.is-hover .iso-lift {
+  transform: translateY(-2px);
+}
+.iso-item:hover .iso-hull,
+.iso-item.is-hover .iso-hull {
+  stroke: var(--trica-iso-edge);
+}
 .iso-item:hover .iso-face,
 .iso-item.is-hover .iso-face {
   filter: brightness(1.14);
   stroke-opacity: 0.9;
+}
+.iso-item.is-selected .iso-hull {
+  stroke: var(--trica-accent);
+}
+.iso-item:focus-visible .iso-hull {
+  stroke: var(--trica-focus);
+  stroke-width: 3;
 }
 .iso-item.h-warning .iso-top {
   stroke: var(--trica-graph-health-warn);
@@ -2024,16 +2161,7 @@ label.check {
   stroke-opacity: 1;
   stroke-width: 2.5;
 }
-.iso-item.is-selected .iso-face {
-  stroke: var(--trica-accent);
-  stroke-opacity: 1;
-  stroke-width: 2.5;
-}
-.iso-item:focus-visible .iso-face {
-  stroke: var(--trica-focus);
-  stroke-opacity: 1;
-  stroke-width: 3;
-}
+
 .iso-lamp {
   fill: var(--trica-graph-util-unknown);
   stroke: var(--trica-iso-label-bg);
@@ -2106,11 +2234,12 @@ label.check {
   opacity: 1;
 }
 
-/* Lines: a base stroke (width = capacity, colour = utilisation, dashes = confidence), dashes running over it. */
+/* Lines: width and colour = speed class, halo = utilisation, dashes = state or medium, particles = live traffic. */
 .iso-edge {
   transition: opacity 0.2s var(--trica-easing);
 }
-.iso-edge.is-dim {
+.iso-edge.is-dim,
+.iso-edge-badges.is-dim {
   opacity: 0.2;
 }
 .iso-edge-hit {
@@ -2120,12 +2249,29 @@ label.check {
   pointer-events: stroke;
   cursor: pointer;
 }
-.iso-edge-casing {
+.iso-edge-casing,
+.iso-edge-halo {
   fill: none;
-  stroke: var(--trica-iso-label-bg);
   stroke-linecap: round;
-  opacity: 0.6;
+  stroke-linejoin: round;
   pointer-events: none;
+}
+.iso-edge-casing {
+  stroke: var(--trica-iso-label-bg);
+  opacity: 0.7;
+}
+.iso-edge-halo {
+  stroke: transparent;
+  opacity: 0.35;
+}
+.iso-edge.u-normal .iso-edge-halo {
+  stroke: var(--trica-graph-util-normal);
+}
+.iso-edge.u-warn .iso-edge-halo {
+  stroke: var(--trica-graph-util-warn);
+}
+.iso-edge.u-crit .iso-edge-halo {
+  stroke: var(--trica-graph-util-crit);
 }
 .iso-edge.is-hot .iso-edge-casing,
 .iso-edge.is-selected .iso-edge-casing {
@@ -2133,12 +2279,48 @@ label.check {
   opacity: 0.9;
 }
 .iso-edge-base,
-.iso-flow,
 .iso-flow-glow {
   fill: none;
-  stroke: var(--trica-graph-util-unknown);
+  stroke: var(--trica-iso-speed-unknown);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.iso-edge-core {
+  fill: none;
+  stroke: var(--trica-iso-label-bg);
   stroke-linecap: round;
   pointer-events: none;
+}
+.iso-edge.b-100g .iso-edge-base,
+.iso-edge.b-100g .iso-flow-glow {
+  stroke: var(--trica-iso-speed-100g);
+}
+.iso-edge.b-40g .iso-edge-base,
+.iso-edge.b-40g .iso-flow-glow {
+  stroke: var(--trica-iso-speed-40g);
+}
+.iso-edge.b-10g .iso-edge-base,
+.iso-edge.b-10g .iso-flow-glow {
+  stroke: var(--trica-iso-speed-10g);
+}
+.iso-edge.b-5g .iso-edge-base,
+.iso-edge.b-5g .iso-flow-glow {
+  stroke: var(--trica-iso-speed-5g);
+}
+.iso-edge.b-1g .iso-edge-base,
+.iso-edge.b-1g .iso-flow-glow {
+  stroke: var(--trica-iso-speed-1g);
+}
+.iso-edge.b-slow .iso-edge-base,
+.iso-edge.b-slow .iso-flow-glow {
+  stroke: var(--trica-iso-speed-slow);
+}
+.iso-edge.st-down .iso-edge-base {
+  stroke: var(--trica-graph-down);
+}
+.iso-edge.st-unknown .iso-edge-base {
+  stroke: var(--trica-graph-util-unknown);
 }
 /* The arrowhead of a device uplink, towards the device the other one reaches the network through. */
 .iso-edge-arrow {
@@ -2147,70 +2329,128 @@ label.check {
   stroke-width: 1;
   pointer-events: none;
 }
-.iso-edge-x {
+.iso-edge.st-down .iso-edge-base {
+  opacity: 0.95;
+}
+.iso-edge-badges {
+  pointer-events: none;
+  transition: opacity 0.2s var(--trica-easing);
+}
+.iso-badge rect {
+  fill: var(--trica-iso-label-bg);
+  fill-opacity: 0.95;
+  stroke: var(--trica-iso-floor-line);
+  stroke-width: 1;
+}
+.iso-badge text {
+  fill: var(--trica-graph-ink);
+  font-family: var(--trica-font-sans);
+  font-size: 10px;
+  font-weight: 600;
+}
+.iso-badge-port {
+  opacity: 0;
+  transition: opacity 0.15s var(--trica-easing);
+}
+.iso-edge-badges.is-shown .iso-badge-port,
+.iso-edge-badges.is-hot .iso-badge-port {
+  opacity: 1;
+}
+.iso-badge-bundle rect {
+  stroke: var(--trica-accent);
+}
+.iso-badge-x circle {
   fill: var(--trica-graph-down);
   stroke: var(--trica-iso-label-bg);
   stroke-width: 2;
+}
+.iso-badge-x path {
+  stroke: var(--trica-iso-label-bg);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+/* Live traffic: dots travelling along the line, each direction in its own lane. */
+.iso-flow {
   pointer-events: none;
 }
-.u-normal .iso-edge-base,
-.u-normal .iso-flow,
-.u-normal .iso-flow-glow {
-  stroke: var(--trica-graph-util-normal);
-}
-.u-warn .iso-edge-base,
-.u-warn .iso-flow,
-.u-warn .iso-flow-glow {
-  stroke: var(--trica-graph-util-warn);
-}
-.u-crit .iso-edge-base,
-.u-crit .iso-flow,
-.u-crit .iso-flow-glow {
-  stroke: var(--trica-graph-util-crit);
-}
-.u-down .iso-edge-base,
-.u-down .iso-flow,
-.u-down .iso-flow-glow {
-  stroke: var(--trica-graph-down);
-}
-.iso-edge:has(.iso-flow) .iso-edge-base {
-  opacity: 0.4;
-}
-/* The moving dashes are brighter than the line, over a wider, fainter copy that glows around them. */
-.iso-flow {
-  stroke-dasharray: 7 13;
-  filter: brightness(1.45) saturate(1.2);
-  animation: iso-flow 3s linear infinite;
-}
 .iso-flow-glow {
-  stroke-dasharray: 7 13;
-  opacity: 0.26;
-  animation: iso-flow 3s linear infinite;
+  stroke-opacity: 0.25;
 }
-.iso-flow.s1,
-.iso-flow-glow.s1 {
-  animation-duration: 6s;
+.iso-particle {
+  fill: var(--trica-iso-particle);
+  stroke: var(--trica-iso-speed-unknown);
+  stroke-width: 0.8;
+  pointer-events: none;
 }
-.iso-flow.s2,
-.iso-flow-glow.s2 {
-  animation-duration: 4.5s;
+.iso-pulse {
+  fill: var(--trica-accent);
+  stroke: var(--trica-iso-label-bg);
+  stroke-width: 1.5;
+  pointer-events: none;
 }
-.iso-flow.s3,
-.iso-flow-glow.s3 {
-  animation-duration: 3s;
+
+/* Rack cards: the linked devices of a rack, as a tree like UniFi's. */
+.iso-leader-line {
+  fill: none;
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  opacity: 0.8;
+  pointer-events: none;
 }
-.iso-flow.s4,
-.iso-flow-glow.s4 {
-  animation-duration: 2s;
+.iso-card-bg {
+  fill: var(--trica-iso-label-bg);
+  stroke: var(--trica-iso-floor-line);
+  stroke-width: 1;
 }
-.iso-flow.s5,
-.iso-flow-glow.s5 {
-  animation-duration: 1.2s;
+.iso-item.is-hover .iso-card-bg,
+.iso-item:hover .iso-card-bg {
+  stroke: var(--trica-iso-edge);
 }
-@keyframes iso-flow {
-  to {
-    stroke-dashoffset: -20;
-  }
+.iso-item.is-selected .iso-card-bg {
+  stroke: var(--trica-accent);
+  stroke-width: 2;
+}
+.iso-item:focus-visible .iso-card-bg {
+  stroke: var(--trica-focus);
+  stroke-width: 3;
+}
+.iso-card-icon-bg {
+  fill: var(--trica-iso-top);
+}
+.iso-card-icon {
+  color: var(--trica-graph-ink);
+}
+.icon-glyph {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  overflow: visible;
+}
+.iso-card-name {
+  fill: var(--trica-graph-ink);
+  font-family: var(--trica-font-sans);
+  font-size: 12px;
+  font-weight: 600;
+}
+.iso-card-model {
+  fill: var(--trica-ink-muted);
+  font-family: var(--trica-font-sans);
+  font-size: 10.5px;
+}
+.iso-card-box .iso-lamp {
+  fill: var(--trica-graph-util-unknown);
+}
+.iso-card-box.h-ok .iso-lamp {
+  fill: var(--trica-graph-health-ok);
+}
+.iso-card-box.h-warning .iso-lamp {
+  fill: var(--trica-graph-health-warn);
+}
+.iso-card-box.h-critical .iso-lamp {
+  fill: var(--trica-graph-health-crit);
 }
 
 /* A level arrives: the floor fades in, the boxes rise one after the other. */
@@ -2244,12 +2484,24 @@ label.check {
     opacity: 0;
   }
 }
+@media (prefers-reduced-motion: no-preference) {
+  .iso-led.is-blink {
+    animation: iso-blink 1.4s ease-in-out infinite;
+  }
+}
+@keyframes iso-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .iso-flow,
-  .iso-flow-glow,
   .iso-svg .iso-item,
-  .iso-svg .iso-plates {
+  .iso-svg .iso-plates,
+  .iso-led {
     animation: none;
+  }
+  .iso-lift {
+    transition: none;
   }
 }
 

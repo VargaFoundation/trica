@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { MapNode, TopologyMap } from "../../api/types";
+import type { MapEdge, MapNode, TopologyMap } from "../../api/types";
 import { layoutWorld, type WorldItem } from "./layout";
 import { buildScene } from "./scene";
 import { MAPS } from "./testdata/maps";
@@ -254,7 +254,10 @@ describe("the scene", () => {
   });
 
   it("runs the two lanes of a line along the same curve in opposite directions", () => {
-    const s = buildScene(MAPS.room, 0);
+    // Arcs are the lines of the global and site levels; a room's cables follow trays (route.test.ts).
+    const base = MAPS.global.edges.find((x) => x.medium === "tunnel") as MapEdge;
+    const live = { ...base, medium: "physical", measured: true, a_to_b_bps: 4e8, b_to_a_bps: 1e8, capacity_mbps: 1000, util: 0.4 } as MapEdge;
+    const s = buildScene({ ...MAPS.global, edges: [live] }, 0);
     const e = s.edges.find((x) => x.lanes.length === 2);
     const ab = e?.lanes.find((l) => l.dir === "ab")?.d ?? "";
     const ba = e?.lanes.find((l) => l.dir === "ba")?.d ?? "";

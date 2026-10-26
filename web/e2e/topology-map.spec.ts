@@ -79,10 +79,11 @@ test("the traffic moves along measured links, and stands still when less motion 
     await signInWithToken(page, url);
     await expect(page.locator(drawn)).toBeVisible();
     await page.waitForTimeout(500);
-    const names = await page.evaluate(() => document.getAnimations().map((a) => (a as CSSAnimation).animationName));
+    // Particles travel by SMIL (animateMotion), which document.getAnimations() does not list.
+    const moving = await page.locator(".iso-flow animateMotion").count();
     const lanes = await page.locator(".iso-flow").count();
     await ctx.close();
-    return { moving: names.filter((n) => n === "iso-flow").length, lanes };
+    return { moving, lanes };
   };
   const on = await flowing("no-preference");
   expect(on.lanes).toBeGreaterThan(0);

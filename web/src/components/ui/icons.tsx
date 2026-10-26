@@ -271,4 +271,13 @@ export function Icon({ name, className }: { name: IconName; className?: string }
   );
 }
 
+/** An icon placed inside an SVG drawing: a nested svg at (x, y), `size` px square. Stroked with currentColor. */
+export function IconGlyph({ name, x, y, size = 16 }: { name: IconName; x: number; y: number; size?: number }) {
+  return (
+    <svg className="icon-glyph" x={x} y={y} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false" data-icon={name}>
+      {PATHS[name]}
+    </svg>
+  );
+}
+
 export const ICON_NAMES = Object.keys(PATHS) as IconName[];

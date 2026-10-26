@@ -72,14 +72,20 @@ export interface IsoBox {
   base: Pt;
   /** Painter's order key: larger is nearer the viewer. */
   depth: number;
+  /** The silhouette of the three faces, for the outline of a hovered or selected block. */
+  hull: string;
   /** Screen bounds of the drawn box. */
   bounds: { x0: number; y0: number; x1: number; y1: number };
 }
 
 /** The three visible faces of a box seen from the south-east, after `rot` quarter turns. */
 export function isoBox(box: Box, world: World, rot: Rot): IsoBox {
-  const r = turnRect(box, world, rot);
-  const { x, y, w, d } = r;
+  return projectBox({ ...box, ...turnRect(box, world, rot) });
+}
+
+/** The same for a box whose footprint is already in turned coordinates. */
+export function projectBox(box: Box): IsoBox {
+  const { x, y, w, d } = box;
   const z0 = box.z;
   const z1 = box.z + box.h;
   const top = [project(x, y, z1), project(x + w, y, z1), project(x + w, y + d, z1), project(x, y + d, z1)];
@@ -90,6 +96,7 @@ export function isoBox(box: Box, world: World, rot: Rot): IsoBox {
     top: pts(...top),
     south: pts(...south),
     east: pts(...east),
+    hull: pts(project(x, y, z1), project(x + w, y, z1), project(x + w, y, z0), project(x + w, y + d, z0), project(x, y + d, z0), project(x, y + d, z1)),
     foot: pts(project(x, y, z0), project(x + w, y, z0), project(x + w, y + d, z0), project(x, y + d, z0)),
     anchor: project(x + w / 2, y + d / 2, z1),
     base: project(x + w / 2, y + d / 2, z0),

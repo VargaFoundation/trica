@@ -10,11 +10,25 @@ export const MAX_LANES = 150;
 export type SpeedClass = 1 | 2 | 3 | 4 | 5;
 export type Direction = "ab" | "ba";
 
-/** Line width, px: capacity on a log scale from 1.5 px (10 Mb/s) to 6 px (400 Gb/s). */
-export function capacityWidth(mbps: number | undefined): number {
-  if (mbps === undefined || !(mbps > 0)) return 1.5;
-  const x = Math.min(1, Math.max(0, (Math.log10(mbps) - 1) / (Math.log10(400_000) - 1)));
-  return Math.round((1.5 + 4.5 * x) * 10) / 10;
+export type LinkState = "up" | "down" | "unknown";
+
+/** What a line says about the link: running, down, or not known (no state reported). */
+export function linkState(e: Pick<MapEdge, "oper">): LinkState {
+  return e.oper === "down" ? "down" : e.oper === "up" || e.oper === "partial" ? "up" : "unknown";
+}
+
+/** Dashes of a state: a down link is dashed, an unknown one dotted, a running one solid. */
+export const STATE_DASH: Readonly<Record<LinkState, string | undefined>> = { up: undefined, down: "6 4", unknown: "1.5 5" };
+
+/** Seconds a particle takes to cross a line, by the speed class of the rate it stands for. */
+export const PARTICLE_SECONDS: Readonly<Record<SpeedClass, number>> = { 1: 7, 2: 5.5, 3: 4, 4: 2.8, 5: 1.8 };
+/** px between two particles of a lane, by speed class: the busier the closer. */
+export const PARTICLE_SPACING: Readonly<Record<SpeedClass, number>> = { 1: 110, 2: 80, 3: 58, 4: 40, 5: 28 };
+export const MAX_PARTICLES = 8;
+
+/** How many particles travel a lane of `len` px: one at least, more as the rate grows, at most MAX_PARTICLES. */
+export function particleCount(len: number, cls: SpeedClass): number {
+  return Math.max(1, Math.min(MAX_PARTICLES, Math.round(len / PARTICLE_SPACING[cls])));
 }
 
 /** The speed class of a rate: one class per decade from 1 Mb/s up. */

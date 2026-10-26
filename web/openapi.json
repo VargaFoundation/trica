@@ -6001,6 +6001,9 @@
           "kind": {
             "type": "string"
           },
+          "model": {
+            "type": "string"
+          },
           "mount": {
             "$ref": "#/components/schemas/MapMount"
           },

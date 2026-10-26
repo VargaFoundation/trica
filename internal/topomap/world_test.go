@@ -76,7 +76,7 @@ func lab() *world {
 	w.add("P1", "room", "S2", nil)
 	w.add("R3", "rack", "P1", nil)
 
-	w.dev("sw1", "R1", map[string]any{"role": "switch", "health": "ok", "power_w": 100.0}, "e1", "e2", "e3")
+	w.dev("sw1", "R1", map[string]any{"role": "switch", "model": "ex-switch-48", "health": "ok", "power_w": 100.0}, "e1", "e2", "e3")
 	w.dev("sw2", "R2", map[string]any{"role": "switch", "health": "warning", "power_w": 120.0}, "e1", "e2")
 	w.dev("srv", "R1", map[string]any{"role": "server", "health": "critical", "log_critical_count": 3.0}, "e1")
 	w.dev("fw-a", "R1", map[string]any{"role": "firewall", "health": "ok", "mgmt_ip": "10.1.0.1"}, "wan", "lan")

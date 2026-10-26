@@ -97,18 +97,35 @@ addresses (`site`, `rack`, `vlan` or `classes` without `view`) keep opening the 
   declared in no rack), a rack (its devices at their unit), the unplaced devices. `level=room` with
   a site id is the site floor. The address is `?level=&id=&sel=&rot=`; a bad address falls back to
   the world with a notice.
-- **Drawing**: SVG isometric boxes with three shades, soft shadows and a health lamp; labels are
-  dropped (caption first) when they would overlap, and reappear on hover or focus. Colours are the
-  `--trica-iso-*` tokens (every theme defines them); no inline style.
+- **Drawing** (ADR 0066): a ground plane with a grid that fades out; every block has three shaded
+  faces, a contact shadow and a light rim on its top. A site is a building (roof, window rows, plate
+  with its code and device count), a room a slab with low cut-away walls and its name painted on the
+  floor, a rack a cabinet (frame, glass door, vents, one status LED per device; the LEDs blink only for
+  a warning or worse, never under `prefers-reduced-motion`). In a room, cables run along cable trays.
+  In a rack, devices that have a link become cards (role icon, name, model, health dot) in a tree,
+  gateway or router on top, then switches, then the rest, joined to their slab by a leader; the others
+  keep their unit. Hover lifts a block 2 px with an outline, selection outlines it in the accent
+  colour. Labels are pills, dropped (caption first) when they would overlap, and reappear on hover or
+  focus. Colours are the `--trica-iso-*` tokens (every theme defines them); no inline style.
+- **Lines** (ADR 0066): in a room and a rack, cables are smooth orthogonal paths with rounded corners
+  that leave each device from its side; parallel lines are fanned out and a LAG is one bundle with a
+  `xN` badge. Colour and width follow the speed class (100G and more, 25-40G, 10G, 2.5-5G, 1G, under
+  1G, unknown). Port badges (`Et49/1`, `Gi0/1`) sit at both ends on hover, on selection and when the
+  line is long enough. A down line is red and dashed with a cross, an unknown one grey and dotted (only
+  when the map has some live state: with none, every line is drawn as running), a device uplink keeps
+  its dash-dot-dot and arrow, a tunnel is a double line with a travelling pulse, an Internet access an
+  arc to the cloud. Above rooms, lines stay raised arcs. The side panel of a line gives both ends
+  (device, port), speed, the rate in each direction with its utilisation, the members and the
+  confidence (no longer drawn as a dash style).
 - **Moving**: click opens a place; the `i` badge or Space selects (side panel); Enter opens; arrows
   move between places; Escape closes the panel, then goes up; `+ - 0`, wheel and drag zoom and pan;
   the two turn buttons rotate by quarter turns (`rot`). Lines are not focusable: the links table under
   the map (first 50 rows) opens each one in the panel.
-- **Traffic**: with live data, each measured line carries one animated dash lane per direction (speed
-  = rate class, width = capacity, colour = utilisation, as in the Network view); at most 150 lanes,
-  the busiest. Nothing moves with `prefers-reduced-motion`, with the "Animate the traffic" switch
-  off, or when the page is hidden. The map is refreshed every 30 s when live data are on, never
-  otherwise.
+- **Traffic**: with live data, each measured line carries dots travelling in each direction (SMIL
+  `animateMotion`; density and speed follow the rate class, at most 8 per lane), over a thin halo tinted by
+  the utilisation; a line without a rate has none. At most 150 lanes, the busiest. Nothing moves with
+  `prefers-reduced-motion`, with the "Animate the traffic" switch off, or when the page is hidden. The map
+  is refreshed every 30 s when live data are on, never otherwise.
 - **Device uplinks** (ADR 0051, amendment of #185). `uplinked_to` is drawn as an edge of its own
   medium, "Uplink (port unknown)": dash-dot-dot (the tunnel's is dash-dot), an arrowhead towards
   the uplink device, shifted off the arc a cable shares (see "Lines of one pair"), in the
@@ -126,8 +143,10 @@ addresses (`site`, `rack`, `vlan` or `classes` without `view`) keep opening the 
 - **Tests**: `src/topology/map/*.test.ts(x)` (geometry, layout, flows, navigation, address, page on the
   recorded API answers `testdata/map-api.json`; `uplinked.test.tsx` for the device uplink: arrowheads,
   dash, legend, table and panel in both languages with axe; `tunnel.test.tsx` for the lines of one pair: shifts,
-  lanes, tunnel dash and legend entry), `e2e/topology-map.spec.ts` (every level in both
-  themes with axe and no CSP violation, drill by mouse and keyboard, flow animations present and
+  lanes, tunnel dash and legend entry, on global-level arcs; `scene.look.test.ts` for what each level draws;
+  `route`, `speed`, `port`, `tree`, `decor`, `labels` for the pure geometry), `e2e/topology-look.spec.ts`
+  (card order, bundle and port badges, particles, LEDs), `e2e/topology-map.spec.ts` (every level in both
+  themes with axe and no CSP violation, drill by mouse and keyboard, particles present and
   absent under reduced motion, a rack of 96 devices drawn in under a second, a device uplink drawn
   with its arrow, legend entry and table row).
 

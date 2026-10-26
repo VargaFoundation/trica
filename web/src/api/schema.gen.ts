@@ -3451,6 +3451,7 @@ export interface components {
             health: components["schemas"]["MapHealth"];
             id: string;
             kind: string;
+            model?: string;
             mount?: components["schemas"]["MapMount"];
             place_type?: string;
             power_w?: number;

@@ -25,14 +25,15 @@ function serve(override?: TopologyMap) {
 const scene = () => document.querySelector<SVGSVGElement>(".iso-svg");
 const ready = () => waitFor(() => expect(scene()?.getAttribute("data-state")).toBe("drawn"), { timeout: 8000 });
 const as = (e: MapEdge, medium: string, extra: Partial<MapEdge> = {}): MapEdge => ({ ...e, ...extra, medium, id: `${e.a}~${e.b}~${medium}` }) as MapEdge;
-const cable = () => MAPS.room.edges.find((e) => e.medium === "physical" && e.measured) as MapEdge;
+// Two sites are joined by arcs; a room level routes its cables along trays, which route.test.ts covers.
+const cable = () => ({ ...(MAPS.global.edges.find((e) => e.medium === "tunnel") as MapEdge), medium: "physical", measured: true, a_to_b_bps: 4e8, b_to_a_bps: 1e8, capacity_mbps: 1000, util: 0.4, id: "cable" }) as MapEdge;
 const withEdges = (m: TopologyMap, edges: MapEdge[]): TopologyMap => ({ ...m, edges });
 const edgeOf = (m: TopologyMap, rot: 0 | 1 | 2 | 3, medium: string) => buildScene(m, rot).edges.find((e) => e.edge.medium === medium);
 
 describe("the lines of one pair in the scene", () => {
   it("keeps the cable, the tunnel and the device uplink of two places on three different lines", () => {
     const c = cable();
-    const m = withEdges(MAPS.room, [c, as(c, "tunnel", { measured: false }), as(c, "uplinked_to", { measured: false, toward: "b" })]);
+    const m = withEdges(MAPS.global, [c, as(c, "tunnel", { measured: false }), as(c, "uplinked_to", { measured: false, toward: "b" })]);
     for (const rot of [0, 1, 2, 3] as const) {
       const sc = buildScene(m, rot);
       expect(new Set(sc.edges.map((e) => e.d)).size).toBe(3);
@@ -61,7 +62,7 @@ describe("the lines of one pair in the scene", () => {
 
   it("draws the lanes of a measured tunnel around its own line", () => {
     const c = cable();
-    const sc = buildScene(withEdges(MAPS.room, [as(c, "tunnel", { measured: true })]), 0);
+    const sc = buildScene(withEdges(MAPS.global, [as(c, "tunnel", { measured: true })]), 0);
     const a = sc.items.find((i) => i.id === c.a);
     const b = sc.items.find((i) => i.id === c.b);
     if (!a || !b) throw new Error("ends missing");

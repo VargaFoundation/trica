@@ -345,6 +345,7 @@ func (v *view) newNode(e end) *MapNode {
 		case "device":
 			nd.Kind = KindDevice
 			nd.Role = attrStr(n, "role")
+			nd.Model = attrStr(n, "model")
 			if v.level == LevelRack {
 				nd.Mount = v.mount(n)
 			}

@@ -4,6 +4,7 @@ import type { MapEdge, MapNode, TopologyMap } from "../../api/types";
 import { ObjectLink } from "../../components/ObjectLink";
 import { HealthPill } from "../../components/ui";
 import { useI18n, type MessageKey } from "../../i18n";
+import { speedBand } from "./speed";
 import { formatBps, formatSpeed, formatUtil } from "../live";
 import { edgeUtilClass } from "./flow";
 
@@ -94,19 +95,32 @@ function EdgeDetails({ edge: e, map }: { edge: MapEdge; map: TopologyMap }) {
   const b = name(e.b);
   const util = edgeUtilClass(e);
   const cap = e.capacity_mbps !== undefined ? formatSpeed(e.capacity_mbps, locale) : undefined;
+  const only = e.members.length === 1 ? e.members[0] : undefined;
+  // A direction's rate, with its share of the capacity when the capacity is known.
+  const withUtil = (bps: number | undefined) => {
+    const rate = formatBps(bps ?? 0, locale);
+    return e.capacity_mbps ? `${rate} (${formatUtil((bps ?? 0) / (e.capacity_mbps * 1e6), locale)})` : rate;
+  };
   return (
     <>
       <h3>{t("topology.panel.link", { from: a, to: b })}</h3>
       <dl className="facts" data-util={util}>
         <Fact label={t("topology.map.panel.medium")} value={t(`topology.map.medium.${e.medium}` as MessageKey)} />
         <Fact label={t("topology.map.panel.state")} value={t(`topology.map.oper.${e.oper}` as MessageKey)} />
+        {only && only.kind !== "uplinked_to" ? (
+          <Fact
+            label={t("topology.map.panel.ends")}
+            value={`${only.a_device.display} › ${only.a_port.display}  ↔  ${only.b_device.display} › ${only.b_port.display}`}
+          />
+        ) : null}
         <Fact label={t("topology.map.panel.confidence")} value={e.confidence} />
         <Fact label={t("topology.map.links.count")} value={number(e.links)} />
+        <Fact label={t("topology.map.panel.speed")} value={t(`topology.map.speed.${speedBand(e.capacity_mbps)}` as MessageKey)} />
         {cap ? <Fact label={t("topology.map.panel.capacity")} value={e.capacity_partial ? t("topology.map.panel.capacityPartial", { value: cap }) : cap} /> : null}
         {e.measured ? (
           <>
-            <Fact label={t("topology.map.panel.aToB", { a, b })} value={formatBps(e.a_to_b_bps ?? 0, locale)} />
-            <Fact label={t("topology.map.panel.aToB", { a: b, b: a })} value={formatBps(e.b_to_a_bps ?? 0, locale)} />
+            <Fact label={t("topology.map.panel.aToB", { a, b })} value={withUtil(e.a_to_b_bps)} />
+            <Fact label={t("topology.map.panel.aToB", { a: b, b: a })} value={withUtil(e.b_to_a_bps)} />
             <Fact label={t("topology.map.panel.util")} value={e.util === undefined ? t("topology.map.panel.notMeasured") : formatUtil(e.util, locale)} />
           </>
         ) : e.medium === "uplinked_to" ? (

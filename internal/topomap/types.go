@@ -176,9 +176,11 @@ type MapNode struct {
 	Size      *MapSize  `json:"size,omitempty"`
 	Mount     *MapMount `json:"mount,omitempty"`
 	Role      string    `json:"role,omitempty"`
-	Counts    MapCounts `json:"counts"`
-	Health    MapHealth `json:"health"`
-	PowerW    *float64  `json:"power_w,omitempty"`
+	// Model is the model of a device, as its `model` attribute states it (the card of the rack level shows it).
+	Model  string    `json:"model,omitempty"`
+	Counts MapCounts `json:"counts"`
+	Health MapHealth `json:"health"`
+	PowerW *float64  `json:"power_w,omitempty"`
 }
 
 // MapKinds counts the links of an edge by what they are.

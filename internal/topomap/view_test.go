@@ -124,7 +124,7 @@ func TestRackLevelDevicesMountAndTrail(t *testing.T) {
 	if sw.Mount == nil || sw.Mount.Position != 4 || sw.Mount.Face != "front" || sw.Mount.UHeight != 2 || !sw.Mount.FullDepth {
 		t.Errorf("sw1 mount = %+v", sw.Mount)
 	}
-	if sw.Role != "switch" || sw.Health.Worst != "ok" {
+	if sw.Role != "switch" || sw.Model != "ex-switch-48" || sw.Health.Worst != "ok" {
 		t.Errorf("sw1 = %+v", sw)
 	}
 	if len(m.Trail) != 2 || m.Trail[0].ID != "S1" || m.Trail[1].ID != "A1" {

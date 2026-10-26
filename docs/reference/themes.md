@@ -105,7 +105,9 @@ graph-unresolved-line graph-declared graph-observed graph-deduced graph-util-nor
 graph-util-warn graph-util-crit graph-down graph-util-unknown graph-health-ok graph-health-warn
 graph-health-crit graph-group graph-group-line`; and the isometric map (ADR 0051) `iso-floor
 iso-floor-line iso-label-bg iso-top iso-top-hi iso-south iso-east iso-neutral-top
-iso-neutral-south iso-neutral-east iso-edge iso-neutral-edge iso-shadow`. The list is `web/src/styles/tokens.css`; the
+iso-neutral-south iso-neutral-east iso-edge iso-neutral-edge iso-shadow`, and the map's scene and link encoding (ADR 0066) `iso-ground
+iso-grid iso-rim iso-glass iso-vent iso-window iso-roof iso-tray iso-particle iso-speed-100g iso-speed-40g iso-speed-10g
+iso-speed-5g iso-speed-1g iso-speed-slow iso-speed-unknown`. The list is `web/src/styles/tokens.css`; the
 Go test `TestDefaultsMatchTokensCSS` keeps the validator's copy in step.
 
 A colour you do not restate stays the console's (or the base's, with `extends`). The result must
