@@ -14,6 +14,7 @@ import { layoutFloor, tileOf, type FloorPlan, type PlacedRack } from "./floor";
 import { useRoomContents, type RoomContents } from "./useRack";
 import { EditPanel, useCanDeclare } from "../edit/EditPanel";
 import { ObjectForm } from "../edit/ObjectForm";
+import { RenameForm } from "../edit/RenameForm";
 import { aisleTiles, conflictingRacks, type Aisle, type AisleTile } from "../aisles/aisles";
 import "../aisles/aisles.css";
 
@@ -92,7 +93,7 @@ export function RoomPage() {
   return <Async query={room}>{(r) => (r.type === "room" ? <Room room={r} /> : <NotFoundPage />)}</Async>;
 }
 
-type RoomPanel = { kind: "rack"; x?: number; y?: number } | { kind: "edit" } | null;
+type RoomPanel = { kind: "rack"; x?: number; y?: number } | { kind: "edit" } | { kind: "rename" } | null;
 
 function Room({ room }: { room: ObjectView }) {
   const { t } = useI18n();
@@ -117,6 +118,9 @@ function Room({ room }: { room: ObjectView }) {
           <button type="button" className="primary" onClick={() => setPanel({ kind: "rack" })}>
             {t("edit.rack.add")}
           </button>{" "}
+          <button type="button" onClick={() => setPanel({ kind: "rename" })}>
+            {t("edit.rename.button")}
+          </button>{" "}
           <button type="button" onClick={() => setPanel({ kind: "edit" })}>
             {t("edit.room.button")}
           </button>
@@ -135,6 +139,7 @@ function Room({ room }: { room: ObjectView }) {
           />
         </EditPanel>
       ) : null}
+      {can && panel?.kind === "rename" ? <RenameForm object={room} onClose={() => setPanel(null)} /> : null}
       {can && panel?.kind === "edit" ? (
         <EditPanel title={t("edit.room.title", { room: room.display })}>
           <ObjectForm mode="edit" object={room} onClose={() => setPanel(null)} />

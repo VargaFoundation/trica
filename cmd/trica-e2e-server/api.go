@@ -500,9 +500,21 @@ func (a *api) batch(w http.ResponseWriter, r *http.Request, preview bool) {
 	}
 	changes := []obj{}
 	objects := obj{}
+	values := 0
 	for i, o := range b.Objects {
 		if o.Identity["id"] != "" {
+			// An object designated by its id (a rename, an edit): one set per
+			// attribute it gives, as the engine reports a changed value.
 			objects[o.Ref] = o.Identity["id"]
+			keys := make([]string, 0, len(o.Attributes))
+			for k := range o.Attributes {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			for _, k := range keys {
+				changes = append(changes, obj{"op": "set", "object_id": o.Identity["id"], "type": o.Type, "key": k, "after": o.Attributes[k]})
+				values++
+			}
 			continue
 		}
 		id := oid(0xf000 + i)
@@ -515,7 +527,7 @@ func (a *api) batch(w http.ResponseWriter, r *http.Request, preview bool) {
 	for _, rel := range b.Unrelations {
 		changes = append(changes, obj{"op": "unrelate", "object_id": oid(0xf000), "type": "", "key": rel.Type, "other_id": oid(idRack)})
 	}
-	result := obj{"created": len(changes), "values_changed": 0, "relations_opened": len(b.Relations), "relations_closed": len(b.Unrelations), "objects": objects, "changes": changes}
+	result := obj{"created": len(changes) - values, "values_changed": values, "relations_opened": len(b.Relations), "relations_closed": len(b.Unrelations), "objects": objects, "changes": changes}
 	if preview {
 		writeJSON(w, http.StatusOK, obj{"source": "e2e", "result": result})
 		return

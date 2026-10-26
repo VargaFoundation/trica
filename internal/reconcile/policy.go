@@ -112,10 +112,33 @@ type candidate struct {
 	Author     string
 }
 
+// builtinPriorities apply after the configured ones, for the attributes no
+// configured rule matches. A person who renames a place (ADR 0067) is not
+// overruled by the declaration file that created it, however recently the
+// file was applied: a name said by a person outranks the other sources, and
+// withdrawing it hands the name back to them.
+var builtinPriorities = func() []PriorityRule {
+	var rules []PriorityRule
+	for _, t := range []string{"site", "building", "room", "row", "aisle", "rack"} {
+		rules = append(rules, PriorityRule{Attribute: t + ".name", Sources: []string{"user:*"}})
+	}
+	return rules
+}()
+
 // rank returns the position of source in the rule matching typ.attr, or -1.
 func (p Policy) rank(typ, attr, source string) int {
 	key := typ + "." + attr
-	for _, r := range p.Priorities {
+	for _, rules := range [][]PriorityRule{p.Priorities, builtinPriorities} {
+		if i := rankIn(rules, key, source); i >= 0 {
+			return i
+		}
+	}
+	return -1
+}
+
+// rankIn is rank over one list of rules: the first rule matching key decides.
+func rankIn(rules []PriorityRule, key, source string) int {
+	for _, r := range rules {
 		if !globMatch(r.Attribute, key) {
 			continue
 		}

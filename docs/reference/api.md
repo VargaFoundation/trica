@@ -121,7 +121,7 @@ Every failure, including an unknown path and a wrong method, is an RFC 9457 prob
 | 403 | `forbidden`, `sensitive-attribute` | The action or the object is not allowed; a query on a sensitive attribute |
 | 404 | `not-found` | Unknown object, proposal, saved query or path |
 | 405 | `method-not-allowed` | With an `Allow` header |
-| 409 | `conflict` | Proposal already decided; saved query exists |
+| 409 | `conflict`, `name-taken` | Proposal already decided; saved query exists; a rename or a creation gives a site, room or rack the name a sibling already carries (ADR 0067) |
 | 413 | `too-large` | Body over 8 MiB |
 | 422 | `rejected` | A well-formed batch the engine refuses: `observed_at` too old, or a value or relation type the schema refuses from a `user:` or `token:` source (ADR 0005); nothing applied |
 | 500 | `internal` | The cause is logged, never returned |

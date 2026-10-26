@@ -32,6 +32,7 @@ import { RemovedTray } from "./RemovedTray";
 import { useRemoved } from "./useRemoved";
 import { EditPanel, useCanDeclare, useCanMount } from "../edit/EditPanel";
 import { ObjectForm } from "../edit/ObjectForm";
+import { RenameForm } from "../edit/RenameForm";
 import { PlaceDeviceForm } from "../edit/PlaceDeviceForm";
 import { QuickPlaceDialog, type PlaceMode } from "../edit/QuickPlaceDialog";
 import type { PickedDevice } from "../edit/DevicePicker";
@@ -64,6 +65,7 @@ type Panel =
       declare?: boolean;
     }
   | { kind: "edit" }
+  | { kind: "rename" }
   | null;
 
 const ISSUE_TEXT: Record<Issue, MessageKey> = {
@@ -142,6 +144,9 @@ function Rack({ rack }: { rack: ObjectView }) {
               </button>{" "}
             </>
           ) : null}
+          <button type="button" onClick={() => open({ kind: "rename" })}>
+            {t("edit.rename.button")}
+          </button>{" "}
           <button type="button" onClick={() => open({ kind: "edit" })}>
             {t("edit.rack.button")}
           </button>
@@ -209,6 +214,9 @@ function Rack({ rack }: { rack: ObjectView }) {
       ) : null}
       {can && panel?.kind === "edit" ? (
         <EditRack rack={rack} onClose={() => setPanel(null)} />
+      ) : null}
+      {can && panel?.kind === "rename" ? (
+        <RenameForm object={rack} onClose={() => setPanel(null)} />
       ) : null}
       {uHeight !== declared ? (
         <p role="note" className="notice">

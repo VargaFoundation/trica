@@ -52,7 +52,9 @@ function errorText(e: unknown): MessageKey {
     case 403:
       return "edit.failed.403";
     case 409:
-      return "edit.failed.409";
+      return e.type.endsWith(":name-taken")
+        ? "edit.failed.nameTaken"
+        : "edit.failed.409";
     case 422:
       return "edit.failed.422";
     default:
