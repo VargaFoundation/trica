@@ -7351,6 +7351,9 @@
             "format": "date-time",
             "type": "string"
           },
+          "device": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
           "display": {
             "type": "string"
           },

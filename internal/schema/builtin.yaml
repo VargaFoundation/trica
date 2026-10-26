@@ -156,6 +156,7 @@ types:
     layer: physical
     label: {en: Module, fr: Module}
     description: A field-replaceable module or card (line card, NIC, RAID controller, supervisor).
+    display_template: "{name} · {model}"
     parents: [device, module]
     attributes:
       name: {kind: string, identity: weak, search: true, label: {en: Name, fr: Nom}, description: "Slot or module name."}

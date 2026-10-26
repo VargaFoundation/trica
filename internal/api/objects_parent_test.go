@@ -12,6 +12,7 @@ import (
 type listedParent struct {
 	Display string         `json:"display"`
 	Parent  *api.ObjectRef `json:"parent"`
+	Device  *api.ObjectRef `json:"device"`
 }
 
 func (e *env) listed(path, token string) map[string]listedParent {
@@ -53,6 +54,45 @@ func TestObjectsListNamesTheParent(t *testing.T) {
 	for _, it := range e.listed("/api/v1/objects?type=cpu", "t-cpu-only") {
 		if it.Parent != nil {
 			t.Fatalf("the parent of a type the caller cannot read is named: %+v", it.Parent)
+		}
+	}
+}
+
+// A drive in a controller names the controller as its parent and the server
+// above it as its device; a component whose parent is the server names no
+// device; a caller who cannot read devices is not told the server.
+func TestObjectsListNamesTheDeviceAboveTheParent(t *testing.T) {
+	e := newEnv(t, reconcile.Policy{})
+	b := sdk.NewBatch("agent:srv-02", sdk.ScopeFull)
+	b.Object("srv", "device").Identify("serial", "SRV-02-SN").Identify("name", "srv-02").Set("role", "server")
+	b.Object("ctl", "module").Identify("name", "Slot 0").In("srv").Set("model", "Smart Array P440ar Controller").Set("kind", "storage_controller")
+	b.Object("dsk", "disk").Identify("name", "1I:0:1").In("ctl").Set("media", "ssd").Set("capacity_bytes", 500107837440).Set("model", "CT500MX500SSD1")
+	b.Object("psu", "psu").Identify("name", "PS 1").In("srv")
+	e.apply(b)
+
+	disks := e.listed("/api/v1/objects?type=disk", tokReader)
+	d, ok := disks["1I:0:1 · SSD 500 GB CT500MX500SSD1"]
+	if !ok {
+		t.Fatalf("no drive with its readable name: %v", disks)
+	}
+	if d.Parent == nil || d.Parent.ID != e.ids["ctl"] || d.Parent.Display != "Slot 0 · Smart Array P440ar Controller" {
+		t.Fatalf("parent of the drive: %+v", d.Parent)
+	}
+	if d.Device == nil || d.Device.ID != e.ids["srv"] || d.Device.Display != "srv-02" || d.Device.Type != "device" {
+		t.Fatalf("device of the drive: %+v", d.Device)
+	}
+	for _, it := range e.listed("/api/v1/objects?type=psu", tokReader) {
+		if it.Device != nil {
+			t.Fatalf("a component whose parent is the server names a device: %+v", it.Device)
+		}
+	}
+	e.auth.Tokens["t-no-device"] = api.Grant{Principal: api.Principal{Subject: "kim", Kind: api.KindUser}, Actions: []string{api.ActionRead}, Types: []string{"disk", "module"}}
+	for _, it := range e.listed("/api/v1/objects?type=disk", "t-no-device") {
+		if it.Device != nil {
+			t.Fatalf("the device of a type the caller cannot read is named: %+v", it.Device)
+		}
+		if it.Parent == nil {
+			t.Fatal("the readable controller is not named")
 		}
 	}
 }

@@ -4088,6 +4088,7 @@ export interface components {
             };
             /** Format: date-time */
             created_at: string;
+            device?: components["schemas"]["ObjectRef"];
             display: string;
             /** Format: date-time */
             first_seen?: string;
