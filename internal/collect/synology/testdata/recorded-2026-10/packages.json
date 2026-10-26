@@ -1,0 +1,303 @@
+{
+ "data": {
+  "packages": [
+   {
+    "additional": {
+     "description": "Active Backup for Microsoft 365 provides a centralized interface coming with the auto-discovery service for efficient data backup and management, the continuous backup mode for minimizing the risk of data loss, Active Backup for Microsoft 365 Portal for easy restoration, and so much more.",
+     "install_type": "",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "000000000000-000000000",
+    "name": "Active Backup for Microsoft 365",
+    "timestamp": 1792998793732,
+    "version": "2.6.3-14235"
+   },
+   {
+    "additional": {
+     "description": "Active Insight is a cloud service that provides better technical support experience with faster troubleshooting. When enabled on multiple of your Synology hosts, it allows you to manage them across locations with a performance monitoring and automated warning system.",
+     "install_type": "system",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "ActiveInsight",
+    "name": "Active Insight",
+    "timestamp": 1792998793747,
+    "version": "3.0.6-24124"
+   },
+   {
+    "additional": {
+     "description": "Antivirus Essential is a free and easy-to-use package that protects your Synology NAS and your files from viruses. Before starting scanning operations, ensure the system has a minimum of 1 GB RAM for successful scanning and optimal performance.",
+     "install_type": "",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "AntiVirus",
+    "name": "Antivirus Essential",
+    "timestamp": 1792998793763,
+    "version": "1.6.0-4005"
+   },
+   {
+    "additional": {
+     "description": "Container Manager is a lightweight virtualization application that gives you the ability to run thousands of containers created by developers from all over the world on DSM. The hugely popular built-in image repository, Docker Hub, allows you to find shared applications from other talented developers.",
+     "install_type": "",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "0000000000000000",
+    "name": "Container Manager",
+    "timestamp": 1792998793787,
+    "version": "24.0.2-1706"
+   },
+   {
+    "additional": {
+     "description": "Download Station is a web-based download application which allows you to download files from the Internet through BT, FTP, HTTP, NZB, and eMule, and subscribe to RSS feeds to keep you updated on the hottest or latest BT. It offers the auto unzip service to help you extract compressed files to your Synology NAS whenever files are downloaded. With Download Station, you can download files from multiple file hosting sites, and search for torrent files via system default search engines as well as self-added engines with the BT search function. To respect the creators' and distributors' intellectual property rights and avoid legal issues, make sure to have the right authorization before uploading or downloading copyrighted materials.",
+     "install_type": "",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "DownloadStation",
+    "name": "Download Station",
+    "timestamp": 1792998793803,
+    "version": "4.1.2-5012"
+   },
+   {
+    "additional": {
+     "description": "File Station is the centralized file management tool for your Synology storage system. Through File Station, you can manage and search files/folders, view files of various types, share private files with external users, and do much more.",
+     "install_type": "system",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "FileStation",
+    "name": "File Station",
+    "timestamp": 1792998793820,
+    "version": "1.4.4-2221"
+   },
+   {
+    "additional": {
+     "description": "Hybrid Share is a cloud file management solution that combines C2 cloud storage with on-prem NAS hosts across multiple locations. It offers high scalability, quick multi-site file access, and rapid deployment, facilitating efficient cross-site collaboration.",
+     "install_type": "system",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "HybridShare",
+    "name": "Hybrid Share",
+    "timestamp": 1792998793837,
+    "version": "1.5.2-1832"
+   },
+   {
+    "additional": {
+     "description": "Hyper Backup helps you protect shared folder data, packages, and LUNs on your Synology storage system, providing diverse backup destinations and multiple backup versions. Restoration is available with a straightforward version-browsing interface.",
+     "install_type": "",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "HyperBackup",
+    "name": "Hyper Backup",
+    "timestamp": 1792998793851,
+    "version": "4.2.2-4262"
+   },
+   {
+    "additional": {
+     "description": "Log Center offers an easy solution for gathering and displaying log messages from network devices. It provides you with a centralized log management interface and the flexible search function to help you find the useful information efficiently.",
+     "install_type": "",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "LogCenter",
+    "name": "Log Center",
+    "timestamp": 1792998793878,
+    "version": "1.3.2-2074"
+   },
+   {
+    "additional": {
+     "description": "OAuth Service is an open standard protocol for account authorization and authentication. It allows resource owners to authorize third-party access to their server resources without sharing their credentials. The package adopts OAuth 2.0 standard.",
+     "install_type": "system",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "OAuthService",
+    "name": "OAuth Service",
+    "timestamp": 1792998793899,
+    "version": "1.3.0-0220"
+   },
+   {
+    "additional": {
+     "description": "PHP is an open source scripting language which aims to help web developers write dynamically generated web pages efficiently. This language is suitable for web development in that it can be easily embedded into HTML.",
+     "install_type": "",
+     "limit_type": "non",
+     "status": "version_limit",
+     "status_code": 264,
+     "status_description": "failed to start because the pkg is end of life on the os",
+     "status_origin": "version_limit"
+    },
+    "id": "PHP7.4",
+    "name": "PHP 7.4",
+    "timestamp": 1792998793905,
+    "version": "7.4.33-0130"
+   },
+   {
+    "additional": {
+     "description": "Python is an interpreted, interactive, and object-oriented programming language suitable for distributed application development, scripting, numeric computing and system testing. With Python, you can develop or integrate your systems more quickly and effectively.",
+     "install_type": "system",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "Python2",
+    "name": "Python2",
+    "timestamp": 1792998793918,
+    "version": "2.7.18-1004"
+   },
+   {
+    "additional": {
+     "description": "Python is an interpreted, interactive, and object-oriented programming language suitable for distributed application development, scripting, numeric computing and system testing. With Python, you can develop or integrate your systems more quickly and effectively.",
+     "install_type": "",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "Python3.9",
+    "name": "Python 3.9",
+    "timestamp": 1792998793931,
+    "version": "3.9.22-0015"
+   },
+   {
+    "additional": {
+     "description": "QuickConnect allows client applications to connect to your Synology NAS via the Internet without setting up port forwarding rules. It can also work with Synology-developed packages, such as File Station, Surveillance Station, Synology Drive, Synology Photos, and mobile applications.",
+     "install_type": "system",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "QuickConnect",
+    "name": "QuickConnect",
+    "timestamp": 1792998793950,
+    "version": "1.0.10-0187"
+   },
+   {
+    "additional": {
+     "description": "Replication Service is a core service that offers the ability to replicate taken snapshots from the source to the destination. This package cannot run alone and depends on core packages that offer snapshot features.",
+     "install_type": "system",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "000000000000000000",
+    "name": "Replication Service",
+    "timestamp": 1792998793964,
+    "version": "1.4.0-1405"
+   },
+   {
+    "additional": {
+     "description": "SMB Service is an easy-to-use file service management tool, allowing you to manage general settings related to the SMB/CIFS file sharing service. Through SMB Service, Windows, macOS, and Linux users can access your Synology NAS from the network once you have enabled the SMB service option in Control Panel.",
+     "install_type": "system",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "SMBService",
+    "name": "SMB Service",
+    "timestamp": 1792998793988,
+    "version": "4.15.13-4251"
+   },
+   {
+    "additional": {
+     "description": "SAN Manager helps you to manage and monitor your iSCSI and Fibre Channel services easily. Both iSCSI and Fibre Channel are storage area network (SAN) services that provide access to consolidated and block-level data storage. Clients can access storage space over storage network as if the space were local disks.",
+     "install_type": "system",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "ScsiTarget",
+    "name": "SAN Manager",
+    "timestamp": 1792998794002,
+    "version": "1.0.12-0802"
+   },
+   {
+    "additional": {
+     "description": "Secure SignIn Service provides enhanced account security for your DSM. It allows passwordless logins and offers sign-in options in addition to basic 2-factor authentication methods.",
+     "install_type": "system",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "SecureSignIn",
+    "name": "Secure SignIn Service",
+    "timestamp": 1792998794016,
+    "version": "1.1.7-0455"
+   },
+   {
+    "additional": {
+     "description": "Snapshot Replication is an expert of data backup and recovery with the point-in-time copy mechanism. Businesses need data protection to prevent data loss from accidental deletion, application crashes, data corruption, and viruses.",
+     "install_type": "",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "0000000000000000000",
+    "name": "Snapshot Replication",
+    "timestamp": 1792998794035,
+    "version": "7.5.1-1915"
+   },
+   {
+    "additional": {
+     "description": "Storage Manager is a built-in application for managing storage on your Synology NAS. It offers a centralized interface to allocate storage capacity, monitor usage, check your drives' health, and use advanced features such as hot spare drives and SSD cache.",
+     "install_type": "system",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "StorageManager",
+    "name": "Storage Manager",
+    "timestamp": 1792998794048,
+    "version": "1.1.0-2018"
+   },
+   {
+    "additional": {
+     "description": "Synology Universal Search is a powerful search tool for your Synology NAS. In one search, you can find matched items from photos to notes. You can also index folders to provide precise and prompt search results by filename or file content. With Synology Universal Search, everything on your Synology NAS is just a few clicks away.",
+     "install_type": "system",
+     "status": "running",
+     "status_code": 0,
+     "status_description": "retrieve from status script",
+     "status_origin": "running"
+    },
+    "id": "SynoFinder",
+    "name": "Universal Search",
+    "timestamp": 1792998794092,
+    "version": "1.9.0-0900"
+   }
+  ],
+  "total": 21
+ },
+ "success": true
+}

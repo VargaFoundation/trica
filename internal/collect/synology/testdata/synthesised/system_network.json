@@ -1,0 +1,48 @@
+{
+ "data": {
+  "hostname": "nas-b2",
+  "nif": [
+   {
+    "addr": "192.0.2.10",
+    "id": "eth0",
+    "mac": "02-11-32-00-00-11",
+    "mask": "255.255.255.0",
+    "mtu": 1500,
+    "speed": 1000,
+    "status": "connected",
+    "type": "lan"
+   },
+   {
+    "addr": "192.0.2.11",
+    "id": "eth1",
+    "mac": "02-11-32-00-00-12",
+    "mask": "255.255.255.128",
+    "mtu": 9000,
+    "speed": 2500,
+    "status": "connected",
+    "type": "lan"
+   },
+   {
+    "addr": "169.254.10.20",
+    "id": "eth2",
+    "mac": "02-11-32-00-00-13",
+    "mask": "255.255.0.0",
+    "mtu": 1500,
+    "speed": -1,
+    "status": "disconnected",
+    "type": "lan"
+   },
+   {
+    "addr": "",
+    "id": "pppoe",
+    "mac": "",
+    "mask": "",
+    "mtu": 1492,
+    "speed": 0,
+    "status": "disconnected",
+    "type": "pppoe"
+   }
+  ]
+ },
+ "success": true
+}

@@ -1,0 +1,15 @@
+{
+ "data": {
+  "codepage": "enu",
+  "model": "DS1821+",
+  "ram": 4096,
+  "serial": "0000ABCDE0001",
+  "temperature": 38,
+  "temperature_warn": false,
+  "time": "Mon Oct 26 08:13:13 2026",
+  "uptime": 10294,
+  "version": "90080",
+  "version_string": "DSM 7.4.1-90080 Update 1"
+ },
+ "success": true
+}

@@ -1,0 +1,25 @@
+{
+ "data": {
+  "packages": [
+   {
+    "additional": {
+     "maintainer": "Example Vendor",
+     "status": "running"
+    },
+    "id": "fake-pkg-1",
+    "name": "Fake Third-Party Tool",
+    "version": "1.2.3-0001"
+   },
+   {
+    "additional": {
+     "status": "stopped"
+    },
+    "id": "fake-pkg-2",
+    "name": "Fake Synology Tool",
+    "version": "2.0.0-0002"
+   }
+  ],
+  "total": 2
+ },
+ "success": true
+}

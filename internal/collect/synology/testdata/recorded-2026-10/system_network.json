@@ -1,0 +1,86 @@
+{
+ "data": {
+  "dns": "192.0.2.1",
+  "enabled_domain": false,
+  "enabled_samba": true,
+  "gateway": "192.0.2.1",
+  "hostname": "nas-a1",
+  "nif": [
+   {
+    "addr": "169.254.194.24",
+    "duplex": true,
+    "id": "eth0",
+    "mac": "02-11-32-00-00-01",
+    "mask": "255.255.0.0",
+    "mtu": 1500,
+    "speed": -1,
+    "status": "disconnected",
+    "type": "lan",
+    "use_dhcp": true
+   },
+   {
+    "addr": "169.254.113.239",
+    "duplex": true,
+    "id": "eth1",
+    "mac": "02-11-32-00-00-02",
+    "mask": "255.255.0.0",
+    "mtu": 1500,
+    "speed": -1,
+    "status": "disconnected",
+    "type": "lan",
+    "use_dhcp": true
+   },
+   {
+    "addr": "169.254.149.87",
+    "duplex": true,
+    "id": "eth2",
+    "mac": "02-11-32-00-00-03",
+    "mask": "255.255.0.0",
+    "mtu": 1500,
+    "speed": -1,
+    "status": "disconnected",
+    "type": "lan",
+    "use_dhcp": true
+   },
+   {
+    "addr": "169.254.136.133",
+    "duplex": true,
+    "id": "eth3",
+    "mac": "02-11-32-00-00-04",
+    "mask": "255.255.0.0",
+    "mtu": 1500,
+    "speed": -1,
+    "status": "disconnected",
+    "type": "lan",
+    "use_dhcp": true
+   },
+   {
+    "addr": "192.0.2.57",
+    "duplex": true,
+    "id": "eth4",
+    "mac": "02-11-32-00-00-05",
+    "mask": "255.255.255.0",
+    "mtu": 1500,
+    "speed": 10000,
+    "status": "connected",
+    "type": "lan",
+    "use_dhcp": true
+   },
+   {
+    "addr": "169.254.14.47",
+    "duplex": true,
+    "id": "eth5",
+    "mac": "02-11-32-00-00-06",
+    "mask": "255.255.0.0",
+    "mtu": 1500,
+    "speed": -1,
+    "status": "disconnected",
+    "type": "lan",
+    "use_dhcp": true
+   }
+  ],
+  "wins": "",
+  "workgroup": "WORKGROUP"
+ },
+ "success": true
+}
