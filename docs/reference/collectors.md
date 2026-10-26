@@ -132,7 +132,11 @@ and `uplinked_to` from each device to the device it reaches the network through.
 uplink port, so no cable is deduced (the topology page draws the uplink as a device-level line,
 [ADR 0062](../adr/0062-topology-uplinks.md)); clients are never requested
 ([ADR 0060](../adr/0060-unifi-network-integration-api.md)). Synthesised from the specification,
-never run against a console.
+never run against a console. When trica cannot reach the console, `options.console: <hostId>` (the `id`
+of `/v1/hosts`) reads the same API through the cloud connector of `https://api.ui.com` (`address`
+empty or that URL, nothing else): the key must be created by the **owner** of the console, a
+non-owner key gets a 403 that the run reports. GET only, never run with an owner key
+([ADR 0060, amendment](../adr/0060-unifi-network-integration-api.md)).
 
 ```yaml
   - kind: unifi

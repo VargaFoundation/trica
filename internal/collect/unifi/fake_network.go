@@ -42,6 +42,9 @@ type FakeNetworkRequest struct {
 	Query    string
 	HasKey   bool
 	Prefixed bool
+	// Console is the host id of a request that came through the cloud
+	// connector prefix; empty for the console's own prefix.
+	Console string
 }
 
 // FakeNetwork is an in-process Network Integration API of a console serving
@@ -68,6 +71,8 @@ type FakeNetwork struct {
 	body      map[string]string
 	delay     map[string]time.Duration
 	redirect  map[string]string
+	notOwner  bool   // the connector answers the owner 403
+	console   string // the host id the connector knows; others answer 404
 }
 
 // NewFakeNetwork starts a fake Network Integration API serving a fixture set
@@ -117,6 +122,20 @@ func (f *FakeNetwork) Target(name string) collect.Target {
 		Timeout:  10 * time.Second,
 	}
 }
+
+// ConnectorTarget returns a collect.Target aimed at the fake as the cloud
+// connector of the console with host id console: options.api network and
+// options.console set, the address left to the fake (the collector itself
+// only accepts https://api.ui.com; tests point cloudHost at the fake). The fake
+// knows that one console: another id answers 404.
+func (f *FakeNetwork) ConnectorTarget(name, console string) collect.Target {
+	f.lock(func() { f.console = console })
+	return f.Target(name)
+}
+
+// NotOwner makes the connector answer as it does for a key of an account that
+// does not own the console: 403, "user is not the owner of this host".
+func (f *FakeNetwork) NotOwner() { f.lock(func() { f.notOwner = true }) }
 
 // URL is the address of the console, https://127.0.0.1:port.
 func (f *FakeNetwork) URL() string { return f.server.URL }
@@ -172,6 +191,12 @@ func (f *FakeNetwork) lock(fn func()) {
 
 func (f *FakeNetwork) handle(w http.ResponseWriter, r *http.Request) {
 	rel, prefixed := strings.CutPrefix(r.URL.Path, networkPrefix)
+	console := ""
+	if id, rest, ok := strings.Cut(strings.TrimPrefix(r.URL.Path, "/v1/connector/consoles/"), "/"); ok && strings.HasPrefix(r.URL.Path, "/v1/connector/consoles/") {
+		if r2, ok := strings.CutPrefix("/"+rest, networkPrefix); ok {
+			rel, prefixed, console = r2, true, id
+		}
+	}
 	if !prefixed {
 		rel = r.URL.Path
 	}
@@ -183,9 +208,12 @@ func (f *FakeNetwork) handle(w http.ResponseWriter, r *http.Request) {
 		body      string
 		delay     time.Duration
 		location  string
+		notOwner  bool
+		known     string
 	)
 	f.lock(func() {
-		f.requests = append(f.requests, FakeNetworkRequest{Method: r.Method, Path: rel, Query: r.URL.RawQuery, HasKey: r.Header.Get("X-API-KEY") == f.key, Prefixed: prefixed})
+		f.requests = append(f.requests, FakeNetworkRequest{Method: r.Method, Path: rel, Query: r.URL.RawQuery, HasKey: r.Header.Get("X-API-KEY") == f.key, Prefixed: prefixed, Console: console})
+		notOwner, known = f.notOwner, f.console
 		key, maxLimit, status = f.key, f.maxLimit, f.status[rel]
 		malformed = f.malformed[rel] || f.malformed[""]
 		body, location = f.body[rel], f.redirect[rel]
@@ -203,6 +231,11 @@ func (f *FakeNetwork) handle(w http.ResponseWriter, r *http.Request) {
 		f.netError(w, r, http.StatusNotFound, "NOT_FOUND", "api.not-found", "no such endpoint")
 	case r.Header.Get("X-API-KEY") != key:
 		f.unauthorized(w)
+	case console != "" && console != known:
+		f.netError(w, r, http.StatusNotFound, "NOT_FOUND", "not_found", "host not found")
+	case console != "" && notOwner:
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte(`{"code":"forbidden","message":"forbidden: access denied: user is not the owner of this host"}`))
 	case r.Method != http.MethodGet:
 		// The collector must never get here; the record above proves it did.
 		f.netError(w, r, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "api.method-not-allowed", "the fake serves GET only")

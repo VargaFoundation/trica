@@ -54,8 +54,8 @@ func TestOnlyGETIsBuilt(t *testing.T) {
 // request: it needs an ADR and an entry here.
 var allowedPaths = map[string]bool{
 	"/v1/hosts": true, "/v1/sites": true, "/v1/devices": true, "/v1/isp-metrics/5m": true,
-	"/proxy/network/integration": true,
-	"/v1/info":                   true, "/v1/sites/%s/devices": true, "/v1/sites/%s/devices/%s": true,
+	"/proxy/network/integration": true, "/v1/connector/consoles/%s/proxy/network/integration": true,
+	"/v1/info": true, "/v1/sites/%s/devices": true, "/v1/sites/%s/devices/%s": true,
 }
 
 // refSuffixes are the object-reference fragments of the mappings (the ref of
@@ -176,7 +176,7 @@ func TestReadOnlyScanCatchesWrites(t *testing.T) {
 	if p := readOnlyProblems(good, true); len(p) != 0 {
 		t.Errorf("a GET is reported: %v", p)
 	}
-	endpoints, err := parser.ParseFile(token.NewFileSet(), "x.go", `package p; var u = []string{"/v1/hosts", "/v1/sites", "/v1/devices", "/v1/isp-metrics/5m", "/proxy/network/integration", "/v1/info", "/v1/sites/%s/devices", "/v1/sites/%s/devices/%s", "/if:", "/wan:", "/"}`, 0)
+	endpoints, err := parser.ParseFile(token.NewFileSet(), "x.go", `package p; var u = []string{"/v1/hosts", "/v1/sites", "/v1/devices", "/v1/isp-metrics/5m", "/proxy/network/integration", "/v1/connector/consoles/%s/proxy/network/integration", "/v1/info", "/v1/sites/%s/devices", "/v1/sites/%s/devices/%s", "/if:", "/wan:", "/"}`, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

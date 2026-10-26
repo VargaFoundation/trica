@@ -43,8 +43,8 @@ var Descriptor = collect.Descriptor{
 	Summary:    schema.Label{EN: "UniFi consoles and the devices they manage (access points, switches, readers, cameras) through the Site Manager cloud API: models, firmware, health, WAN ports, addresses and Internet accesses, with the ISP latency, loss and uptime of the active one. With options.api network, read from the LAN instead: the ports of each device (state, speed, connector, PoE) and the uplink each device reaches the network through.", FR: "Consoles UniFi et équipements qu'elles gèrent (bornes Wi-Fi, commutateurs, contrôle d'accès, caméras) par l'API cloud Site Manager : modèles, firmware, santé, ports WAN, adresses et accès Internet, avec la latence, la perte et la disponibilité de l'opérateur sur celui qui est actif. Avec options.api network, lu depuis le réseau local : les ports de chaque équipement (état, débit, connecteur, PoE) et l'équipement par lequel chacun remonte vers le réseau."},
 	Deployment: collect.DeploymentTarget,
 	Collects:   []string{"device", "interface", "internet_access", "ip_address", "software"},
-	ReadOnly:   "The client has one method, GET. Site Manager: four endpoints (/v1/hosts, /v1/sites, /v1/devices, /v1/isp-metrics/5m bounded to the last 30 minutes). Network (api: network): four shapes (/v1/info, /v1/sites, /v1/sites/{id}/devices, /v1/sites/{id}/devices/{id}) under /proxy/network/integration, never the clients. Redirects are never followed and the key goes in one header, so it cannot leave the configured address.",
-	Address:    "Site Manager: empty for https://api.ui.com, or the https base URL of the API. Network (options.api: network): required, the https address of the console, no path (https://192.0.2.1).",
+	ReadOnly:   "The client has one method, GET. Site Manager: four endpoints (/v1/hosts, /v1/sites, /v1/devices, /v1/isp-metrics/5m bounded to the last 30 minutes). Network (api: network): four shapes (/v1/info, /v1/sites, /v1/sites/{id}/devices, /v1/sites/{id}/devices/{id}) under /proxy/network/integration, never the clients; with options.console the same four shapes under /v1/connector/consoles/{hostId}/proxy/network/integration on api.ui.com. Redirects are never followed and the key goes in one header, so it cannot leave the configured address.",
+	Address:    "Site Manager: empty for https://api.ui.com, or the https base URL of the API. Network (options.api: network): required, the https address of the console, no path (https://192.0.2.1); with options.console it is empty or https://api.ui.com (the cloud connector).",
 	Username:   collect.Credential{Use: collect.UseUnused},
 	Secret:     collect.Credential{Use: collect.UseRequired, Meaning: "Site Manager API key, or the console's Network API key (created on the console)"},
 	Options:    Options{},
@@ -67,20 +67,23 @@ type Options struct {
 	Roles []string `yaml:"roles" doc:"Device role overrides, one 'shortname-or-model=role' per entry (UAH-DOOR=access_control); the role is a value of the schema's device role."`
 	// ISPMetrics turns the ISP metrics call off; nil means on.
 	ISPMetrics *bool `yaml:"isp_metrics" default:"true" doc:"api: site-manager only. Read each site's ISP metrics (latency, packet loss, uptime) every run and keep the newest as measurements of the active Internet access; false makes no such call."`
+	// Console reads a console through the cloud connector.
+	Console string `yaml:"console" doc:"api: network only. The host id of a console (the id of /v1/hosts on https://unifi.ui.com): read its Network Integration API through the cloud connector of https://api.ui.com instead of from the LAN. The key must be created by the OWNER of the console (Site Manager, API); address is empty or https://api.ui.com."`
 }
 
 // ispMetrics reports whether the ISP metrics are read (the default).
 func (o Options) ispMetrics() bool { return o.ISPMetrics == nil || *o.ISPMetrics }
 
 type collector struct {
-	t     collect.Target
-	opts  Options
-	base  *url.URL
-	api   string            // APISiteManager or APINetwork
-	hosts []string          // lower-cased options.hosts
-	sites []string          // lower-cased options.sites
-	roles map[string]string // normalised shortname or model -> role
-	now   func() time.Time  // test hook: uptime is relative to it
+	t       collect.Target
+	opts    Options
+	base    *url.URL
+	api     string            // APISiteManager or APINetwork
+	console string            // options.console: the host id, reached through the cloud connector
+	hosts   []string          // lower-cased options.hosts
+	sites   []string          // lower-cased options.sites
+	roles   map[string]string // normalised shortname or model -> role
+	now     func() time.Time  // test hook: uptime is relative to it
 }
 
 // New builds a UniFi collector for t. It checks everything that can be
@@ -94,11 +97,12 @@ func New(t collect.Target) (sdk.Collector, error) {
 	if err != nil {
 		return nil, err
 	}
-	base, err := parseAddress(t, api)
+	console := strings.TrimSpace(opts.Console)
+	base, err := parseAddress(t, api, console)
 	if err != nil {
 		return nil, err
 	}
-	c := &collector{t: t, opts: opts, api: api, base: base, roles: map[string]string{}, now: time.Now}
+	c := &collector{t: t, opts: opts, api: api, console: console, base: base, roles: map[string]string{}, now: time.Now}
 	for _, s := range opts.Sites {
 		if strings.TrimSpace(s) == "" {
 			return nil, fmt.Errorf("target %s: options.sites: empty site name", t.Source())
@@ -141,6 +145,9 @@ const (
 func apiOf(t collect.Target, o Options) (string, error) {
 	switch api := strings.TrimSpace(o.API); api {
 	case "", APISiteManager:
+		if strings.TrimSpace(o.Console) != "" {
+			return "", fmt.Errorf("target %s: options.console applies to api: network (it reads one console through the cloud connector)", t.Source())
+		}
 		if len(o.Sites) > 0 {
 			return "", fmt.Errorf("target %s: options.sites applies to api: network (the Site Manager API is filtered with options.hosts)", t.Source())
 		}
@@ -162,10 +169,10 @@ func apiOf(t collect.Target, o Options) (string, error) {
 // DefaultAddress when the target has none; for api: network the address of
 // the console is required, without a path, and the Network Integration API
 // prefix is added. Only https is accepted: the key travels in a header.
-func parseAddress(t collect.Target, api string) (*url.URL, error) {
+func parseAddress(t collect.Target, api, console string) (*url.URL, error) {
 	addr := strings.TrimSpace(t.Address)
 	if addr == "" {
-		if api == APINetwork {
+		if api == APINetwork && console == "" {
 			return nil, fmt.Errorf("target %s: api: network needs the address of the console (https://192.0.2.1)", t.Source())
 		}
 		addr = DefaultAddress
@@ -181,6 +188,17 @@ func parseAddress(t collect.Target, api string) (*url.URL, error) {
 		return nil, fmt.Errorf("target %s: address must be https (the API key is sent in a header), got %q", t.Source(), u.Scheme)
 	}
 	path := strings.TrimRight(u.Path, "/")
+	if console != "" {
+		// Through the connector the key goes to the cloud, never to another
+		// host: a target that names another one is a mistake or a leak.
+		if !strings.EqualFold(u.Host, cloudHost) || path != "" {
+			return nil, fmt.Errorf("target %s: with options.console the address must be https://%s (the key is sent to the cloud connector only), got %q", t.Source(), cloudHost, t.Address)
+		}
+		if !consolePattern.MatchString(console) {
+			return nil, fmt.Errorf("target %s: options.console %q is not a console host id (hexadecimal digits and colons, at most %d characters)", t.Source(), console, maxConsoleID)
+		}
+		return &url.URL{Scheme: "https", Host: u.Host, Path: fmt.Sprintf(connectorPath, url.PathEscape(console))}, nil
+	}
 	if api == APINetwork {
 		if path != "" {
 			return nil, fmt.Errorf("target %s: address %q has a path: give the console's address only, trica adds %s", t.Source(), t.Address, networkPrefix)
@@ -189,6 +207,10 @@ func parseAddress(t collect.Target, api string) (*url.URL, error) {
 	}
 	return &url.URL{Scheme: "https", Host: u.Host, Path: path}, nil
 }
+
+// cloudHost is the only host a connector target may name. A variable so that
+// tests can aim it at a fake; nothing else assigns it.
+var cloudHost = "api.ui.com"
 
 // Kind implements sdk.Collector.
 func (c *collector) Kind() string { return Kind }

@@ -63,7 +63,7 @@ What the specification gives, and what it does not:
    device's detail failing, makes the batch partial (nothing withdrawn); the device is kept without
    ports or uplink. A 401 or 429 on a call stops the remaining calls. An id that is not a UUID is a
    warning and a partial batch, without a health error.
-8. **The cloud connector variant is rejected**: it needs an owner or organisation key, forwards
+8. **The cloud connector variant is rejected** (superseded by the amendment below): it needs an owner or organisation key, forwards
    POST/PUT/DELETE/PATCH (a leaked key could write to the network), and cannot be tested. The guard
    keeps refusing `/connector/`; revisiting it needs an amendment.
 
@@ -76,3 +76,28 @@ What the specification gives, and what it does not:
   record) or a later API version (follow-up issue).
 - Evidence stays `recorded` (one value per module); the `Tested` entry says synthesised, never run.
 - `testdata/README.md` lists 13 points to verify on a real console.
+
+## Amendment (2026-10): through the cloud connector
+
+Item 8 rejected the connector because a key then reaches a path that forwards writes, and because it
+could not be tested. A console that trica cannot reach (an office behind a NAT) leaves no other way
+to its ports and `uplinked_to` links, so the variant is accepted under these limits:
+
+- **`options.console: <hostId>`**, valid with `api: network` only (refused otherwise, and refused
+  with `api: site-manager`). The host id is the `id` of `/v1/hosts`: hexadecimal digits and colons,
+  at most 200 characters, anything else is refused at start. The base path becomes
+  `/v1/connector/consoles/<hostId>/proxy/network/integration`; everything under it is the LAN mode
+  (same four endpoint shapes, same mapping, never the clients).
+- **The address is `https://api.ui.com` or empty.** Any other host, port or path is refused at start,
+  so the key is never sent anywhere else. Redirects are still not followed.
+- **Still GET only.** The connector would forward a write, but the client has no method that sends
+  one. The source guard keeps refusing `/connector/` everywhere except the one exact string
+  `/v1/connector/consoles/%s/proxy/network/integration`, whose `%s` is the validated, escaped id
+  (`TestOnlyGETIsBuilt`, `TestReadOnlyScanCatchesWrites`).
+- **The key must be created by the owner of the console** (Site Manager, API). Measured on
+  2026-10-26: a key of a non-owner account answers `403 {"code":"forbidden","message":"forbidden:
+  access denied: user is not the owner of this host"}`; the run then fails with a message saying so.
+  401 (bad key), 404 (the console is unknown to the cloud) and 429 are reported as in the LAN mode.
+- **Not proven**: the connector was never run with an owner's key. The behaviour with an owner key
+  (that it answers like the local API) is an expectation; the fake serves the LAN fixtures under the
+  connector prefix. The owner 403 text is the one observed.
