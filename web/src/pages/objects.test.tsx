@@ -65,6 +65,27 @@ describe("all objects", () => {
     expect(within(dev.querySelector('td[data-label="Parent / site"]') as HTMLElement).getByRole("link", { name: "paris-1" })).toBeInTheDocument();
   });
 
+  it("names the server of a drive that sits in a controller, then the controller", async () => {
+    const disk: ObjectView = {
+      ...srv01,
+      id: "0a000000-0000-4000-8000-0000000000d1",
+      type: "disk",
+      display: "1I:0:1 · SSD 500 GB CT500MX500SSD1",
+      attributes: { name: "1I:0:1" },
+      parent_id: "0a000000-0000-4000-8000-0000000000e1",
+      parent: { id: "0a000000-0000-4000-8000-0000000000e1", type: "module", display: "Slot 0 · Smart Array P440ar Controller" },
+      device: { id: ID.srv01, type: "device", display: "srv-01" },
+      site_id: ID.site,
+    };
+    mockApi(routes([disk]));
+    renderApp({ at: "/objects" });
+    const row = (await screen.findByRole("link", { name: disk.display })).closest("tr") as HTMLElement;
+    const cell = row.querySelector('td[data-label="Parent / site"]') as HTMLElement;
+    expect(within(cell).getByRole("link", { name: "srv-01" })).toHaveAttribute("href", `/objects/${ID.srv01}`);
+    expect(within(cell).getByRole("link", { name: "Slot 0 · Smart Array P440ar Controller" })).toBeInTheDocument();
+    expect(cell).toHaveTextContent("srv-01 › Slot 0 · Smart Array P440ar Controller");
+  });
+
   it("turns the filters of the address into a TQL query", async () => {
     const api = mockApi(routes());
     renderApp({ at: `/objects?q=vendor:dell&type=device&site=${ID.site}&health=warning&presence=all&sort=-last_seen,display&offset=50` });

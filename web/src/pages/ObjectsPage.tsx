@@ -104,7 +104,15 @@ function ObjectRows({ items, siteName }: { items: ObjectView[]; siteName: (id?: 
               <td data-label={t("objects.type")}>{label}</td>
               <td data-label={t("objects.parentOrSite")}>
                 {o.parent ? (
-                  <Link to={`/objects/${encodeURIComponent(o.parent.id)}`}>{o.parent.display}</Link>
+                  <>
+                    {o.device && (
+                      <>
+                        <Link to={`/objects/${encodeURIComponent(o.device.id)}`}>{o.device.display}</Link>
+                        {" › "}
+                      </>
+                    )}
+                    <Link to={`/objects/${encodeURIComponent(o.parent.id)}`}>{o.parent.display}</Link>
+                  </>
                 ) : site && o.site_id && o.site_id !== o.id ? (
                   <Link to={`/objects/${encodeURIComponent(o.site_id)}`}>{site}</Link>
                 ) : (

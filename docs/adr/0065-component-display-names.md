@@ -36,8 +36,9 @@ third column showed the site, the same for every part of every server.
 3. **Templates**: `cpu` `{name} · {model|cpu}`, `memory` `{name} · {technology} {size_bytes|ram}`,
    `disk` `{name} · {media|media} {capacity_bytes|bytes} {model}`, `psu`
    `{name} · {capacity_w|watts} {model}`. The slot or name stays first: it tells two identical parts of
-   one server apart. `module` and `transceiver` are left as they are: their names are already the
-   model or the port, and nothing obviously reads better.
+   one server apart. `transceiver` is left as it is: its name is the port it sits in.
+   *Amended (#207)*: `module` gets `{name} · {model}` — a storage controller listed as the parent of a
+   drive read `Slot 0`, which says nothing; it now reads `Slot 0 · Smart Array P440ar Controller`.
 4. **`memory.technology`** (string, searchable: `DDR4`, `DDR5`, `LPDDR5`, `HBM2`). The Redfish
    collector fills it from `MemoryDeviceType` (iLO 5, iDRAC) or `DIMMType` (iLO 4), reduced to the
    generation (`DDR4_SDRAM` and `DDR4E_SDRAM` are `DDR4`); `DRAM`, `Other`, `Unknown` give nothing.
@@ -82,3 +83,12 @@ third column showed the site, the same for every part of every server.
 - Not done: templates for custom types are possible but no overlay can set one on a built-in type;
   the parent column does not walk up past the direct parent (a disk in a controller shows the
   controller).
+
+## Amendment (#207): the device above a component's parent
+
+A drive sits in a controller (`module`), which sits in the server: the list's parent column showed
+`Slot 0` for every drive. List and search items now also carry `device {id, type, display}` when the
+parent is not a device: the nearest device above it, found by walking up the parents (at most four
+levels, one query per level), and only through objects the caller may read — the walk stops at the
+first one they may not, and nothing above it is named. The objects page shows
+`srv-01 › Slot 0 · Smart Array P440ar Controller`.

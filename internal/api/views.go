@@ -71,6 +71,9 @@ type ObjectView struct {
 	// Parent names the parent object on a list item, when the caller may read
 	// it: what a component is part of (a cpu, a disk: its server).
 	Parent *ObjectRef `json:"parent,omitempty"`
+	// Device names, on a list item whose parent is not a device, the nearest
+	// device above it: the server of a disk that sits in a controller.
+	Device *ObjectRef `json:"device,omitempty"`
 	// SiteID is the id of the site the object is in (itself for a site).
 	SiteID     string         `json:"site_id,omitempty"`
 	Display    string         `json:"display"`

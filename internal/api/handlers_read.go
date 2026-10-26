@@ -184,24 +184,8 @@ func (c *call) runSearch(q *tql.Query, label string, pp pageParams) error {
 	}
 	// The parent of each item, named when the caller may read it, so that a
 	// list says what a component belongs to without a request per row.
-	var parentIDs []string
-	for _, it := range items {
-		if it.ParentID != nil {
-			parentIDs = append(parentIDs, *it.ParentID)
-		}
-	}
-	if len(parentIDs) > 0 {
-		refs, err := c.visibleRefs(parentIDs)
-		if err != nil {
-			return err
-		}
-		for i := range items {
-			if items[i].ParentID != nil {
-				if ref, ok := refs[*items[i].ParentID]; ok {
-					items[i].Parent = &ref
-				}
-			}
-		}
+	if err := c.nameParents(items); err != nil {
+		return err
 	}
 	return c.json(200, SearchPage{
 		Summary: SearchSummary{Query: res.Query, Total: res.Total, ByType: res.ByType, Fuzzy: res.Fuzzy, TookMS: res.Took.Milliseconds()},
@@ -469,6 +453,83 @@ func otherEnd(r store.Relation, self string) string {
 
 // visibleRefs loads the objects with these ids and keeps the ones the caller
 // may read (type and site checked).
+// maxDeviceDepth bounds the walk from a component up to its device: a disk
+// sits in a controller that sits in the server, nothing in the schema nests
+// deeper.
+const maxDeviceDepth = 4
+
+// nameParents sets Parent on each item that has one, and Device when that
+// parent is not itself a device: the nearest device above it (a disk's server,
+// above the controller it sits in). An object the caller may not read is never
+// named, and the walk stops there.
+func (c *call) nameParents(items []ObjectView) error {
+	var ids []string
+	for _, it := range items {
+		if it.ParentID != nil {
+			ids = append(ids, *it.ParentID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	ends, err := c.visibleEnds(ids)
+	if err != nil {
+		return err
+	}
+	// Walk up from the parents that are not devices, one query per level.
+	device := map[string]string{} // parent id -> its nearest device id
+	cursor := map[string]string{} // parent id -> the object reached so far
+	for id, e := range ends {
+		if e.Type != "device" && e.ParentID != "" {
+			cursor[id] = e.ParentID
+		}
+	}
+	for depth := 0; depth < maxDeviceDepth && len(cursor) > 0; depth++ {
+		var next []string
+		for _, up := range cursor {
+			if _, ok := ends[up]; !ok {
+				next = append(next, up)
+			}
+		}
+		more, err := c.visibleEnds(next)
+		if err != nil {
+			return err
+		}
+		for id, e := range more {
+			ends[id] = e
+		}
+		for from, up := range cursor {
+			e, ok := ends[up]
+			switch {
+			case !ok:
+				delete(cursor, from) // not readable: say nothing
+			case e.Type == "device":
+				device[from] = up
+				delete(cursor, from)
+			case e.ParentID == "":
+				delete(cursor, from)
+			default:
+				cursor[from] = e.ParentID
+			}
+		}
+	}
+	for i := range items {
+		if items[i].ParentID == nil {
+			continue
+		}
+		e, ok := ends[*items[i].ParentID]
+		if !ok {
+			continue
+		}
+		items[i].Parent = &ObjectRef{ID: e.ID, Type: e.Type, Display: e.Display}
+		if d, ok := device[e.ID]; ok {
+			de := ends[d]
+			items[i].Device = &ObjectRef{ID: de.ID, Type: de.Type, Display: de.Display}
+		}
+	}
+	return nil
+}
+
 func (c *call) visibleRefs(ids []string) (map[string]ObjectRef, error) {
 	ends, err := c.visibleEnds(ids)
 	if err != nil {
