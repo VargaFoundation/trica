@@ -184,6 +184,13 @@ the vendors' public text, listed per model below, and, for the left-to-right ord
 DL360 Gen9 rear and of the Arista faces, from the CC0 pictures above. Where the text does not give a
 position, the drawing is schematic and the generator says so.
 
+A model that occupies no rack unit and has `height_mm` (today the DS1821+) is drawn at its own
+size, not on a 19-inch sheet: its SVG has the chassis' millimetres as viewBox, its layout the same
+size, its PNG is 1000 px wide in the chassis' proportions. Its two PNG were rendered in a local
+Chromium, not in the pinned Playwright image, and **not reduced by `pngquant`** (neither was
+available offline): they are 232 021 B and 90 146 B, under the 2 MiB cap, and a regeneration in
+the pinned image will change their bytes (not their drawing).
+
 **Licence: CC0-1.0.** To the extent possible under law, the Varga Foundation and the trica
 contributors waive all copyright and related rights to the drawings in `drawings/` and to the PNG
 files of the table below (<https://creativecommons.org/publicdomain/zero/1.0/>), so that they can
@@ -196,6 +203,7 @@ be used anywhere. The model files beside them stay Apache-2.0.
 | `hpe-proliant-dl380-gen10-8sff`, `-8sff-nvme`, `-24sff`, `-24sff-nvme` (fronts), the six DL380 Gen10 chassis (rear) | front, rear | 8SFF CTO 868703-B21, 24SFF CTO 868704-B21, the 8 NVMe Express Bay kit 826689-B21 in Box 3; QuickSpecs DL380 Gen10 (a00008180enw): Box 1 (Universal Media Bay only there), Box 2, Box 3 (the 8SFF's primary cage), power, health, NIC, UID, iLO service port, USB 3.0, pull tag; rear risers 1-3 (slots 1-8), optional serial port, PSU bays 1 (far right) and 2, VGA, 4x1GbE, iLO, 2 USB 3.0, UID, FlexibleLOM. Left-to-right order of boxes and rear from the CC0 picture above |
 | `hpe-proliant-dl180-gen9-8sff`, `-8lff`, `-12lff` | front, rear | CTO 754523-B21, 754524-B21, 775506-B21 (and pre-configured SKUs); QuickSpecs DL180 Gen9 (c04346227): box 1 media bay, box 2, box 3 8SFF; 8 (+4) or 12 LFF; USB 3.0 on the LFF ears; rear PCIe 1-6, 2x1GbE, VGA, 2 USB 3.0, UID, optional iLO, PSU 1-2. LFF bay positions schematic |
 | `dell-poweredge-r330-8sff`, `-4lff-hot-plug`, `-4lff-cabled` | front, rear | Dell PowerEdge R330 Owner's Manual: the three chassis' front features (power, NMI, ID, VGA, LCD and buttons or five diagnostic LEDs, iDRAC USB, USB 2.0, information tag, slim optical), back panel (serial, vFlash, iDRAC port, 2 PCIe, PSU1-2, 2 USB 3.0, 2 NICs, ID button and connector, VGA). Positions schematic |
+| `synology-ds1821-plus` | front, rear | DS1821+ (desktop, 0 U, drawn at the chassis' own size 343 x 166 mm): 8 vertical trays numbered 1-8 with status LEDs, power button, STATUS, ALERT and LAN 1-4 LEDs on the front; rear: two 120 mm fans, PCIe slot opening (drawn with two port positions for an optional 10 GbE card, LAN 5 and LAN 6), 4 RJ45 (LAN 1-4), 2 eSATA, 2 USB 3.2, reset, K-lock, 250 W power inlet. **The dimensions and the layout of the faces are written from memory of the vendor specification sheet; the page (`https://global.synology.com/en-global/products/DS1821+#specs`) was not fetched (no network when this was written), and the drawings were not compared with a photograph.** The only recorded data behind it is the collector's fixture (`internal/collect/synology/testdata/recorded-2026-10`, a real DS1821+: tray names "Drive 2".."Drive 8", `eth0`..`eth5`). Positions are schematic. The two M.2 slots are on the underside and are not drawn |
 | `arista-dcs-7280se-64-f`, `-r` | front, rear | Arista 7280E data sheet: 48 SFP+, 4 QSFP+, 1 management, 1 RS-232 RJ-45, 1 USB, 2 PSUs, 4 fans; handles red (front-to-rear) or blue (rear-to-front) |
 | `arista-dcs-7050sx-64-f`, `-r` (models with a picture at the front) | rear | Arista 7050SX data sheet: 2 PSUs (1+1), 4 fans (N+1), colour-coded |
 | `mikrotik-crs354-48g-4s-plus-2q-plus-rm` | front, rear | MikroTik product page and user manual: 48 GbE, 4 SFP+, 2 QSFP+, RJ-45 console, 10/100 management, reset, 3 fans, 2 AC inputs, no display. Port grouping, management side and rear layout schematic |

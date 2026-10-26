@@ -250,6 +250,75 @@ describe("face images", () => {
   });
 });
 
+describe("a desktop device on a shelf (ADR 0068)", () => {
+  const NAS = "/api/v1/device-types/acme-tower-nas/front";
+  const nas = (desktop: boolean): RackItem => ({
+    device: { id: dev(7), type: "device", display: "nas-01" },
+    position: 5,
+    face: "front",
+    u_height: 4,
+    full_depth: false,
+    desktop,
+    role: "nas",
+    front_image: NAS,
+  });
+
+  beforeEach(() => {
+    clearFaceImages();
+    vi.stubGlobal("createImageBitmap", vi.fn(() => Promise.resolve({ width: 1000, height: 484, close: () => undefined })));
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(() => ({ clearRect: () => undefined, drawImage: () => undefined }) as never);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const draw = async (desktop: boolean) => {
+    mockApi({
+      ...defaultRoutes(),
+      [`GET /objects/${ID.rack}`]: rack,
+      [`GET /racks/${ID.rack}/contents`]: page([nas(desktop)]),
+      [`GET /racks/${ID.rack}/removed`]: page([]),
+      "GET /device-types/acme-tower-nas/front": "png bytes",
+    });
+    renderApp({ at: `/racks/${ID.rack}` });
+    await screen.findByRole("table");
+    await waitFor(() => expect(slot("front", dev(7)).querySelector("foreignObject")).not.toBeNull());
+    const fo = slot("front", dev(7)).querySelector("foreignObject") as SVGForeignObjectElement;
+    return { w: Number(fo.getAttribute("width")), h: Number(fo.getAttribute("height")), x: Number(fo.getAttribute("x")) };
+  };
+
+  it("keeps the proportions of its face inside the shelf, centred, instead of stretching it over 4 U", async () => {
+    // 4 U = 86 px high in a 278 px wide slot; a 1000 x 484 picture fits 86 high, 177.7 wide.
+    const { w, h, x } = await draw(true);
+    expect(h).toBeCloseTo(86, 5);
+    expect(w).toBeCloseTo(86 * (1000 / 484), 3);
+    expect(x).toBeGreaterThan(1 + 1);
+  });
+
+  it("still stretches the face of a rack-mounted device over its slot", async () => {
+    const { w, h } = await draw(false);
+    expect(w).toBe(278);
+    expect(h).toBe(86);
+  });
+
+  it("paints it with its own proportions on the export sheet too", () => {
+    const img = { width: 1000, height: 484 } as unknown as CanvasImageSource;
+    const calls: unknown[][] = [];
+    const state: Record<string, unknown> = {};
+    const ctx = new Proxy(state, {
+      get: (t, k) => (k in t ? t[k as string] : (...args: unknown[]) => (k === "drawImage" ? calls.push(args) : undefined)),
+      set: (t, k, v) => ((t[k as string] = v), true),
+    }) as unknown as Ctx;
+    const layout = layoutRack(12, [{ id: "n", name: "nas-01", position: 5, face: "front", heightU: 4, desktop: true, frontImage: NAS }]);
+    drawRackSheet(ctx, { title: "Rack r12", uHeight: 12, faces: [{ caption: "Front", slots: layout.front }], footer: "x", images: new Map([[NAS, img]]) });
+    expect(calls).toHaveLength(1);
+    const [, , , w, h] = calls[0] as number[];
+    expect(h).toBeCloseTo(86, 5);
+    expect(w).toBeCloseTo(86 * (1000 / 484), 3);
+  });
+});
+
 describe("the export sheet", () => {
   /** A context that records the calls the faces make. */
   function recorder() {

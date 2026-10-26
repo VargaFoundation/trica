@@ -179,3 +179,79 @@ func TestNoFlexibleLOMBayNoFlexibleLOMPort(t *testing.T) {
 		t.Fatalf("%+v, want eno5 unplaced", fps)
 	}
 }
+
+// dsmParts is a DS1821+ as the Synology collector reports the recorded one
+// (internal/collect/synology/testdata/recorded-2026-10): six drives named by
+// DSM id and slotted by bay long name (bays 1 and 7 are empty, so sata6 is in
+// bay 8), two M.2 cache drives, and eth0..eth5 (eth4 and eth5 on a 10 GbE card).
+func dsmParts() []*store.Object {
+	dev := "dev"
+	var parts []*store.Object
+	add := func(typ, name string, attrs map[string]any) {
+		a := map[string]any{"name": name}
+		for k, v := range attrs {
+			a[k] = v
+		}
+		parts = append(parts, &store.Object{ID: fmt.Sprintf("p%02d", len(parts)), Type: typ, ParentID: &dev, Display: name, Status: "active", Attrs: a})
+	}
+	for id, long := range map[string]string{"sata1": "Drive 2", "sata2": "Drive 3", "sata3": "Drive 4", "sata4": "Drive 5", "sata5": "Drive 6", "sata6": "Drive 8", "nvme0n1": "M.2 Drive 1", "nvme1n1": "M.2 Drive 2"} {
+		add("disk", id, map[string]any{"slot": long, "serial": "SYNTH-" + id})
+	}
+	for i := 0; i < 6; i++ {
+		add("interface", fmt.Sprintf("eth%d", i), map[string]any{"kind": "physical", "mac": fmt.Sprintf("02:00:5e:00:01:0%d", i)})
+	}
+	return parts
+}
+
+// Every drive of a DS1821+ lights up in the tray DSM names it by (not the one
+// its DSM id numbers), every port in its LAN place, and the M.2 drives, on the
+// underside, are listed as parts the faces cannot show.
+func TestPlaceADS1821(t *testing.T) {
+	faces := libraryFaces(t, "synology-ds1821-plus")
+	got := map[string]FacePart{}
+	for _, fp := range partsOnFaces("dev", dsmParts(), faces) {
+		got[partNameOf(fp.Part)] = fp
+	}
+	want := map[string]string{
+		"sata1": "front 2", "sata2": "front 3", "sata3": "front 4", "sata4": "front 5", "sata5": "front 6", "sata6": "front 8",
+		"eth0": "rear LAN 1", "eth1": "rear LAN 2", "eth2": "rear LAN 3", "eth3": "rear LAN 4", "eth4": "rear LAN 5", "eth5": "rear LAN 6",
+		"nvme0n1": " " + UnplacedOS, "nvme1n1": " " + UnplacedOS,
+	}
+	for name, w := range want {
+		fp, ok := got[name]
+		where := fp.Face + " " + fp.Spot
+		if fp.Spot == "" {
+			where = " " + fp.Unplaced
+		}
+		if !ok || where != w {
+			t.Errorf("%s at %q, want %q", name, where, w)
+		}
+	}
+	if len(got) != len(want) {
+		t.Errorf("%d parts listed, want %d", len(got), len(want))
+	}
+}
+
+// DSM's names read as the box's own ports only where a drawing has them: a
+// Linux host with an eth0 and a face without "LAN 1" keeps it as an OS name.
+func TestDSMNamesNeedTheirSpot(t *testing.T) {
+	dev := "dev"
+	parts := []*store.Object{
+		{ID: "i", Type: "interface", ParentID: &dev, Display: "eth0", Status: "active", Attrs: map[string]any{"name": "eth0", "kind": "physical"}},
+		{ID: "d", Type: "disk", ParentID: &dev, Display: "sata1", Status: "active", Attrs: map[string]any{"name": "sata1", "slot": "Drive 9"}},
+	}
+	for _, fp := range placeParts(dev, parts, libraryFaces(t, "hpe-proliant-dl380-gen10-8sff")) {
+		if fp.Spot != "" {
+			t.Errorf("%s placed at %s %s on a face that has no such spot", partNameOf(fp.Part), fp.Face, fp.Spot)
+		}
+	}
+	if got := shelfHeightU(166); got == nil || *got != 4 {
+		t.Errorf("shelfHeightU(166) = %v, want 4", got)
+	}
+	if got := shelfHeightU(44.45); got == nil || *got != 1 {
+		t.Errorf("shelfHeightU(44.45) = %v, want 1 (exactly one unit)", got)
+	}
+	if shelfHeightU(0) != nil {
+		t.Error("shelfHeightU(0) must say nothing")
+	}
+}

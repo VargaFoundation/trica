@@ -24,6 +24,7 @@ type rackItem struct {
 	FrontImage       string   `json:"front_image"`
 	VariantUncertain bool     `json:"variant_uncertain"`
 	Variants         int      `json:"variants"`
+	Desktop          bool     `json:"desktop"`
 }
 
 func rackItems(t *testing.T, p page) []rackItem {
@@ -175,5 +176,41 @@ func TestRackContentsTreatAModelOfZeroUAsHavingNoHeight(t *testing.T) {
 	}
 	if it := by["z-lib"]; it.Model == nil || it.UHeight == nil || *it.UHeight != 2 {
 		t.Fatalf("z-lib height %v, want its own 2 U under a library 0 U model", it.UHeight)
+	}
+}
+
+// A desktop model of the library (a 166 mm high, 0 U tower NAS, like the DS1821+) on a rack
+// shelf: the elevation is told it is a desktop device and gets the shelf
+// height the chassis needs, ceil(166 / 44.45) = 4 U, unless the device
+// declares its own; a rack-mounted model is not a desktop device (ADR 0068).
+func TestRackContentsSizeADesktopDeviceByItsChassisHeight(t *testing.T) {
+	e := newEnv(t, reconcile.Policy{})
+	e.furnish()
+	b := sdk.NewBatch("declaration:test", sdk.ScopePartial)
+	b.Confidence = sdk.Declared
+	b.Object("nas-t", "device_type").Identify("slug", "acme-tower-nas")
+	b.Object("nas", "device").Identify("name", "nas-auto").Set("role", "nas")
+	b.Object("nas2", "device").Identify("name", "nas-declared").Set("role", "nas").Set("u_height", 3)
+	b.Object("rk", "device").Identify("name", "srv-rack").Set("role", "server")
+	rack := sdk.Endpoint{Type: "rack", Identity: map[string]string{sdk.IDKey: e.ids["rack-p"]}}
+	b.Relations = append(b.Relations,
+		&sdk.Relation{Type: "instance_of", From: sdk.Ref("nas"), To: sdk.Ref("nas-t")},
+		&sdk.Relation{Type: "instance_of", From: sdk.Ref("nas2"), To: sdk.Ref("nas-t")},
+		&sdk.Relation{Type: "mounted_in", From: sdk.Ref("nas"), To: rack, Attributes: map[string]any{}},
+		&sdk.Relation{Type: "mounted_in", From: sdk.Ref("nas2"), To: rack, Attributes: map[string]any{}},
+		&sdk.Relation{Type: "mounted_in", From: sdk.Ref("rk"), To: rack, Attributes: map[string]any{}})
+	e.apply(b)
+	by := map[string]rackItem{}
+	for _, it := range rackItems(t, e.page("/api/v1/racks/"+e.ids["rack-p"]+"/contents", tokReader)) {
+		by[it.Device.Display] = it
+	}
+	if it := by["nas-auto"]; !it.Desktop || it.UHeight == nil || *it.UHeight != 4 || it.FrontImage == "" {
+		t.Fatalf("nas-auto: desktop %v height %v image %q, want a desktop device of 4 U with its front image", it.Desktop, it.UHeight, it.FrontImage)
+	}
+	if it := by["nas-declared"]; !it.Desktop || it.UHeight == nil || *it.UHeight != 3 {
+		t.Fatalf("nas-declared: desktop %v height %v, want its own 3 U kept", it.Desktop, it.UHeight)
+	}
+	if it := by["srv-rack"]; it.Desktop {
+		t.Fatalf("a device without a model is no desktop device")
 	}
 }

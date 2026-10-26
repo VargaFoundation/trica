@@ -121,3 +121,31 @@ test("clicking a spot opens the part", async ({ page }) => {
   await page.locator('.faces-card a[data-spot="1:3"]').click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Disk 3");
 });
+
+// lbc-nas is a DS1821+ (8 trays, no rack unit) whose disks are named by DSM id and slotted by the
+// bay's long name, and whose ports are eth0..eth5: the six disks sit in their trays (bays 1 and 7
+// empty), the ports in LAN 1 to LAN 6, the M.2 cache drives are listed as parts no face shows.
+test.describe("a Synology NAS", () => {
+  test.use({ colorScheme: "dark", viewport: { width: 1400, height: 1000 } });
+  test("draws its disks in their trays and its ports in their places", async ({ page }) => {
+    await signInWithToken(page, `/objects/${ID.nas}`);
+    const section = page.locator(".faces-card");
+    const front = section.locator('figure[data-face="front"] svg');
+    const rear = section.locator('figure[data-face="rear"] svg');
+    await expect(front).toHaveAttribute("data-drawn", "image");
+    await expect(rear).toHaveAttribute("data-drawn", "image");
+    await expect(front.locator("a.face-spot[data-kind=bay]")).toHaveCount(6);
+    await expect(front.locator("g.face-spot-empty[data-kind=bay]")).toHaveCount(2);
+    await expect(front.locator('a[data-spot="8"]')).toHaveAttribute("aria-label", /sata6/);
+    await expect(front.locator('a[data-spot="4"]')).toHaveClass(/face-spot-warning/);
+    await expect(rear.locator('a[data-spot="LAN 1"]')).toHaveClass(/face-spot-up/);
+    await expect(rear.locator('a[data-spot="LAN 2"]')).toHaveClass(/face-spot-down/);
+    await expect(rear.locator('a[data-spot="LAN 5"]')).toHaveClass(/face-spot-up/);
+    await expect(section.locator(".faces-unplaced")).toContainText("nvme0n1");
+    await expectAccessible(page);
+    if (SHOTS) {
+      await page.waitForTimeout(300);
+      await section.screenshot({ path: `${SHOTS}/device-ds1821.png`, scale: "device" });
+    }
+  });
+});

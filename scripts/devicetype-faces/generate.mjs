@@ -4,6 +4,7 @@
 //   node scripts/devicetype-faces/generate.mjs          # SVG sources only
 //   node scripts/devicetype-faces/generate.mjs --png    # and the PNG the library serves
 //   node scripts/devicetype-faces/generate.mjs --inspect DIR  # 3000 px PNG in DIR, to check counts
+//   node scripts/devicetype-faces/generate.mjs --only SLUG    # only the faces of one model (a prefix works)
 //
 // SVG sources go to internal/devicetypes/library/drawings/<Vendor>/<slug>.<face>.svg,
 // the spots marked on them (bays, power supplies, fans, ports, slots: ADR 0047)
@@ -33,6 +34,7 @@ import { fileURLToPath } from "node:url";
 
 import { withMarks } from "./draw.mjs";
 import { catalogueOutputs } from "./catalogue.mjs";
+import { ds1821Front, ds1821Rear } from "./desktop.mjs";
 import * as f from "./faces.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -76,6 +78,9 @@ export const outputs = [
   ["Arista", "arista-dcs-7050sx-64-r", "rear", () => f.aristaPowerSide("DCS-7050SX-64-R", "rear-to-front")],
   ["MikroTik", "mikrotik-crs354-48g-4s-plus-2q-plus-rm", "front", f.crs354Front],
   ["MikroTik", "mikrotik-crs354-48g-4s-plus-2q-plus-rm", "rear", f.crs354Rear],
+  // Desktop devices, drawn at their own size (desktop.mjs).
+  ["Synology", "synology-ds1821-plus", "front", ds1821Front],
+  ["Synology", "synology-ds1821-plus", "rear", ds1821Rear],
   // The catalogue of common models (catalogue.mjs).
   ...catalogueOutputs,
 ];
@@ -118,8 +123,11 @@ async function main() {
   const inspectDir = inspect >= 0 ? process.argv[inspect + 1] : undefined;
   const png = process.argv.includes("--png") || inspectDir !== undefined;
   const WIDTH_PX = inspectDir ? 3000 : LIBRARY_WIDTH_PX;
+  const only = process.argv.indexOf("--only");
+  const onlySlug = only >= 0 ? process.argv[only + 1] : undefined;
   const written = [];
   for (const [vendor, slug, face, draw] of outputs) {
+    if (onlySlug && !slug.startsWith(onlySlug)) continue;
     const { svg, spots } = withMarks(draw);
     const file = join(lib, "drawings", vendor, `${slug}.${face}.svg`);
     mkdirSync(dirname(file), { recursive: true });

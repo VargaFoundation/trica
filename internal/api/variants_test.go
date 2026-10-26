@@ -35,10 +35,12 @@ var testLibrary = libIndex{devicetypes.NewIndex([]*devicetypes.Model{
 	{Slug: "acme-srv2-12lff", Vendor: "Acme", Model: "SRV-2 12LFF", UHeight: 2, PartNumbers: []string{"SKU-12"}, VariantOf: "acme-srv2"},
 	{Slug: "acme-srv2-12lff-nvme", Vendor: "Acme", Model: "SRV-2 12LFF NVMe", UHeight: 2, VariantOf: "acme-srv2-12lff"},
 	{Slug: "acme-desk-nas", Vendor: "Acme", Model: "DeskNAS", UHeight: 0},
+	{Slug: "acme-tower-nas", Vendor: "Acme", Model: "TowerNAS", UHeight: 0, HeightMM: 166},
 })}
 
 func init() {
 	testImages["acme-srv2-8sff/front"] = api.DeviceImage{ContentType: "image/png", ETag: `"8"`, Data: pngBytes}
+	testImages["acme-tower-nas/front"] = api.DeviceImage{ContentType: "image/png", ETag: `"tw"`, Data: pngBytes}
 	testImages["acme-srv2-12lff/front"] = api.DeviceImage{ContentType: "image/png", ETag: `"12"`, Data: pngBytes}
 }
 

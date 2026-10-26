@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { useI18n, type MessageKey } from "../i18n";
 import { faceKind, genericFace, type Prim } from "./faces";
 import { useFaceImage } from "./faceImages";
-import { formatRange, intervalsOverlap, overallHealth, slotImage, type Face, type Health, type Slot } from "./layout";
+import { containBox, formatRange, intervalsOverlap, overallHealth, slotImage, type Face, type Health, type Slot } from "./layout";
 import "./racks.css";
 import "../aisles/aisles.css";
 
@@ -233,7 +233,7 @@ function SlotView({ slot: s, y, dragged, onPointerDown }: { slot: Slot; y: numbe
     <>
       <title>{tooltip}</title>
       <rect x={x} y={y + 1} width={w} height={h} rx={2} />
-      {drawn === "image" && bitmap ? <FaceCanvas bitmap={bitmap} x={x} y={y + 1} width={w} height={h} /> : null}
+      {drawn === "image" && bitmap ? <FaceCanvas bitmap={bitmap} {...(s.item.desktop ? offsetBox(containBox(w, h, bitmap.width, bitmap.height), x, y + 1) : { x, y: y + 1, width: w, height: h })} /> : null}
       {drawn === "generic" ? <GenericFace role={s.item.role} x={x} y={y + 1} width={w} height={h} /> : null}
       {s.shadow ? null : <rect className="rack-health-strip" x={x} y={y + 1} width={STRIP_PX} height={h} rx={1} />}
       {reversed ? <rect className="rack-airflow-strip" x={x + w - STRIP_PX} y={y + 1} width={STRIP_PX} height={h} rx={1} /> : null}
@@ -312,6 +312,11 @@ export function FaceCanvas({ bitmap, x, y, width, height, scale = IMAGE_SCALE }:
       <canvas ref={ref} width={cw} height={ch} className="rack-face-canvas" aria-hidden="true" />
     </foreignObject>
   );
+}
+
+/** A box inside the slot (see containBox), in the slot's own coordinates. */
+function offsetBox(b: { x: number; y: number; width: number; height: number }, x: number, y: number) {
+  return { x: x + b.x, y: y + b.y, width: b.width, height: b.height };
 }
 
 function GenericFace({ role, x, y, width, height }: { role?: string; x: number; y: number; width: number; height: number }) {

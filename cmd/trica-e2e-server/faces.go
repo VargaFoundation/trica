@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -170,6 +171,14 @@ func (a *api) faceFields(it obj, d obj, m obj) {
 	}
 	slug, _ := ma["slug"].(string)
 	if lm := library.BySlug(slug); lm != nil {
+		// A model that occupies no rack unit stands on a shelf the height of its
+		// chassis (ADR 0068), as the server says.
+		if lm.UHeight == 0 {
+			it["desktop"] = true
+			if _, own := attrs["u_height"]; !own && lm.HeightMM > 0 {
+				it["u_height"] = math.Ceil(lm.HeightMM/44.45 - 1e-9)
+			}
+		}
 		for face, img := range map[string]*devicetypes.Image{"front_image": lm.FrontImage, "rear_image": lm.RearImage} {
 			if img != nil {
 				it[face] = "/api/v1/device-types/" + slug + "/" + strings.TrimSuffix(face, "_image")
@@ -371,4 +380,54 @@ func (a *api) faces(w http.ResponseWriter, d obj) {
 func asObjs(v any) []obj {
 	l, _ := v.([]obj)
 	return l
+}
+
+// lbc-nas: a DS1821+ the way the Synology collector reports the recorded one
+// (disks named by DSM id and slotted by bay long name, bays 1 and 7 empty;
+// eth0..eth5, a 10 GbE card in the PCIe slot), standing on the bottom shelf
+// of r21. Invented serials and addresses. The mock gives the outcome of the
+// server's placement rules, which internal/api tests (TestPlaceADS1821).
+const firstNAS = 0xa00
+
+func buildNAS(inv *inventory) {
+	m := library.BySlug("synology-ds1821-plus")
+	if m == nil || m.FrontImage == nil {
+		panic("no model synology-ds1821-plus")
+	}
+	n := firstNAS + 1
+	model := n
+	inv.add(object(model, "device_type", m.Model, 0, 0, obj{"slug": m.Slug, "vendor": m.Vendor, "model": m.Model, "u_height": m.UHeight, "full_depth": m.FullDepth}))
+	n++
+	dev := n
+	inv.add(object(dev, "device", "lbc-nas", idRackD, idSiteL, obj{"hostname": "lbc-nas", "role": "nas", "health": "ok", "model": m.Model}))
+	inv.mount(dev, idRackD, 1, "front", model)
+	part := func(typ, name string, where place, attrs obj) {
+		n++
+		a := obj{"name": name}
+		for k, v := range attrs {
+			a[k] = v
+		}
+		inv.add(object(n, typ, name, dev, idSiteL, a))
+		inv.places[oid(n)] = where
+	}
+	for i, d := range []struct {
+		id, bay, health string
+	}{{"sata1", "2", "ok"}, {"sata2", "3", "ok"}, {"sata3", "4", "warning"}, {"sata4", "5", "ok"}, {"sata5", "6", "ok"}, {"sata6", "8", "ok"}} {
+		part("disk", d.id, at("bay", "front", d.bay), obj{"slot": "Drive " + d.bay, "health": d.health, "model": "SYNTH-HDD-8T", "media": "HDD", "capacity_bytes": 8001563222016, "temperature_c": 33 + i, "serial": "SYNTH-NAS-" + d.id})
+	}
+	for i, d := range []string{"nvme0n1", "nvme1n1"} {
+		part("disk", d, place{kind: "bay", why: "os"}, obj{"slot": "M.2 Drive " + strconv.Itoa(i+1), "health": "ok", "media": "nvme", "capacity_bytes": 500107862016})
+	}
+	part("psu", "PSU 1", at("psu", "rear", "1"), obj{"health": "ok", "capacity_w": 250})
+	for i := 0; i < 6; i++ {
+		state, speed := "up", 1000
+		if i == 1 || i == 3 {
+			state = "down"
+		}
+		if i >= 4 {
+			speed = 10000
+		}
+		b := strconv.Itoa(i)
+		part("interface", "eth"+b, at("port", "rear", "LAN "+strconv.Itoa(i+1)), obj{"kind": "physical", "oper_status": state, "speed_mbps": speed, "mac": "02:00:00:00:a0:0" + b})
+	}
 }

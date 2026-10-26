@@ -177,6 +177,7 @@ func buildInventory() *inventory {
 	buildFaces(inv)
 	buildParts(inv)
 	buildStorageNode(inv)
+	buildNAS(inv)
 	buildVariants(inv)
 	buildAisles(inv)
 	return inv

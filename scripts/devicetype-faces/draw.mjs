@@ -106,6 +106,21 @@ export function svgDoc(heightU, title, body) {
 }
 
 /**
+ * A whole face of a device that is not rack-mounted (a desktop NAS): the SVG
+ * document around a body, at the device's own size, not the 19-inch panel's.
+ * width and height are millimetres; the layout of the face is in the same
+ * units, so the image and its spots keep the device's proportions.
+ */
+export function deskDoc(width, height, title, body) {
+  const more = body.includes("url(#carrierdark") ? carrierDefs : "";
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${r(width)} ${r(height)}" width="${r(width)}mm" height="${r(height)}mm" ` +
+    `font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif">` +
+    `<title>${esc(title)}</title>${defs}${more}${body}</svg>\n`
+  );
+}
+
+/**
  * The front of a chassis with rack ears: the ears, the body between them and
  * a thin shadow line. bodyW is the chassis width (vendor dimension).
  */

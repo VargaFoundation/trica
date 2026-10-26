@@ -214,7 +214,12 @@ func TestDrawingsMatchTheirImagesAndModels(t *testing.T) {
 		}
 		w, _ := strconv.ParseFloat(vb[1], 64)
 		h, _ := strconv.ParseFloat(vb[2], 64)
-		if w != 482.6 || math.Abs(h-m.UHeight*44.45) > 0.01 {
+		if m.UHeight == 0 && m.HeightMM > 0 {
+			// A desktop model is drawn at its own size, not on a 19" sheet (ADR 0068).
+			if w <= 0 || math.Abs(h-m.HeightMM) > 0.01 {
+				return fmt.Errorf("%s: %gx%g mm, want a height of %g mm (height_mm)", p, w, h, m.HeightMM)
+			}
+		} else if w != 482.6 || math.Abs(h-m.UHeight*44.45) > 0.01 {
 			return fmt.Errorf("%s: %gx%g mm, want 482.6 x %g (%gU)", p, w, h, m.UHeight*44.45, m.UHeight)
 		}
 		pw, ph := binary.BigEndian.Uint32(img.Data[16:20]), binary.BigEndian.Uint32(img.Data[20:24])

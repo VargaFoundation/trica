@@ -1,5 +1,5 @@
 import { DEFAULT_TILE_MM, layoutFloor, tileOf } from "./floor";
-import { formatRange, freeUnits, intervalsOverlap, layoutRack, slotImage, type Mounted, type Slot } from "./layout";
+import { containBox, formatRange, freeUnits, intervalsOverlap, layoutRack, slotImage, type Mounted, type Slot } from "./layout";
 
 const dev = (id: string, position: number | undefined, heightU: number | undefined, extra: Partial<Mounted> = {}): Mounted => ({
   id,
@@ -183,5 +183,25 @@ describe("layoutFloor", () => {
       { id: "c", name: "c", x: 0, y: 0 },
     ]);
     expect(p.placed.map((r) => r.id)).toEqual(["c", "a", "b"]);
+  });
+});
+
+describe("containBox", () => {
+  it("fits the image inside the box, keeps its proportions and centres it", () => {
+    // A 1000 x 484 face in a 278 x 86 shelf is limited by the height.
+    const b = containBox(278, 86, 1000, 484);
+    expect(b.height).toBeCloseTo(86, 6);
+    expect(b.width).toBeCloseTo(86 * (1000 / 484), 6);
+    expect(b.x).toBeCloseTo((278 - b.width) / 2, 6);
+    expect(b.y).toBeCloseTo(0, 6);
+    // A tall image is limited by the width.
+    const t = containBox(100, 100, 50, 200);
+    expect(t.width).toBeCloseTo(25, 6);
+    expect(t.height).toBe(100);
+    expect(t.x).toBeCloseTo(37.5, 6);
+  });
+
+  it("fills the box when the image has no size", () => {
+    expect(containBox(278, 86, 0, 0)).toEqual({ x: 0, y: 0, width: 278, height: 86 });
   });
 });
