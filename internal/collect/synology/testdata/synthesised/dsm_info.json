@@ -1,0 +1,10 @@
+{
+ "data": {
+  "model": "DS923+",
+  "serial": "0000ABCDE0002",
+  "uptime": 108309,
+  "version": "72806",
+  "version_string": "DSM 7.2.2-72806 Update 3"
+ },
+ "success": true
+}

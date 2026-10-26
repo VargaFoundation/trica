@@ -14,5 +14,6 @@ import (
 	_ "github.com/VargaFoundation/trica/internal/collect/mikrotik"   // registers "mikrotik"
 	_ "github.com/VargaFoundation/trica/internal/collect/pfsense"    // registers "pfsense"
 	_ "github.com/VargaFoundation/trica/internal/collect/redfish"    // registers "redfish"
+	_ "github.com/VargaFoundation/trica/internal/collect/synology"   // registers "synology"
 	_ "github.com/VargaFoundation/trica/internal/collect/unifi"      // registers "unifi"
 )

@@ -15,7 +15,7 @@ a pasted secret stops the start instead of collecting nothing.
 
 | Key | Meaning |
 |---|---|
-| `kind` | The collector module: `arista`, `kubernetes`, `maas`, `mikrotik`, `pfsense`, `redfish` or `unifi` today. `GET /api/v1/collectors` (or the Collectors page) is the authoritative list of what this build knows. |
+| `kind` | The collector module: `arista`, `kubernetes`, `maas`, `mikrotik`, `pfsense`, `redfish`, `synology` or `unifi` today. `GET /api/v1/collectors` (or the Collectors page) is the authoritative list of what this build knows. |
 | `name` | Identifies the target. The batch source is `<kind>:<name>`, which is also the key of the health board and of the logs. |
 | `address` | Where to connect; the form depends on the collector (examples below). |
 | `username` | Account name, for the collectors that use one. |
@@ -64,6 +64,15 @@ targets:
     password: env:SRV_01_BMC_PASSWORD
     options:
       log_days: 7
+
+  - kind: synology             # a Synology NAS (DSM 7), Web API over HTTPS
+    name: nas-a1
+    address: https://192.0.2.57:5001     # the DSM HTTPS port
+    username: trica                      # a dedicated administrators-group account, no 2-step verification
+    password: file:/var/run/secrets/collect/nas-a1/password
+    tls: {ca_file: /etc/trica/nas-a1.crt}
+    options:
+      skip: [containers]
 
   - kind: maas                 # password is the API key; username is not used
     name: lab
@@ -135,6 +144,15 @@ never run against a console.
       api: network
       sites: [default]        # optional
 ```
+
+A `synology` target reads one NAS through the DSM Web API: the device with its serial number and
+health, its interfaces and addresses, each drive (temperature, health, wear), the installed packages,
+the running container images and the USB UPS (`powered_by`). It only sends the form `POST`s of an
+allow-list of read calls, with the credentials in the body and never in a URL, and always logs out.
+DSM answers these APIs only to an account of the `administrators` group: create a dedicated one,
+without 2-step verification, used only by trica
+([ADR 0064](../adr/0064-synology-dsm-collector.md), [the module's README](../../internal/collect/synology/README.md)).
+Recorded from one DS1821+ (DSM 7.4.1), never run against DSM 6.
 
 Every run of a target ends in one health record on the board (`GET /api/v1/health/collection`):
 the collector's own, or, when it returned an error, panicked or reported none, one made by the

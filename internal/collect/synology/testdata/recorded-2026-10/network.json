@@ -1,0 +1,24 @@
+{
+ "data": {
+  "arp_ignore": true,
+  "dns_manual": false,
+  "dns_primary": "192.0.2.1",
+  "dns_secondary": "",
+  "enable_windomain": false,
+  "gateway": "192.0.2.1",
+  "gateway_info": {
+   "ifname": "eth4",
+   "ip": "192.0.2.57",
+   "mask": "255.255.255.0",
+   "status": "connected",
+   "type": "lan",
+   "use_dhcp": true
+  },
+  "ipv4_first": false,
+  "multi_gateway": false,
+  "server_name": "nas-a1",
+  "use_dhcp_domain": true,
+  "v6gateway": ""
+ },
+ "success": true
+}

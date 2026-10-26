@@ -1,0 +1,84 @@
+{
+ "data": {
+  "disks": [
+   {
+    "diskType": "SATA",
+    "firm": "FW01",
+    "id": "sata1",
+    "isSsd": false,
+    "longName": "Drive 1",
+    "model": "FAKE HDD 4TB",
+    "remain_life": {
+     "trustable": true,
+     "value": -1
+    },
+    "serial": "FAKEHDD0101",
+    "size_total": "4000787030016",
+    "status": "normal",
+    "temp": 35
+   },
+   {
+    "diskType": "SATA",
+    "firm": "FW01",
+    "id": "sata2",
+    "isSsd": false,
+    "longName": "Drive 2",
+    "model": "FAKE HDD 4TB",
+    "remain_life": {
+     "trustable": true,
+     "value": -1
+    },
+    "serial": "FAKEHDD0102",
+    "size_total": "4000787030016",
+    "status": "crashed",
+    "temp": 47
+   },
+   {
+    "diskType": "SATA",
+    "firm": "FW01",
+    "id": "sata3",
+    "isSsd": true,
+    "longName": "Drive 3",
+    "model": "FAKE SSD 1TB",
+    "remain_life": {
+     "trustable": true,
+     "value": 85
+    },
+    "serial": "FAKEHDD0103",
+    "size_total": "1000204886016",
+    "status": "normal",
+    "temp": 30
+   },
+   {
+    "diskType": "SATA",
+    "firm": "FW01",
+    "id": "sata4",
+    "isSsd": true,
+    "longName": "Drive 4",
+    "model": "FAKE SSD 1TB",
+    "remain_life": {
+     "trustable": false,
+     "value": 50
+    },
+    "serial": "FAKEHDD0104",
+    "size_total": "1000204886016",
+    "status": "warning",
+    "temp": 31
+   }
+  ],
+  "ssdCaches": [],
+  "storagePools": [
+   {
+    "id": "reuse_1",
+    "status": "crashed"
+   }
+  ],
+  "volumes": [
+   {
+    "id": "volume_1",
+    "status": "crashed"
+   }
+  ]
+ },
+ "success": true
+}

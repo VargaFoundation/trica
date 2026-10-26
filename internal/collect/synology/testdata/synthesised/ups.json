@@ -1,0 +1,11 @@
+{
+ "data": {
+  "charge": 0,
+  "enable": false,
+  "manufacture": "",
+  "model": "",
+  "status": "",
+  "usb_ups_connect": false
+ },
+ "success": true
+}

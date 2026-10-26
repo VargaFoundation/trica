@@ -1,0 +1,29 @@
+{
+ "data": {
+  "ACL_enable": false,
+  "ACL_list": [],
+  "charge": 100,
+  "delay_time": -1,
+  "enable": true,
+  "manufacture": "EATON\n",
+  "mode": "USB",
+  "model": "Ellipse PRO 650 \n",
+  "net_server_ip": "",
+  "runtime": 332,
+  "shutdown_device": false,
+  "snmp_auth": false,
+  "snmp_auth_key": false,
+  "snmp_auth_type": "",
+  "snmp_community": "",
+  "snmp_mib": "",
+  "snmp_privacy": false,
+  "snmp_privacy_key": false,
+  "snmp_privacy_type": "",
+  "snmp_server_ip": "",
+  "snmp_user": "",
+  "snmp_version": "",
+  "status": "usb_ups_status_online",
+  "usb_ups_connect": true
+ },
+ "success": true
+}

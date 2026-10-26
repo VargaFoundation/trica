@@ -1,0 +1,195 @@
+{
+ "data": {
+  "cpu": {
+   "15min_load": 14,
+   "1min_load": 18,
+   "5min_load": 18,
+   "device": "System",
+   "other_load": 1,
+   "system_load": 0,
+   "user_load": 0
+  },
+  "disk": {
+   "disk": [
+    {
+     "device": "nvme0n1",
+     "display_name": "Cache device 1",
+     "read_access": 0,
+     "read_byte": 0,
+     "type": "internal",
+     "utilization": 0,
+     "write_access": 0,
+     "write_byte": 0
+    },
+    {
+     "device": "nvme1n1",
+     "display_name": "Cache device 2",
+     "read_access": 0,
+     "read_byte": 0,
+     "type": "internal",
+     "utilization": 0,
+     "write_access": 0,
+     "write_byte": 0
+    },
+    {
+     "device": "sata1",
+     "display_name": "Drive 2",
+     "read_access": 0,
+     "read_byte": 0,
+     "type": "internal",
+     "utilization": 0,
+     "write_access": 0,
+     "write_byte": 0
+    },
+    {
+     "device": "sata2",
+     "display_name": "Drive 3",
+     "read_access": 0,
+     "read_byte": 0,
+     "type": "internal",
+     "utilization": 0,
+     "write_access": 0,
+     "write_byte": 0
+    },
+    {
+     "device": "sata3",
+     "display_name": "Drive 4",
+     "read_access": 0,
+     "read_byte": 0,
+     "type": "internal",
+     "utilization": 0,
+     "write_access": 0,
+     "write_byte": 0
+    },
+    {
+     "device": "sata5",
+     "display_name": "Drive 6",
+     "read_access": 0,
+     "read_byte": 0,
+     "type": "internal",
+     "utilization": 0,
+     "write_access": 0,
+     "write_byte": 0
+    },
+    {
+     "device": "sata6",
+     "display_name": "Drive 8",
+     "read_access": 0,
+     "read_byte": 0,
+     "type": "internal",
+     "utilization": 0,
+     "write_access": 0,
+     "write_byte": 0
+    },
+    {
+     "device": "sata4",
+     "display_name": "Drive 5",
+     "read_access": 0,
+     "read_byte": 0,
+     "type": "internal",
+     "utilization": 0,
+     "write_access": 0,
+     "write_byte": 0
+    }
+   ],
+   "total": {
+    "device": "total",
+    "read_access": 0,
+    "read_byte": 0,
+    "utilization": 0,
+    "write_access": 0,
+    "write_byte": 0
+   }
+  },
+  "lun": [],
+  "memory": {
+   "avail_real": 180148,
+   "avail_swap": 4489132,
+   "buffer": 35500,
+   "cached": 1981648,
+   "device": "Memory",
+   "memory_size": 4194304,
+   "real_usage": 44,
+   "si_disk": 0,
+   "so_disk": 0,
+   "swap_usage": 0,
+   "total_real": 3983284,
+   "total_swap": 4489132
+  },
+  "network": [
+   {
+    "device": "total",
+    "rx": 0,
+    "tx": 0
+   },
+   {
+    "device": "eth0",
+    "rx": 0,
+    "tx": 0
+   },
+   {
+    "device": "eth1",
+    "rx": 0,
+    "tx": 0
+   },
+   {
+    "device": "eth2",
+    "rx": 0,
+    "tx": 0
+   },
+   {
+    "device": "eth3",
+    "rx": 0,
+    "tx": 0
+   },
+   {
+    "device": "eth4",
+    "rx": 0,
+    "tx": 0
+   },
+   {
+    "device": "eth5",
+    "rx": 0,
+    "tx": 0
+   }
+  ],
+  "nfs": [],
+  "smb": {
+   "smb_cmd": [],
+   "smb_cpu": [],
+   "smb_rwpkt": []
+  },
+  "space": {
+   "total": {
+    "device": "total",
+    "read_access": 0,
+    "read_byte": 0,
+    "utilization": 0,
+    "write_access": 0,
+    "write_byte": 0
+   },
+   "volume": [
+    {
+     "device": "dm-5",
+     "display_name": "volume2",
+     "read_access": 0,
+     "read_byte": 0,
+     "utilization": 0,
+     "write_access": 0,
+     "write_byte": 0
+    },
+    {
+     "device": "dm-7",
+     "display_name": "volume1",
+     "read_access": 0,
+     "read_byte": 0,
+     "utilization": 0,
+     "write_access": 0,
+     "write_byte": 0
+    }
+   ]
+  },
+  "time": 1792998794
+ },
+ "success": true
+}

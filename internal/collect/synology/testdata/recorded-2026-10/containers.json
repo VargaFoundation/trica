@@ -1,0 +1,25 @@
+{
+ "data": {
+  "containers": [
+   {
+    "Image": "netbirdio/netbird:0.78.1",
+    "State": {
+     "ExitCode": 0,
+     "Running": true,
+     "StartedAt": "2026-10-26T04:23:15.87980767Z",
+     "Status": "running"
+    },
+    "id": "0000000000000000000000000000000000000000000000000000000000000000",
+    "image": "netbirdio/netbird:0.78.1",
+    "is_package": false,
+    "name": "netbird",
+    "status": "running",
+    "up_status": "Up 3 hours"
+   }
+  ],
+  "limit": 1,
+  "offset": 0,
+  "total": 1
+ },
+ "success": true
+}

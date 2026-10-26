@@ -1,0 +1,14 @@
+{
+ "data": {
+  "cpu_cores": "4",
+  "firmware_ver": "DSM 7.2.2-72806 Update 3",
+  "model": "DS923+",
+  "ram_size": 8192,
+  "serial": "0000ABCDE0002",
+  "sys_temp": 61,
+  "sys_tempwarn": true,
+  "temperature_warning": true,
+  "up_time": "30:05:09"
+ },
+ "success": true
+}

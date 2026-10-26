@@ -1,0 +1,45 @@
+{
+ "data": {
+  "cpu_clock_speed": 2199,
+  "cpu_cores": "4",
+  "cpu_family": "Ryzen",
+  "cpu_series": "V1500B",
+  "cpu_vendor": "AMD",
+  "enabled_ntp": true,
+  "external_pci_slot_info": [
+   {
+    "Occupied": "yes",
+    "Recognized": "no",
+    "cardName": "Occupied",
+    "slot": "1"
+   }
+  ],
+  "firmware_date": "2026/10/02",
+  "firmware_ver": "DSM 7.4.1-90080 Update 1",
+  "model": "DS1821+",
+  "ntp_server": "time.google.com",
+  "ram_size": 4096,
+  "sata_dev": [],
+  "serial": "0000ABCDE0001",
+  "support_esata": "yes",
+  "sys_temp": 38,
+  "sys_tempwarn": false,
+  "systempwarn": false,
+  "temperature_warning": false,
+  "time": "2026-10-26 08:13:12",
+  "time_zone": "Amsterdam",
+  "time_zone_desc": "(GMT+01:00) Amsterdam, Berlin, Rome, Stockholm, Vienna",
+  "up_time": "2:51:33",
+  "usb_dev": [
+   {
+    "cls": "other",
+    "pid": "ffff",
+    "producer": "MGE UPS Systems",
+    "product": "UPS",
+    "rev": "1.00",
+    "vid": "0463"
+   }
+  ]
+ },
+ "success": true
+}
