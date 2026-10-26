@@ -22,6 +22,18 @@ import (
 // networkPrefix is where a UniFi OS console serves the Network Integration API.
 const networkPrefix = "/proxy/network/integration"
 
+// connectorPath is where the cloud forwards a console's Network Integration
+// API (options.console, ADR 0060 amendment); %s is the host id, escaped. The
+// connector also forwards writes: the client has no method that sends one.
+const connectorPath = "/v1/connector/consoles/%s/proxy/network/integration"
+
+// maxConsoleID bounds options.console.
+const maxConsoleID = 200
+
+// consolePattern is what a host id is: hexadecimal digits and colons (UniFi's
+// are the console's MAC, then a colon and a number).
+var consolePattern = regexp.MustCompile(`^[0-9A-Fa-f:]{1,200}$`)
+
 // Endpoints of the Network Integration API, relative to networkPrefix. The two
 // with %s take a server-supplied id that was checked against uuidPattern and
 // is escaped.
@@ -66,6 +78,9 @@ func (c *collector) gatherNetwork(ctx context.Context, cl *client) (s *netSnapsh
 	// The first call doubles as the reachability and credentials probe.
 	info, err := getJSON[netInfo](ctx, cl, epNetInfo, nil)
 	if err != nil {
+		if c.console != "" && kindOf(err) == errNotFound {
+			err = fmt.Errorf("console %q is unknown to the cloud (check the host id in Site Manager, /v1/hosts): %w", c.console, err)
+		}
 		return nil, nil, nil, err
 	}
 	all, err := listOffset[netSite](ctx, cl, epNetSites, nil)

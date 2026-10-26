@@ -71,7 +71,11 @@ func (e *requestError) Error() string {
 	case errAuth:
 		b.WriteString("authentication refused (HTTP 401): the API key is unknown, revoked or expired")
 	case errForbidden:
-		b.WriteString("forbidden (HTTP 403): the key's account may not read this")
+		if strings.Contains(strings.ToLower(e.Msg), "not the owner of this host") {
+			b.WriteString("forbidden (HTTP 403): the cloud connector only serves the owner of the console: create the API key with the OWNER's account (Site Manager, API)")
+		} else {
+			b.WriteString("forbidden (HTTP 403): the key's account may not read this")
+		}
 	case errNotFound:
 		b.WriteString("not found (HTTP 404)")
 	case errRateLimited:

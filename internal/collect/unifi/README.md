@@ -174,8 +174,30 @@ OpenAPI document, never run against a real console**; the 13 points to verify ar
     sites: [default]                  # optional: name or internal reference
 ```
 
-Run it with `trica collector` on the office LAN. `options.hosts` and `options.isp_metrics` are refused
+Run it with `trica collector` on the office LAN (or use the cloud connector, below). `options.hosts` and `options.isp_metrics` are refused
 with `api: network`, `options.sites` with the Site Manager.
+
+### Through the cloud connector (`options.console`)
+
+When trica cannot reach the console, the same API is available from the cloud
+([ADR 0060, amendment](../../../docs/adr/0060-unifi-network-integration-api.md)):
+
+```yaml
+- kind: unifi
+  name: office-cloud
+  password: file:/var/run/secrets/collect/unifi-owner-key/key   # a key created by the OWNER of the console
+  domain: office-a
+  options:
+    api: network
+    console: "70A7413E7B4A0000000000000000000000000000A1B2:1234567890"   # the host id: `id` of GET /v1/hosts
+```
+
+`address` is empty or `https://api.ui.com` (any other host is refused, so the key never goes
+elsewhere); the requests go to `/v1/connector/consoles/<hostId>/proxy/network/integration/v1/...` with
+the same four shapes, mapping and GET-only rule as the LAN mode. The key must come from the **owner**
+of the console (unifi.ui.com, API): a key of another account gets `403 ... user is not the owner of
+this host`, and the run fails saying so. A 404 means the cloud does not know that host id. Not run
+against the real connector with an owner key. `options.console` is refused without `api: network`.
 
 Requests of one run: `GET /v1/info` (probe), `/v1/sites`, `/v1/sites/{id}/devices` per site (paged,
 `limit=200`) and `/v1/sites/{id}/devices/{id}` per device. Nothing else, and never the clients.
