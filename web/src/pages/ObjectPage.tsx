@@ -27,6 +27,7 @@ import { DevicePlacement } from "../edit/DevicePlacement";
 import { AirflowSection } from "../aisles/Airflow";
 import { EditPanel, useCanDeclare } from "../edit/EditPanel";
 import { ObjectForm } from "../edit/ObjectForm";
+import { RenameForm } from "../edit/RenameForm";
 import { CONTAINER_TYPES } from "../edit/rules";
 import { useFloorContext, useRoomOf } from "../edit/useFloor";
 
@@ -245,20 +246,24 @@ function useObjectName(id: string | undefined): string | undefined {
 function EditContainer({ obj }: { obj: ObjectView }) {
   const { t } = useI18n();
   const can = useCanDeclare();
-  const [open, setOpen] = useState(false);
-  const floor = useFloorContext(useRoomOf(open && obj.type === "rack" ? obj : undefined));
+  const [open, setOpen] = useState<"edit" | "rename" | null>(null);
+  const floor = useFloorContext(useRoomOf(open === "edit" && obj.type === "rack" ? obj : undefined));
   if (!can) return null;
-  if (!open)
+  if (open === null)
     return (
       <p className="actions">
-        <button type="button" onClick={() => setOpen(true)}>
+        <button type="button" onClick={() => setOpen("rename")}>
+          {t("edit.rename.button")}
+        </button>{" "}
+        <button type="button" onClick={() => setOpen("edit")}>
           {t("edit.object.button")}
         </button>
       </p>
     );
+  if (open === "rename") return <RenameForm object={obj} onClose={() => setOpen(null)} />;
   return (
     <EditPanel title={t("edit.object.title", { name: obj.display })}>
-      <ObjectForm mode="edit" object={obj} floor={floor} onClose={() => setOpen(false)} />
+      <ObjectForm mode="edit" object={obj} floor={floor} onClose={() => setOpen(null)} />
     </EditPanel>
   );
 }

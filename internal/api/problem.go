@@ -90,6 +90,8 @@ func classify(err error) (*httpError, bool) {
 		return he, false
 	case errors.Is(err, search.ErrQuery), errors.As(err, &syn):
 		return newErr(http.StatusBadRequest, "invalid-query", "%s", err.Error()), false
+	case errors.Is(err, reconcile.ErrNameTaken):
+		return newErr(http.StatusConflict, "name-taken", "%s", err.Error()), false
 	case errors.Is(err, reconcile.ErrConflict):
 		return newErr(http.StatusConflict, "conflict", "%s", err.Error()), false
 	case errors.Is(err, store.ErrNotFound):

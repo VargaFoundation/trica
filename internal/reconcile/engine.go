@@ -270,7 +270,7 @@ func (e *Engine) apply(ctx context.Context, tx pgx.Tx, b *sdk.Batch, author, rea
 		return nil, err
 	}
 	r.res.ChangesetID = r.cs
-	steps := []func(context.Context) error{r.resolveObjects, r.writeClaims, r.writeRelationClaims, r.resolveAttributes, r.resolveRelations, r.checkPlacements, r.writeHealth}
+	steps := []func(context.Context) error{r.resolveObjects, r.checkNames, r.writeClaims, r.writeRelationClaims, r.resolveAttributes, r.resolveRelations, r.checkPlacements, r.writeHealth}
 	for _, step := range steps {
 		if err := step(ctx); err != nil {
 			return nil, err

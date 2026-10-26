@@ -12,7 +12,7 @@ variables override it. `TRICA_CONFIG` names the file when `--config` is not give
 | `migrate_on_start` | | `true` | Apply pending migrations before serving, under an advisory lock (ADR 0014). |
 | `sweep_interval` | | `1m` | How often unseen objects are marked absent. |
 | `schema_overlays` | | `[]` | YAML files with custom types, attributes and relations merged over the built-in schema (ADR 0003). A broken overlay stops the start. |
-| `policy.priorities` | | `[]` | Per-attribute source priorities (ADR 0004). |
+| `policy.priorities` | | `[]` | Per-attribute source priorities (ADR 0004). Built in, below any configured rule: a person (`user:*`) outranks other sources on `name` of places (ADR 0067). |
 | `policy.propose` | | `[]` | Source globs whose batches wait for approval, e.g. `mcp:*`, `deduce:*` (ADR 0009). |
 | `policy.absent_after` | | `30m` | How long an observed object may go unseen before it is marked absent (ADR 0007). |
 
