@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MapEdge, MapNode, TopologyMap } from "../../api/types";
 import { layoutWorld, type WorldItem } from "./layout";
-import { buildScene } from "./scene";
+import { blockBounds, buildScene } from "./scene";
 import { MAPS } from "./testdata/maps";
 
 const overlap = (a: WorldItem, b: WorldItem) =>
@@ -233,6 +233,28 @@ describe("the scene", () => {
         for (const [k, a] of shown.entries())
           for (const b of shown.slice(k + 1)) expect(hit(a.pill, b.pill), `${name}/${rot}: ${a.id} / ${b.id}`).toBe(false);
       }
+    }
+  });
+
+  it("scene: no shown pill covers another item's block, in every recorded level and every turn", () => {
+    const hit = (a: { x0: number; x1: number; y0: number; y1: number }, b: typeof a) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+    for (const [name, m] of Object.entries(MAPS)) {
+      for (const rot of [0, 1, 2, 3] as const) {
+        const s = buildScene(m, rot);
+        for (const a of s.items.filter((i) => i.labelShown && !i.card))
+          for (const b of s.items.filter((i) => i.id !== a.id && !i.card && i.role !== "device"))
+            expect(hit(a.pill, blockBounds(b)), `${name}/${rot}: ${a.id} on ${b.id}`).toBe(false);
+      }
+    }
+  });
+
+  it("scene: at rack level the Internet and the portals stand right of the cards and of the frame", () => {
+    for (const rot of [0, 1, 2, 3] as const) {
+      const s = buildScene(MAPS.rack, rot);
+      const gates = s.items.filter((i) => i.role === "internet" || i.role === "portal");
+      expect(gates.length).toBeGreaterThan(0);
+      const right = Math.max(...s.items.filter((i) => i.card).map((i) => i.card!.x + i.card!.w), ...[...(s.frame?.back ?? []), ...(s.frame?.front ?? [])].map((p) => p.bounds.x1));
+      for (const g of gates) expect(blockBounds(g).x0, `${rot}: ${g.id}`).toBeGreaterThan(right);
     }
   });
 

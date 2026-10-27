@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assignLanes, fanOffsets, offsetPolyline, orthogonalRoute, pointAt, pointAtDistance, polylineLength, quadAt, quadLength, roundedPath, simplify, trayLaneY, trayRect, trayRoute } from "./route";
+import { assignLanes, fanOffsets, gateRoute, offsetPolyline, orthogonalRoute, pointAt, pointAtDistance, polylineLength, quadAt, quadLength, roundedPath, simplify, trayLaneY, trayRect, trayRoute } from "./route";
 
 const P = (x: number, y: number) => ({ x, y });
 
@@ -116,5 +116,21 @@ describe("quadratic curve", () => {
     const l = quadLength(P(0, 0), P(5, 10), P(10, 0));
     expect(l).toBeGreaterThan(10);
     expect(l).toBeLessThan(2 * Math.hypot(5, 10));
+  });
+});
+
+describe("the route from a card to a gate on its right", () => {
+  const orthogonal = (pts: { x: number; y: number }[]) => pts.slice(1).every((p, i) => p.x === pts[i]?.x || p.y === pts[i]?.y);
+  it.each([
+    ["east side", "e" as const, P(100, 50), P(300, 120), { laneX: 250 }, [P(100, 50), P(250, 50), P(250, 120), P(300, 120)]],
+    ["east side, gate at the same height", "e" as const, P(100, 50), P(300, 50), { laneX: 250 }, [P(100, 50), P(300, 50)]],
+    ["top, into the channel above its row", "n" as const, P(100, 50), P(300, 20), { laneX: 250, chanY: 30 }, [P(100, 50), P(100, 30), P(250, 30), P(250, 20), P(300, 20)]],
+    ["a lane left of the card is pushed past its stub", "e" as const, P(100, 50), P(300, 80), { laneX: 90 }, [P(100, 50), P(112, 50), P(112, 80), P(300, 80)]],
+  ])("%s", (_, side, a, g, opts, want) => {
+    const got = gateRoute(a, side, g, opts);
+    expect(got).toEqual(want);
+    expect(orthogonal(got)).toBe(true);
+    expect(got[0]).toEqual(a);
+    expect(got[got.length - 1]).toEqual(g);
   });
 });
