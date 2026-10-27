@@ -14,6 +14,29 @@ spec:
     repoURL: https://github.com/example-org/orion.git
     targetRevision: deploy
 status:
+  resources:
+  - kind: ConfigMap
+    name: orion-config
+    namespace: orion
+    status: Synced
+    version: v1
+  - kind: Service
+    name: orion
+    namespace: orion
+    status: Synced
+    version: v1
+  - group: apps
+    kind: Deployment
+    name: orion
+    namespace: orion
+    status: Synced
+    version: v1
+  - group: batch
+    kind: CronJob
+    name: orion-boond-sync
+    namespace: orion
+    status: Synced
+    version: v1
   health:
     status: Healthy
   reconciledAt: '2026-10-26T20:19:02Z'
@@ -155,6 +178,13 @@ spec:
     repoURL: https://github.com/example-org/orion.git
     targetRevision: main
 status:
+  resources:
+  - group: apps
+    kind: Deployment
+    name: el-orion
+    namespace: tekton-orion
+    status: Synced
+    version: v1
   health:
     status: Healthy
   reconciledAt: '2026-10-26T20:18:49Z'

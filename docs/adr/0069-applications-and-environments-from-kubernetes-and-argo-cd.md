@@ -63,8 +63,9 @@ Argo CD describes them.
 - Impact (ADR 0011) needs no new rule: a cluster or node down takes its pods down, the workload
   when every pod is gone, then the instance (`runs_on`). A failure never climbs from an instance
   to its application. `TestImpactReachesApplicationInstances` guards it.
-- dev and prod are known only through Argo CD (instance, health, sync, version) until a
-  collector runs there; their workloads, pods and nodes are not in the inventory.
+- dev and prod are known only through Argo CD (instance, health, sync, version, and since the
+  amendment below their controllers) until a collector runs there; their pods and nodes are not
+  in the inventory.
 - `platform-apps` (project `default`) becomes an application of its own unless `default` is listed in
   `argocd_platform_projects` (done at Diametral).
 - The `<application>-<component>-<env>` naming is a convention: an estate that does not follow
@@ -84,4 +85,16 @@ outside Argo CD and carry `app.kubernetes.io/part-of`, so each became an applica
 (`argocd`, `cilium`, five `tekton-*`). The option `platform_namespaces` lists the namespaces of
 such tools: a labelled workload there is the component `<part-of>` of the application
 `platform`. Elsewhere `part-of` keeps naming an application.
+
+## Amendment (2026-10-28): what Argo CD says it runs on the other clusters
+
+Collecting dev and prod directly needs a token that can read their pods, so their environment
+values in clear: a secret-tier credential. The Application objects trica already reads carry
+`status.resources`, the controllers Argo CD manages. For a destination that is not the cluster the
+collector reads, those Deployments, StatefulSets, DaemonSets and CronJobs become `workload`s in a
+`k8s_cluster` named after the environment (one environment per cluster), and the instance `runs_on`
+them. No new permission, no new secret. What it cannot give: pods, nodes (which server runs it),
+replica counts, per-resource health (Argo CD 3 keeps it in the resource tree, served by its API
+only). The cluster's identity is its name, so a collector added there later completes the same
+objects.
 

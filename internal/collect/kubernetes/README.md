@@ -76,6 +76,7 @@ supports them; prefer a static ServiceAccount token for a collector.
 | `app.kubernetes.io/part-of`, `name`, `component`, `version` of a workload | `application`, `component` (in it), `component_instance` (in the component) | Instance key `application/component/environment/namespace`; `runs_on` the workload; `deployed_in` the environment; `version` from the label, else the image tag. No label, no application. In a namespace of `platform_namespaces`, the application is `platform` and the component the `part-of` value. |
 | Ingress host serving a service of an instance | `endpoint` | `url` `https://<host>`, `exposed_by` the instance. |
 | Argo CD `Application` (with `argocd`) | `component_instance` | Same key rule, in the environment of the destination cluster; `health`, `sync_status`, `version` (`targetRevision@sha7`, only if no label gave one); `repository` of the application (credentials stripped). See below. |
+| Its `status.resources` (Deployments, StatefulSets, DaemonSets, CronJobs), for a destination that is not this cluster | `k8s_cluster` (named after the environment, `api_endpoint` the destination), `namespace`, `workload` (`kind`) | `runs_on` instance -> workload; `deployed_in` cluster -> environment. No pods, nodes or replica counts: an Application does not carry them. A collector running on that cluster later meets these objects by name. |
 
 Lists are sorted, so two runs on an unchanged cluster emit the same batch.
 

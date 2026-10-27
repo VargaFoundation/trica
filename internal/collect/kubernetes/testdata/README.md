@@ -17,6 +17,9 @@ Argo CD cluster Secrets, which hold tokens, were not read at all).
 `build-1.31/applications-synthesised.yaml` is **synthesised**: a multi-source
 Application with a credentialed repository address (a fake `EXAMPLE-NOT-A-SECRET`),
 one annotated `trica.io/application`, one with an unmapped destination.
+`status.resources` of `orion-app-dev` and `orion-ci` in `build-1.31/applications.yaml` were
+added on 2026-10-28 in the shape recorded from a tenant Application on Argo CD v3.3.18 (group,
+kind, name, namespace, status, version; no per-resource health in that version), names anonymised.
 `k3s-1.31/` and `kubeadm-1.29/` below are still synthesised.
 
 **These fixtures are synthesised from the Kubernetes and KubeVirt API
