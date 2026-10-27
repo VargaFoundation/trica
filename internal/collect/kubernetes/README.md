@@ -52,6 +52,7 @@ targets:
 | `options.argocd_namespace` | name, default `argocd` | Where the Applications live. |
 | `options.argocd_clusters` | map server or name to environment | The environment of an Application's destination: `{"https://203.0.113.1:6443": dev}`. In-cluster destinations are this cluster. An unmapped one is named after its host and reported as a warning. Never read from Argo CD's cluster Secrets (they hold tokens). |
 | `options.argocd_platform_projects` | list of Argo CD projects | Applications of these projects are all components of the application `platform`. |
+| `options.platform_namespaces` | list of namespaces | A workload labelled `app.kubernetes.io/part-of` in one of them (the platform's tools installed outside Argo CD: `kube-system`, `argocd`...) is the component `<part-of>` of the application `platform`, not an application of its own. |
 | `timeout` | duration | Bounds the whole run (default 30 s), and each request. |
 
 Exec-based and auth-provider credentials of a kubeconfig work as client-go
@@ -72,7 +73,7 @@ supports them; prefer a static ServiceAccount token for a collector.
 | KubeVirt `VirtualMachineInstance` | `vm` | identity `uuid` (firmware UUID, else the instance UID) and `name`; `namespace`, `vcpus` (cores x sockets x threads, when the instance declares a cpu block), `memory_bytes` (guest memory, else the pod's memory request or limit), `power_state` (Running -> running, Paused condition -> paused, Succeeded/Failed -> stopped, otherwise unknown), `os_name` (guest agent). Relation `hosts` node -> vm. |
 | VMI `status.interfaces` | `interface` in the `vm` | `name`, `kind: virtual`, `mac`; each address (loopback and link-local are dropped) is an `ip_address` `assigned_to` the interface. |
 
-| `app.kubernetes.io/part-of`, `name`, `component`, `version` of a workload | `application`, `component` (in it), `component_instance` (in the component) | Instance key `application/component/environment/namespace`; `runs_on` the workload; `deployed_in` the environment; `version` from the label, else the image tag. No label, no application. |
+| `app.kubernetes.io/part-of`, `name`, `component`, `version` of a workload | `application`, `component` (in it), `component_instance` (in the component) | Instance key `application/component/environment/namespace`; `runs_on` the workload; `deployed_in` the environment; `version` from the label, else the image tag. No label, no application. In a namespace of `platform_namespaces`, the application is `platform` and the component the `part-of` value. |
 | Ingress host serving a service of an instance | `endpoint` | `url` `https://<host>`, `exposed_by` the instance. |
 | Argo CD `Application` (with `argocd`) | `component_instance` | Same key rule, in the environment of the destination cluster; `health`, `sync_status`, `version` (`targetRevision@sha7`, only if no label gave one); `repository` of the application (credentials stripped). See below. |
 

@@ -109,14 +109,16 @@ func (x *builder) instance(app, comp, env, ns string) *sdk.Object {
 // in order:
 //  1. the workload is owned by an Argo CD Application of a platform project:
 //     application platform, component the Application's;
-//  2. it carries app.kubernetes.io/part-of: that application, and the
+//  2. it carries app.kubernetes.io/part-of in a platform namespace: application
+//     platform, the part-of value as component;
+//  3. it carries app.kubernetes.io/part-of elsewhere: that application, and the
 //     component label (or the name label, or its own name) as component;
-//  3. it is owned by a known Argo CD Application: that one's application,
+//  4. it is owned by a known Argo CD Application: that one's application,
 //     and the component label if there is one, else the Application's;
-//  4. it carries the Argo CD label and a component label but Argo CD is not
+//  5. it carries the Argo CD label and a component label but Argo CD is not
 //     read here: the Application is named <application>-<component>-<env> by
 //     convention, so the application is what is left of it;
-//  5. otherwise no application: a workload nobody labelled is no noise.
+//  6. otherwise no application: a workload nobody labelled is no noise.
 func (x *builder) placeWorkload(w workloadInfo) (app, comp string, ok bool) {
 	if w.kind == "job" {
 		return "", "", false
@@ -127,6 +129,8 @@ func (x *builder) placeWorkload(w workloadInfo) (app, comp string, ok bool) {
 	switch {
 	case owned && owner.pl.platform:
 		return platformApplication, owner.pl.component, true
+	case slug(l[labelPartOf]) != "" && x.cfg.platformNS[w.namespace]:
+		return platformApplication, slug(l[labelPartOf]), true
 	case slug(l[labelPartOf]) != "":
 		app = slug(l[labelPartOf])
 		switch {

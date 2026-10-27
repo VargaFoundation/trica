@@ -80,6 +80,8 @@ type options struct {
 	ArgocdClusters map[string]string `yaml:"argocd_clusters" doc:"Maps an Argo CD destination (its API server URL, or its registered name) to the environment it is, for instance {\"https://10.0.2.1:6443\": dev}. The cluster Argo CD runs in (kubernetes.default.svc) is this cluster's environment. A destination not listed is an environment named after its server, and a warning."`
 	// ArgocdPlatformProjects lists the Argo CD projects of the platform.
 	ArgocdPlatformProjects []string `yaml:"argocd_platform_projects" doc:"Argo CD projects whose Applications are the platform itself: all are filed under the one application \"platform\" instead of one application each."`
+	// PlatformNamespaces lists the namespaces of the platform's own tools.
+	PlatformNamespaces []string `yaml:"platform_namespaces" doc:"Namespaces holding the platform's own tools, installed outside Argo CD (kube-system, argocd...): a labelled workload there is a component of the application \"platform\", named after its app.kubernetes.io/part-of, instead of an application of its own."`
 }
 
 // config is what a run takes from the options, normalised.
@@ -92,6 +94,7 @@ type config struct {
 	// argocdClusters is keyed by destination server (no trailing slash) or name.
 	argocdClusters map[string]string
 	names          namer
+	platformNS     map[string]bool // options.platform_namespaces
 }
 
 func (o options) config(endpoint string) *config {
@@ -101,6 +104,12 @@ func (o options) config(endpoint string) *config {
 		argocd: o.Argocd, argocdNamespace: o.ArgocdNamespace,
 		argocdClusters: map[string]string{},
 		names:          namer{platformProjects: map[string]bool{}},
+		platformNS:     map[string]bool{},
+	}
+	for _, ns := range o.PlatformNamespaces {
+		if ns = strings.TrimSpace(ns); ns != "" {
+			c.platformNS[ns] = true
+		}
 	}
 	for k, v := range o.ArgocdClusters {
 		c.argocdClusters[strings.TrimRight(strings.TrimSpace(k), "/")] = strings.TrimSpace(v)

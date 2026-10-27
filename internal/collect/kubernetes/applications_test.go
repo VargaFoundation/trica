@@ -467,7 +467,7 @@ func TestEnvironmentOptions(t *testing.T) {
 
 func TestPlaceWorkload(t *testing.T) {
 	x := &builder{
-		cfg:   &config{environment: "dev"},
+		cfg:   &config{environment: "dev", platformNS: map[string]bool{"kube-system": true}},
 		nsEnv: map[string]string{"eu": "prod-eu"},
 		argo: map[string]argoEntry{
 			"orion-app-dev":      {pl: argoPlacement{app: "orion", component: "app"}},
@@ -482,6 +482,8 @@ func TestPlaceWorkload(t *testing.T) {
 		wantAnyApp bool
 	}{
 		{"part-of and component", workloadInfo{kind: "deployment", name: "x", labels: map[string]string{labelPartOf: "Argo CD", labelComponent: "server"}}, "argo-cd", "server", true},
+		{"part-of in a platform namespace: a platform component", workloadInfo{kind: "daemonset", name: "cilium", namespace: "kube-system", labels: map[string]string{labelPartOf: "Cilium", labelName: "cilium-agent"}}, platformApplication, "cilium", true},
+		{"part-of in another namespace: its own application", workloadInfo{kind: "daemonset", name: "cilium", namespace: "net", labels: map[string]string{labelPartOf: "Cilium"}}, "cilium", "cilium", true},
 		{"part-of and name", workloadInfo{kind: "deployment", name: "w", labels: map[string]string{labelPartOf: "stack", labelName: "stack-api"}}, "stack", "api", true},
 		{"part-of alone: the workload's name", workloadInfo{kind: "statefulset", name: "stack-db", labels: map[string]string{labelPartOf: "stack"}}, "stack", "db", true},
 		{"part-of the name of the workload", workloadInfo{kind: "daemonset", name: "stack", labels: map[string]string{labelPartOf: "stack"}}, "stack", "stack", true},
