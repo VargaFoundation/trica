@@ -27,6 +27,8 @@ func TestRenderDisplay(t *testing.T) {
 		{"disk unknown media", "{name} · {media|media} {capacity_bytes|bytes}", map[string]string{"name": "sda", "media": "unknown", "capacity_bytes": "1920383410176"}, "sda · 1.9 TB"},
 		{"psu", "{name} · {capacity_w|watts} {model}", map[string]string{"name": "HpeServerPowerSupply 0", "capacity_w": "800", "model": "865414-B21"}, "HpeServerPowerSupply 0 · 800 W 865414-B21"},
 		{"not a number", "{name} · {capacity_w|watts}", map[string]string{"name": "p", "capacity_w": "lots"}, "p"},
+		{"application with a human name", "{display_name}", map[string]string{"name": "microsoft-entra-id", "display_name": "Microsoft Entra ID"}, "Microsoft Entra ID"},
+		{"application without one falls back", "{display_name}", map[string]string{"name": "ada"}, ""},
 		{"1.5e10 float form", "{x|bytes}", map[string]string{"x": "1.7179869184e+10"}, "17.2 GB"},
 	}
 	for _, c := range cases {
@@ -43,7 +45,7 @@ func TestRenderDisplay(t *testing.T) {
 
 func TestBuiltinTemplatesAreValid(t *testing.T) {
 	r := Builtin()
-	for _, n := range []string{"cpu", "memory", "disk", "psu"} {
+	for _, n := range []string{"cpu", "memory", "disk", "psu", "application"} {
 		if r.Types[n].DisplayTemplate == "" {
 			t.Errorf("type %s has no display template", n)
 		}

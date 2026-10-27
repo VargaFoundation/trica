@@ -92,3 +92,11 @@ parent is not a device: the nearest device above it, found by walking up the par
 levels, one query per level), and only through objects the caller may read — the walk stops at the
 first one they may not, and nothing above it is named. The objects page shows
 `srv-01 › Slot 0 · Smart Array P440ar Controller`.
+
+## Amendment (2026-10-27): applications
+
+`application` gets `display_template: "{display_name}"`: a SaaS declared with a human name
+(`Microsoft Entra ID`) is listed by it, an application without one (the slugs the Kubernetes
+collector makes, ADR 0069) keeps its `name`. Lookups by name still read `name`. The startup
+recompute applies it to the applications already stored.
+
