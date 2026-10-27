@@ -2205,6 +2205,9 @@ label.check {
   stroke: var(--trica-iso-floor-line);
   stroke-width: 1;
 }
+.iso-leader-dot {
+  fill: var(--trica-iso-floor-line);
+}
 .iso-labels {
   transition: opacity 0.15s var(--trica-easing);
 }
@@ -2354,6 +2357,12 @@ label.check {
 }
 .iso-edge-badges.is-shown .iso-badge-port,
 .iso-edge-badges.is-hot .iso-badge-port {
+  opacity: 1;
+}
+.iso-edge-badges.is-shown .iso-badge-port.is-dropped {
+  opacity: 0;
+}
+.iso-edge-badges.is-hot .iso-badge-port.is-dropped {
   opacity: 1;
 }
 .iso-badge-bundle rect {

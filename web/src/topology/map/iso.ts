@@ -132,3 +132,40 @@ export function union(list: readonly Bounds[], margin = 0): Bounds {
 export function viewBoxOf(b: Bounds): string {
   return `${round(b.x0)} ${round(b.y0)} ${round(b.x1 - b.x0)} ${round(b.y1 - b.y0)}`;
 }
+
+/** Polygon points ("x,y x,y") moved by (dx, dy). */
+export function shiftPoints(points: string, dx: number, dy: number): string {
+  return points
+    .split(" ")
+    .filter((s) => s !== "")
+    .map((s) => {
+      const [x, y] = s.split(",").map(Number) as [number, number];
+      return `${round(x + dx)},${round(y + dy)}`;
+    })
+    .join(" ");
+}
+
+/** A projected box moved on the screen by (dx, dy): every polygon, anchor and bound, not its painter's order. */
+export function shiftIso(b: IsoBox, dx: number, dy: number): IsoBox {
+  return {
+    ...b,
+    top: shiftPoints(b.top, dx, dy),
+    south: shiftPoints(b.south, dx, dy),
+    east: shiftPoints(b.east, dx, dy),
+    foot: shiftPoints(b.foot, dx, dy),
+    hull: shiftPoints(b.hull, dx, dy),
+    anchor: { x: b.anchor.x + dx, y: b.anchor.y + dy },
+    base: { x: b.base.x + dx, y: b.base.y + dy },
+    bounds: { x0: b.bounds.x0 + dx, y0: b.bounds.y0 + dy, x1: b.bounds.x1 + dx, y1: b.bounds.y1 + dy },
+  };
+}
+
+/** The moves that stack boxes in one column: every left edge at `x`, the first top at `y`, `gap` px between one and the next. */
+export function columnShifts(boxes: readonly Bounds[], x: number, y: number, gap: number): Pt[] {
+  let top = y;
+  return boxes.map((b) => {
+    const at = { x: x - b.x0, y: top - b.y0 };
+    top += b.y1 - b.y0 + gap;
+    return at;
+  });
+}

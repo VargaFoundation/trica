@@ -41,6 +41,23 @@ style that hid the one thing a network engineer reads first: speed and state.
 8. **Pure geometry** (routing, bundle fan-out, port shortening, speed class, label collision, rack tree,
    decor) is in modules of its own with table-driven tests.
 
+## Amendment (2026-10-27): nothing written over anything
+
+The first version left pills over racks at room level and put the Internet cloud and the far ends of
+tunnels on the rack frame at rack level. Now:
+
+- **Blocks are obstacles.** Label placement (`labels.ts`, `pillSlots`, `placePill`, `leaderBetween`) tries spots nearest to the default
+  first (below, lower, sideways, then above), each with its caption and then without, and takes the
+  first that touches neither a placed label nor any block's screen box (building, room, rack, device,
+  gate). A pill moved away from its block keeps a thin leader line to it; a device pill that must stay
+  at its unit loses its caption, then is hidden until pointed at.
+- **External ends stand outside.** At rack level the Internet and the other places are drawn to the
+  right of the device-card column, outside the rack's footprint, and their links are routed around the
+  cards (`gateRoute` in `route.ts`).
+- **Port badges** of one device side are spread so that they do not overlap (`badgeDistances`).
+- **Proof.** `e2e/topology-labels.spec.ts` reads the boxes the browser draws at every level of the e2e
+  inventory, in both themes, and fails if two labels intersect or a label covers a block.
+
 ## Not drawn
 
 No pixel test (the proof is the tests on the scene model plus screenshots reviewed by a person); no

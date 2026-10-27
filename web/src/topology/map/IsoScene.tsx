@@ -261,7 +261,7 @@ export function IsoScene(p: IsoSceneProps) {
     );
   };
   const badgeOf = (b: SceneBadge, cls: string) => (
-    <g key={cls} className={`iso-badge ${cls}`} transform={`translate(${b.x} ${b.y})`}>
+    <g key={cls} className={`iso-badge ${cls}${b.drop ? " is-dropped" : ""}`} transform={`translate(${b.x} ${b.y})`}>
       <rect x={-b.w / 2} y="-8" width={b.w} height="15" rx="7.5" />
       <text y="3.5" textAnchor="middle">
         {b.text}
@@ -574,10 +574,16 @@ function Label({ item, sub, shown }: { item: SceneItem; sub?: string; shown: boo
   const pl = item.pill;
   const h = sub ? 34 : 21;
   const x = pl.x0;
-  const y = item.labelAt.y - 14;
+  const y = pl.y0;
+  const lead = item.pillLeader;
   return (
     <g className={`iso-labels h-${item.node.health.worst}${shown ? "" : " is-hidden"}`} data-for={item.id} aria-hidden="true">
-      {item.labelStart ? <line className="iso-leader" x1={item.iso.bounds.x1} y1={item.labelAt.y - 3} x2={x} y2={item.labelAt.y - 3} /> : null}
+      {lead ? (
+        <g className="iso-leader-group">
+          <line className="iso-leader" x1={lead.x1} y1={lead.y1} x2={lead.x2} y2={lead.y2} />
+          <circle className="iso-leader-dot" cx={lead.x1} cy={lead.y1} r="2" />
+        </g>
+      ) : null}
       <rect className="iso-pill" x={x} y={y} width={Math.max(pl.x1 - pl.x0, 1)} height={h} rx={h > 25 ? 10 : 10.5} />
       <circle className="iso-lamp" cx={x + 11} cy={y + 10.5} r="3.5" />
       <text className="iso-label" x={x + 20} y={y + 14.5}>

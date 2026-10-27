@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CELL, isoBox, project, turnedWorld, turnPoint, turnRect, union, ZUNIT, type Rot } from "./iso";
+import { CELL, columnShifts, isoBox, project, shiftIso, shiftPoints, turnedWorld, turnPoint, turnRect, union, ZUNIT, type Rot } from "./iso";
 
 const world = { w: 10, d: 6 };
 const ROTS: Rot[] = [0, 1, 2, 3];
@@ -68,4 +68,48 @@ describe("isometric geometry", () => {
     expect(union([{ x0: 0, y0: 0, x1: 10, y1: 5 }, { x0: -4, y0: 2, x1: 3, y1: 9 }], 1)).toEqual({ x0: -5, y0: -1, x1: 11, y1: 10 });
     expect(union([])).toEqual({ x0: 0, y0: 0, x1: 0, y1: 0 });
   });
+});
+
+describe("moving a projected box on the screen", () => {
+  it.each([
+    ["1,2 3.5,4", 10, -1, "11,1 13.5,3"],
+    ["0,0", 0, 0, "0,0"],
+    ["", 5, 5, ""],
+  ])("shifts the points %j by (%d, %d)", (points, dx, dy, want) => expect(shiftPoints(points, dx, dy)).toBe(want));
+
+  it("moves every polygon, anchor and bound by the same amount and keeps the painter's order", () => {
+    const b = isoBox({ x: 1, y: 2, w: 1, d: 1, z: 0, h: 1 }, world, 0);
+    const m = shiftIso(b, 100, -40);
+    expect(m.bounds).toEqual({ x0: b.bounds.x0 + 100, y0: b.bounds.y0 - 40, x1: b.bounds.x1 + 100, y1: b.bounds.y1 - 40 });
+    expect(m.anchor).toEqual({ x: b.anchor.x + 100, y: b.anchor.y - 40 });
+    expect(m.base).toEqual({ x: b.base.x + 100, y: b.base.y - 40 });
+    expect(m.depth).toBe(b.depth);
+    // Every polygon still sits inside the moved bounds, and the opposite shift gives the polygons back.
+    expect(shiftIso(m, -100, 40).hull).toBe(b.hull);
+    for (const poly of [m.top, m.south, m.east, m.foot, m.hull]) {
+      for (const pt of poly.split(" ")) {
+        const [x, y] = pt.split(",").map(Number) as [number, number];
+        expect(x).toBeGreaterThanOrEqual(m.bounds.x0 - 0.1);
+        expect(x).toBeLessThanOrEqual(m.bounds.x1 + 0.1);
+        expect(y).toBeGreaterThanOrEqual(m.bounds.y0 - 0.1);
+        expect(y).toBeLessThanOrEqual(m.bounds.y1 + 0.1);
+      }
+    }
+  });
+});
+
+describe("stacking boxes in a column", () => {
+  it("puts every left edge on x and each box under the previous one, a gap apart", () => {
+    const boxes = [
+      { x0: 10, y0: 5, x1: 50, y1: 45 },
+      { x0: -20, y0: 100, x1: 0, y1: 120 },
+      { x0: 0, y0: 0, x1: 30, y1: 10 },
+    ];
+    const moves = columnShifts(boxes, 200, 0, 30);
+    const moved = boxes.map((b, i) => ({ x0: b.x0 + (moves[i]?.x ?? 0), y0: b.y0 + (moves[i]?.y ?? 0), x1: b.x1 + (moves[i]?.x ?? 0), y1: b.y1 + (moves[i]?.y ?? 0) }));
+    expect(moved.map((b) => b.x0)).toEqual([200, 200, 200]);
+    expect(moved.map((b) => b.y0)).toEqual([0, 70, 120]);
+    expect(moved[1]?.y1).toBe(90);
+  });
+  it("gives nothing for nothing", () => expect(columnShifts([], 0, 0, 10)).toEqual([]));
 });
