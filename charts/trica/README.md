@@ -50,6 +50,7 @@ restricted NetworkPolicy, collectors, transport). Where the image comes from is 
 | `collect.targetsConfigMap` / `targetsKey` | `""` / `targets.yaml` | An existing ConfigMap holding the targets file instead of `collect.targets`. |
 | `collect.secrets` | `[]` | Existing Secrets to mount at `/var/run/secrets/collect/<name>/` (one file per key), for targets' `file:` references. |
 | `collect.kubernetes.rbac.enabled` | `false` | ClusterRole and binding, read-only (`get`/`list`/`watch`, no Secrets, no ConfigMaps), for a `kubernetes` target with address `in-cluster`; mounts the service account token. |
+| `collect.kubernetes.rbac.argocd` / `argocdNamespace` | `false` / `argocd` | With the target's option `argocd: true` (ADR 0069): a Role and binding in `argocdNamespace` granting `get`/`list`/`watch` on `applications.argoproj.io` and nothing else (not the Secrets where Argo CD keeps its clusters' credentials). Needs `rbac.enabled`. |
 | `live.enabled` | `false` | The live topology overlay ([reference](../../docs/reference/configuration.md#live-topology-overlay), ADR 0041): the server reads link throughput and state from a Prometheus-compatible endpoint. Needs `live.config.url` and `live.config.sources`. |
 | `live.config` | `{}` | The server's `live` block, rendered as is and checked by the values schema. Credentials are `file:` references to `live.secrets`, never values. |
 | `live.secrets` | `[]` | Existing Secrets to mount at `/var/run/secrets/live/<name>/` (one file per key), for `live.config`'s `file:` references. |

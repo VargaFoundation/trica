@@ -12,6 +12,7 @@ import { useCrumbs } from "../components/crumbs";
 import { Quantity } from "../components/Quantity";
 import { ButtonLink, Card, HealthPill, Icon, KindIcon, Table, TabPanel, Tabs, useKindLabel, useTabParam, type TabDef } from "../components/ui";
 import { healthOf } from "../inventory/health";
+import { AppInstancesSection } from "./AppInstances";
 import { ComponentsSection, OverviewSection, useChildren } from "./ObjectOverview";
 import { useSchemaLookup, type SchemaLookup } from "../hooks";
 import { useI18n } from "../i18n";
@@ -201,6 +202,7 @@ function ObjectDetail({ obj }: { obj: ObjectView }) {
         {tab === "overview" ? (
           <>
             {CONTAINER_TYPES.includes(obj.type) ? <EditContainer obj={obj} /> : null}
+            {obj.type === "application" ? <AppInstancesSection app={obj} /> : null}
             <OverviewSection obj={obj} lookup={lookup} onProvenance={() => setTab("provenance")} />
             <ModelChoiceSection obj={obj} />
             <DeviceFacesSection obj={obj} lookup={lookup} />

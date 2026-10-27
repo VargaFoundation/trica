@@ -241,3 +241,69 @@ func BenchmarkImpact(b *testing.B) {
 		}
 	}
 }
+
+// kubeApp is what the Kubernetes collector draws for an application: a node
+// of a cluster hosts the pods, a workload is served by its pods, a component
+// instance runs on the workload and sits under a component of the
+// application (ADR 0069).
+func kubeApp() *world {
+	return (&world{}).
+		add("cluster", "k8s_cluster", "", nil).
+		add("node-a", "k8s_node", "cluster", nil).add("node-b", "k8s_node", "cluster", nil).
+		add("ns", "namespace", "cluster", nil).
+		add("wl", "workload", "ns", nil).
+		add("pod-a", "pod", "ns", nil).add("pod-b", "pod", "ns", nil).
+		rel("hosts", "node-a", "pod-a").rel("hosts", "node-b", "pod-b").
+		rel("served_by", "wl", "pod-a").rel("served_by", "wl", "pod-b").
+		add("app", "application", "", nil).
+		add("comp", "component", "app", nil).
+		add("inst", "component_instance", "comp", nil).
+		rel("runs_on", "inst", "wl")
+}
+
+func TestImpactReachesApplicationInstances(t *testing.T) {
+	cases := []struct {
+		name   string
+		failed []string
+		want   map[string]string
+		spared []string
+	}{
+		{
+			name:   "a cluster down takes its instances down",
+			failed: []string{"cluster"},
+			want:   map[string]string{"node-a": "down/parent", "pod-a": "down/hosts", "wl": "down/parent", "inst": "down/runs_on"},
+			// The failure goes down the tree, never up from an instance to its application.
+			spared: []string{"app", "comp"},
+		},
+		{
+			name:   "every node down takes the instance down",
+			failed: []string{"node-a", "node-b"},
+			want:   map[string]string{"wl": "down/served_by", "inst": "down/runs_on"},
+		},
+		{
+			name:   "one node of two leaves the instance up",
+			failed: []string{"node-a"},
+			want:   map[string]string{"pod-a": "down/hosts"},
+			spared: []string{"wl", "inst", "pod-b"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := kubeApp().snapshot().Impact(tc.failed, ImpactOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := states(r)
+			for id, want := range tc.want {
+				if got[id] != want {
+					t.Errorf("%s: got %q, want %q", id, got[id], want)
+				}
+			}
+			for _, id := range tc.spared {
+				if s, ok := got[id]; ok {
+					t.Errorf("%s: should be spared, got %q", id, s)
+				}
+			}
+		})
+	}
+}

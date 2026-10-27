@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lyra-webui
+  namespace: lyra
+  uid: 00000000-0000-4000-8000-00000000006e
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: lyra.internal.dev.example.test
+    http:
+      paths:
+      - backend:
+          service:
+            name: lyra-webui-auth
+            port:
+              name: http
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - lyra.internal.dev.example.test

@@ -89,6 +89,54 @@ tests:
       - equal: {path: "rules[2].verbs", value: [get, list, watch]}
       - equal: {path: "rules[3].verbs", value: [get, list, watch]}
       - equal: {path: "rules[4].verbs", value: [get, list, watch]}
+  - it: grants nothing on Argo CD unless asked
+    template: templates/collect-rbac.yaml
+    set:
+      collect.enabled: true
+      collect.targets: [{kind: kubernetes, name: prod, address: in-cluster}]
+      collect.kubernetes.rbac.enabled: true
+    asserts:
+      - hasDocuments: {count: 2}
+  - it: grants read-only access to the Argo CD Applications of one namespace, when asked
+    template: templates/collect-rbac.yaml
+    release: {namespace: inventory}
+    set:
+      collect.enabled: true
+      collect.targets: [{kind: kubernetes, name: prod, address: in-cluster}]
+      collect.kubernetes.rbac.enabled: true
+      collect.kubernetes.rbac.argocd: true
+    asserts:
+      - hasDocuments: {count: 4}
+      - documentIndex: 0
+        isKind: {of: ClusterRole}
+      # The cluster role is the same as without it: the right is namespaced.
+      - documentIndex: 0
+        lengthEqual: {path: rules, count: 5}
+      - documentIndex: 2
+        isKind: {of: Role}
+      - documentIndex: 2
+        equal: {path: metadata.namespace, value: argocd}
+      - documentIndex: 2
+        equal: {path: rules, value: [{apiGroups: [argoproj.io], resources: [applications], verbs: [get, list, watch]}]}
+      - documentIndex: 3
+        isKind: {of: RoleBinding}
+      - documentIndex: 3
+        equal: {path: metadata.namespace, value: argocd}
+      - documentIndex: 3
+        equal: {path: roleRef.name, value: RELEASE-NAME-trica-collector-argocd}
+      - documentIndex: 3
+        equal: {path: "subjects[0].namespace", value: inventory}
+  - it: takes the Argo CD namespace from the values
+    template: templates/collect-rbac.yaml
+    documentIndex: 2
+    set:
+      collect.enabled: true
+      collect.targets: [{kind: kubernetes, name: prod, address: in-cluster}]
+      collect.kubernetes.rbac.enabled: true
+      collect.kubernetes.rbac.argocd: true
+      collect.kubernetes.rbac.argocdNamespace: gitops
+    asserts:
+      - equal: {path: metadata.namespace, value: gitops}
   - it: binds the role to the chart's service account
     template: templates/collect-rbac.yaml
     documentIndex: 1

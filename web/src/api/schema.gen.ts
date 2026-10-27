@@ -1013,6 +1013,12 @@ export interface components {
              */
             domain?: string;
             /**
+             * Hosting
+             * @description self: it runs on our own infrastructure and its instances are observed. saas: a vendor runs it, it is declared by hand and has no instance.
+             * @enum {string}
+             */
+            hosting?: "self" | "saas";
+            /**
              * Name
              * @description Application slug.
              */
@@ -1027,6 +1033,11 @@ export interface components {
              * @description Source repository URL.
              */
             repository?: string;
+            /**
+             * Vendor
+             * @description Who runs a SaaS application.
+             */
+            vendor?: string;
         } & {
             [key: string]: unknown;
         };
@@ -1136,10 +1147,20 @@ export interface components {
              */
             environment?: string;
             /**
+             * Health
+             * @description Health as the deployment tool reports it (Argo CD: Healthy, Progressing, Degraded, Suspended, Missing, Unknown).
+             */
+            health?: string;
+            /**
              * Key
-             * @description application/component/environment/location.
+             * @description application/component/environment/location; for a Kubernetes instance, application/component/environment/namespace.
              */
             key?: string;
+            /**
+             * Sync status
+             * @description Whether the deployed state matches what was declared (Argo CD: Synced, OutOfSync, Unknown).
+             */
+            sync_status?: string;
             /**
              * Version
              * @description Deployed version.
@@ -1703,6 +1724,17 @@ export interface components {
         };
         /** @description Attributes of a environment object. Other attributes may appear; those of the schema are typed. */
         "Attributes.environment": {
+            /**
+             * Cluster
+             * @description Name of the cluster that is this environment, when there is one.
+             */
+            cluster?: string;
+            /**
+             * Kind
+             * @description What the environment is for.
+             * @enum {string}
+             */
+            kind?: "prod" | "staging" | "dev" | "test" | "build" | "other";
             /**
              * Name
              * @description Environment name.

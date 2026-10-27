@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    argocd.argoproj.io/instance: orion-tenant-base-dev
+    example.test/kyverno-admission: 'true'
+    example.test/managed-by: tenant-base
+    example.test/tenant: orion
+    kubernetes.io/metadata.name: orion
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+  name: orion
+  uid: 00000000-0000-4000-8000-000000000042
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    argocd.argoproj.io/instance: lyra-tenant-base-dev
+    example.test/kyverno-admission: 'true'
+    example.test/managed-by: tenant-base
+    example.test/tenant: lyra
+    kubernetes.io/metadata.name: lyra
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+  name: lyra
+  uid: 00000000-0000-4000-8000-000000000043

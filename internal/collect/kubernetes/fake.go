@@ -41,11 +41,28 @@ const (
 	// Kubeadm129 is a 2-node kubeadm v1.29 cluster, one node not ready, without
 	// KubeVirt and without ingress.
 	Kubeadm129 = "kubeadm-1.29"
+	// Build131 is the single-node K3s v1.31 cluster that runs Argo CD and
+	// Harbor, with the Argo CD Applications of three clusters (build, dev and
+	// prod), recorded and anonymised.
+	Build131 = "build-1.31"
+	// Dev131 is the 3-node K3s v1.31 cluster Argo CD deploys the development
+	// applications to: labelled workloads, one ingress, no Argo CD.
+	Dev131 = "dev-1.31"
 )
 
-// kubevirtGroup is the API group served by the dynamic fake; every other
-// object of a fixture goes to the typed fake.
-const kubevirtGroup = "kubevirt.io"
+// kubevirtGroup and argocdGroup are the API groups served by the dynamic fake;
+// every other object of a fixture goes to the typed fake.
+const (
+	kubevirtGroup = "kubevirt.io"
+	argocdGroup   = "argoproj.io"
+)
+
+// custom reports whether an object is a custom resource, which the dynamic
+// fake serves.
+func custom(u *unstructured.Unstructured) bool {
+	g := u.GroupVersionKind().Group
+	return g == kubevirtGroup || g == argocdGroup
+}
 
 // Fake is a simulated Kubernetes API server: the typed and the dynamic fake
 // clients of client-go, loaded with a fixture cluster, recording every
@@ -71,7 +88,7 @@ func FakeKubernetesVersion(fixture string, objects ...runtime.Object) *Fake {
 		panic(fmt.Sprintf("kubernetes fake: fixture %s: %v", fixture, err))
 	}
 	for _, o := range objects {
-		if u, ok := o.(*unstructured.Unstructured); ok && u.GroupVersionKind().Group == kubevirtGroup {
+		if u, ok := o.(*unstructured.Unstructured); ok && custom(u) {
 			virt = append(virt, u)
 			continue
 		}
@@ -80,7 +97,7 @@ func FakeKubernetesVersion(fixture string, objects ...runtime.Object) *Fake {
 	f := &Fake{
 		kube: kubefake.NewClientset(typed...),
 		dyn: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
-			map[schema.GroupVersionResource]string{vmiResource: "VirtualMachineInstanceList"}, virt...),
+			map[schema.GroupVersionResource]string{vmiResource: "VirtualMachineInstanceList", applicationResource: "ApplicationList"}, virt...),
 	}
 	f.kube.Discovery().(*fakediscovery.FakeDiscovery).FakedServerVersion = ver
 	return f
@@ -114,7 +131,7 @@ func loadFixture(fixture string) (typed []runtime.Object, virt []runtime.Object,
 				return nil, nil, nil, fmt.Errorf("%s: %w", e.Name(), err)
 			}
 			for _, u := range docs {
-				if u.GroupVersionKind().Group == kubevirtGroup {
+				if custom(u) {
 					virt = append(virt, u)
 					continue
 				}
@@ -189,8 +206,13 @@ func (f *Fake) Collector(t collect.Target) (*Collector, error) {
 // override or add to the defaults; the timeout is generous unless a test
 // narrows it.
 func (f *Fake) Target(name, cluster string) collect.Target {
+	return f.TargetWith(name, map[string]any{"cluster": cluster})
+}
+
+// TargetWith is Target with the whole options map given.
+func (f *Fake) TargetWith(name string, options map[string]any) collect.Target {
 	t := collect.Target{Kind: Kind, Name: name, Address: inClusterAddress, Timeout: 10 * time.Second}
-	if err := t.Options.Encode(map[string]any{"cluster": cluster}); err != nil {
+	if err := t.Options.Encode(options); err != nil {
 		panic(err)
 	}
 	return t

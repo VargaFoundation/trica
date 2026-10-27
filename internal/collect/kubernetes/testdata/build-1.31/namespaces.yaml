@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    kubernetes.io/metadata.name: argocd
+    name: argocd
+  name: argocd
+  uid: 00000000-0000-4000-8000-000000000003
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    kubernetes.io/metadata.name: harbor
+  name: harbor
+  uid: 00000000-0000-4000-8000-000000000004

@@ -36,12 +36,12 @@ const inClusterAddress = "in-cluster"
 var Descriptor = collect.Descriptor{
 	Kind:       Kind,
 	Title:      "Kubernetes",
-	Vendors:    []string{"Kubernetes", "KubeVirt"},
+	Vendors:    []string{"Kubernetes", "KubeVirt", "Argo CD"},
 	Protocol:   "Kubernetes API (list calls), in-cluster or through a kubeconfig",
-	Summary:    schema.Label{EN: "Kubernetes clusters: nodes, namespaces, workloads, pods, services, ingresses and KubeVirt virtual machines.", FR: "Clusters Kubernetes : nœuds, namespaces, charges de travail, pods, services, ingresses et machines virtuelles KubeVirt."},
+	Summary:    schema.Label{EN: "Kubernetes clusters: nodes, namespaces, workloads, pods, services, ingresses, KubeVirt virtual machines, and the applications and environments they run (from workload labels and Argo CD).", FR: "Clusters Kubernetes : nœuds, namespaces, charges de travail, pods, services, ingresses, machines virtuelles KubeVirt, et les applications et environnements qu'ils portent (d'après les labels et Argo CD)."},
 	Deployment: collect.DeploymentTarget,
-	Collects:   []string{"ingress", "interface", "ip_address", "k8s_cluster", "k8s_node", "k8s_service", "namespace", "pod", "vm", "workload"},
-	ReadOnly:   "Only list calls and one GET /version; it never reads a Secret or a ConfigMap, and its ServiceAccount has only get, list and watch.",
+	Collects:   []string{"application", "component", "component_instance", "endpoint", "environment", "ingress", "interface", "ip_address", "k8s_cluster", "k8s_node", "k8s_service", "namespace", "pod", "vm", "workload"},
+	ReadOnly:   "Only list calls and one GET /version; it never reads a Secret or a ConfigMap, and its ServiceAccount has only get, list and watch (on Argo CD Applications too, when argocd is on).",
 	Address:    "in-cluster, empty, or the API server URL (needs options.kubeconfig)",
 	Username:   collect.Credential{Use: collect.UseUnused},
 	Secret:     collect.Credential{Use: collect.UseOptional, Meaning: "Bearer token; without it the kubeconfig or the in-cluster ServiceAccount is used"},
@@ -68,6 +68,49 @@ type options struct {
 	// outnumber the live pods by far, and listing them all can outlast the
 	// run's timeout.
 	FinishedPods bool `yaml:"finished_pods" default:"false" doc:"Also collect the pods that have ended (Succeeded or Failed); on a cluster running CI jobs they can outnumber the live pods by far."`
+	// Environment names the environment this cluster is (ADR 0069).
+	Environment string `yaml:"environment" doc:"Name of the environment this cluster is; empty is the cluster's name. A namespace labelled trica.io/environment=<x> belongs to the environment <x> instead."`
+	// EnvironmentKind says what the environment is for.
+	EnvironmentKind string `yaml:"environment_kind" enum:"prod,staging,dev,test,build,other" doc:"What this cluster's environment is for; empty guesses it from the environment's name when that says so."`
+	// Argocd reads the Argo CD Applications of the cluster.
+	Argocd bool `yaml:"argocd" default:"false" doc:"Also list the Argo CD Applications (applications.argoproj.io, read-only) of this cluster: each one is an instance of a component in the environment of its destination cluster. Needs the chart's collect.kubernetes.rbac.argocd."`
+	// ArgocdNamespace is where Argo CD keeps its Applications.
+	ArgocdNamespace string `yaml:"argocd_namespace" default:"argocd" doc:"Namespace Argo CD keeps its Applications in."`
+	// ArgocdClusters maps a destination cluster to the environment it is.
+	ArgocdClusters map[string]string `yaml:"argocd_clusters" doc:"Maps an Argo CD destination (its API server URL, or its registered name) to the environment it is, for instance {\"https://10.0.2.1:6443\": dev}. The cluster Argo CD runs in (kubernetes.default.svc) is this cluster's environment. A destination not listed is an environment named after its server, and a warning."`
+	// ArgocdPlatformProjects lists the Argo CD projects of the platform.
+	ArgocdPlatformProjects []string `yaml:"argocd_platform_projects" doc:"Argo CD projects whose Applications are the platform itself: all are filed under the one application \"platform\" instead of one application each."`
+}
+
+// config is what a run takes from the options, normalised.
+type config struct {
+	cluster, endpoint string
+	environment       string
+	environmentKind   string
+	argocd            bool
+	argocdNamespace   string
+	// argocdClusters is keyed by destination server (no trailing slash) or name.
+	argocdClusters map[string]string
+	names          namer
+}
+
+func (o options) config(endpoint string) *config {
+	c := &config{
+		cluster: o.Cluster, endpoint: endpoint,
+		environment: o.Environment, environmentKind: o.EnvironmentKind,
+		argocd: o.Argocd, argocdNamespace: o.ArgocdNamespace,
+		argocdClusters: map[string]string{},
+		names:          namer{platformProjects: map[string]bool{}},
+	}
+	for k, v := range o.ArgocdClusters {
+		c.argocdClusters[strings.TrimRight(strings.TrimSpace(k), "/")] = strings.TrimSpace(v)
+	}
+	for _, p := range o.ArgocdPlatformProjects {
+		if p = strings.TrimSpace(p); p != "" {
+			c.names.platformProjects[p] = true
+		}
+	}
+	return c
 }
 
 // clients is what a run needs from the cluster.
@@ -118,6 +161,22 @@ func newCollector(t collect.Target, connect connectFunc) (*Collector, error) {
 	if o.Cluster == "" {
 		return nil, fmt.Errorf("target %s: option cluster is required", t.Source())
 	}
+	o.Environment = strings.TrimSpace(o.Environment)
+	if o.Environment == "" {
+		o.Environment = o.Cluster
+	}
+	o.EnvironmentKind = strings.TrimSpace(o.EnvironmentKind)
+	if o.EnvironmentKind != "" && !validEnvironmentKind(o.EnvironmentKind) {
+		return nil, fmt.Errorf("target %s: option environment_kind %q is not one of %s", t.Source(), o.EnvironmentKind, strings.Join(environmentKinds, ", "))
+	}
+	if o.ArgocdNamespace = strings.TrimSpace(o.ArgocdNamespace); o.ArgocdNamespace == "" {
+		o.ArgocdNamespace = "argocd"
+	}
+	for k, v := range o.ArgocdClusters {
+		if strings.TrimSpace(k) == "" || strings.TrimSpace(v) == "" {
+			return nil, fmt.Errorf("target %s: option argocd_clusters needs a destination and an environment in every entry", t.Source())
+		}
+	}
 	c := &Collector{target: t, opts: o, connect: connect}
 	if connect == nil {
 		if !c.inCluster() && strings.TrimSpace(o.Kubeconfig) == "" {
@@ -154,16 +213,17 @@ func (c *Collector) run(ctx context.Context, started time.Time) *sdk.Batch {
 	if err != nil {
 		return collect.Failed(c.target, Kind, "", started, fmt.Errorf("server version: %w", err))
 	}
-	snap, err := gather(ctx, cl, c.opts.FinishedPods)
+	cfg := c.opts.config(cl.endpoint)
+	snap, err := gather(ctx, cl, c.opts.FinishedPods, cfg)
 	if err != nil {
 		return collect.Failed(c.target, Kind, ver.GitVersion, started, err)
 	}
 	snap.version = ver.GitVersion
 
 	b := sdk.NewBatch(c.target.Source(), sdk.ScopeFull)
-	buildBatch(b, c.opts.Cluster, cl.endpoint, snap)
+	buildBatch(b, cfg, snap)
 	problems := snap.problems
-	collect.Succeeded(b, c.target, Kind, ver.GitVersion, started, problems.warnings())
+	collect.Succeeded(b, c.target, Kind, ver.GitVersion, started, append(problems.warnings(), snap.warnings...))
 	if len(problems) > 0 {
 		// Something could not be read: what was read is kept, nothing else
 		// is withdrawn on the server (ADR 0005).

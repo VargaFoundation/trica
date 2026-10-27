@@ -52,13 +52,31 @@ type builder struct {
 	workloads       map[types.UID]string
 	replicaSetOwner map[types.UID]types.UID
 	podWorkload     map[string]string // pod ref -> workload ref
+
+	// The application layer (ADR 0069).
+	cfg *config
+	// nsEnv maps a namespace to the environment its label puts it in.
+	nsEnv map[string]string
+	// argo maps the name of an Argo CD Application to where it lands.
+	argo map[string]argoEntry
+	// workloadInstance maps a workload ref to the instance running on it;
+	// svcInstances maps a service ref to the instances behind it.
+	workloadInstance map[string]string
+	svcInstances     map[string][]string
+	// instances records the instances already linked to their environment.
+	instances map[string]bool
+	// links records the endpoint links already made.
+	links map[string]bool
 }
 
 // buildBatch maps snap into b. Everything is sorted, so that two runs on an
 // unchanged cluster emit identical batches.
-func buildBatch(b *sdk.Batch, cluster, endpoint string, snap *snapshot) {
+func buildBatch(b *sdk.Batch, cfg *config, snap *snapshot) {
+	cluster, endpoint := cfg.cluster, cfg.endpoint
 	x := &builder{
-		b: b, snap: snap,
+		b: b, snap: snap, cfg: cfg,
+		nsEnv: map[string]string{}, argo: map[string]argoEntry{}, workloadInstance: map[string]string{},
+		svcInstances: map[string][]string{}, instances: map[string]bool{}, links: map[string]bool{},
 		nodes: map[string]string{}, namespaces: map[string]string{}, services: map[string]string{},
 		workloads: map[types.UID]string{}, replicaSetOwner: map[types.UID]types.UID{}, podWorkload: map[string]string{},
 	}
@@ -69,10 +87,13 @@ func buildBatch(b *sdk.Batch, cluster, endpoint string, snap *snapshot) {
 		Set("api_endpoint", endpoint)
 
 	x.nodesAndNamespaces()
+	x.environments()
+	x.argoApplications()
 	x.workloadObjects()
 	x.pods()
 	x.servicesAndIngresses()
 	x.virtualMachines()
+	x.argoInstances()
 }
 
 func (x *builder) nodesAndNamespaces() {
@@ -161,25 +182,44 @@ type workloadInfo struct {
 	replicas, ready       int
 	counted               bool // replicas and ready mean something (not for jobs)
 	images                []string
+	// labels are the workload's own labels, completed by those of its pod
+	// template (a chart may put them on one only).
+	labels map[string]string
+}
+
+// mergeLabels returns own completed by fallback: own wins.
+func mergeLabels(own, fallback map[string]string) map[string]string {
+	out := make(map[string]string, len(own)+len(fallback))
+	for k, v := range fallback {
+		out[k] = v
+	}
+	for k, v := range own {
+		out[k] = v
+	}
+	return out
 }
 
 func (x *builder) workloadObjects() {
 	var all []workloadInfo
 	for _, d := range x.snap.deployments {
 		all = append(all, workloadInfo{kind: "deployment", namespace: d.Namespace, name: d.Name, uid: d.UID,
-			replicas: replicasOrOne(d.Spec.Replicas), ready: int(d.Status.ReadyReplicas), counted: true, images: images(d.Spec.Template.Spec.Containers)})
+			replicas: replicasOrOne(d.Spec.Replicas), ready: int(d.Status.ReadyReplicas), counted: true, images: images(d.Spec.Template.Spec.Containers),
+			labels: mergeLabels(d.Labels, d.Spec.Template.Labels)})
 	}
 	for _, s := range x.snap.statefulsets {
 		all = append(all, workloadInfo{kind: "statefulset", namespace: s.Namespace, name: s.Name, uid: s.UID,
-			replicas: replicasOrOne(s.Spec.Replicas), ready: int(s.Status.ReadyReplicas), counted: true, images: images(s.Spec.Template.Spec.Containers)})
+			replicas: replicasOrOne(s.Spec.Replicas), ready: int(s.Status.ReadyReplicas), counted: true, images: images(s.Spec.Template.Spec.Containers),
+			labels: mergeLabels(s.Labels, s.Spec.Template.Labels)})
 	}
 	for _, d := range x.snap.daemonsets {
 		all = append(all, workloadInfo{kind: "daemonset", namespace: d.Namespace, name: d.Name, uid: d.UID,
-			replicas: int(d.Status.DesiredNumberScheduled), ready: int(d.Status.NumberReady), counted: true, images: images(d.Spec.Template.Spec.Containers)})
+			replicas: int(d.Status.DesiredNumberScheduled), ready: int(d.Status.NumberReady), counted: true, images: images(d.Spec.Template.Spec.Containers),
+			labels: mergeLabels(d.Labels, d.Spec.Template.Labels)})
 	}
 	for _, c := range x.snap.cronjobs {
 		all = append(all, workloadInfo{kind: "cronjob", namespace: c.Namespace, name: c.Name, uid: c.UID,
-			images: images(c.Spec.JobTemplate.Spec.Template.Spec.Containers)})
+			images: images(c.Spec.JobTemplate.Spec.Template.Spec.Containers),
+			labels: mergeLabels(c.Labels, c.Spec.JobTemplate.Spec.Template.Labels)})
 	}
 	jobs := map[types.UID]*batchv1.Job{}
 	for i := range x.snap.jobs {
@@ -209,6 +249,7 @@ func (x *builder) workloadObjects() {
 			o.Set("replicas", w.replicas).Set("ready_replicas", w.ready)
 		}
 		setList(o, "images", w.images)
+		x.instanceOfWorkload(w, ref)
 	}
 	// A ReplicaSet is not reported (the Deployment is what an operator
 	// knows), but it is how a pod finds its Deployment.
@@ -319,6 +360,7 @@ func (x *builder) servicesAndIngresses() {
 				x.b.Relate("exposed_by", svcRef, ref)
 			}
 		}
+		x.endpoints(ing.Namespace, rules)
 	}
 }
 
@@ -327,6 +369,7 @@ func (x *builder) servicesAndIngresses() {
 func (x *builder) exposes(svcRef string, s corev1.Service) {
 	sel := labels.SelectorFromSet(s.Spec.Selector)
 	workloads := map[string]bool{}
+	instances := map[string]bool{}
 	for _, p := range x.snap.pods {
 		if p.Namespace != s.Namespace || finished(p) {
 			continue
@@ -342,7 +385,11 @@ func (x *builder) exposes(svcRef string, s corev1.Service) {
 	}
 	for _, w := range sortedKeys(workloads) {
 		x.b.Relate("exposed_by", w, svcRef)
+		if inst, ok := x.workloadInstance[w]; ok {
+			instances[inst] = true
+		}
 	}
+	x.svcInstances[svcRef] = sortedKeys(instances)
 }
 
 func servicePorts(ports []corev1.ServicePort) []map[string]any {

@@ -1,0 +1,332 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/component: app
+    app.kubernetes.io/instance: orion
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: orion
+    app.kubernetes.io/version: 0.1.0
+    pod-template-hash: 8679bffb84
+  name: orion-8679bffb84-49bk4
+  namespace: orion
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: orion-8679bffb84
+    uid: 00000000-0000-4000-8000-00000000004e
+  uid: 00000000-0000-4000-8000-000000000055
+spec:
+  containers:
+  - image: registry.example.test/orion/app:b49eb3f3bdbdfbe87d76e218033b0e25dcc4df0e
+    name: app
+  nodeName: kube-dev-02
+status:
+  containerStatuses:
+  - image: registry.example.test/orion/app:b49eb3f3bdbdfbe87d76e218033b0e25dcc4df0e
+    imageID: ''
+    name: app
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.37
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/component: boondmock
+    app.kubernetes.io/instance: orion
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: orion
+    app.kubernetes.io/version: 0.1.0
+    pod-template-hash: 7d84d8476
+  name: orion-boondmock-7d84d8476-g4gfz
+  namespace: orion
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: orion-boondmock-7d84d8476
+    uid: 00000000-0000-4000-8000-00000000004f
+  uid: 00000000-0000-4000-8000-000000000056
+spec:
+  containers:
+  - image: registry.example.test/ghcr-proxy/example-org/boondmanager-mock:0.11.0
+    name: boondmock
+  nodeName: kube-dev-03
+status:
+  containerStatuses:
+  - image: registry.example.test/ghcr-proxy/example-org/boondmanager-mock:0.11.0
+    imageID: ''
+    name: boondmock
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.38
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/instance: orion-keycloak
+    app.kubernetes.io/name: keycloakx
+    apps.kubernetes.io/pod-index: '0'
+    controller-revision-hash: orion-keycloak-7df968f9b8
+    statefulset.kubernetes.io/pod-name: orion-keycloak-0
+  name: orion-keycloak-0
+  namespace: orion
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: StatefulSet
+    name: orion-keycloak
+    uid: 00000000-0000-4000-8000-00000000004b
+  uid: 00000000-0000-4000-8000-000000000057
+spec:
+  containers:
+  - image: registry.example.test/orion/keycloak:26.0.7
+    name: keycloak
+  nodeName: kube-dev-01
+status:
+  containerStatuses:
+  - image: registry.example.test/orion/keycloak:26.0.7
+    imageID: ''
+    name: keycloak
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.39
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    application: spilo
+    apps.kubernetes.io/pod-index: '0'
+    cluster-name: orion-postgres-cluster
+    controller-revision-hash: orion-postgres-cluster-564c448b6c
+    spilo-role: master
+    statefulset.kubernetes.io/pod-name: orion-postgres-cluster-0
+    team: default
+  name: orion-postgres-cluster-0
+  namespace: orion
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: StatefulSet
+    name: orion-postgres-cluster
+    uid: 00000000-0000-4000-8000-00000000004c
+  uid: 00000000-0000-4000-8000-000000000058
+spec:
+  containers:
+  - image: registry.example.test/ghcr-proxy/zalando/spilo-16:3.2-p3
+    name: postgres
+  nodeName: kube-dev-01
+status:
+  containerStatuses:
+  - image: registry.example.test/ghcr-proxy/zalando/spilo-16:3.2-p3
+    imageID: ''
+    name: postgres
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.40
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: lyra-api
+    lyra.example.test/role: api
+    pod-template-hash: 66cf5d585
+    release: lyra-webui-dev
+  name: lyra-api-66cf5d585-f47sq
+  namespace: lyra
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: lyra-api-66cf5d585
+    uid: 00000000-0000-4000-8000-000000000050
+  uid: 00000000-0000-4000-8000-000000000059
+spec:
+  containers:
+  - image: registry.example.test/lyra/lyra-pipeline:c3e9b3c6737c9d99c2ecf057b057d033e1632564
+    name: api
+  nodeName: kube-dev-01
+status:
+  containerStatuses:
+  - image: registry.example.test/lyra/lyra-pipeline:c3e9b3c6737c9d99c2ecf057b057d033e1632564
+    imageID: ''
+    name: api
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.41
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: lyra-directory
+    lyra.example.test/role: directory
+    pod-template-hash: c596f4c95
+    release: lyra-webui-dev
+  name: lyra-directory-c596f4c95-dshkk
+  namespace: lyra
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: lyra-directory-c596f4c95
+    uid: 00000000-0000-4000-8000-000000000051
+  uid: 00000000-0000-4000-8000-00000000005a
+spec:
+  containers:
+  - image: registry.example.test/lyra/lyra-pipeline:c3e9b3c6737c9d99c2ecf057b057d033e1632564
+    name: directory
+  nodeName: kube-dev-02
+status:
+  containerStatuses:
+  - image: registry.example.test/lyra/lyra-pipeline:c3e9b3c6737c9d99c2ecf057b057d033e1632564
+    imageID: ''
+    name: directory
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.42
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    application: spilo
+    apps.kubernetes.io/pod-index: '0'
+    cluster-name: lyra-pg
+    controller-revision-hash: lyra-pg-769f97dc69
+    spilo-role: master
+    statefulset.kubernetes.io/pod-name: lyra-pg-0
+    team: lyra
+  name: lyra-pg-0
+  namespace: lyra
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: StatefulSet
+    name: lyra-pg
+    uid: 00000000-0000-4000-8000-00000000004d
+  uid: 00000000-0000-4000-8000-00000000005b
+spec:
+  containers:
+  - image: registry.example.test/ghcr-proxy/zalando/spilo-17:4.0-p2
+    name: postgres
+  nodeName: kube-dev-01
+status:
+  containerStatuses:
+  - image: ghcr.io/zalando/spilo-17:4.0-p2
+    imageID: ''
+    name: postgres
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.43
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: lyra-spicedb
+    chart: lyra-spicedb-0.1.0
+    env: dev
+    heritage: Helm
+    pod-template-hash: 75fb7bf845
+    release: lyra-spicedb-dev
+  name: lyra-spicedb-75fb7bf845-wdzg8
+  namespace: lyra
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: lyra-spicedb-75fb7bf845
+    uid: 00000000-0000-4000-8000-000000000052
+  uid: 00000000-0000-4000-8000-00000000005c
+spec:
+  containers:
+  - image: registry.example.test/dockerhub-proxy/authzed/spicedb:v1.54.0
+    name: spicedb
+  nodeName: kube-dev-01
+status:
+  containerStatuses:
+  - image: registry.example.test/dockerhub-proxy/authzed/spicedb:v1.54.0
+    imageID: ''
+    name: spicedb
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.44
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: lyra-webui
+    chart: lyra-webui-0.1.0
+    env: dev
+    heritage: Helm
+    pod-template-hash: 69cc6c848d
+    release: lyra-webui-dev
+  name: lyra-webui-69cc6c848d-gnwdr
+  namespace: lyra
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: lyra-webui-69cc6c848d
+    uid: 00000000-0000-4000-8000-000000000053
+  uid: 00000000-0000-4000-8000-00000000005d
+spec:
+  containers:
+  - image: registry.example.test/lyra/webui:b61e002327bfcb21e3683e7a9b2186a3d5360074
+    name: webui
+  nodeName: kube-dev-03
+status:
+  containerStatuses:
+  - image: registry.example.test/lyra/webui:b61e002327bfcb21e3683e7a9b2186a3d5360074
+    imageID: ''
+    name: webui
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.45
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: lyra-webui-auth
+    pod-template-hash: 5d9b8448d6
+  name: lyra-webui-auth-5d9b8448d6-wpk2q
+  namespace: lyra
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: lyra-webui-auth-5d9b8448d6
+    uid: 00000000-0000-4000-8000-000000000054
+  uid: 00000000-0000-4000-8000-00000000005e
+spec:
+  containers:
+  - image: registry.example.test/quay-proxy/oauth2-proxy/oauth2-proxy:v7.15.3
+    name: oauth-proxy
+  nodeName: kube-dev-01
+status:
+  containerStatuses:
+  - image: registry.example.test/quay-proxy/oauth2-proxy/oauth2-proxy:v7.15.3
+    imageID: ''
+    name: oauth-proxy
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.46

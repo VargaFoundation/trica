@@ -1,0 +1,528 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: orion-app-dev
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-00000000006f
+spec:
+  destination:
+    namespace: orion
+    server: https://203.0.113.1:6443
+  project: tenant-orion
+  source:
+    path: app/dev
+    repoURL: https://github.com/example-org/orion.git
+    targetRevision: deploy
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:19:02Z'
+  sourceType: Directory
+  sync:
+    revision: 9404edc2d3c79b260aba5eda5e664fe2e8477a5b
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: orion-app-prod
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000070
+spec:
+  destination:
+    namespace: orion
+    server: https://198.51.100.1:6443
+  project: tenant-orion
+  source:
+    path: app/prod
+    repoURL: https://github.com/example-org/orion.git
+    targetRevision: deploy
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:18:38Z'
+  sourceType: Directory
+  sync:
+    revision: 9404edc2d3c79b260aba5eda5e664fe2e8477a5b
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: orion-keycloak-prod
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000071
+spec:
+  destination:
+    namespace: orion
+    server: https://198.51.100.1:6443
+  project: tenant-orion
+  source:
+    helm:
+      releaseName: orion-keycloak
+      valueFiles:
+      - values.yaml
+      - values-prod.yaml
+    path: deploy/keycloak
+    repoURL: https://github.com/example-org/orion.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:19:07Z'
+  sourceType: Helm
+  sync:
+    revision: b49eb3f3bdbdfbe87d76e218033b0e25dcc4df0e
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: orion-postgres-dev
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000072
+spec:
+  destination:
+    namespace: orion
+    server: https://203.0.113.1:6443
+  project: tenant-orion
+  source:
+    helm:
+      releaseName: orion-postgres
+      valueFiles:
+      - values.yaml
+      - values-dev.yaml
+    path: deploy/postgres
+    repoURL: https://github.com/example-org/orion.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:18:39Z'
+  sourceType: Helm
+  sync:
+    revision: b49eb3f3bdbdfbe87d76e218033b0e25dcc4df0e
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    argocd.argoproj.io/instance: platform-apps
+  name: orion-tenant-base-dev
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000073
+spec:
+  destination:
+    namespace: orion
+    server: https://203.0.113.1:6443
+  project: infra
+  source:
+    helm:
+      releaseName: orion
+      valueFiles:
+      - values-orion-dev.yaml
+    path: platform/tenant-base
+    repoURL: https://github.com/example-org/infra.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:15:47Z'
+  sourceType: Helm
+  sync:
+    revision: 2c59caac9d7103eb66a586ede9ecb9996d92ba17
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    argocd.argoproj.io/instance: platform-apps
+  name: orion-ci
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000074
+spec:
+  destination:
+    namespace: tekton-orion
+    server: https://kubernetes.default.svc
+  project: tenant-orion-ci
+  source:
+    directory:
+      jsonnet: {}
+      recurse: true
+    path: .ci
+    repoURL: https://github.com/example-org/orion.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:18:49Z'
+  sourceType: Directory
+  sync:
+    revision: b49eb3f3bdbdfbe87d76e218033b0e25dcc4df0e
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lyra-webui-dev
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000075
+spec:
+  destination:
+    namespace: lyra
+    server: https://203.0.113.1:6443
+  project: tenant-lyra
+  source:
+    helm:
+      valueFiles:
+      - values-dev.yaml
+    path: deploy/webui
+    repoURL: https://github.com/example-org/lyra.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:19:21Z'
+  sourceType: Helm
+  sync:
+    revision: c4bab545cd226b10753e956adf50cb9e5f165910
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lyra-webui-prod
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000076
+spec:
+  destination:
+    namespace: lyra
+    server: https://198.51.100.1:6443
+  project: tenant-lyra
+  source:
+    helm:
+      valueFiles:
+      - values-prod.yaml
+    path: deploy/webui
+    repoURL: https://github.com/example-org/lyra.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:19:21Z'
+  sourceType: Helm
+  sync:
+    revision: c4bab545cd226b10753e956adf50cb9e5f165910
+    status: OutOfSync
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    argocd.argoproj.io/instance: platform-apps
+  name: vega-runtime-prod
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000077
+spec:
+  destination:
+    namespace: vega-run
+    server: https://198.51.100.1:6443
+  project: infra
+  source:
+    path: platform/vega-runtime
+    repoURL: https://github.com/example-org/infra.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:18:49Z'
+  sourceType: Helm
+  sync:
+    revision: 2c59caac9d7103eb66a586ede9ecb9996d92ba17
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    argocd.argoproj.io/instance: platform-apps
+  name: hiring-prod
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000078
+spec:
+  destination:
+    namespace: hiring
+    server: https://198.51.100.1:6443
+  project: hiring
+  source:
+    path: hiring/prod
+    repoURL: https://github.com/example-org/hiring.git
+    targetRevision: deploy
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:18:50Z'
+  sourceType: Directory
+  sync:
+    revision: 23c8f5f2272eeacafcbb46586fe2d2a782388493
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    app.kubernetes.io/part-of: hiring
+    hiring.example.test/env: dev
+  name: browserfarm-dev
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000079
+spec:
+  destination:
+    namespace: hiring
+    server: https://203.0.113.1:6443
+  project: hiring
+  source:
+    helm:
+      releaseName: browserfarm
+      valueFiles:
+      - values-dev.yaml
+    path: devops/browserfarm
+    repoURL: https://github.com/example-org/hiring.git
+    targetRevision: develop
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:18:56Z'
+  sourceType: Helm
+  sync:
+    revision: ed58f8569adc9603e81ae0e7013773590cce0345
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    argocd.argoproj.io/instance: platform-apps
+  name: harbor
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-00000000007a
+spec:
+  destination:
+    namespace: harbor
+    server: https://kubernetes.default.svc
+  project: infra
+  source:
+    helm:
+      releaseName: harbor
+      valueFiles:
+      - values.yaml
+    path: platform/harbor
+    repoURL: https://github.com/example-org/infra.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:16:03Z'
+  sourceType: Helm
+  sync:
+    revision: 2c59caac9d7103eb66a586ede9ecb9996d92ba17
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    argocd.argoproj.io/instance: platform-apps
+  name: ceph-csi-prod
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-00000000007b
+spec:
+  destination:
+    namespace: ceph
+    server: https://198.51.100.1:6443
+  project: infra
+  source:
+    helm:
+      releaseName: ceph-csi
+      valueFiles:
+      - values-prod.yaml
+    path: platform/ceph-csi
+    repoURL: https://github.com/example-org/infra.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:18:23Z'
+  sourceType: Helm
+  sync:
+    revision: 2c59caac9d7103eb66a586ede9ecb9996d92ba17
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    argocd.argoproj.io/instance: platform-apps
+  name: coredns-build
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-00000000007c
+spec:
+  destination:
+    namespace: kube-system
+    server: https://kubernetes.default.svc
+  project: infra
+  source:
+    helm:
+      releaseName: coredns-custom
+      valueFiles:
+      - values-build.yaml
+    path: platform/coredns
+    repoURL: https://github.com/example-org/infra.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:18:31Z'
+  sourceType: Helm
+  sync:
+    revision: 2c59caac9d7103eb66a586ede9ecb9996d92ba17
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    argocd.argoproj.io/instance: platform-apps
+  name: gvisor-prod
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-00000000007d
+spec:
+  destination:
+    server: https://198.51.100.1:6443
+  project: infra
+  source:
+    path: platform/gvisor/manifests
+    repoURL: https://github.com/example-org/infra.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:18:24Z'
+  sourceType: Directory
+  sync:
+    revision: 2c59caac9d7103eb66a586ede9ecb9996d92ba17
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    argocd.argoproj.io/instance: platform-apps
+  name: platform-apps
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-00000000007e
+spec:
+  destination:
+    namespace: argocd
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    directory:
+      include: '{*-application.yaml,*-appproject.yaml,tenant-*-apps-*-applicationset.yaml}'
+      jsonnet: {}
+      recurse: false
+    path: gitops
+    repoURL: https://github.com/example-org/infra.git
+    targetRevision: main
+status:
+  health:
+    status: Degraded
+  reconciledAt: '2026-10-26T20:19:11Z'
+  sourceType: Directory
+  sync:
+    revision: 2c59caac9d7103eb66a586ede9ecb9996d92ba17
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: altair-app-prod
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-00000000007f
+spec:
+  destination:
+    namespace: altair
+    server: https://198.51.100.1:6443
+  project: tenant-altair
+  source:
+    path: app/prod
+    repoURL: https://github.com/example-org/altair.git
+    targetRevision: deploy
+status:
+  health:
+    status: Degraded
+  reconciledAt: '2026-10-26T20:18:51Z'
+  sourceType: Directory
+  sync:
+    revision: 4e80b86f94d5c1e02c28b8df78eac422c78755ab
+    status: Synced
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    argocd.argoproj.io/instance: platform-apps
+  name: radar-ci
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000080
+spec:
+  destination:
+    namespace: tekton-radar
+    server: https://kubernetes.default.svc
+  project: tenant-radar-ci
+  source:
+    directory:
+      recurse: true
+    path: .ci
+    repoURL: https://github.com/example-org/radar.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:18:40Z'
+  sourceType: ''
+  sync:
+    revision: main
+    status: Unknown
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  labels:
+    argocd.argoproj.io/instance: platform-apps
+  name: keycloak-platform
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000081
+spec:
+  destination:
+    namespace: keycloak-platform
+    server: https://kubernetes.default.svc
+  project: infra
+  source:
+    helm:
+      releaseName: keycloak-platform
+      valueFiles:
+      - values.yaml
+    path: platform/keycloak-platform
+    repoURL: https://github.com/example-org/infra.git
+    targetRevision: main
+status:
+  health:
+    status: Healthy
+  reconciledAt: '2026-10-26T20:16:07Z'
+  sourceType: Helm
+  sync:
+    revision: 2c59caac9d7103eb66a586ede9ecb9996d92ba17
+    status: Synced

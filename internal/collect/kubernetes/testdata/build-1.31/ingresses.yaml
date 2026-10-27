@@ -1,0 +1,73 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-00000000003a
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: argo.build.example.test
+    http:
+      paths:
+      - backend:
+          service:
+            name: argocd-server
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - argo.build.example.test
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: harbor-ingress
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-00000000003b
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: registry.example.test
+    http:
+      paths:
+      - backend:
+          service:
+            name: harbor-core
+            port:
+              number: 80
+        path: /api/
+        pathType: Prefix
+      - backend:
+          service:
+            name: harbor-core
+            port:
+              number: 80
+        path: /service/
+        pathType: Prefix
+      - backend:
+          service:
+            name: harbor-core
+            port:
+              number: 80
+        path: /v2/
+        pathType: Prefix
+      - backend:
+          service:
+            name: harbor-core
+            port:
+              number: 80
+        path: /c/
+        pathType: Prefix
+      - backend:
+          service:
+            name: harbor-portal
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - registry.example.test
