@@ -611,6 +611,8 @@ types:
       criticality: {kind: enum, values: [low, medium, high, critical], label: {en: Criticality, fr: Criticité}, description: "Business criticality."}
       owner: {kind: string, search: true, label: {en: Owner, fr: Responsable}, description: "Owning team or person."}
       repository: {kind: string, search: true, label: {en: Repository, fr: Dépôt}, description: "Source repository URL."}
+      hosting: {kind: enum, values: [self, saas], label: {en: Hosting, fr: Hébergement}, description: "self: it runs on our own infrastructure and its instances are observed. saas: a vendor runs it, it is declared by hand and has no instance."}
+      vendor: {kind: string, search: true, label: {en: Vendor, fr: Éditeur}, description: "Who runs a SaaS application."}
       description: {kind: text, search: true, label: {en: Description, fr: Description}, description: "What the application does."}
   component:
     layer: application
@@ -627,11 +629,14 @@ types:
     label: {en: Instance, fr: Instance}
     description: A running instance of a component in an environment.
     display: key
+    parents: [component]
     attributes:
-      key: {kind: string, identity: strong, search: true, label: {en: Key, fr: Clé}, description: "application/component/environment/location."}
+      key: {kind: string, identity: strong, search: true, label: {en: Key, fr: Clé}, description: "application/component/environment/location; for a Kubernetes instance, application/component/environment/namespace."}
       version: {kind: string, search: true, label: {en: Version, fr: Version}, description: "Deployed version."}
       deployed_at: {kind: time, label: {en: Deployed at, fr: Déployé le}, description: "Last deployment time."}
       environment: {kind: string, search: true, label: {en: Environment, fr: Environnement}, description: "Environment name."}
+      health: {kind: string, search: true, label: {en: Health, fr: Santé}, description: "Health as the deployment tool reports it (Argo CD: Healthy, Progressing, Degraded, Suspended, Missing, Unknown)."}
+      sync_status: {kind: string, search: true, label: {en: Sync status, fr: Synchronisation}, description: "Whether the deployed state matches what was declared (Argo CD: Synced, OutOfSync, Unknown)."}
   endpoint:
     layer: application
     label: {en: Endpoint, fr: Point d'exposition}
@@ -645,9 +650,11 @@ types:
   environment:
     layer: application
     label: {en: Environment, fr: Environnement}
-    description: A deployment environment (dev, prod).
+    description: A deployment environment (dev, prod). The Kubernetes collector makes one per cluster, unless a namespace says otherwise.
     attributes:
       name: {kind: string, identity: strong, search: true, required: true, label: {en: Name, fr: Nom}, description: "Environment name."}
+      kind: {kind: enum, values: [prod, staging, dev, test, build, other], label: {en: Kind, fr: Type}, description: "What the environment is for."}
+      cluster: {kind: string, search: true, label: {en: Cluster, fr: Cluster}, description: "Name of the cluster that is this environment, when there is one."}
 
   # ------------------------------------------------------------- organisation
   team:
@@ -855,6 +862,12 @@ relations:
     description: A component reachable through an endpoint, service or ingress.
     from: [component, component_instance, k8s_service, workload]
     to: [endpoint, k8s_service, ingress, ip_address]
+  deployed_in:
+    label: {en: is deployed in, fr: est déployé dans}
+    inverse: {en: holds, fr: accueille}
+    description: The environment an application instance, a cluster or a namespace belongs to. A cluster is one environment unless a namespace says otherwise.
+    from: [component_instance, k8s_cluster, namespace]
+    to: [environment]
   owned_by:
     label: {en: is owned by, fr: est sous la responsabilité de}
     inverse: {en: owns, fr: est responsable de}

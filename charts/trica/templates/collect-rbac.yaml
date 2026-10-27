@@ -38,4 +38,37 @@ subjects:
   - kind: ServiceAccount
     name: {{ include "trica.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}
+{{- if .Values.collect.kubernetes.rbac.argocd }}
+---
+# Argo CD Applications (the collector's option argocd), in the namespace Argo CD
+# keeps them in and nowhere else. Applications only: not the cluster Secrets
+# where Argo CD keeps the credentials of its clusters, not its repositories.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "trica.fullname" . }}-collector-argocd
+  namespace: {{ .Values.collect.kubernetes.rbac.argocdNamespace }}
+  labels:
+    {{- include "trica.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [applications]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "trica.fullname" . }}-collector-argocd
+  namespace: {{ .Values.collect.kubernetes.rbac.argocdNamespace }}
+  labels:
+    {{- include "trica.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "trica.fullname" . }}-collector-argocd
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "trica.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
 {{- end }}

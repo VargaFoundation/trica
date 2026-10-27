@@ -1,0 +1,81 @@
+# Synthesised: nothing of this exists on a cluster. It covers what the recorded
+# Applications do not: a multi-source Application, repository addresses that
+# carry credentials (a fake token, to prove they are dropped), a destination
+# given by name, the trica.io annotations and a destination nobody mapped.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nova-api-prod
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-0000000001a1
+spec:
+  project: tenant-nova
+  destination:
+    namespace: nova
+    server: https://198.51.100.1:6443
+  sources:
+    - repoURL: https://git-user:EXAMPLE-NOT-A-SECRET@git.example.test/example-org/nova-values.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://git-user:EXAMPLE-NOT-A-SECRET@git.example.test/example-org/nova.git
+      path: deploy/prod
+      targetRevision: release
+      helm:
+        valueFiles:
+          - $values/prod.yaml
+status:
+  health:
+    status: Healthy
+  sync:
+    status: Synced
+    revision: "1111111111111111111111111111111111111111"
+    revisions:
+      - "2222222222222222222222222222222222222222"
+      - "3333333333333333333333333333333333333333"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nova-worker-staging
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-0000000001a2
+  annotations:
+    trica.io/application: Nova Suite
+    trica.io/component: worker
+spec:
+  project: tenant-nova
+  destination:
+    name: in-cluster
+    namespace: nova-staging
+  source:
+    repoURL: git@git.example.test:example-org/nova.git
+    path: deploy/staging
+    targetRevision: HEAD
+status:
+  health:
+    status: Progressing
+  sync:
+    status: OutOfSync
+    revision: "4444444444444444444444444444444444444444"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nova-edge-qa
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-0000000001a3
+spec:
+  project: tenant-nova
+  destination:
+    namespace: nova
+    server: https://192.0.2.77:6443
+  source:
+    repoURL: https://git.example.test/example-org/nova.git?ref=qa#readme
+    chart: nova-edge
+    targetRevision: 1.4.2
+status:
+  health:
+    status: Missing
+  sync:
+    status: Unknown
+    revision: 1.4.2

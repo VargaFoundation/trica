@@ -1,0 +1,349 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: app
+    app.kubernetes.io/instance: orion
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: orion
+    app.kubernetes.io/version: 0.1.0
+    argocd.argoproj.io/instance: orion-app-dev
+  name: orion
+  namespace: orion
+  uid: 00000000-0000-4000-8000-00000000005f
+spec:
+  clusterIP: 198.51.100.47
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/component: app
+    app.kubernetes.io/name: orion
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: boondmock
+    app.kubernetes.io/instance: orion
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: orion
+    app.kubernetes.io/version: 0.1.0
+    argocd.argoproj.io/instance: orion-app-dev
+  name: orion-boondmock
+  namespace: orion
+  uid: 00000000-0000-4000-8000-000000000060
+spec:
+  clusterIP: 198.51.100.48
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/component: boondmock
+    app.kubernetes.io/name: orion
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: headless
+    app.kubernetes.io/instance: orion-keycloak
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: keycloakx
+    app.kubernetes.io/version: 26.0.7
+    argocd.argoproj.io/instance: orion-keycloak-dev
+    helm.sh/chart: keycloakx-7.1.9
+  name: orion-keycloak-headless
+  namespace: orion
+  uid: 00000000-0000-4000-8000-000000000061
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/instance: orion-keycloak
+    app.kubernetes.io/name: keycloakx
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: http
+    app.kubernetes.io/instance: orion-keycloak
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: keycloakx
+    app.kubernetes.io/version: 26.0.7
+    argocd.argoproj.io/instance: orion-keycloak-dev
+    helm.sh/chart: keycloakx-7.1.9
+  name: orion-keycloak-http
+  namespace: orion
+  uid: 00000000-0000-4000-8000-000000000062
+spec:
+  clusterIP: 198.51.100.49
+  ports:
+  - name: http-internal
+    port: 9000
+    protocol: TCP
+    targetPort: http-internal
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+  selector:
+    app.kubernetes.io/instance: orion-keycloak
+    app.kubernetes.io/name: keycloakx
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    application: spilo
+    cluster-name: orion-postgres-cluster
+    spilo-role: master
+    team: default
+  name: orion-postgres-cluster
+  namespace: orion
+  uid: 00000000-0000-4000-8000-000000000063
+spec:
+  clusterIP: 198.51.100.50
+  ports:
+  - name: postgresql
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    application: spilo
+    cluster-name: orion-postgres-cluster
+  name: orion-postgres-cluster-config
+  namespace: orion
+  uid: 00000000-0000-4000-8000-000000000064
+spec:
+  clusterIP: None
+  ports: []
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    application: spilo
+    cluster-name: orion-postgres-cluster
+    spilo-role: replica
+    team: default
+  name: orion-postgres-cluster-repl
+  namespace: orion
+  uid: 00000000-0000-4000-8000-000000000065
+spec:
+  clusterIP: 198.51.100.51
+  ports:
+  - name: postgresql
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    application: spilo
+    cluster-name: orion-postgres-cluster
+    spilo-role: replica
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lyra-webui
+    argocd.argoproj.io/instance: lyra-webui-dev
+    chart: lyra-webui-0.1.0
+    env: dev
+    heritage: Helm
+    release: lyra-webui-dev
+  name: lyra-api
+  namespace: lyra
+  uid: 00000000-0000-4000-8000-000000000066
+spec:
+  clusterIP: 198.51.100.52
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: http
+  selector:
+    app: lyra-api
+    release: lyra-webui-dev
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lyra-webui
+    argocd.argoproj.io/instance: lyra-webui-dev
+    chart: lyra-webui-0.1.0
+    env: dev
+    heritage: Helm
+    release: lyra-webui-dev
+  name: lyra-directory
+  namespace: lyra
+  uid: 00000000-0000-4000-8000-000000000067
+spec:
+  clusterIP: 198.51.100.53
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: http
+  selector:
+    app: lyra-directory
+    release: lyra-webui-dev
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    application: spilo
+    cluster-name: lyra-pg
+    spilo-role: master
+    team: lyra
+  name: lyra-pg
+  namespace: lyra
+  uid: 00000000-0000-4000-8000-000000000068
+spec:
+  clusterIP: 198.51.100.54
+  ports:
+  - name: postgresql
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    application: spilo
+    cluster-name: lyra-pg
+  name: lyra-pg-config
+  namespace: lyra
+  uid: 00000000-0000-4000-8000-000000000069
+spec:
+  clusterIP: None
+  ports: []
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    application: spilo
+    cluster-name: lyra-pg
+    spilo-role: replica
+    team: lyra
+  name: lyra-pg-repl
+  namespace: lyra
+  uid: 00000000-0000-4000-8000-00000000006a
+spec:
+  clusterIP: 198.51.100.55
+  ports:
+  - name: postgresql
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    application: spilo
+    cluster-name: lyra-pg
+    spilo-role: replica
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lyra-spicedb
+    argocd.argoproj.io/instance: lyra-spicedb-dev
+    chart: lyra-spicedb-0.1.0
+    env: dev
+    heritage: Helm
+    release: lyra-spicedb-dev
+  name: lyra-spicedb
+  namespace: lyra
+  uid: 00000000-0000-4000-8000-00000000006b
+spec:
+  clusterIP: 198.51.100.56
+  ports:
+  - name: grpc
+    port: 50051
+    protocol: TCP
+    targetPort: grpc
+  - name: http
+    port: 8443
+    protocol: TCP
+    targetPort: http
+  selector:
+    app: lyra-spicedb
+    release: lyra-spicedb-dev
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lyra-webui
+    argocd.argoproj.io/instance: lyra-webui-dev
+    chart: lyra-webui-0.1.0
+    env: dev
+    heritage: Helm
+    release: lyra-webui-dev
+  name: lyra-webui
+  namespace: lyra
+  uid: 00000000-0000-4000-8000-00000000006c
+spec:
+  clusterIP: 198.51.100.57
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    app: lyra-webui
+    release: lyra-webui-dev
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: lyra-webui-auth
+    argocd.argoproj.io/instance: lyra-webui-dev
+  name: lyra-webui-auth
+  namespace: lyra
+  uid: 00000000-0000-4000-8000-00000000006d
+spec:
+  clusterIP: 198.51.100.58
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: lyra-webui-auth
+  type: ClusterIP

@@ -236,7 +236,8 @@ mode 2.
 Chart: `collect.enabled`, `collect.targets` (or `collect.targetsConfigMap`), `collect.secrets`
 (existing Secrets mounted under `/var/run/secrets/collect/<name>/`) and `collect.kubernetes.rbac`
 (a read-only ClusterRole for an `in-cluster` kubernetes target: `get`, `list` and `watch` on what
-the collector reads, no Secrets, no ConfigMaps; off by default). See
+the collector reads, no Secrets, no ConfigMaps; off by default; `rbac.argocd` adds a Role in
+`rbac.argocdNamespace` to list Argo CD Applications, ADR 0069). See
 [`charts/trica/README.md`](../../charts/trica/README.md).
 
 ## Mode 2: a remote collector

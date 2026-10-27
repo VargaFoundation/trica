@@ -131,6 +131,12 @@ collect:
     # Mounts the service account token in the pod (otherwise it is not).
     rbac:
       enabled: false
+      # Also read the Argo CD Applications (the collector's option argocd,
+      # ADR 0069): a Role limited to get/list/watch on applications.argoproj.io
+      # in argocdNamespace, bound to the same service account. Not the Secrets
+      # where Argo CD keeps the credentials of its clusters.
+      argocd: false
+      argocdNamespace: argocd
 
 # Live topology overlay (docs/reference/configuration.md#live-topology-overlay,
 # ADR 0041): link throughput and state read by the server from a

@@ -1,0 +1,1148 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: applicationset-controller
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-applicationset-controller
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+  name: argocd-applicationset-controller
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000005
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-applicationset-controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: applicationset-controller
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-applicationset-controller
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+    spec:
+      containers:
+      - image: quay.io/argoproj/argocd:v3.3.18
+        name: applicationset-controller
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-image-updater
+    app.kubernetes.io/version: v0.16.0
+    helm.sh/chart: argocd-image-updater-0.12.1
+  name: argocd-argocd-image-updater
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000006
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-image-updater
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/name: argocd-image-updater
+    spec:
+      containers:
+      - image: quay.io/argoprojlabs/argocd-image-updater:v0.16.0
+        name: argocd-image-updater
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: dex-server
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-dex-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+  name: argocd-dex-server
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000007
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-dex-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: dex-server
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-dex-server
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+    spec:
+      containers:
+      - image: ghcr.io/dexidp/dex:v2.45.1
+        name: dex-server
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: notifications-controller
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-notifications-controller
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+  name: argocd-notifications-controller
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000008
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-notifications-controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: notifications-controller
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-notifications-controller
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+    spec:
+      containers:
+      - image: quay.io/argoproj/argocd:v3.3.18
+        name: notifications-controller
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: redis
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-redis
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+  name: argocd-redis
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000009
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: redis
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-redis
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+    spec:
+      containers:
+      - image: ecr-public.aws.com/docker/library/redis:8.2.3-alpine
+        name: redis
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: repo-server
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-repo-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+  name: argocd-repo-server
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-00000000000a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-repo-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: repo-server
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-repo-server
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+    spec:
+      containers:
+      - image: quay.io/argoproj/argocd:v3.3.18
+        name: repo-server
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+  name: argocd-server
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-00000000000b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: server
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-server
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+    spec:
+      containers:
+      - image: quay.io/argoproj/argocd:v3.3.18
+        name: server
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: core
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    component: core
+    heritage: Helm
+    release: harbor
+  name: harbor-core
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-00000000000c
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor
+      component: core
+      release: harbor
+  template:
+    metadata:
+      labels:
+        app: harbor
+        app.kubernetes.io/component: core
+        app.kubernetes.io/instance: harbor
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/part-of: harbor
+        app.kubernetes.io/version: 2.14.3
+        chart: harbor
+        component: core
+        heritage: Helm
+        release: harbor
+    spec:
+      containers:
+      - image: goharbor/harbor-core:v2.14.3
+        name: core
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: jobservice
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    component: jobservice
+    heritage: Helm
+    release: harbor
+  name: harbor-jobservice
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-00000000000d
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor
+      component: jobservice
+      release: harbor
+  template:
+    metadata:
+      labels:
+        app: harbor
+        app.kubernetes.io/component: jobservice
+        app.kubernetes.io/instance: harbor
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/part-of: harbor
+        app.kubernetes.io/version: 2.14.3
+        chart: harbor
+        component: jobservice
+        heritage: Helm
+        release: harbor
+    spec:
+      containers:
+      - image: goharbor/harbor-jobservice:v2.14.3
+        name: jobservice
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: portal
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    component: portal
+    heritage: Helm
+    release: harbor
+  name: harbor-portal
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-00000000000e
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor
+      component: portal
+      release: harbor
+  template:
+    metadata:
+      labels:
+        app: harbor
+        app.kubernetes.io/component: portal
+        app.kubernetes.io/instance: harbor
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/part-of: harbor
+        app.kubernetes.io/version: 2.14.3
+        chart: harbor
+        component: portal
+        heritage: Helm
+        release: harbor
+    spec:
+      containers:
+      - image: goharbor/harbor-portal:v2.14.3
+        name: portal
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: registry
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    component: registry
+    heritage: Helm
+    release: harbor
+  name: harbor-registry
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-00000000000f
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor
+      component: registry
+      release: harbor
+  template:
+    metadata:
+      labels:
+        app: harbor
+        app.kubernetes.io/component: registry
+        app.kubernetes.io/instance: harbor
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/part-of: harbor
+        app.kubernetes.io/version: 2.14.3
+        chart: harbor
+        component: registry
+        heritage: Helm
+        release: harbor
+    spec:
+      containers:
+      - image: goharbor/registry-photon:v2.14.3
+        name: registry
+      - image: goharbor/harbor-registryctl:v2.14.3
+        name: registryctl
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/component: application-controller
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-application-controller
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+  name: argocd-application-controller
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000010
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-application-controller
+  serviceName: argocd-application-controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: application-controller
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-application-controller
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+    spec:
+      containers:
+      - image: quay.io/argoproj/argocd:v3.3.18
+        name: application-controller
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: database
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    component: database
+    heritage: Helm
+    release: harbor
+  name: harbor-database
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-000000000011
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor
+      component: database
+      release: harbor
+  serviceName: harbor-database
+  template:
+    metadata:
+      labels:
+        app: harbor
+        app.kubernetes.io/component: database
+        app.kubernetes.io/instance: harbor
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/part-of: harbor
+        app.kubernetes.io/version: 2.14.3
+        chart: harbor
+        component: database
+        heritage: Helm
+        release: harbor
+    spec:
+      containers:
+      - image: goharbor/harbor-db:v2.14.3
+        name: database
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: redis
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    component: redis
+    heritage: Helm
+    release: harbor
+  name: harbor-redis
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-000000000012
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor
+      component: redis
+      release: harbor
+  serviceName: harbor-redis
+  template:
+    metadata:
+      labels:
+        app: harbor
+        app.kubernetes.io/component: redis
+        app.kubernetes.io/instance: harbor
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/part-of: harbor
+        app.kubernetes.io/version: 2.14.3
+        chart: harbor
+        component: redis
+        heritage: Helm
+        release: harbor
+    spec:
+      containers:
+      - image: goharbor/redis-photon:v2.14.3
+        name: redis
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: trivy
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    component: trivy
+    heritage: Helm
+    release: harbor
+  name: harbor-trivy
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-000000000013
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor
+      component: trivy
+      release: harbor
+  serviceName: harbor-trivy
+  template:
+    metadata:
+      labels:
+        app: harbor
+        app.kubernetes.io/component: trivy
+        app.kubernetes.io/instance: harbor
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/part-of: harbor
+        app.kubernetes.io/version: 2.14.3
+        chart: harbor
+        component: trivy
+        heritage: Helm
+        release: harbor
+    spec:
+      containers:
+      - image: goharbor/trivy-adapter-photon:v2.14.3
+        name: trivy
+status:
+  readyReplicas: 1
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  labels:
+    app.kubernetes.io/component: applicationset-controller
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-applicationset-controller
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+    pod-template-hash: d99dc5cfc
+  name: argocd-applicationset-controller-d99dc5cfc
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: Deployment
+    name: argocd-applicationset-controller
+    uid: 00000000-0000-4000-8000-000000000005
+  uid: 00000000-0000-4000-8000-000000000014
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-applicationset-controller
+      pod-template-hash: d99dc5cfc
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: applicationset-controller
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-applicationset-controller
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+        pod-template-hash: d99dc5cfc
+    spec:
+      containers:
+      - image: quay.io/argoproj/argocd:v3.3.18
+        name: applicationset-controller
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  labels:
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/name: argocd-image-updater
+    pod-template-hash: 7c9bcd8fd6
+  name: argocd-argocd-image-updater-7c9bcd8fd6
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: Deployment
+    name: argocd-argocd-image-updater
+    uid: 00000000-0000-4000-8000-000000000006
+  uid: 00000000-0000-4000-8000-000000000015
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-image-updater
+      pod-template-hash: 7c9bcd8fd6
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/name: argocd-image-updater
+        pod-template-hash: 7c9bcd8fd6
+    spec:
+      containers:
+      - image: quay.io/argoprojlabs/argocd-image-updater:v0.16.0
+        name: argocd-image-updater
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  labels:
+    app.kubernetes.io/component: dex-server
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-dex-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+    pod-template-hash: 75dccff898
+  name: argocd-dex-server-75dccff898
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: Deployment
+    name: argocd-dex-server
+    uid: 00000000-0000-4000-8000-000000000007
+  uid: 00000000-0000-4000-8000-000000000016
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-dex-server
+      pod-template-hash: 75dccff898
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: dex-server
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-dex-server
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+        pod-template-hash: 75dccff898
+    spec:
+      containers:
+      - image: ghcr.io/dexidp/dex:v2.45.1
+        name: dex-server
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  labels:
+    app.kubernetes.io/component: notifications-controller
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-notifications-controller
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+    pod-template-hash: 7d5fdbc475
+  name: argocd-notifications-controller-7d5fdbc475
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: Deployment
+    name: argocd-notifications-controller
+    uid: 00000000-0000-4000-8000-000000000008
+  uid: 00000000-0000-4000-8000-000000000017
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-notifications-controller
+      pod-template-hash: 7d5fdbc475
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: notifications-controller
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-notifications-controller
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+        pod-template-hash: 7d5fdbc475
+    spec:
+      containers:
+      - image: quay.io/argoproj/argocd:v3.3.18
+        name: notifications-controller
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  labels:
+    app.kubernetes.io/component: redis
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-redis
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+    pod-template-hash: 6d6bbd4bdd
+  name: argocd-redis-6d6bbd4bdd
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: Deployment
+    name: argocd-redis
+    uid: 00000000-0000-4000-8000-000000000009
+  uid: 00000000-0000-4000-8000-000000000018
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-redis
+      pod-template-hash: 6d6bbd4bdd
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: redis
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-redis
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+        pod-template-hash: 6d6bbd4bdd
+    spec:
+      containers:
+      - image: ecr-public.aws.com/docker/library/redis:8.2.3-alpine
+        name: redis
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  labels:
+    app.kubernetes.io/component: repo-server
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-repo-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+    pod-template-hash: 59586cc48b
+  name: argocd-repo-server-59586cc48b
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: Deployment
+    name: argocd-repo-server
+    uid: 00000000-0000-4000-8000-00000000000a
+  uid: 00000000-0000-4000-8000-000000000019
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-repo-server
+      pod-template-hash: 59586cc48b
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: repo-server
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-repo-server
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+        pod-template-hash: 59586cc48b
+    spec:
+      containers:
+      - image: quay.io/argoproj/argocd:v3.3.18
+        name: repo-server
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+    pod-template-hash: 9d6bfdbd4
+  name: argocd-server-9d6bfdbd4
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: Deployment
+    name: argocd-server
+    uid: 00000000-0000-4000-8000-00000000000b
+  uid: 00000000-0000-4000-8000-00000000001a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-server
+      pod-template-hash: 9d6bfdbd4
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: server
+        app.kubernetes.io/instance: argocd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: argocd-server
+        app.kubernetes.io/part-of: argocd
+        app.kubernetes.io/version: v3.3.18
+        helm.sh/chart: argo-cd-9.5.11
+        pod-template-hash: 9d6bfdbd4
+    spec:
+      containers:
+      - image: quay.io/argoproj/argocd:v3.3.18
+        name: server
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: core
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    chart: harbor
+    component: core
+    heritage: Helm
+    pod-template-hash: 66f6ff98cd
+    release: harbor
+  name: harbor-core-66f6ff98cd
+  namespace: harbor
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: Deployment
+    name: harbor-core
+    uid: 00000000-0000-4000-8000-00000000000c
+  uid: 00000000-0000-4000-8000-00000000001b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor
+      component: core
+      pod-template-hash: 66f6ff98cd
+      release: harbor
+  template:
+    metadata:
+      labels:
+        app: harbor
+        app.kubernetes.io/component: core
+        app.kubernetes.io/instance: harbor
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/part-of: harbor
+        app.kubernetes.io/version: 2.14.3
+        chart: harbor
+        component: core
+        heritage: Helm
+        pod-template-hash: 66f6ff98cd
+        release: harbor
+    spec:
+      containers:
+      - image: goharbor/harbor-core:v2.14.3
+        name: core
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: jobservice
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    chart: harbor
+    component: jobservice
+    heritage: Helm
+    pod-template-hash: cbb657b5c
+    release: harbor
+  name: harbor-jobservice-cbb657b5c
+  namespace: harbor
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: Deployment
+    name: harbor-jobservice
+    uid: 00000000-0000-4000-8000-00000000000d
+  uid: 00000000-0000-4000-8000-00000000001c
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor
+      component: jobservice
+      pod-template-hash: cbb657b5c
+      release: harbor
+  template:
+    metadata:
+      labels:
+        app: harbor
+        app.kubernetes.io/component: jobservice
+        app.kubernetes.io/instance: harbor
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/part-of: harbor
+        app.kubernetes.io/version: 2.14.3
+        chart: harbor
+        component: jobservice
+        heritage: Helm
+        pod-template-hash: cbb657b5c
+        release: harbor
+    spec:
+      containers:
+      - image: goharbor/harbor-jobservice:v2.14.3
+        name: jobservice
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: portal
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    chart: harbor
+    component: portal
+    heritage: Helm
+    pod-template-hash: 6f67cdbd74
+    release: harbor
+  name: harbor-portal-6f67cdbd74
+  namespace: harbor
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: Deployment
+    name: harbor-portal
+    uid: 00000000-0000-4000-8000-00000000000e
+  uid: 00000000-0000-4000-8000-00000000001d
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor
+      component: portal
+      pod-template-hash: 6f67cdbd74
+      release: harbor
+  template:
+    metadata:
+      labels:
+        app: harbor
+        app.kubernetes.io/component: portal
+        app.kubernetes.io/instance: harbor
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/part-of: harbor
+        app.kubernetes.io/version: 2.14.3
+        chart: harbor
+        component: portal
+        heritage: Helm
+        pod-template-hash: 6f67cdbd74
+        release: harbor
+    spec:
+      containers:
+      - image: goharbor/harbor-portal:v2.14.3
+        name: portal
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: registry
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    chart: harbor
+    component: registry
+    heritage: Helm
+    pod-template-hash: 84b9df57c7
+    release: harbor
+  name: harbor-registry-84b9df57c7
+  namespace: harbor
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: Deployment
+    name: harbor-registry
+    uid: 00000000-0000-4000-8000-00000000000f
+  uid: 00000000-0000-4000-8000-00000000001e
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: harbor
+      component: registry
+      pod-template-hash: 84b9df57c7
+      release: harbor
+  template:
+    metadata:
+      labels:
+        app: harbor
+        app.kubernetes.io/component: registry
+        app.kubernetes.io/instance: harbor
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: harbor
+        app.kubernetes.io/part-of: harbor
+        app.kubernetes.io/version: 2.14.3
+        chart: harbor
+        component: registry
+        heritage: Helm
+        pod-template-hash: 84b9df57c7
+        release: harbor
+    spec:
+      containers:
+      - image: goharbor/registry-photon:v2.14.3
+        name: registry
+      - image: goharbor/harbor-registryctl:v2.14.3
+        name: registryctl

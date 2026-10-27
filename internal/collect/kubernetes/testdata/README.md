@@ -1,5 +1,24 @@
 # Fixtures of the kubernetes collector
 
+**Recorded (2026-10-26): `build-1.31/` and `dev-1.31/`**, from a k3s v1.31.1
+cluster pair and the Argo CD v3.3.18 that manages them (203 Applications; 19
+kept in `build-1.31/applications.yaml`: tenant applications in dev and prod, platform
+applications, an in-cluster one, a multi-source one). Read with `kubectl get` on
+`build` and `dev` (get only) and cut down to the fields the collector reads
+(nodes, namespaces, workloads, ReplicaSets, pods, services, ingresses,
+Applications). Anonymised: tenant names (`orion`, `lyra`, `vega`, `altair`, `hiring`),
+host names (`example.test`), the repository organisation (`example-org`), the
+project (`infra`), node names (`kube-build-01`, `kube-dev-01`...), every IP
+(documentation ranges; the dev API server is `203.0.113.1`, prod
+`198.51.100.1`), UIDs, UUIDs and commit SHAs (remapped). Dropped: environment
+variables, container arguments, annotations other than `trica.io/`, Application
+history, resources and operation state, Secrets and ConfigMaps (never read; the
+Argo CD cluster Secrets, which hold tokens, were not read at all).
+`build-1.31/applications-synthesised.yaml` is **synthesised**: a multi-source
+Application with a credentialed repository address (a fake `EXAMPLE-NOT-A-SECRET`),
+one annotated `trica.io/application`, one with an unmapped destination.
+`k3s-1.31/` and `kubeadm-1.29/` below are still synthesised.
+
 **These fixtures are synthesised from the Kubernetes and KubeVirt API
 documentation and from the shape of objects the author knows. None of them was
 recorded from a real cluster.** They are written to be valid for the API types
@@ -21,6 +40,8 @@ for `ip_address` (see the package README).
 | Directory | Models | Contains |
 |---|---|---|
 | `k3s-1.31/` | K3s v1.31.4+k3s1 with Cilium 1.16 and KubeVirt 1.4 | 3 nodes (1 control plane with etcd, 2 workers, one of them without role label), 8 namespaces, CoreDNS, local-path-provisioner, metrics-server, Traefik, Cilium (operator + DaemonSet), node-exporter, an application (Deployment of 2 replicas with a sidecar, StatefulSet, CronJob and its finished Job), 6 services (ClusterIP, headless, LoadBalancer, no selector), 1 Ingress with two hosts, 2 KubeVirt VirtualMachineInstances with their virt-launcher pods, and a Secret (see below) |
+| `build-1.31/` | Recorded: the build cluster (Argo CD and Harbor namespaces) | See above; `applications.yaml` is read through the dynamic fake. |
+| `dev-1.31/` | Recorded: a development cluster | 3 nodes, namespaces `orion` and `lyra`, no Argo CD. |
 | `kubeadm-1.29/` | kubeadm v1.29.9 | 2 nodes (one `NotReady`, the control-plane label has an empty value as kubeadm sets it), CoreDNS (2 replicas, 1 ready), kube-proxy, one application, a NodePort service; no Ingress, no KubeVirt |
 
 `version.json` is the body of `GET /version`; the other files are lists of

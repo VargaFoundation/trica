@@ -275,6 +275,13 @@
               "properties": {
                 "enabled": {
                   "type": "boolean"
+                },
+                "argocd": {
+                  "type": "boolean"
+                },
+                "argocdNamespace": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "additionalProperties": false

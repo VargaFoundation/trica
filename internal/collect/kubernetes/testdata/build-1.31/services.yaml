@@ -1,0 +1,348 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: applicationset-controller
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-applicationset-controller
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+  name: argocd-applicationset-controller
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-00000000002e
+spec:
+  clusterIP: 198.51.100.25
+  ports:
+  - name: http-webhook
+    port: 7000
+    protocol: TCP
+    targetPort: webhook
+  selector:
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/name: argocd-applicationset-controller
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: dex-server
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-dex-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+  name: argocd-dex-server
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-00000000002f
+spec:
+  clusterIP: 198.51.100.26
+  ports:
+  - name: http
+    port: 5556
+    protocol: TCP
+    targetPort: http
+  - name: grpc
+    port: 5557
+    protocol: TCP
+    targetPort: grpc
+  selector:
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/name: argocd-dex-server
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: redis
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-redis
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+  name: argocd-redis
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000030
+spec:
+  clusterIP: 198.51.100.27
+  ports:
+  - name: redis
+    port: 6379
+    protocol: TCP
+    targetPort: redis
+  selector:
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/name: argocd-redis
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: repo-server
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-repo-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+  name: argocd-repo-server
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000031
+spec:
+  clusterIP: 198.51.100.28
+  ports:
+  - name: tcp-repo-server
+    port: 8081
+    protocol: TCP
+    targetPort: repo-server
+  selector:
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/name: argocd-repo-server
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+  name: argocd-server
+  namespace: argocd
+  uid: 00000000-0000-4000-8000-000000000032
+spec:
+  clusterIP: 198.51.100.29
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/name: argocd-server
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    heritage: Helm
+    release: harbor
+  name: harbor-core
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-000000000033
+spec:
+  clusterIP: 198.51.100.30
+  ports:
+  - name: http-web
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: harbor
+    component: core
+    release: harbor
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    heritage: Helm
+    release: harbor
+  name: harbor-database
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-000000000034
+spec:
+  clusterIP: 198.51.100.31
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: harbor
+    component: database
+    release: harbor
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    heritage: Helm
+    release: harbor
+  name: harbor-jobservice
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-000000000035
+spec:
+  clusterIP: 198.51.100.32
+  ports:
+  - name: http-jobservice
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: harbor
+    component: jobservice
+    release: harbor
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    heritage: Helm
+    release: harbor
+  name: harbor-portal
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-000000000036
+spec:
+  clusterIP: 198.51.100.33
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: harbor
+    component: portal
+    release: harbor
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    heritage: Helm
+    release: harbor
+  name: harbor-redis
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-000000000037
+spec:
+  clusterIP: 198.51.100.34
+  ports:
+  - port: 6379
+    protocol: TCP
+    targetPort: 6379
+  selector:
+    app: harbor
+    component: redis
+    release: harbor
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    heritage: Helm
+    release: harbor
+  name: harbor-registry
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-000000000038
+spec:
+  clusterIP: 198.51.100.35
+  ports:
+  - name: http-registry
+    port: 5000
+    protocol: TCP
+    targetPort: 5000
+  - name: http-controller
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: harbor
+    component: registry
+    release: harbor
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    argocd.argoproj.io/instance: harbor
+    chart: harbor
+    heritage: Helm
+    release: harbor
+  name: harbor-trivy
+  namespace: harbor
+  uid: 00000000-0000-4000-8000-000000000039
+spec:
+  clusterIP: 198.51.100.36
+  ports:
+  - name: http-trivy
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: harbor
+    component: trivy
+    release: harbor
+  type: ClusterIP

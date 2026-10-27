@@ -41,15 +41,20 @@ type snapshot struct {
 	cronjobs     []batchv1.CronJob
 	ingresses    []networkingv1.Ingress
 	vmis         []unstructured.Unstructured
+	// apps are the Argo CD Applications, read when the argocd option is on.
+	apps []unstructured.Unstructured
 
 	problems problems
+	// warnings are what the run noticed and that does not make it partial:
+	// something unusual, not something it could not read.
+	warnings []string
 }
 
 // gather lists every resource the collector maps. A list that fails is
 // recorded in the snapshot and the others still run; only an expired context,
 // refused credentials, or every list failing ends the run with an error.
 // Pods that have ended are left out unless finishedPods is set.
-func gather(ctx context.Context, cl *clients, finishedPods bool) (*snapshot, error) {
+func gather(ctx context.Context, cl *clients, finishedPods bool, cfg *config) (*snapshot, error) {
 	s := &snapshot{}
 	attempted, failed := 0, 0
 	var aborted error
@@ -141,6 +146,18 @@ func gather(ctx context.Context, cl *clients, finishedPods bool) (*snapshot, err
 			})
 		return err
 	})
+
+	if cfg.argocd {
+		// Not optional: the operator asked for it, so an Argo CD that is not
+		// there, or a ServiceAccount that may not list it, is a failed read.
+		step("applications.argoproj.io", false, func() (err error) {
+			s.apps, err = listAll(ctx, cl.dyn.Resource(applicationResource).Namespace(cfg.argocdNamespace).List,
+				func(l *unstructured.UnstructuredList) ([]unstructured.Unstructured, string) {
+					return l.Items, l.GetContinue()
+				})
+			return err
+		})
+	}
 
 	if aborted != nil {
 		return nil, aborted

@@ -1,0 +1,577 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/component: application-controller
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-application-controller
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    apps.kubernetes.io/pod-index: '0'
+    controller-revision-hash: argocd-application-controller-6dd794b499
+    helm.sh/chart: argo-cd-9.5.11
+    statefulset.kubernetes.io/pod-name: argocd-application-controller-0
+  name: argocd-application-controller-0
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: StatefulSet
+    name: argocd-application-controller
+    uid: 00000000-0000-4000-8000-000000000010
+  uid: 00000000-0000-4000-8000-00000000001f
+spec:
+  containers:
+  - image: quay.io/argoproj/argocd:v3.3.18
+    name: application-controller
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: quay.io/argoproj/argocd:v3.3.18
+    imageID: ''
+    name: application-controller
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.10
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/component: applicationset-controller
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-applicationset-controller
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+    pod-template-hash: d99dc5cfc
+  name: argocd-applicationset-controller-d99dc5cfc-k2h4p
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: argocd-applicationset-controller-d99dc5cfc
+    uid: 00000000-0000-4000-8000-000000000014
+  uid: 00000000-0000-4000-8000-000000000020
+spec:
+  containers:
+  - image: quay.io/argoproj/argocd:v3.3.18
+    name: applicationset-controller
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: quay.io/argoproj/argocd:v3.3.18
+    imageID: ''
+    name: applicationset-controller
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.11
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/name: argocd-image-updater
+    pod-template-hash: 7c9bcd8fd6
+  name: argocd-argocd-image-updater-7c9bcd8fd6-9zlzb
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: argocd-argocd-image-updater-7c9bcd8fd6
+    uid: 00000000-0000-4000-8000-000000000015
+  uid: 00000000-0000-4000-8000-000000000021
+spec:
+  containers:
+  - image: quay.io/argoprojlabs/argocd-image-updater:v0.16.0
+    name: argocd-image-updater
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: quay.io/argoprojlabs/argocd-image-updater:v0.16.0
+    imageID: ''
+    name: argocd-image-updater
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.12
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/component: dex-server
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-dex-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+    pod-template-hash: 75dccff898
+  name: argocd-dex-server-75dccff898-72cn2
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: argocd-dex-server-75dccff898
+    uid: 00000000-0000-4000-8000-000000000016
+  uid: 00000000-0000-4000-8000-000000000022
+spec:
+  containers:
+  - image: ghcr.io/dexidp/dex:v2.45.1
+    name: dex-server
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: ghcr.io/dexidp/dex:v2.45.1
+    imageID: ''
+    name: dex-server
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.13
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/component: notifications-controller
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-notifications-controller
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+    pod-template-hash: 7d5fdbc475
+  name: argocd-notifications-controller-7d5fdbc475-84nmg
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: argocd-notifications-controller-7d5fdbc475
+    uid: 00000000-0000-4000-8000-000000000017
+  uid: 00000000-0000-4000-8000-000000000023
+spec:
+  containers:
+  - image: quay.io/argoproj/argocd:v3.3.18
+    name: notifications-controller
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: quay.io/argoproj/argocd:v3.3.18
+    imageID: ''
+    name: notifications-controller
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.14
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/component: redis
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-redis
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+    pod-template-hash: 6d6bbd4bdd
+  name: argocd-redis-6d6bbd4bdd-xnl8w
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: argocd-redis-6d6bbd4bdd
+    uid: 00000000-0000-4000-8000-000000000018
+  uid: 00000000-0000-4000-8000-000000000024
+spec:
+  containers:
+  - image: ecr-public.aws.com/docker/library/redis:8.2.3-alpine
+    name: redis
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: ecr-public.aws.com/docker/library/redis:8.2.3-alpine
+    imageID: ''
+    name: redis
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.15
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/component: repo-server
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-repo-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+    pod-template-hash: 59586cc48b
+  name: argocd-repo-server-59586cc48b-sndd7
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: argocd-repo-server-59586cc48b
+    uid: 00000000-0000-4000-8000-000000000019
+  uid: 00000000-0000-4000-8000-000000000025
+spec:
+  containers:
+  - image: quay.io/argoproj/argocd:v3.3.18
+    name: repo-server
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: quay.io/argoproj/argocd:v3.3.18
+    imageID: ''
+    name: repo-server
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.16
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.kubernetes.io/component: server
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: argocd-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/version: v3.3.18
+    helm.sh/chart: argo-cd-9.5.11
+    pod-template-hash: 9d6bfdbd4
+  name: argocd-server-9d6bfdbd4-l75xf
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: argocd-server-9d6bfdbd4
+    uid: 00000000-0000-4000-8000-00000000001a
+  uid: 00000000-0000-4000-8000-000000000026
+spec:
+  containers:
+  - image: quay.io/argoproj/argocd:v3.3.18
+    name: server
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: quay.io/argoproj/argocd:v3.3.18
+    imageID: ''
+    name: server
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.17
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: core
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    chart: harbor
+    component: core
+    heritage: Helm
+    pod-template-hash: 66f6ff98cd
+    release: harbor
+  name: harbor-core-66f6ff98cd-rw5h8
+  namespace: harbor
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: harbor-core-66f6ff98cd
+    uid: 00000000-0000-4000-8000-00000000001b
+  uid: 00000000-0000-4000-8000-000000000027
+spec:
+  containers:
+  - image: goharbor/harbor-core:v2.14.3
+    name: core
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: docker.io/goharbor/harbor-core:v2.14.3
+    imageID: ''
+    name: core
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.18
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: database
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    apps.kubernetes.io/pod-index: '0'
+    chart: harbor
+    component: database
+    controller-revision-hash: harbor-database-55989cc7f6
+    heritage: Helm
+    release: harbor
+    statefulset.kubernetes.io/pod-name: harbor-database-0
+  name: harbor-database-0
+  namespace: harbor
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: StatefulSet
+    name: harbor-database
+    uid: 00000000-0000-4000-8000-000000000011
+  uid: 00000000-0000-4000-8000-000000000028
+spec:
+  containers:
+  - image: goharbor/harbor-db:v2.14.3
+    name: database
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: docker.io/goharbor/harbor-db:v2.14.3
+    imageID: ''
+    name: database
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.19
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: jobservice
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    chart: harbor
+    component: jobservice
+    heritage: Helm
+    pod-template-hash: cbb657b5c
+    release: harbor
+  name: harbor-jobservice-cbb657b5c-w24rd
+  namespace: harbor
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: harbor-jobservice-cbb657b5c
+    uid: 00000000-0000-4000-8000-00000000001c
+  uid: 00000000-0000-4000-8000-000000000029
+spec:
+  containers:
+  - image: goharbor/harbor-jobservice:v2.14.3
+    name: jobservice
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: docker.io/goharbor/harbor-jobservice:v2.14.3
+    imageID: ''
+    name: jobservice
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.20
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: portal
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    chart: harbor
+    component: portal
+    heritage: Helm
+    pod-template-hash: 6f67cdbd74
+    release: harbor
+  name: harbor-portal-6f67cdbd74-kvm4j
+  namespace: harbor
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: harbor-portal-6f67cdbd74
+    uid: 00000000-0000-4000-8000-00000000001d
+  uid: 00000000-0000-4000-8000-00000000002a
+spec:
+  containers:
+  - image: goharbor/harbor-portal:v2.14.3
+    name: portal
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: docker.io/goharbor/harbor-portal:v2.14.3
+    imageID: ''
+    name: portal
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.21
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: redis
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    apps.kubernetes.io/pod-index: '0'
+    chart: harbor
+    component: redis
+    controller-revision-hash: harbor-redis-5449ff9879
+    heritage: Helm
+    release: harbor
+    statefulset.kubernetes.io/pod-name: harbor-redis-0
+  name: harbor-redis-0
+  namespace: harbor
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: StatefulSet
+    name: harbor-redis
+    uid: 00000000-0000-4000-8000-000000000012
+  uid: 00000000-0000-4000-8000-00000000002b
+spec:
+  containers:
+  - image: goharbor/redis-photon:v2.14.3
+    name: redis
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: docker.io/goharbor/redis-photon:v2.14.3
+    imageID: ''
+    name: redis
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.22
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: registry
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    chart: harbor
+    component: registry
+    heritage: Helm
+    pod-template-hash: 84b9df57c7
+    release: harbor
+  name: harbor-registry-84b9df57c7-mpdcg
+  namespace: harbor
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: ReplicaSet
+    name: harbor-registry-84b9df57c7
+    uid: 00000000-0000-4000-8000-00000000001e
+  uid: 00000000-0000-4000-8000-00000000002c
+spec:
+  containers:
+  - image: goharbor/registry-photon:v2.14.3
+    name: registry
+  - image: goharbor/harbor-registryctl:v2.14.3
+    name: registryctl
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: docker.io/goharbor/registry-photon:v2.14.3
+    imageID: ''
+    name: registry
+    ready: true
+    restartCount: 0
+  - image: docker.io/goharbor/harbor-registryctl:v2.14.3
+    imageID: ''
+    name: registryctl
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.23
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: harbor
+    app.kubernetes.io/component: trivy
+    app.kubernetes.io/instance: harbor
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: harbor
+    app.kubernetes.io/part-of: harbor
+    app.kubernetes.io/version: 2.14.3
+    apps.kubernetes.io/pod-index: '0'
+    chart: harbor
+    component: trivy
+    controller-revision-hash: harbor-trivy-75cbf64cd7
+    heritage: Helm
+    release: harbor
+    statefulset.kubernetes.io/pod-name: harbor-trivy-0
+  name: harbor-trivy-0
+  namespace: harbor
+  ownerReferences:
+  - apiVersion: apps/v1
+    controller: true
+    kind: StatefulSet
+    name: harbor-trivy
+    uid: 00000000-0000-4000-8000-000000000013
+  uid: 00000000-0000-4000-8000-00000000002d
+spec:
+  containers:
+  - image: goharbor/trivy-adapter-photon:v2.14.3
+    name: trivy
+  nodeName: kube-build-01
+status:
+  containerStatuses:
+  - image: docker.io/goharbor/trivy-adapter-photon:v2.14.3
+    imageID: ''
+    name: trivy
+    ready: true
+    restartCount: 0
+  phase: Running
+  podIP: 203.0.113.24

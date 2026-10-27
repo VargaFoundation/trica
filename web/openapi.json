@@ -381,6 +381,20 @@
               "fr": "Domaine"
             }
           },
+          "hosting": {
+            "description": "self: it runs on our own infrastructure and its instances are observed. saas: a vendor runs it, it is declared by hand and has no instance.",
+            "enum": [
+              "self",
+              "saas"
+            ],
+            "title": "Hosting",
+            "type": "string",
+            "x-trica-kind": "enum",
+            "x-trica-label": {
+              "en": "Hosting",
+              "fr": "Hébergement"
+            }
+          },
           "name": {
             "description": "Application slug.",
             "title": "Name",
@@ -409,6 +423,16 @@
             "x-trica-label": {
               "en": "Repository",
               "fr": "Dépôt"
+            }
+          },
+          "vendor": {
+            "description": "Who runs a SaaS application.",
+            "title": "Vendor",
+            "type": "string",
+            "x-trica-kind": "string",
+            "x-trica-label": {
+              "en": "Vendor",
+              "fr": "Éditeur"
             }
           }
         },
@@ -630,14 +654,34 @@
               "fr": "Environnement"
             }
           },
+          "health": {
+            "description": "Health as the deployment tool reports it (Argo CD: Healthy, Progressing, Degraded, Suspended, Missing, Unknown).",
+            "title": "Health",
+            "type": "string",
+            "x-trica-kind": "string",
+            "x-trica-label": {
+              "en": "Health",
+              "fr": "Santé"
+            }
+          },
           "key": {
-            "description": "application/component/environment/location.",
+            "description": "application/component/environment/location; for a Kubernetes instance, application/component/environment/namespace.",
             "title": "Key",
             "type": "string",
             "x-trica-kind": "string",
             "x-trica-label": {
               "en": "Key",
               "fr": "Clé"
+            }
+          },
+          "sync_status": {
+            "description": "Whether the deployed state matches what was declared (Argo CD: Synced, OutOfSync, Unknown).",
+            "title": "Sync status",
+            "type": "string",
+            "x-trica-kind": "string",
+            "x-trica-label": {
+              "en": "Sync status",
+              "fr": "Synchronisation"
             }
           },
           "version": {
@@ -1827,6 +1871,34 @@
         "additionalProperties": true,
         "description": "Attributes of a environment object. Other attributes may appear; those of the schema are typed.",
         "properties": {
+          "cluster": {
+            "description": "Name of the cluster that is this environment, when there is one.",
+            "title": "Cluster",
+            "type": "string",
+            "x-trica-kind": "string",
+            "x-trica-label": {
+              "en": "Cluster",
+              "fr": "Cluster"
+            }
+          },
+          "kind": {
+            "description": "What the environment is for.",
+            "enum": [
+              "prod",
+              "staging",
+              "dev",
+              "test",
+              "build",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string",
+            "x-trica-kind": "enum",
+            "x-trica-label": {
+              "en": "Kind",
+              "fr": "Type"
+            }
+          },
           "name": {
             "description": "Environment name.",
             "title": "Name",
