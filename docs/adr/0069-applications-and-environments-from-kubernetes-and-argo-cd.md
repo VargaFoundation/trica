@@ -65,7 +65,8 @@ Argo CD describes them.
   to its application. `TestImpactReachesApplicationInstances` guards it.
 - dev and prod are known only through Argo CD (instance, health, sync, version) until a
   collector runs there; their workloads, pods and nodes are not in the inventory.
-- `platform-apps` (project `default`) becomes an application of its own; accepted.
+- `platform-apps` (project `default`) becomes an application of its own unless `default` is listed in
+  `argocd_platform_projects` (done at Diametral).
 - The `<application>-<component>-<env>` naming is a convention: an estate that does not follow
   it sets `trica.io/application` and `trica.io/component` on the Application.
 - A scp-style repository address (`git@host:org/repo`) is kept as `host:org/repo`.
@@ -75,3 +76,12 @@ Argo CD describes them.
 - Reading the Argo CD cluster Secrets for the names: secrets of that kind carry tokens.
 - A ClusterRole rule for `applications`: it would grant every namespace for what lives in one.
 - Guessing an application from an Argo CD label alone: wrong guesses are noise in a CMDB.
+
+## Amendment (2026-10-27): the platform's tools installed outside Argo CD
+
+Measured in production after the first run: Argo CD itself, Cilium and Tekton are installed
+outside Argo CD and carry `app.kubernetes.io/part-of`, so each became an application of its own
+(`argocd`, `cilium`, five `tekton-*`). The option `platform_namespaces` lists the namespaces of
+such tools: a labelled workload there is the component `<part-of>` of the application
+`platform`. Elsewhere `part-of` keeps naming an application.
+
