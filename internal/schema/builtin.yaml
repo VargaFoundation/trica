@@ -604,6 +604,8 @@ types:
     layer: application
     label: {en: Application, fr: Application}
     description: A business application. Declared next to its code, its instances are observed.
+    # The human name when one is declared (a SaaS: "Microsoft Entra ID"), else the slug.
+    display_template: "{display_name}"
     attributes:
       name: {kind: string, identity: strong, search: true, required: true, label: {en: Name, fr: Nom}, description: "Application slug."}
       display_name: {kind: string, search: true, label: {en: Display name, fr: Nom affiché}, description: "Human name."}
