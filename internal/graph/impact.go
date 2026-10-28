@@ -28,6 +28,12 @@ const (
 	RuleParent      = "parent"      // its container is down
 	RulePower       = "power"       // every power supply it contains is down
 	RuleUnreachable = "unreachable" // cut from every anchor by the failure
+	// RuleRescheduled: every pod of a workload is down but a node of its
+	// cluster is up, so Kubernetes starts them again there: degraded, not down.
+	RuleRescheduled = "rescheduled"
+	// RuleInstances: an application is down when all its instances are, and
+	// degraded when one of them is down or degraded.
+	RuleInstances = "instances"
 )
 
 // ImpactOptions tunes an impact query.
@@ -69,9 +75,16 @@ type ImpactResult struct {
 //     relation (hosts, contains) from its From to its To;
 //   - to_from relations (runs_on, depends_on): the To down takes the From down;
 //   - supply relations (powered_by, served_by, routes_via): the From goes
-//     down when every target it has of that relation type is down;
+//     down when every target it has of that relation type is down, and is
+//     degraded while only some are (its redundancy is gone);
+//   - a workload whose pods are all down is only degraded while a node of its
+//     cluster is up (Kubernetes starts them again there), down when none is;
 //   - a device whose power supplies (psu children) are all down is down;
-//   - degrade relations (calls): the From is degraded, and it stops there;
+//   - degrade relations (calls): the From is degraded;
+//   - a degraded object degrades what runs on or depends on it (to_from
+//     relations), nothing else;
+//   - an application is down when all its instances are, degraded when one of
+//     them is down or degraded;
 //   - link relations (cabled_to, maps_to): an object that could reach an
 //     anchor before the failure and cannot any more is down.
 func (s *Snapshot) Impact(failed []string, opt ImpactOptions) (*ImpactResult, error) {
@@ -91,6 +104,9 @@ func (s *Snapshot) Impact(failed []string, opt ImpactOptions) (*ImpactResult, er
 	}
 	for {
 		p.drain()
+		if p.settle() > 0 {
+			continue
+		}
 		if before == nil {
 			break
 		}
@@ -114,6 +130,9 @@ type propagation struct {
 	s     *Snapshot
 	state map[string]*Affected
 	queue []string
+	// degraded holds the objects newly degraded, whose to_from dependents
+	// are degraded in turn.
+	degraded []string
 }
 
 func (p *propagation) isDown(id string) bool {
@@ -144,6 +163,7 @@ func (p *propagation) degrade(id, rule, cause string, depth int) {
 		return
 	}
 	p.state[id] = &Affected{ID: id, Type: n.Type, Display: n.Display, State: StateDegraded, Rule: rule, Cause: cause, Depth: depth}
+	p.degraded = append(p.degraded, id)
 }
 
 // drain propagates every queued failure until nothing changes. Each object
@@ -168,7 +188,12 @@ func (p *propagation) drain() {
 			case schema.ImpactDegrade:
 				p.degrade(e.From, e.Type, id, d)
 			case schema.ImpactSupply:
-				if p.allSuppliersDown(e.From, e.Type) {
+				switch {
+				case !p.allSuppliersDown(e.From, e.Type):
+					p.degrade(e.From, e.Type, id, d)
+				case p.reschedulable(e.From):
+					p.degrade(e.From, RuleRescheduled, id, d)
+				default:
 					p.down(e.From, e.Type, id, d)
 				}
 			}
@@ -176,7 +201,108 @@ func (p *propagation) drain() {
 		if n := p.s.Nodes[id]; n.Type == "psu" && n.ParentID != "" && p.allPSUsDown(n.ParentID) {
 			p.down(n.ParentID, RulePower, id, d)
 		}
+		p.drainDegraded()
 	}
+	p.drainDegraded()
+}
+
+// drainDegraded degrades what runs on or depends on a degraded object.
+func (p *propagation) drainDegraded() {
+	for len(p.degraded) > 0 {
+		id := p.degraded[0]
+		p.degraded = p.degraded[1:]
+		a := p.state[id]
+		if a == nil || a.State != StateDegraded {
+			continue
+		}
+		for _, e := range p.s.In[id] {
+			if e.Impact == schema.ImpactToFrom {
+				p.degrade(e.From, e.Type, id, a.Depth+1)
+			}
+		}
+	}
+}
+
+// settle applies the rules that look at a whole set once the propagation is
+// still: a workload left degraded because its cluster had a live node goes
+// down when no node of that cluster is up any more; an application takes the
+// state of its instances. It returns how many objects it took down or
+// degraded, so that the caller propagates again.
+func (p *propagation) settle() int {
+	changed := 0
+	for _, id := range sortedKeys(p.s.Nodes) {
+		n := p.s.Nodes[id]
+		switch n.Type {
+		case "workload":
+			if a := p.state[id]; a != nil && a.State == StateDegraded && p.allSuppliersDown(id, "served_by") && len(p.s.Out[id]) > 0 && !p.reschedulable(id) {
+				p.down(id, "served_by", a.Cause, a.Depth)
+				changed++
+			}
+		case "application":
+			if p.state[id] != nil && p.state[id].State == StateDown {
+				continue
+			}
+			down, hit, total, cause, depth := 0, 0, 0, "", 0
+			for _, inst := range p.instancesOf(id) {
+				total++
+				if a := p.state[inst]; a != nil {
+					hit++
+					if a.State == StateDown {
+						down++
+					}
+					if cause == "" || a.Depth > depth {
+						cause, depth = inst, a.Depth
+					}
+				}
+			}
+			switch {
+			case total > 0 && down == total:
+				p.down(id, RuleInstances, cause, depth+1)
+				changed++
+			case hit > 0 && p.state[id] == nil:
+				p.degrade(id, RuleInstances, cause, depth+1)
+				p.drainDegraded()
+				changed++
+			}
+		}
+	}
+	return changed
+}
+
+// reschedulable says whether a workload whose pods are down can have them
+// started again: it is in a cluster that still has a node up.
+func (p *propagation) reschedulable(id string) bool {
+	n := p.s.Nodes[id]
+	if n == nil || n.Type != "workload" {
+		return false
+	}
+	cluster := n.ParentID
+	for cluster != "" && p.s.Nodes[cluster] != nil && p.s.Nodes[cluster].Type != "k8s_cluster" {
+		cluster = p.s.Nodes[cluster].ParentID
+	}
+	if cluster == "" || p.s.Nodes[cluster] == nil || p.isDown(cluster) {
+		return false
+	}
+	for _, c := range p.s.Children[cluster] {
+		if k := p.s.Nodes[c]; k.Type == "k8s_node" && k.Status != StatusAbsent && !p.isDown(c) {
+			return true
+		}
+	}
+	return false
+}
+
+// instancesOf lists the component instances below an application (in its
+// components), absent ones left out.
+func (p *propagation) instancesOf(app string) []string {
+	var out []string
+	for _, c := range p.s.Children[app] {
+		for _, i := range p.s.Children[c] {
+			if n := p.s.Nodes[i]; n.Type == "component_instance" && n.Status != StatusAbsent {
+				out = append(out, i)
+			}
+		}
+	}
+	return out
 }
 
 func (p *propagation) allSuppliersDown(id, relType string) bool {
@@ -318,7 +444,7 @@ func (s *Snapshot) hasLinks(id string) bool {
 	return false
 }
 
-func sortedKeys(m map[string]bool) []string {
+func sortedKeys[V any](m map[string]V) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
 		out = append(out, k)
