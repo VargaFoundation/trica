@@ -58,10 +58,39 @@ tunnels on the rack frame at rack level. Now:
 - **Proof.** `e2e/topology-labels.spec.ts` reads the boxes the browser draws at every level of the e2e
   inventory, in both themes, and fails if two labels intersect or a label covers a block.
 
+## Amendment (2026-10-28): a rack's tree routes its lines round the cards
+
+Production feedback on a busy rack (three switches, seven servers cabled to each, a bastion, two
+gates): "c'est le bordel". Lines between the cards ran straight over the cards in their way, all the
+links of a layer shared one 44 px channel, every line carried two port names, and a device cabled to
+nothing but a gate had no card, so its link was an arc across the whole tree. Now (`tree.ts`,
+`planTree`, `orderLayers`; `scene.ts`, `placeCards`, `cardEdges`):
+
+- **Order.** Within a layer, a card moves to the mean position of its neighbours above, then below
+  (one barycentre sweep each way), so that a tree's links cross less.
+- **Rows.** A layer longer than six cards wraps onto rows of near equal length.
+- **Channels and corridors.** A line between two rows runs along the channel between them, on a lane
+  of its own; past rows in its way it runs down a corridor free of cards (between two of them, or
+  beside the row), on a track of its own. A channel grows with its lanes, the gaps between cards with
+  their tracks; a line that rises into a card moves aside when it would lie on one that drops out of
+  the card above. Two cards side by side are joined straight across, two further apart over the top
+  of their row. No line of the tree runs over a card or lies on another.
+- **Gates.** A device linked to nothing but a gate (a bastion to the Internet) gets a card. A link to
+  a gate leaves the card's east side when no card is right of it, otherwise its top, runs along the
+  channel above its row to a lane of its own right of the tree, and down that lane to the gate.
+- **Leaders.** A slab meets its card through a gutter left of the tree, then the card's west side,
+  or, past a card on its left, along the top of its row.
+- **Port names.** Past eight lines, a tree's port names wait until a line or a card is pointed at.
+- **Proof.** `tree.test.ts` plans a three-switch, seven-server tree and fails if a line enters a card
+  or lies on another; `rack-tree.test.ts` builds the scene of `testdata/busyRack.ts` (synthesised on
+  the shape of the production rack) at all four rotations and fails if a sampled point of any line is
+  inside a card, if a link is drawn as an arc, if the port names show on the dense tree, or if a
+  device linked only to a gate has no card.
+
 ## Not drawn
 
 No pixel test (the proof is the tests on the scene model plus screenshots reviewed by a person); no
-route that avoids other lines crossing; no per-port drawing on a rack front; no export of the map.
+route that avoids other lines crossing (in a rack's tree lines still cross, but never overlap nor run over a card); no per-port drawing on a rack front; no export of the map.
 
 ## Consequences
 

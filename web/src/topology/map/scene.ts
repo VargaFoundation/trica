@@ -12,9 +12,9 @@ import { isGate, layoutWorld, UZ, type ItemRole, type Plate, type WorldItem, typ
 import { edgeUtilClass, linkState, type Direction, type LinkState } from "./flow";
 import { badgeBox, badgeDistances, hitsAny, leaderBetween, merge, placePill, type PillSize, type PillSpec } from "./labels";
 import { bundleMark, endBadge } from "./port";
-import { assignLanes, fanOffsets, gateRoute, offsetPolyline, orthogonalRoute, pointAt, pointAtDistance, polylineLength, quadAt, quadLength, roundedPath, trayLaneY, trayRect, trayRoute, type Side } from "./route";
+import { assignLanes, fanOffsets, offsetPolyline, pointAt, pointAtDistance, polylineLength, quadAt, quadLength, roundedPath, trayLaneY, trayRect, trayRoute } from "./route";
 import { BAND_WIDTH, speedBand, type SpeedBand } from "./speed";
-import { layoutCards, rankTree, type TreeEdge, type TreeNode } from "./tree";
+import { orderLayers, planTree, rankTree, type TreeEdge, type TreeNode, type TreePlan } from "./tree";
 
 export interface Cabinet {
   iso: IsoBox;
@@ -653,151 +653,89 @@ export function placeBadges(edges: SceneEdge[], taken: Bounds[]): void {
 /** A point a fraction of the way from the first end to the centre. */
 const pointAtLerp = (ends: [Pt, Pt], t: number, mid: Pt): Pt => ({ x: ends[0].x + (mid.x - ends[0].x) * t * 2, y: ends[0].y + (mid.y - ends[0].y) * t * 2 });
 
-const CARD = { w: 158, h: 46, gapX: 40, gapY: 44, perRow: 3 };
+const CARD = { w: 158, h: 46, gapX: 40, gapY: 44, perRow: 6, track: 10 };
+/** Past this many lines a tree's port names wait until a line or a card is pointed at. */
+const TREE_PORTS = 8;
 
-/** Places the cards of a rack's tree to the right of the drawing and returns the layers' slots. */
-function placeCards(items: SceneItem[], layers: string[][]): void {
+/**
+ * Places the cards of a rack's tree right of the drawing, routes the links between them (`planTree`),
+ * and joins each slab to its card by a leader: down a gutter left of the tree, then into the card's
+ * west side, or, past a card on its left, along the top of its row. Returns the routes, in the scene's
+ * coordinates, and the lanes of the links to the gates (finished once the gates stand).
+ */
+function placeCards(items: SceneItem[], layers: string[][], links: MapEdge[], gateRank: ReadonlyMap<string, number>): TreePlan {
   const at = new Map(items.map((i) => [i.id, i]));
   const rackItems = items.filter((i) => i.role === "device" || i.role === "shelf");
   const pills = items.filter((i) => i.labelShown && !i.card && i.pill.x1 > 0).map((i) => i.pill.x1);
-  const x0 = Math.max(0, ...rackItems.map((i) => i.iso.bounds.x1), ...pills) + 56;
-  const y0 = Math.min(...items.filter((i) => i.role === "device").map((i) => i.iso.bounds.y0), Infinity);
-  const { slots } = layoutCards(layers, CARD);
-  for (const [id, s] of slots) {
+  const x0 = Math.max(0, ...rackItems.map((i) => i.iso.bounds.x1), ...pills) + 64;
+  const y0f = Math.min(...items.filter((i) => i.role === "device").map((i) => i.iso.bounds.y0), Infinity);
+  const y0 = Number.isFinite(y0f) ? y0f : 0;
+  const inTree = new Set(layers.flat());
+  const between = links.filter((e) => inTree.has(e.a) && inTree.has(e.b));
+  const toGates = links.flatMap((e) => (inTree.has(e.a) && gateRank.has(e.b) ? [{ key: e.id, card: e.a, gate: gateRank.get(e.b) as number }] : inTree.has(e.b) && gateRank.has(e.a) ? [{ key: e.id, card: e.b, gate: gateRank.get(e.a) as number }] : []));
+  const plan = planTree(orderLayers(layers, between), between.map((e) => ({ key: e.id, a: e.a, b: e.b })), toGates, CARD);
+  const move = (p: Pt): Pt => ({ x: fmt(p.x + x0), y: fmt(p.y + y0) });
+  const routes = new Map([...plan.routes].map(([k, pts]) => [k, pts.map(move)] as const));
+  const exits = new Map([...plan.exits].map(([k, x]) => [k, { pts: x.pts.map(move), laneX: fmt(x.laneX + x0) }] as const));
+  const cards = new Map([...plan.cards].map(([k, c]) => [k, { ...c, x: fmt(c.x + x0), y: fmt(c.y + y0) }] as const));
+  const gutter = x0 - 26;
+  for (const [id, c] of cards) {
     const it = at.get(id);
     if (!it) continue;
     it.card = {
-      x: fmt(x0 + s.x),
-      y: fmt((Number.isFinite(y0) ? y0 : 0) + s.y),
+      x: c.x,
+      y: c.y,
       w: CARD.w,
       h: CARD.h,
       icon: kindOf({ type: "device", attributes: { role: it.node.role } }).icon,
       name: it.label,
       model: it.node.model,
-      layer: s.layer,
+      layer: c.layer,
     };
-    it.navAt = { x: it.card.x + CARD.w / 2, y: it.card.y + CARD.h / 2 };
+    it.navAt = { x: c.x + CARD.w / 2, y: c.y + CARD.h / 2 };
     it.labelShown = false;
     it.subShown = false;
-    // The slab's east face meets its card through an elbow.
     const from = project(it.rect.x + it.rect.w, it.rect.y + it.rect.d / 2, it.z + it.h / 2);
-    it.leader = roundedPath(orthogonalRoute(from, "e", { x: it.card.x, y: it.card.y + CARD.h / 2 }, "w", { stub: 18 }), 6);
+    const first = ![...cards.values()].some((o) => o.row === c.row && o.x < c.x);
+    const pts = first
+      ? [from, { x: gutter, y: from.y }, { x: gutter, y: c.y + CARD.h / 2 }, { x: c.x, y: c.y + CARD.h / 2 }]
+      : [from, { x: gutter, y: from.y }, { x: gutter, y: c.y - 5 }, { x: c.x + 12, y: c.y - 5 }, { x: c.x + 12, y: c.y }];
+    it.leader = roundedPath(pts, 5);
   }
+  return { ...plan, routes, exits, cards, laneRight: plan.laneRight > 0 ? fmt(plan.laneRight + x0) : 0 };
 }
 
-/**
- * Routes of the edges between the cards of a rack's tree: out of a side, through a channel, into a side.
- * An edge to a gate (`gates`: the point of its west side) leaves the card by its east side when no card
- * is to its right, otherwise by its top, and runs round the cards to the gate's column.
- */
-function cardEdges(edges: MapEdge[], cards: Map<string, SceneCard>, gates: ReadonlyMap<string, Pt> = new Map()): SceneEdge[] {
-  type Plan = { e: MapEdge; ca?: SceneCard; cb?: SceneCard; ga?: Pt; gb?: Pt; sa: Side; sb: Side };
-  const plans: Plan[] = [];
-  const rightmost = (c: SceneCard) => ![...cards.values()].some((o) => o !== c && Math.abs(o.y - c.y) <= 1 && o.x > c.x);
-  for (const e of edges) {
-    const ca = cards.get(e.a);
-    const cb = cards.get(e.b);
-    const ga = gates.get(e.a);
-    const gb = gates.get(e.b);
-    if (ga && gb) continue;
-    if (ga || gb) {
-      const c = ga ? cb : ca;
-      if (!c) continue;
-      const side: Side = rightmost(c) ? "e" : "n";
-      plans.push(ga ? { e, cb: c, ga, sa: "w", sb: side } : { e, ca: c, gb, sa: side, sb: "w" });
-      continue;
-    }
-    if (!ca || !cb) continue;
-    let sa: Side;
-    let sb: Side;
-    if (ca.layer !== cb.layer || Math.abs(ca.y - cb.y) > 1) {
-      [sa, sb] = ca.y <= cb.y ? ["s", "n"] : ["n", "s"];
-    } else {
-      [sa, sb] = ca.x <= cb.x ? ["e", "w"] : ["w", "e"];
-    }
-    plans.push({ e, ca, cb, sa, sb });
-  }
-  const cardAt = (p: Plan, end: "a" | "b") => (end === "a" ? p.ca : p.cb);
-  const gateAt = (p: Plan, end: "a" | "b") => (end === "a" ? p.ga : p.gb);
-  // The links that leave one side of a card are spread along it, ordered by where they go.
-  const sides = new Map<string, { plan: number; end: "a" | "b"; other: number }[]>();
-  plans.forEach((p, i) => {
-    for (const end of ["a", "b"] as const) {
-      const c = cardAt(p, end);
-      if (!c) continue;
-      const o = cardAt(p, end === "a" ? "b" : "a") ?? gateAt(p, end === "a" ? "b" : "a");
-      if (!o) continue;
-      const side = end === "a" ? p.sa : p.sb;
-      const key = `${c.x}|${c.y}|${side}`;
-      const list = sides.get(key) ?? [];
-      const centre = "w" in o ? { x: o.x + (o as SceneCard).w / 2, y: o.y + (o as SceneCard).h / 2 } : o;
-      list.push({ plan: i, end, other: side === "n" || side === "s" ? centre.x : centre.y });
-      sides.set(key, list);
-    }
-  });
-  const attach = new Map<string, Pt>();
-  for (const list of sides.values()) {
-    list.sort((p, q) => p.other - q.other || p.plan - q.plan);
-    list.forEach((s, k) => {
-      const p = plans[s.plan] as Plan;
-      const c = cardAt(p, s.end) as SceneCard;
-      const side = (s.end === "a" ? p.sa : p.sb) as Side;
-      const f = (k + 1) / (list.length + 1);
-      const pt = side === "n" ? { x: c.x + c.w * f, y: c.y } : side === "s" ? { x: c.x + c.w * f, y: c.y + c.h } : side === "w" ? { x: c.x, y: c.y + c.h * f } : { x: c.x + c.w, y: c.y + c.h * f };
-      attach.set(`${s.plan}|${s.end}`, pt);
-    });
-  }
+/** The scene's edges of a rack's tree: the planned routes, and the links to the gates finished into their ports. */
+function cardEdges(edges: MapEdge[], plan: TreePlan, gates: ReadonlyMap<string, Pt>): SceneEdge[] {
+  const ports = edges.length <= TREE_PORTS;
   // The links that end on one gate arrive on its west side, spread along it.
-  const arriving = new Map<string, number[]>();
-  plans.forEach((p, i) => {
-    const g = p.ga ? p.e.a : p.gb ? p.e.b : undefined;
-    if (g) arriving.set(g, [...(arriving.get(g) ?? []), i]);
-  });
-  const into = new Map<number, Pt>();
+  const arriving = new Map<string, MapEdge[]>();
+  for (const e of edges) {
+    const g = gates.has(e.a) ? e.a : gates.has(e.b) ? e.b : undefined;
+    if (g && plan.exits.has(e.id)) arriving.set(g, [...(arriving.get(g) ?? []), e]);
+  }
+  const into = new Map<string, Pt>();
   for (const [id, list] of arriving) {
     const g = gates.get(id) as Pt;
-    const off = fanOffsets(list.length, 7);
-    list.forEach((i, k) => into.set(i, { x: g.x, y: g.y + (off[k] ?? 0) }));
+    const sorted = [...list].sort((p, q) => (plan.exits.get(p.id)?.laneX ?? 0) - (plan.exits.get(q.id)?.laneX ?? 0));
+    const off = fanOffsets(sorted.length, 7);
+    sorted.forEach((e, k) => into.set(e.id, { x: g.x, y: g.y + (off[k] ?? 0) }));
   }
-  // Channels between two layers: links whose spans overlap take different heights.
-  const channel = new Map<number, number>();
-  const groups = new Map<string, number[]>();
-  plans.forEach((p, i) => {
-    if (p.ga || p.gb) return;
-    if (p.sa !== "s" && p.sa !== "n") return;
-    const a = attach.get(`${i}|a`) as Pt;
-    const b = attach.get(`${i}|b`) as Pt;
-    const key = `${Math.round(Math.min(a.y, b.y))}|${Math.round(Math.max(a.y, b.y))}`;
-    groups.set(key, [...(groups.get(key) ?? []), i]);
-  });
-  for (const ids of groups.values()) {
-    const lanes = assignLanes(
-      ids.map((i) => ({ from: (attach.get(`${i}|a`) as Pt).x, to: (attach.get(`${i}|b`) as Pt).x })),
-    );
-    const n = Math.max(...lanes) + 1;
-    ids.forEach((i, k) => {
-      const a = attach.get(`${i}|a`) as Pt;
-      const b = attach.get(`${i}|b`) as Pt;
-      channel.set(i, (a.y + b.y) / 2 + ((lanes[k] as number) - (n - 1) / 2) * 6);
-    });
-  }
-  let lane = 0;
-  return plans.map((p, i) => {
-    if (p.ga || p.gb) {
-      const end = p.ga ? "b" : "a";
-      const from = attach.get(`${i}|${end}`) as Pt;
-      const to = into.get(i) as Pt;
-      const k = lane++;
-      const side = (end === "a" ? p.sa : p.sb) as "e" | "n";
-      // The lane runs left of the gates, each link on its own so that two never share a vertical.
-      const pts = gateRoute(from, side, to, { laneX: to.x - 26 - k * 7, chanY: from.y - 9 - (k % 3) * 4 });
-      return finish(p.e, pathGeometry(p.e, p.ga ? [...pts].reverse() : pts), false, true);
+  const out: SceneEdge[] = [];
+  for (const e of edges) {
+    let pts = plan.routes.get(e.id);
+    const exit = plan.exits.get(e.id);
+    const to = into.get(e.id);
+    if (!pts && exit && to) {
+      const run = [...exit.pts, { x: exit.laneX, y: to.y }, to];
+      pts = gates.has(e.a) ? run.reverse() : run;
     }
-    const a = attach.get(`${i}|a`) as Pt;
-    const b = attach.get(`${i}|b`) as Pt;
-    const pts = orthogonalRoute(a, p.sa, b, p.sb, { stub: 12, mid: channel.get(i) });
-    return finish(p.e, pathGeometry(p.e, pts), false, true);
-  });
+    if (!pts) continue;
+    const se = finish(e, pathGeometry(e, pts), false, true);
+    if (!ports) se.portsShown = false;
+    out.push(se);
+  }
+  return out;
 }
 
 /** Routes of the cables of a room: up from a rack to a tray behind the racks, along it, down to the other rack. */
@@ -842,14 +780,19 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
     i.labelStart = true;
     i.labelShown = (i.node.mount?.u_height ?? 1) >= 2 || linked.has(i.id);
   }
-  // A rack whose devices are cabled shows them as a tree of cards, the gateway on top.
+  // A rack whose devices are cabled shows them as a tree of cards, the gateway on top. A device cabled
+  // to nothing but a gate (a bastion to the Internet) is in the tree too: the gates rank above it.
+  const gates = m.level === "rack" ? items.filter((i) => isGate(i.role)) : [];
   let layers: string[][] = [];
   if (m.level === "rack") {
     const nodes: TreeNode[] = items
-      .filter((i) => i.node.kind === "device")
-      .map((i) => ({ id: i.id, kind: "device", role: i.node.role, u: i.node.mount?.position, name: i.label }));
+      .filter((i) => i.node.kind === "device" || isGate(i.role))
+      .map((i) => ({ id: i.id, kind: i.node.kind, role: i.node.role, u: i.node.mount?.position, name: i.label }));
     const tree: TreeEdge[] = m.edges.map((e) => ({ a: e.a, b: e.b, medium: e.medium, toward: e.toward }));
-    layers = rankTree(nodes, tree);
+    const gateIds = new Set(gates.map((g) => g.id));
+    layers = rankTree(nodes, tree)
+      .map((l) => l.filter((id) => !gateIds.has(id)))
+      .filter((l) => l.length > 0);
     for (const id of layers.flat()) {
       const it = at.get(id);
       if (it) it.labelShown = false;
@@ -858,20 +801,23 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
   const frame = layout.frame ? frameScene(layout.frame, layout, rot) : undefined;
   // At the rack level the gates (the Internet, other places) stand in a column of their own, right of the
   // cards: they are placed once the rack, its labels and its cards are, so that nothing is drawn over them.
-  const gates = m.level === "rack" ? items.filter((i) => isGate(i.role)) : [];
   const rest = items.filter((i) => !gates.includes(i));
   const blocks = (list: SceneItem[]): Obstacle[] => list.map((i) => ({ id: i.id, box: blockBounds(i) }));
   const frameBox = frame ? union([...frame.back, ...frame.front].map((p) => p.bounds)) : undefined;
   const fixed: Obstacle[] = [...blocks(rest), ...(frameBox ? [{ id: "frame", box: frameBox }] : [])];
   const taken: Bounds[] = [];
   placeLabels(rest, fixed, taken);
-  if (layers.length > 0) placeCards(items, layers);
+  const gateRank = new Map(gates.map((g, k) => [g.id, k]));
+  const inTree = new Set(layers.flat());
+  const treeLinks = m.edges.filter((e) => e.a !== e.b && at.has(e.a) && at.has(e.b) && (inTree.has(e.a) || inTree.has(e.b)) && (inTree.has(e.a) || gateRank.has(e.a)) && (inTree.has(e.b) || gateRank.has(e.b)));
+  const plan = layers.length > 0 ? placeCards(items, layers, treeLinks, gateRank) : undefined;
   const cards = new Map(items.flatMap((i) => (i.card ? [[i.id, i.card] as const] : [])));
   const gatePorts = new Map<string, Pt>();
   if (gates.length > 0) {
     const right = Math.max(0, ...[...cards.values()].map((c) => c.x + c.w), ...rest.map((i) => i.iso.bounds.x1), ...rest.filter((i) => !i.card && i.pill.x1 > 0 && i.labelShown).map((i) => i.pill.x1), frameBox?.x1 ?? 0);
     const top = Math.min(...[...cards.values()].map((c) => c.y), ...(frameBox ? [frameBox.y0] : []), Infinity);
-    const moves = columnShifts(gates.map(blockBounds), right + (cards.size > 0 ? 130 : 90), Number.isFinite(top) ? top : 0, 64);
+    const from = Math.max(right + (cards.size > 0 ? 130 : 90), (plan?.laneRight ?? 0) + 60);
+    const moves = columnShifts(gates.map(blockBounds), from, Number.isFinite(top) ? top : 0, 64);
     gates.forEach((g, k) => shiftItem(g, moves[k]?.x ?? 0, moves[k]?.y ?? 0));
     placeLabels(gates, [...fixed, ...blocks(gates), ...[...cards.values()].map((c, k) => ({ id: `card${k}`, box: { x0: c.x, y0: c.y, x1: c.x + c.w, y1: c.y + c.h } }))], taken);
     for (const g of gates) gatePorts.set(g.id, { x: blockBounds(g).x0 - 3, y: g.port.y });
@@ -885,11 +831,9 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
     edges.push(...t.edges);
     trays.push(...t.trays);
     arcs = t.rest;
-  } else if (cards.size > 0) {
-    const ends = (id: string) => cards.has(id) || gatePorts.has(id);
-    const onCards = arcs.filter((e) => ends(e.a) && ends(e.b) && !(gatePorts.has(e.a) && gatePorts.has(e.b)));
-    edges.push(...cardEdges(onCards, cards, gatePorts));
-    arcs = arcs.filter((e) => !onCards.includes(e));
+  } else if (plan) {
+    edges.push(...cardEdges(treeLinks, plan, gatePorts));
+    arcs = arcs.filter((e) => !treeLinks.includes(e));
   }
   for (const e of arcs) {
     const a = at.get(e.a) as SceneItem;
