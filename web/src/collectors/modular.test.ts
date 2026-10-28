@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 // The point of ADR 0055: a collector added to the server appears in these
 // pages from its descriptor alone. Naming one in the code that renders them
 // would be the first step towards a page per collector, so this fails on it.
-const KINDS = ["arista", "kubernetes", "maas", "mikrotik", "pfsense", "redfish", "synology", "unifi"];
+const KINDS = ["arista", "kubemetrics", "kubernetes", "maas", "mikrotik", "pfsense", "redfish", "synology", "unifi"];
 
 const here = import.meta.dirname;
 const files = [
