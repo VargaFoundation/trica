@@ -256,20 +256,29 @@ func (w *world) impact(failed ...*store.Object) map[string]string {
 	return out
 }
 
-// TestImpactOfTheServers: when both servers that carry the pods of orion fail,
-// the workload and its instance go down; when one does, the other pod still
-// serves, so the instance stays up. Neither case reaches further than the
-// instance: the application is not down because one environment is.
+// TestImpactOfTheServers: when both servers that carry the pods of orion fail
+// while a third node of the cluster is up, Kubernetes starts the pods again
+// there: the workload and its instance are degraded, not down (ADR 0011
+// amendment). When every server fails, they go down. When one of the two
+// fails, the other pod still serves: degraded at most, never down.
 func TestImpactOfTheServers(t *testing.T) {
 	w := newWorld(t)
 	wl, inst := w.find("workload", "orion"), w.instance()
 
 	both := w.impact(w.device(1), w.device(2))
-	if both[wl.ID] != "down" {
-		t.Errorf("workload state %q with both servers down, want down", both[wl.ID])
+	if both[wl.ID] != "degraded" {
+		t.Errorf("workload state %q with both servers down and a node left, want degraded", both[wl.ID])
 	}
-	if both[inst.ID] != "down" {
-		t.Errorf("instance state %q with both servers down, want down", both[inst.ID])
+	if both[inst.ID] != "degraded" {
+		t.Errorf("instance state %q with both servers down and a node left, want degraded", both[inst.ID])
+	}
+
+	all := w.impact(w.device(0), w.device(1), w.device(2))
+	if all[wl.ID] != "down" {
+		t.Errorf("workload state %q with every server down, want down", all[wl.ID])
+	}
+	if all[inst.ID] != "down" {
+		t.Errorf("instance state %q with every server down, want down", all[inst.ID])
 	}
 
 	one := w.impact(w.device(1))

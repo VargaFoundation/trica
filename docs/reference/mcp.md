@@ -38,7 +38,7 @@ cannot be queried, sorted on or compared.
 | `rank_filter` | read | Top-N objects by an attribute, with filters | "The 10 servers that consume the most" |
 | `forecast_threshold` | read | Objects whose numeric attribute, extrapolated by a straight line through its history, reaches a threshold within a horizon | "SSDs that will reach 80 % wear within six months" |
 | `version_compliance` | read | Versions against a target or a `version_policy`: counts first, then who is behind | "Switches behind the firmware reference" |
-| `impact_analysis` | read | What fails when objects fail (needs a graph) | "If I cut sw-core-01, which applications go down?" |
+| `impact_analysis` | read | What fails or degrades when objects fail (needs a graph): a workload short of pods is degraded while its cluster can restart them; an application takes the state of its instances (ADR 0011) | "If I cut sw-core-01, which applications go down?" |
 | `network_path` | read | The chain of relations between two objects (needs a graph) | "How are the API and its database connected?" |
 | `filter_objects` | read | Objects meeting attribute conditions (eq, ne, gt, ge, lt, le, contains, within, in, exists, missing) | "Reversed airflow" |
 | `list_objects` | read | One type, stable order | "All racks" |

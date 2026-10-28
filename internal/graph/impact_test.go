@@ -32,7 +32,7 @@ func TestImpactPropagation(t *testing.T) {
 			spared: []string{"srv-dual", "sw1"},
 		},
 		{
-			name:   "hosts, runs_on and depends_on carry the failure, calls only degrades",
+			name:   "hosts, runs_on and depends_on carry the failure, calls only degrades, and what depends on a degraded object is degraded",
 			w:      lab(),
 			failed: []string{"srv-single"},
 			want: map[string]string{
@@ -41,8 +41,9 @@ func TestImpactPropagation(t *testing.T) {
 				"db":            "down/runs_on",
 				"app":           "down/depends_on",
 				"front":         "degraded/calls",
+				"report":        "degraded/depends_on",
 			},
-			spared: []string{"report", "srv-dual", "sw2"},
+			spared: []string{"srv-dual", "sw2"},
 		},
 		{
 			name:   "one feed of a redundant supply is not enough",
@@ -95,12 +96,12 @@ func TestImpactPropagation(t *testing.T) {
 			want:   map[string]string{"both": "down/depends_on"},
 		},
 		{
-			name: "a supply is lost only when every supplier of that relation type is",
+			name: "a supply is lost only when every supplier of that relation type is; one lost degrades",
 			w: lab().
 				add("pod-a", "pod", "", nil).add("pod-b", "pod", "", nil).add("wl", "workload", "", nil).
 				rel("served_by", "wl", "pod-a").rel("served_by", "wl", "pod-b"),
 			failed: []string{"pod-a"},
-			spared: []string{"wl"},
+			want:   map[string]string{"wl": "degraded/served_by"},
 		},
 		{
 			name: "every replica gone takes the workload down",
@@ -145,7 +146,7 @@ func TestImpactResultShape(t *testing.T) {
 	if len(r.Failed) != 2 || r.Failed[0] != "db" {
 		t.Errorf("failed list: %v", r.Failed)
 	}
-	if r.Down["vm"] != 1 || r.Down["application"] != 1 || r.Degraded["application"] != 1 {
+	if r.Down["vm"] != 1 || r.Down["application"] != 1 || r.Degraded["application"] != 2 {
 		t.Errorf("counts: down %v degraded %v", r.Down, r.Degraded)
 	}
 	for i := 1; i < len(r.Affected); i++ {
@@ -269,22 +270,30 @@ func TestImpactReachesApplicationInstances(t *testing.T) {
 		spared []string
 	}{
 		{
-			name:   "a cluster down takes its instances down",
+			name:   "a cluster down takes its instances down, and the application whose instances all are",
 			failed: []string{"cluster"},
-			want:   map[string]string{"node-a": "down/parent", "pod-a": "down/hosts", "wl": "down/parent", "inst": "down/runs_on"},
-			// The failure goes down the tree, never up from an instance to its application.
-			spared: []string{"app", "comp"},
+			want:   map[string]string{"node-a": "down/parent", "pod-a": "down/hosts", "wl": "down/parent", "inst": "down/runs_on", "app": "down/instances"},
 		},
 		{
-			name:   "every node down takes the instance down",
+			name:   "every node down takes the instance and its application down",
 			failed: []string{"node-a", "node-b"},
-			want:   map[string]string{"wl": "down/served_by", "inst": "down/runs_on"},
+			want:   map[string]string{"wl": "down/served_by", "inst": "down/runs_on", "app": "down/instances"},
 		},
 		{
-			name:   "one node of two leaves the instance up",
+			name:   "one node of two: a pod lost, the instance and the application degraded",
 			failed: []string{"node-a"},
-			want:   map[string]string{"pod-a": "down/hosts"},
-			spared: []string{"wl", "inst", "pod-b"},
+			want:   map[string]string{"pod-a": "down/hosts", "wl": "degraded/served_by", "inst": "degraded/runs_on", "app": "degraded/instances"},
+			spared: []string{"pod-b", "node-b"},
+		},
+		{
+			name:   "every pod lost but a node is up: Kubernetes starts them again, degraded",
+			failed: []string{"pod-a", "pod-b"},
+			want:   map[string]string{"wl": "degraded/rescheduled", "inst": "degraded/runs_on", "app": "degraded/instances"},
+		},
+		{
+			name:   "the last node failing after the pods turns rescheduled into down",
+			failed: []string{"pod-a", "pod-b", "node-a", "node-b"},
+			want:   map[string]string{"wl": "down/served_by", "inst": "down/runs_on", "app": "down/instances"},
 		},
 	}
 	for _, tc := range cases {
@@ -305,5 +314,26 @@ func TestImpactReachesApplicationInstances(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestImpactApplicationWithAnInstanceLeft: an application with a healthy
+// instance elsewhere (another environment) is degraded, not down, when the
+// other one goes down.
+func TestImpactApplicationWithAnInstanceLeft(t *testing.T) {
+	w := kubeApp().
+		add("inst-dev", "component_instance", "comp", nil).
+		add("other-wl", "workload", "", nil).
+		rel("runs_on", "inst-dev", "other-wl")
+	r, err := w.snapshot().Impact([]string{"cluster"}, ImpactOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := states(r)
+	if got["inst"] != "down/runs_on" || got["app"] != "degraded/instances" {
+		t.Errorf("inst %q, app %q; want down/runs_on and degraded/instances", got["inst"], got["app"])
+	}
+	if _, hit := got["inst-dev"]; hit {
+		t.Errorf("the other instance is affected: %q", got["inst-dev"])
 	}
 }

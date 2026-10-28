@@ -10,7 +10,7 @@ import (
 
 const (
 	descImpact = `What goes down or degrades if objects fail: "if I power off sw-core-01, which applications fall" is impact_analysis{objects:["sw-core-01"], affected_types:["application"]}. ` +
-		`Follows the dependency graph (cabling, power, hosting, runs-on). Each affected object says whether it is down or degraded, why, and from which failed object. ` +
+		`Follows the dependency graph (cabling, power, hosting, runs-on). Each affected object says whether it is down or degraded, why, and from which failed object: a workload that lost some pods, or all of them while its cluster has a node left to restart them, is degraded; an application is down when all its instances are, degraded when one is. ` +
 		`The answer starts with the counts per type, then lists the affected objects you may read, down first.`
 	descPath = `How two objects are connected: the chain of objects and relations from one to the other (a server to a firewall, an application to its database host). ` +
 		`Follows relations in either direction (restrict with relation_types, e.g. cabled_to). Answers found:false when there is no path. ` +
