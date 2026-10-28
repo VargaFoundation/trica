@@ -15,7 +15,7 @@ a pasted secret stops the start instead of collecting nothing.
 
 | Key | Meaning |
 |---|---|
-| `kind` | The collector module: `arista`, `kubernetes`, `maas`, `mikrotik`, `pfsense`, `redfish`, `synology` or `unifi` today. `GET /api/v1/collectors` (or the Collectors page) is the authoritative list of what this build knows. |
+| `kind` | The collector module: `arista`, `kubemetrics`, `kubernetes`, `maas`, `mikrotik`, `pfsense`, `redfish`, `synology` or `unifi` today. `GET /api/v1/collectors` (or the Collectors page) is the authoritative list of what this build knows. |
 | `name` | Identifies the target. The batch source is `<kind>:<name>`, which is also the key of the health board and of the logs. |
 | `address` | Where to connect; the form depends on the collector (examples below). |
 | `username` | Account name, for the collectors that use one. |
@@ -157,6 +157,30 @@ DSM answers these APIs only to an account of the `administrators` group: create 
 without 2-step verification, used only by trica
 ([ADR 0064](../adr/0064-synology-dsm-collector.md), [the module's README](../../internal/collect/synology/README.md)).
 Recorded from one DS1821+ (DSM 7.4.1), never run against DSM 6.
+
+A `kubemetrics` target reads one Kubernetes cluster through its kube-state-metrics series, for a
+cluster trica has no Kubernetes API access to (dev and prod are otherwise known only through
+Argo CD, which has no pods or nodes). It sends `GET <address>/api/v1/query` (instant queries)
+for six metric families and nothing else, with basic authentication: the cluster, its nodes (each
+linked to its server by SMBIOS UUID, as the `kubernetes` collector does), the namespaces, the pods
+with their node, and the workload that controls each pod (deployment, statefulset, daemonset,
+cronjob or job). It reads no manifest, no environment value and no container argument: the series
+carry none. `options.cluster` must be the name the Argo CD view of the `kubernetes` collector
+uses for the same cluster, so that both describe the same objects
+([ADR 0070](../adr/0070-kubemetrics-collector.md), [the module's README](../../internal/collect/kubemetrics/README.md)).
+
+```yaml
+  - kind: kubemetrics
+    name: prod
+    address: https://metrics.example.org/inventory   # serves /api/v1/query
+    username: trica
+    password: file:/var/run/secrets/collect/prod/password
+    options:
+      cluster: prod                                  # required
+      selector: job="monitoring-kube-state-metrics"  # optional
+```
+
+Recorded from one three-node k3s v1.31 cluster, never run against another distribution.
 
 Every run of a target ends in one health record on the board (`GET /api/v1/health/collection`):
 the collector's own, or, when it returned an error, panicked or reported none, one made by the

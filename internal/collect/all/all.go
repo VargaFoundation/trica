@@ -7,13 +7,14 @@
 package all
 
 import (
-	_ "github.com/VargaFoundation/trica/internal/collect/arista"     // registers "arista"
-	_ "github.com/VargaFoundation/trica/internal/collect/hostagent"  // registers "agent", the host agent, which has no factory
-	_ "github.com/VargaFoundation/trica/internal/collect/kubernetes" // registers "kubernetes"
-	_ "github.com/VargaFoundation/trica/internal/collect/maas"       // registers "maas"
-	_ "github.com/VargaFoundation/trica/internal/collect/mikrotik"   // registers "mikrotik"
-	_ "github.com/VargaFoundation/trica/internal/collect/pfsense"    // registers "pfsense"
-	_ "github.com/VargaFoundation/trica/internal/collect/redfish"    // registers "redfish"
-	_ "github.com/VargaFoundation/trica/internal/collect/synology"   // registers "synology"
-	_ "github.com/VargaFoundation/trica/internal/collect/unifi"      // registers "unifi"
+	_ "github.com/VargaFoundation/trica/internal/collect/arista"      // registers "arista"
+	_ "github.com/VargaFoundation/trica/internal/collect/hostagent"   // registers "agent", the host agent, which has no factory
+	_ "github.com/VargaFoundation/trica/internal/collect/kubemetrics" // registers "kubemetrics"
+	_ "github.com/VargaFoundation/trica/internal/collect/kubernetes"  // registers "kubernetes"
+	_ "github.com/VargaFoundation/trica/internal/collect/maas"        // registers "maas"
+	_ "github.com/VargaFoundation/trica/internal/collect/mikrotik"    // registers "mikrotik"
+	_ "github.com/VargaFoundation/trica/internal/collect/pfsense"     // registers "pfsense"
+	_ "github.com/VargaFoundation/trica/internal/collect/redfish"     // registers "redfish"
+	_ "github.com/VargaFoundation/trica/internal/collect/synology"    // registers "synology"
+	_ "github.com/VargaFoundation/trica/internal/collect/unifi"       // registers "unifi"
 )
