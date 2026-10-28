@@ -132,6 +132,48 @@ func TestArgoApplications(t *testing.T) {
 		wantAttrs(t, instance(t, b, "nova/edge-qa/192-0-2-77/nova"), map[string]any{"version": "1.4.2"})
 	})
 
+	t.Run("a cluster no collector reads: Argo CD's workloads, the instance runs on them", func(t *testing.T) {
+		c := object(t, b, "argo-cluster/dev")
+		if c.Type != "k8s_cluster" || c.Identity["name"] != "dev" {
+			t.Fatalf("cluster %+v", c)
+		}
+		wantAttrs(t, c, map[string]any{"api_endpoint": "https://203.0.113.1:6443"})
+		if !relate(b, "deployed_in", "argo-cluster/dev", "env/dev") {
+			t.Error("the dev cluster is not in the dev environment")
+		}
+		ns := object(t, b, "argo-cluster/dev/ns/orion")
+		if ns.Parent != "argo-cluster/dev" {
+			t.Errorf("namespace under %q", ns.Parent)
+		}
+		for _, w := range []struct{ ref, kind string }{
+			{"argo-cluster/dev/ns/orion/deployment/orion", "deployment"},
+			{"argo-cluster/dev/ns/orion/cronjob/orion-boond-sync", "cronjob"},
+		} {
+			o := object(t, b, w.ref)
+			if o.Type != "workload" || o.Parent != ns.Ref {
+				t.Errorf("%s: %s under %q", w.ref, o.Type, o.Parent)
+			}
+			wantAttrs(t, o, map[string]any{"kind": w.kind})
+			if !relate(b, "runs_on", "instance/orion/app/dev/orion", w.ref) {
+				t.Errorf("the instance does not run on %s", w.ref)
+			}
+		}
+		// A ConfigMap or a Service of status.resources is not a workload.
+		for _, o := range b.Objects {
+			if strings.HasPrefix(o.Ref, "argo-cluster/dev/ns/orion/") && o.Type != "workload" {
+				t.Errorf("%s is a %s", o.Ref, o.Type)
+			}
+		}
+	})
+
+	t.Run("an in-cluster Application adds nothing: the collector reads that cluster itself", func(t *testing.T) {
+		for _, o := range b.Objects {
+			if strings.HasPrefix(o.Ref, "argo-cluster/build") {
+				t.Errorf("%s made from Argo CD for this very cluster", o.Ref)
+			}
+		}
+	})
+
 	t.Run("a multi-source Application is read through its source with the code", func(t *testing.T) {
 		o := instance(t, b, "nova/api/prod/nova")
 		// revisions[1] is the sync of sources[1] (path deploy/prod, release),

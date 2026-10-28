@@ -290,5 +290,37 @@ func (x *builder) argoInstances() {
 			// The credentials a repository address may carry are dropped.
 			setIfAbsent(x.b.Object(x.appRef(pl.app), "application"), "repository", cleanRepoURL(a.repoURL))
 		}
+		if !isLocal(a, x.cfg.endpoint) {
+			x.remoteWorkloads(o.Ref, pl.environment, a)
+		}
+	}
+}
+
+// remoteWorkloads records what Argo CD says it runs on a cluster no collector
+// of this target reads: the cluster (named after its environment, one
+// environment per cluster), the namespaces and the controllers, and the
+// instance runs on them. Pods, nodes and replica counts are not in an
+// Application: a collector running there brings them, and its objects meet
+// these by name.
+func (x *builder) remoteWorkloads(instRef, env string, a *argoApp) {
+	ws := a.workloads
+	if len(ws) == 0 {
+		return
+	}
+	cref := "argo-cluster/" + env
+	c := x.b.Object(cref, "k8s_cluster").Identify("name", env)
+	if a.destServer != "" {
+		setIfAbsent(c, "api_endpoint", strings.TrimRight(a.destServer, "/"))
+	}
+	if !x.links[cref] {
+		x.links[cref] = true
+		x.b.Relate("deployed_in", cref, x.env(env, environmentKind(env)))
+	}
+	for _, w := range ws {
+		nref := cref + "/ns/" + w.namespace
+		x.b.Object(nref, "namespace").In(cref).Identify("name", w.namespace)
+		wref := nref + "/" + w.kind + "/" + w.name
+		x.b.Object(wref, "workload").In(nref).Identify("name", w.name).Set("kind", w.kind)
+		x.b.Relate("runs_on", instRef, wref)
 	}
 }

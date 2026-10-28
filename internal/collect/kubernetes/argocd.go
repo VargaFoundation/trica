@@ -56,6 +56,19 @@ type argoApp struct {
 	// trica.io/component, on the Application as an annotation or a label.
 	annotated, componentHint string
 	partOf                   string
+	// workloads are the controllers Argo CD says it manages (status.resources):
+	// what trica knows of a cluster no collector reads.
+	workloads []argoWorkload
+}
+
+// argoWorkload is one controller in an Application's status.resources.
+type argoWorkload struct{ kind, namespace, name string }
+
+// argoWorkloadKinds are the status.resources kinds that are workloads, with
+// the workload kind trica records.
+var argoWorkloadKinds = map[string]string{
+	"apps/Deployment": "deployment", "apps/StatefulSet": "statefulset", "apps/DaemonSet": "daemonset",
+	"batch/CronJob": "cronjob",
 }
 
 // parseApplication reads an Application defensively: it is a custom resource,
@@ -132,6 +145,27 @@ func parseApplication(u *unstructured.Unstructured) (*argoApp, error) {
 		}
 	}
 	a.partOf = strings.TrimSpace(u.GetLabels()[labelPartOf])
+
+	res, _, e := unstructured.NestedSlice(u.Object, "status", "resources")
+	if e != nil {
+		return nil, fmt.Errorf("status.resources: %w", e)
+	}
+	for i, r := range res {
+		m, ok := r.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("status.resources[%d]: not an object", i)
+		}
+		group, _ := m["group"].(string)
+		kind, _ := m["kind"].(string)
+		name, _ := m["name"].(string)
+		ns, _ := m["namespace"].(string)
+		if k, ok := argoWorkloadKinds[group+"/"+kind]; ok && name != "" {
+			if ns == "" {
+				ns = a.namespace
+			}
+			a.workloads = append(a.workloads, argoWorkload{kind: k, namespace: ns, name: name})
+		}
+	}
 	return a, nil
 }
 
@@ -226,15 +260,10 @@ func slug(s string) string {
 // cluster Argo CD is configured with), a cluster the options name, or an
 // unknown one, which is named after its server and reported.
 func (c *config) destinationEnvironment(a *argoApp, endpoint string) (env string, known bool) {
-	server := strings.TrimRight(a.destServer, "/")
-	switch {
-	case a.destName == inClusterName,
-		strings.EqualFold(server, inClusterServer),
-		server != "" && endpoint != "" && strings.EqualFold(server, strings.TrimRight(endpoint, "/")):
-		return c.environment, true
-	case server == "" && a.destName == "":
+	if isLocal(a, endpoint) {
 		return c.environment, true
 	}
+	server := strings.TrimRight(a.destServer, "/")
 	if e, ok := c.argocdClusters[server]; ok && server != "" {
 		return e, true
 	}
@@ -248,6 +277,20 @@ func (c *config) destinationEnvironment(a *argoApp, endpoint string) (env string
 		return u.Hostname(), false
 	}
 	return server, false
+}
+
+// isLocal says whether an Application deploys to the cluster this collector
+// reads (the in-cluster server or name, the target's own API server, or no
+// destination at all).
+func isLocal(a *argoApp, endpoint string) bool {
+	server := strings.TrimRight(a.destServer, "/")
+	switch {
+	case a.destName == inClusterName,
+		strings.EqualFold(server, inClusterServer),
+		server != "" && endpoint != "" && strings.EqualFold(server, strings.TrimRight(endpoint, "/")):
+		return true
+	}
+	return server == "" && a.destName == ""
 }
 
 // cleanRepoURL drops what must not be kept of a repository address:
