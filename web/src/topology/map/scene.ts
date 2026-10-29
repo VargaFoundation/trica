@@ -65,6 +65,8 @@ export interface SceneItem {
   door?: SceneDoor;
   /** The ports of a rack device's front (one path). */
   ports?: string;
+  /** Its status LED, on the right of its front: the colour of its health, as a product shows it. */
+  led?: Pt;
   /** Little triangle on top of a rack pointing the way it faces. */
   arrow?: string;
   /** Where lines meet the item. */
@@ -344,6 +346,8 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
   }
   let ports: string | undefined;
   if (it.role === "device" && b.h >= 0.25) ports = portStrip(r, b.z, b.h, Math.max(4, Math.min(16, Math.floor(r.w / 0.16))));
+  // A rack shows its health on its door; a gate is not a thing with a health.
+  const led = it.role === "rack" || isGate(it.role) ? undefined : project(r.x + r.w - Math.min(0.3, r.w * 0.15), r.y + r.d, b.z + b.h * 0.55);
   const summarised = it.role === "site" || it.role === "room" || it.role === "area" || it.role === "rack";
   const centre = turnPoint({ x: b.x + b.w / 2, y: b.y + b.d / 2 }, world, rot);
   return {
@@ -362,6 +366,7 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
     floorText,
     door,
     ports,
+    led: led ? { x: fmt(led.x), y: fmt(led.y) } : undefined,
     arrow,
     port,
     label: it.label,

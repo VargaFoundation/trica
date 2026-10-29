@@ -5,6 +5,7 @@ import { prefersReducedMotion } from "../../motion";
 import { IconGlyph } from "../../components/ui/icons";
 import { MAX_PARTICLES, PARTICLE_SECONDS, particleCount, planFlows, STATE_DASH, type Direction, type SpeedClass } from "./flow";
 import type { IsoBox, Rot } from "./iso";
+import { isGate } from "./layout";
 import { nextSpot, type Arrow } from "./nav";
 import { buildScene, MEDIUM_DASH, textScale, type SceneBadge, type SceneEdge, type SceneFrame, type SceneItem } from "./scene";
 
@@ -34,6 +35,8 @@ export const FIT_MAX = 1.6;
 /** Room kept round the framed blocks for their names, in scene px; more on top, where the controls float. */
 const FIT_PAD = 48;
 const FIT_PAD_TOP = 88;
+/** Below the blocks: their names, and the hint that floats at the bottom. */
+const FIT_PAD_BOTTOM = 96;
 
 /** The stage's size in px, once it is laid out (0 by 0 before, and where nothing is laid out). */
 function useSize(el: React.RefObject<Element | null>): { w: number; h: number } {
@@ -62,7 +65,7 @@ export function fitFrame(core: { x0: number; y0: number; x1: number; y1: number 
   const x0 = core.x0 - FIT_PAD;
   const x1 = core.x1 + FIT_PAD;
   const y0 = core.y0 - FIT_PAD_TOP;
-  const y1 = core.y1 + FIT_PAD;
+  const y1 = core.y1 + FIT_PAD_BOTTOM;
   const cx = (x0 + x1) / 2;
   const cy = (y0 + y1) / 2;
   let w = x1 - x0;
@@ -367,6 +370,15 @@ export function IsoScene(p: IsoSceneProps) {
         <filter id="iso-blur" x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation="5" />
         </filter>
+        {/* Light from the back left: the side faces darken towards the ground, the tops catch a sheen at the back. */}
+        <linearGradient id="iso-shade-side" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.24" />
+        </linearGradient>
+        <linearGradient id="iso-sheen" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.16" />
+          <stop offset="0.6" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
         <linearGradient id="iso-grad-top" x1="0" y1="0" x2="1" y2="1">
           <stop className="iso-stop-hi" offset="0" />
           <stop className="iso-stop-lo" offset="1" />
@@ -440,6 +452,7 @@ export function IsoScene(p: IsoSceneProps) {
             ) : (
               <polygon className="iso-shadow iso-shadow-flat" points={it.iso.foot} transform="translate(8 5)" />
             )}
+            {it.node.health.worst === "critical" && !isGate(it.role) ? <polygon className="iso-alarm" points={it.iso.foot} filter="url(#iso-blur)" /> : null}
             {it.leader ? <path className="iso-leader-line" d={it.leader} /> : null}
             <g className="iso-lift">
               <Body item={it} />
@@ -539,6 +552,9 @@ function Body({ item: it }: { item: SceneItem }) {
       <polygon className="iso-face iso-south" points={iso.south} />
       <polygon className="iso-face iso-east" points={iso.east} />
       <polygon className="iso-face iso-top" points={iso.top} />
+      <polygon className="iso-shade" points={iso.south} fill="url(#iso-shade-side)" />
+      <polygon className="iso-shade" points={iso.east} fill="url(#iso-shade-side)" />
+      <polygon className="iso-shade" points={iso.top} fill="url(#iso-sheen)" />
       <polygon className="iso-rim" points={iso.top} />
     </>
   );
@@ -576,6 +592,12 @@ function Body({ item: it }: { item: SceneItem }) {
         </g>
       ) : null}
       {it.ports ? <path className="iso-ports" d={it.ports} /> : null}
+      {it.led ? (
+        <g className={`iso-status l-${it.node.health.worst}`}>
+          <circle className="iso-status-glow" cx={it.led.x} cy={it.led.y} r="5" />
+          <circle className={`iso-led l-${it.node.health.worst}${LED_BLINK.has(it.node.health.worst) ? " is-blink" : ""}`} cx={it.led.x} cy={it.led.y} r="2.4" />
+        </g>
+      ) : null}
       {it.door ? (
         <g className="iso-door">
           <polygon className="iso-glass" points={it.door.glass} />

@@ -1950,8 +1950,8 @@ label.check {
 /* Boxes. */
 .iso-face {
   stroke: var(--trica-iso-edge);
-  stroke-opacity: 0.55;
-  stroke-width: 1;
+  stroke-opacity: 0.35;
+  stroke-width: 0.8;
   stroke-linejoin: round;
   transition: filter 0.15s var(--trica-easing);
 }
@@ -2188,15 +2188,43 @@ label.check {
   stroke: var(--trica-focus);
   stroke-width: 3;
 }
-.iso-item.h-warning .iso-top {
-  stroke: var(--trica-graph-health-warn);
-  stroke-opacity: 1;
-  stroke-width: 2.5;
+/* Health is a status LED on the thing, as a product shows it, and a soft red glow on the ground under
+   what is critical: never a colour across a whole block. */
+.iso-status-glow {
+  fill: var(--trica-graph-util-unknown);
+  opacity: 0.18;
+  pointer-events: none;
 }
-.iso-item.h-critical .iso-top {
-  stroke: var(--trica-graph-health-crit);
-  stroke-opacity: 1;
-  stroke-width: 2.5;
+.iso-status.l-ok .iso-status-glow {
+  fill: var(--trica-graph-health-ok);
+}
+.iso-status.l-warning .iso-status-glow {
+  fill: var(--trica-graph-health-warn);
+  opacity: 0.32;
+}
+.iso-status.l-critical .iso-status-glow {
+  fill: var(--trica-graph-health-crit);
+  opacity: 0.4;
+}
+.iso-alarm {
+  fill: var(--trica-graph-health-crit);
+  opacity: 0.32;
+  pointer-events: none;
+  animation: iso-alarm 2.4s ease-in-out infinite;
+}
+@keyframes iso-alarm {
+  50% {
+    opacity: 0.12;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iso-alarm {
+    animation: none;
+  }
+}
+.iso-shade {
+  stroke: none;
+  pointer-events: none;
 }
 
 .iso-lamp {
