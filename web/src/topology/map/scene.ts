@@ -194,8 +194,12 @@ export interface Scene {
   text: number;
 }
 
-/** The text scales a scene is built at: a zoom only rebuilds it when it crosses one of these steps. */
-export const TEXT_STEPS = [0.6, 0.75, 0.9, 1, 1.2, 1.45, 1.75, 2.1, 2.5] as const;
+/**
+ * The text scales a scene is built at, 1.18 apart around 1 (so that text stays within 9 % of its size
+ * on screen): a zoom only rebuilds it when it crosses one of them. From the deepest zoom in (ZOOM_MAX of
+ * a view at FIT_MAX) to a far zoom out.
+ */
+export const TEXT_STEPS: readonly number[] = Array.from({ length: 21 }, (_, i) => Math.round(1.18 ** (i - 14) * 1000) / 1000);
 
 /**
  * The text scale for a view that draws one scene px as `screen` screen px: the step nearest to its
@@ -203,7 +207,7 @@ export const TEXT_STEPS = [0.6, 0.75, 0.9, 1, 1.2, 1.45, 1.75, 2.1, 2.5] as cons
  */
 export function textScale(screen: number): number {
   const want = 1 / Math.max(screen, 1e-6);
-  let best: number = TEXT_STEPS[0];
+  let best = TEXT_STEPS[0] ?? 1;
   for (const t of TEXT_STEPS) if (Math.abs(Math.log(t / want)) < Math.abs(Math.log(best / want))) best = t;
   return best;
 }

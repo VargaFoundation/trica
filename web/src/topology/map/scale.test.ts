@@ -21,12 +21,19 @@ const loose = (nodes: MapNode[]): TopologyMap => ({ ...MAPS.room, nodes, edges: 
 describe("the text scale of a view", () => {
   it.each([
     [1, 1],
-    [0.5, 2.1],
-    [0.4, 2.5],
-    [0.1, 2.5],
-    [1.6, 0.6],
-    [1.1, 0.9],
+    [0.5, 1.939],
+    [0.4, 2.7],
+    [0.1, 2.7],
+    [1.6, 0.609],
+    [1.1, 0.847],
+    [2, 0.516],
+    [4, 0.266],
+    [9.6, 0.099],
   ])("a view at %f screen px per scene px draws text %f times its design size", (screen, want) => expect(textScale(screen)).toBe(want));
+
+  it("keeps text within 9 % of its design size on screen from the deepest zoom in to a far zoom out", () => {
+    for (let screen = 0.4; screen <= 9.6; screen *= 1.05) expect(Math.abs(Math.log(textScale(screen) * screen)), String(screen)).toBeLessThan(Math.log(1.09));
+  });
 
   it("only ever gives one of its steps", () => {
     for (let s = 0.05; s < 4; s *= 1.07) expect(TEXT_STEPS).toContain(textScale(s));
