@@ -134,7 +134,19 @@ Now:
   - E2E tests: `e2e/topology-scale.spec.ts` (a name keeps its size on screen across zooms; a lone device takes under a quarter of the stage), and in `e2e/topology-map.spec.ts` the flight between levels and the absence of dots.
   - The e2e tests fail on the previous build, and the unit tests fail without the code they cover.
 
-Not done: arcs between places still cross the walls of the rooms they pass over, and a card of a rack's tree still scales with the zoom (only its routing is in scene px).
+Follow-ups in the same story:
+
+- **Cards at one size.** The tree of a rack is laid out at the text scale, but only when the scale is under
+  1. Zoomed in, a card keeps its design size on screen. Zoomed out, it shrinks with the scene, or a tree
+  wider than the stage could never fit. The view frames the scene at the fitted text scale.
+- **Arcs above walls.**
+  - A room's or an area's lines start from the top of a mast above its walls.
+  - An arc is raised, 16 px at a time and at most 240, until no point of it (but near its ends) lies inside the walls of a room it passes over.
+  - `arcs.test.ts` checks this on four rooms in a row and on the recorded site, at every rotation.
+- **Trunks.**
+  - Three links or more from one card down to the rows below run as a trunk: one drop, one lane under the card, one track per corridor, one lane above each row served, then a drop into each card.
+  - Each link stays its own line. Only links of one trunk lie on one another.
+  - On three switches over seven servers, the channel under the switches holds three lanes instead of 21.
 
 ## Not drawn
 

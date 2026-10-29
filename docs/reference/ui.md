@@ -100,8 +100,8 @@ addresses (`site`, `rack`, `vlan` or `classes` without `view`) keep opening the 
 - **Drawing** (ADR 0066 and its "visual language" amendment): a ground plane with a grid that fades
   out; every block is a neutral product body (graphite in dark, off-white in light) with three faces
   lit from the back left (side faces darken towards the ground, tops catch a sheen), a contact shadow
-  and a light rim. A site is a building (roof, window rows), a room a slab with low cut-away walls and
-  its name painted on the floor, a rack of a room a cabinet (glass door, vents, one LED per device). A
+  and a light rim. A site is a building (roof, window rows), a room a slab with low cut-away walls, its name painted
+  on the floor and a mast its lines start from (arcs are raised over the walls of the rooms they pass), a rack of a room a cabinet (glass door, vents, one LED per device). A
   device's front shows its role: a switch's or patch panel's ports, a firewall's or router's ports and
   screen, a server's drive bays, storage bays, a PDU's outlets. At the rack level the rack is a cabinet
   with far panels and blanking plates over its empty units. The Internet and other places are round
@@ -109,7 +109,9 @@ addresses (`site`, `rack`, `vlan` or `classes` without `view`) keep opening the 
   block (a rack: its door LEDs) and a soft pulsing glow under what is critical, never a colour across a
   block; LEDs blink only for a warning or worse, and nothing pulses under `prefers-reduced-motion`. In a
   room, cables run along cable trays. In a rack, devices that have a link become cards (role icon,
-  name, model, health dot) in a tree, gateway or router on top, then switches, then the rest; a card
+  name, model, health dot) in a tree, gateway or router on top, then switches, then the rest; three
+  links or more from one card down run as one trunk (one drop, one lane, then a drop into each card);
+  zoomed in, a card keeps its design size on screen, zoomed out it shrinks with the scene; a card
   and its slab are one item (pointing at either lights both); the others keep their unit. Hover lifts
   a block 2 px with an outline and dims what it is not linked to; selection outlines it in the accent
   colour. Colours are the `--trica-iso-*` tokens (every theme defines them); no inline style.
