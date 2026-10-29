@@ -132,18 +132,6 @@ export function orthogonalRoute(a: Pt, aSide: Side, b: Pt, bSide: Side, opts: { 
   return simplify([a, sa, ...via, sb, b]);
 }
 
-/**
- * A route from a card to a gate that stands to the right of every card: out of the card's east side
- * (when no card is to its right) or its top (into the channel above its row), along that line to the
- * lane `laneX`, along the lane to the height of the gate's port, and into the port. Never crosses a card.
- */
-export function gateRoute(a: Pt, aSide: "e" | "n", g: Pt, opts: { laneX: number; chanY?: number; stub?: number }): Pt[] {
-  const stub = opts.stub ?? 12;
-  if (aSide === "e") return simplify([a, { x: a.x + stub, y: a.y }, { x: Math.max(opts.laneX, a.x + stub), y: a.y }, { x: Math.max(opts.laneX, a.x + stub), y: g.y }, g]);
-  const y = opts.chanY ?? a.y - stub;
-  return simplify([a, { x: a.x, y }, { x: opts.laneX, y }, { x: opts.laneX, y: g.y }, g]);
-}
-
 /** A route along a cable tray: from a up (or down) to the tray line, along it, then to b. Coordinates are those of the floor plane. */
 export function trayRoute(a: Pt, b: Pt, trayY: number): Pt[] {
   return simplify([a, { x: a.x, y: trayY }, { x: b.x, y: trayY }, b]);

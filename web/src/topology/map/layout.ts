@@ -40,8 +40,8 @@ export interface WorldLayout {
   plates: Plate[];
   /** Number of rack units drawn, for the rack level. */
   units?: number;
-  /** The cabinet's outer footprint and height (rack level): the four posts and the rails stand on it. */
-  frame?: { box: Box; units: number };
+  /** The cabinet's outer footprint and height (rack level): the four posts and the rails stand on it; `filled` are the units a device takes. */
+  frame?: { box: Box; units: number; filled: number[] };
 }
 
 /** The shape of a gate: a thin panel standing across a column, its long side along y. */
@@ -258,7 +258,8 @@ function layoutRack(m: TopologyMap): WorldLayout {
     items.push(item(n, "shelf", { x: W + 5 + (i % 4) * 1.5, y: 0.6 + Math.floor(i / 4) * 1.5, w: 1.2, d: 1.2, z: 0, h: 0.4 }, { sub: n.role }));
   });
   const POST = 0.14;
-  const frame = { box: { x: -POST, y: -POST, w: W + POST * 2, d: D + POST * 2, z: 0, h: units * UZ + 0.1 }, units };
+  const filled = [...new Set(mounted.flatMap((n) => Array.from({ length: Math.max(1, n.mount?.u_height ?? 1) }, (_, k) => (n.mount?.position ?? 0) + k)))].sort((a, b) => a - b);
+  const frame = { box: { x: -POST, y: -POST, w: W + POST * 2, d: D + POST * 2, z: 0, h: units * UZ + 0.1 }, units, filled };
   const plates: Plate[] = [{ id: "base", box: { x: -0.45, y: -0.45, w: W + 0.9, d: D + 0.9, z: -0.12, h: 0.12 } }];
   const out = settle([...items, ...ps], plates);
   const base = out.plates[0]?.box ?? { x: 0.45, y: 0.45 };

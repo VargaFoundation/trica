@@ -6,15 +6,15 @@
 import type { MapEdge, MapNode, TopologyMap } from "../../api/types";
 import type { IconName } from "../../components/ui/icons";
 import { kindOf } from "../../inventory/kind";
-import { doorGlass, faceOf, floorMatrix, ledDots, ledStates, portStrip, ventLines, wallBoxes, windows, type Face, type Rect } from "./decor";
-import { CELL, columnShifts, isoBox, project, projectBox, shiftIso, turnedWorld, turnPoint, turnRect, union, viewBoxOf, type Bounds, type IsoBox, type Pt, type Rot } from "./iso";
+import { deviceFront, doorGlass, faceOf, facePoly, floorMatrix, ledDots, ledStates, ventLines, wallBoxes, windows, type DeviceFront, type Face, type Rect } from "./decor";
+import { CELL, columnShifts, insidePolygon, isoBox, pointsOf, project, projectBox, shiftIso, turnedWorld, turnPoint, turnRect, union, viewBoxOf, type Bounds, type IsoBox, type Pt, type Rot } from "./iso";
 import { isGate, layoutWorld, UZ, type ItemRole, type Plate, type WorldItem, type WorldLayout } from "./layout";
 import { edgeUtilClass, linkState, type Direction, type LinkState } from "./flow";
 import { badgeBox, badgeDistances, hitsAny, leaderBetween, merge, placePill, type PillSize, type PillSpec } from "./labels";
 import { bundleMark, endBadge } from "./port";
-import { assignLanes, fanOffsets, gateRoute, offsetPolyline, orthogonalRoute, pointAt, pointAtDistance, polylineLength, quadAt, quadLength, roundedPath, trayLaneY, trayRect, trayRoute, type Side } from "./route";
+import { assignLanes, fanOffsets, offsetPolyline, pointAt, pointAtDistance, polylineLength, quadAt, quadLength, roundedPath, trayLaneY, trayRect, trayRoute } from "./route";
 import { BAND_WIDTH, speedBand, type SpeedBand } from "./speed";
-import { layoutCards, rankTree, type TreeEdge, type TreeNode } from "./tree";
+import { orderLayers, planTree, rankTree, type TreeEdge, type TreeNode, type TreePlan } from "./tree";
 
 export interface Cabinet {
   iso: IsoBox;
@@ -34,8 +34,10 @@ export interface SceneDoor {
 export interface SceneCard {
   x: number;
   y: number;
+  /** In scene px: the design size times `k`, the text scale the card is drawn at. */
   w: number;
   h: number;
+  k: number;
   icon: IconName;
   name: string;
   model?: string;
@@ -63,8 +65,12 @@ export interface SceneItem {
   floorText?: { text: string; transform: string };
   /** The front of a room's rack. */
   door?: SceneDoor;
-  /** The ports of a rack device's front (one path). */
-  ports?: string;
+  /** What a device's front shows, by its role. */
+  front?: DeviceFront;
+  /** Its status LED, on the right of its front: the colour of its health, as a product shows it. */
+  led?: Pt;
+  /** A room's mast: from its floor up to the point above its walls where its lines start. */
+  mast?: { x1: number; y1: number; x2: number; y2: number };
   /** Little triangle on top of a rack pointing the way it faces. */
   arrow?: string;
   /** Where lines meet the item. */
@@ -93,9 +99,8 @@ export interface SceneItem {
   pill: Bounds;
   /** The line from the block to its pill, when the pill is not right under (or beside) it. */
   pillLeader?: { x1: number; y1: number; x2: number; y2: number };
-  /** Its card in the rack's tree, and the leader that joins it to the slab. */
+  /** Its card in the rack's tree. */
   card?: SceneCard;
-  leader?: string;
 }
 
 export interface SceneFrame {
@@ -106,6 +111,11 @@ export interface SceneFrame {
   top: string;
   /** U ticks along the front-left post, and the numbers of some of them. */
   ticks: string;
+  /** The cabinet's back and left side panels, behind the devices (polygon points). */
+  panels: string[];
+  /** Blanking plates over the empty units of the front, one closed shape per run of empty units, and a line between units. */
+  blanks: string;
+  blankLines: string;
   marks: { x: number; y: number; text: string }[];
 }
 
@@ -182,9 +192,37 @@ export interface Scene {
   ground: SceneGround;
   /** Cable trays of a room, on the floor behind its racks. */
   trays: IsoBox[];
+  /** What the view frames: the blocks, cards and frame, not the floor they stand on nor the labels. */
+  core: Bounds;
+  /** How much bigger than its design size the text of this scene is drawn. */
+  text: number;
 }
 
+/**
+ * The text scales a scene is built at, 1.18 apart around 1 (so that text stays within 9 % of its size
+ * on screen): a zoom only rebuilds it when it crosses one of them. From the deepest zoom in (ZOOM_MAX of
+ * a view at FIT_MAX) to a far zoom out.
+ */
+export const TEXT_STEPS: readonly number[] = Array.from({ length: 21 }, (_, i) => Math.round(1.18 ** (i - 14) * 1000) / 1000);
+
+/**
+ * The text scale for a view that draws one scene px as `screen` screen px: the step nearest to its
+ * inverse, so that text keeps its design size on screen (within the steps' range).
+ */
+export function textScale(screen: number): number {
+  const want = 1 / Math.max(screen, 1e-6);
+  let best = TEXT_STEPS[0] ?? 1;
+  for (const t of TEXT_STEPS) if (Math.abs(Math.log(t / want)) < Math.abs(Math.log(best / want))) best = t;
+  return best;
+}
+
+/** Below this many screen px, a device's block is too small for its name to be written until pointed at. */
+export const LABEL_MIN_PX = 18;
+
 const fmt = (n: number) => Math.round(n * 10) / 10;
+/** The height of a room's far walls, and of its mast above its floor (over the walls). */
+const WALL_BACK = 1.15;
+const MAST = WALL_BACK + 0.45;
 
 function plateIso(p: Plate, layout: WorldLayout, rot: Rot): ScenePlate {
   const world = { w: layout.w, d: layout.d };
@@ -274,6 +312,12 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
   }
   const gate = isGate(it.role);
   let port = iso.anchor;
+  // A room's or an area's lines start from the top of a mast above its walls, so that they pass over them.
+  let mast: SceneItem["mast"];
+  if (it.role === "room" || it.role === "area") {
+    port = project(r.x + r.w / 2, r.y + r.d / 2, z1 + MAST);
+    mast = { x1: fmt(iso.anchor.x), y1: fmt(iso.anchor.y), x2: fmt(port.x), y2: fmt(port.y) };
+  }
   if (it.role === "device") port = it.portSide === "east" ? project(r.x + r.w, r.y + r.d / 2, b.z + b.h / 2) : project(r.x + r.w / 2, r.y + r.d, b.z + b.h / 2);
   else if (gate) port = project(r.x + r.w / 2, r.y + r.d / 2, b.z + b.h / 2);
   const parts: IsoBox[] = [];
@@ -299,7 +343,7 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
   let walls: SceneItem["walls"];
   let floorText: SceneItem["floorText"];
   if (it.role === "room") {
-    const w = wallBoxes(r, z1, 1.15, 0.3);
+    const w = wallBoxes(r, z1, WALL_BACK, 0.3);
     walls = { back: w.back.map(projectBox), front: w.front.map(projectBox) };
   }
   if (it.role === "room" || it.role === "area") {
@@ -321,8 +365,10 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
       };
     }
   }
-  let ports: string | undefined;
-  if (it.role === "device" && b.h >= 0.25) ports = portStrip(r, b.z, b.h, Math.max(4, Math.min(16, Math.floor(r.w / 0.16))));
+  // A device's front shows what it is: a switch's ports, a server's bays, a PDU's outlets, a firewall's screen.
+  const front = (it.role === "device" || it.role === "shelf" || it.role === "unplaced") && it.node.kind === "device" && b.h >= 0.25 ? deviceFront(it.node.role, r, b.z, b.h) : undefined;
+  // A rack shows its health on its door; a gate is not a thing with a health.
+  const led = it.role === "rack" || isGate(it.role) ? undefined : project(r.x + r.w - Math.min(0.3, r.w * 0.15), r.y + r.d, b.z + b.h * 0.55);
   const summarised = it.role === "site" || it.role === "room" || it.role === "area" || it.role === "rack";
   const centre = turnPoint({ x: b.x + b.w / 2, y: b.y + b.d / 2 }, world, rot);
   return {
@@ -340,7 +386,9 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
     walls,
     floorText,
     door,
-    ports,
+    front,
+    led: led ? { x: fmt(led.x), y: fmt(led.y) } : undefined,
+    mast,
     arrow,
     port,
     label: it.label,
@@ -359,7 +407,7 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
 }
 
 /** A quadratic arc between two points, bowed to one side; `shift` moves it sideways. */
-export function arc(a: Pt, b: Pt, shift = 0, reverse = false): { d: string; mid: Pt; c: Pt; ends: [Pt, Pt] } {
+export function arc(a: Pt, b: Pt, shift = 0, reverse = false, lift = 0): { d: string; mid: Pt; c: Pt; ends: [Pt, Pt] } {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
@@ -368,7 +416,7 @@ export function arc(a: Pt, b: Pt, shift = 0, reverse = false): { d: string; mid:
   const bow = Math.min(70, len * 0.2);
   const sa = { x: a.x + nx * shift, y: a.y + ny * shift };
   const sb = { x: b.x + nx * shift, y: b.y + ny * shift };
-  const c = { x: (sa.x + sb.x) / 2 + nx * bow, y: (sa.y + sb.y) / 2 + ny * bow - Math.min(30, len * 0.1) };
+  const c = { x: (sa.x + sb.x) / 2 + nx * bow, y: (sa.y + sb.y) / 2 + ny * bow - Math.min(30, len * 0.1) - lift };
   // The bow is fixed by the a to b direction, so a reversed lane runs along the same curve backwards.
   const [from, to] = reverse ? [sb, sa] : [sa, sb];
   return {
@@ -408,26 +456,28 @@ export function arrowHead(tip: Pt, ctrl: Pt, size = 8): string {
 export const LANE_GAP = 3;
 
 const CHAR = 6.9;
+/**
+ * How much bigger than its design size text is drawn in the scene being built: the inverse of the
+ * screen scale, so that labels and badges keep one size on screen whatever the zoom (see `textScale`).
+ * Set by `buildScene` for the time it runs.
+ */
+let TEXT = 1;
 
 /** The size of a label's pill, from an estimate of the text (it is not measured). */
 function pillSizeOf(i: SceneItem): PillSize {
   return (withSub) => {
     const sub = withSub ? (i.sub?.length ?? 18) * 6.2 : 0;
-    return { w: Math.round(Math.max(i.label.length * CHAR, sub) + 30), h: withSub ? 34 : 21 };
+    return { w: Math.round((Math.max(i.label.length * CHAR, sub) + 30) * TEXT), h: (withSub ? 34 : 21) * TEXT };
   };
 }
 
-/** The cloud above the Internet's gate, relative to the gate's anchor (as IsoScene draws it). */
-const CLOUD_BOX = { x0: -34, y0: -60, x1: 30, y1: -12 };
-
-/** Everything a block draws, in screen px: its faces, posts, walls, cabinets, plant and, for the Internet, its cloud. */
+/** Everything a block draws, in screen px: its faces, posts, walls, cabinets and plant; a gate's badge stays inside its box. */
 export function blockBounds(i: SceneItem): Bounds {
   let b: Bounds = i.iso.bounds;
   for (const p of i.parts) b = merge(b, p.bounds);
   if (i.walls) for (const w of [...i.walls.back, ...i.walls.front]) b = merge(b, w.bounds);
   for (const c of i.cabinets) b = merge(b, c.iso.bounds);
   if (i.plant) b = merge(b, i.plant.bounds);
-  if (i.role === "internet") b = merge(b, { x0: i.iso.anchor.x + CLOUD_BOX.x0, y0: i.iso.anchor.y + CLOUD_BOX.y0, x1: i.iso.anchor.x + CLOUD_BOX.x1, y1: i.iso.anchor.y + CLOUD_BOX.y1 });
   return b;
 }
 
@@ -452,22 +502,29 @@ export interface Obstacle {
  * down and sideways (a leader line then joins it to its block) or above, a rack's devices slide along
  * their column instead, and when nothing is free it is hidden until pointed at. Widths are estimated.
  */
+/** A device: its name stays next to it, or waits until it is pointed at. */
+const nearOnly = (i: SceneItem) => (i.role === "device" || i.role === "shelf") && !i.drillable;
+/** A device that is not in trouble: zoomed out, its name waits until it is pointed at. */
+const crowdable = (i: SceneItem) => nearOnly(i) && i.node.health.worst !== "critical" && i.node.health.worst !== "warning";
+/** Past this many lines at a level, port names wait until a line or one of its ends is pointed at. */
+const PORTS_MAX = 12;
+
 function placeLabels(items: SceneItem[], obstacles: readonly Obstacle[], taken: Bounds[]): void {
   for (const i of [...items].reverse()) {
     if (!i.labelShown) continue;
     const mine = blockBounds(i);
-    const spec: PillSpec = { at: { x: i.labelAt.x, y: i.labelAt.y - 14 }, start: i.labelStart, top: mine.y0, size: pillSizeOf(i), hasSub: i.hasSub, beside: i.labelStart };
+    const spec: PillSpec = { at: { x: i.labelAt.x, y: i.labelAt.y - 14 * TEXT }, start: i.labelStart, top: mine.y0, size: pillSizeOf(i), hasSub: i.hasSub, beside: i.labelStart, scale: TEXT, near: nearOnly(i) };
     const won = placePill(
       spec,
       taken,
       obstacles.filter((o) => o.id !== i.id).map((o) => o.box),
     );
     if (won) {
-      i.labelAt = { x: won.rect.x0 + (i.labelStart ? 0 : (won.rect.x1 - won.rect.x0) / 2), y: won.rect.y0 + 14 };
+      i.labelAt = { x: won.rect.x0 + (i.labelStart ? 0 : (won.rect.x1 - won.rect.x0) / 2), y: won.rect.y0 + 14 * TEXT };
       i.subShown = won.withSub;
       i.pill = won.rect;
       taken.push(won.rect);
-      if (i.labelStart) i.pillLeader = leaderBetween({ x: i.iso.bounds.x1, y: spec.at.y + 11 }, won.rect);
+      if (i.labelStart) i.pillLeader = leaderBetween({ x: i.iso.bounds.x1, y: spec.at.y + 11 * TEXT }, won.rect);
       else if (won.dx !== 0 || won.dy !== 0 || won.above) i.pillLeader = leaderBetween(won.above ? { x: i.iso.base.x, y: mine.y0 + 3 } : { x: i.iso.base.x, y: i.iso.bounds.y1 - 3 }, won.rect);
     } else {
       i.labelShown = false;
@@ -479,7 +536,7 @@ function placeLabels(items: SceneItem[], obstacles: readonly Obstacle[], taken: 
     // Hidden: where it shows when pointed at.
     const { w, h } = pillSizeOf(i)(false);
     const x0 = i.labelStart ? i.labelAt.x : i.labelAt.x - w / 2;
-    const y0 = i.labelAt.y - 14;
+    const y0 = i.labelAt.y - 14 * TEXT;
     i.pill = { x0, x1: x0 + w, y0, y1: y0 + h };
   }
 }
@@ -514,10 +571,32 @@ function frameScene(f: NonNullable<WorldLayout["frame"]>, layout: WorldLayout, r
       marks.push({ x: fmt(c.x - 11), y: fmt(c.y + 3), text: String(u) });
     }
   }
-  return { back: posts.slice(0, 1), front: posts.slice(1), top, ticks, marks };
+  // The far panels of the cabinet, and blanking plates where no device is mounted.
+  const H = h;
+  const panels = [
+    [corner(r.x, r.y, 0), corner(r.x + r.w, r.y, 0), corner(r.x + r.w, r.y, H), corner(r.x, r.y, H)].join(" "),
+    [corner(r.x, r.y, 0), corner(r.x, r.y + r.d, 0), corner(r.x, r.y + r.d, H), corner(r.x, r.y, H)].join(" "),
+  ];
+  const filled = new Set(f.filled);
+  const inner = { x: r.x + P, y: r.y, w: r.w - 2 * P, d: r.d };
+  let blanks = "";
+  let blankLines = "";
+  for (let u = 1; u <= f.units; u++) {
+    if (filled.has(u)) continue;
+    let v = u;
+    while (v + 1 <= f.units && !filled.has(v + 1)) v++;
+    blanks += `M${facePoly(inner, "south", 0, 1, (u - 1) * UZ + 0.02, v * UZ - 0.02).split(" ").join("L")}Z`;
+    for (let k = u; k < v; k++) {
+      const a = project(inner.x, inner.y + inner.d, k * UZ);
+      const b = project(inner.x + inner.w, inner.y + inner.d, k * UZ);
+      blankLines += `M${fmt(a.x)},${fmt(a.y)}L${fmt(b.x)},${fmt(b.y)}`;
+    }
+    u = v;
+  }
+  return { back: posts.slice(0, 1), front: posts.slice(1), top, ticks, marks, panels, blanks, blankLines };
 }
 
-const badge = (p: Pt, text: string): SceneBadge => ({ x: fmt(p.x), y: fmt(p.y), text, w: Math.round(text.length * 5.6 + 10) });
+const badge = (p: Pt, text: string): SceneBadge => ({ x: fmt(p.x), y: fmt(p.y), text, w: Math.round((text.length * 5.6 + 10) * TEXT) });
 
 /** What a path gives the finished edge: its centre line, its two lanes, where badges sit. */
 interface Geometry {
@@ -533,9 +612,30 @@ interface Geometry {
   arrows: string[];
 }
 
-function arcGeometry(e: MapEdge, a: SceneItem, b: SceneItem): Geometry {
+/** How much higher, in px, an arc is raised at a time until it clears the walls in its way, and at most. */
+const LIFT_STEP = 16;
+const LIFT_MAX = 240;
+
+/**
+ * A raised arc between two items. `wallsOf` gives the screen outlines of the rooms' walls: the arc is
+ * raised until no point of it (but near its ends) lies inside the walls of a room it passes over.
+ */
+function arcGeometry(e: MapEdge, a: SceneItem, b: SceneItem, wallsOf: ReadonlyMap<string, Pt[][]> = new Map()): Geometry {
   const shift = mediumShift(e.medium);
-  const base = arc(a.port, b.port, shift);
+  const walls = [...wallsOf].flatMap(([id, ws]) => (id === a.id || id === b.id ? [] : ws));
+  const clears = (q: ReturnType<typeof arc>) => {
+    for (let k = 2; k <= 18; k++) {
+      const p = quadAt(q.ends[0], q.c, q.ends[1], k / 20);
+      if (walls.some((w) => insidePolygon(p, w))) return false;
+    }
+    return true;
+  };
+  let lift = 0;
+  let base = arc(a.port, b.port, shift);
+  while (walls.length > 0 && lift < LIFT_MAX && !clears(base)) {
+    lift += LIFT_STEP;
+    base = arc(a.port, b.port, shift, false, lift);
+  }
   const arrows: string[] = [];
   if (e.medium === "uplinked_to") {
     if (e.toward === "a" || e.toward === "both") arrows.push(arrowHead(base.ends[0], base.c));
@@ -545,8 +645,8 @@ function arcGeometry(e: MapEdge, a: SceneItem, b: SceneItem): Geometry {
   const lanes: SceneLane[] = e.measured
     ? [
         // Two lanes side by side: a to b on one side of the line, b to a on the other, each drawn in its own direction.
-        { dir: "ab", d: arc(a.port, b.port, shift - LANE_GAP).d, len },
-        { dir: "ba", d: arc(a.port, b.port, shift + LANE_GAP, true).d, len },
+        { dir: "ab", d: arc(a.port, b.port, shift - LANE_GAP, false, lift).d, len },
+        { dir: "ba", d: arc(a.port, b.port, shift + LANE_GAP, true, lift).d, len },
       ]
     : [];
   return { d: base.d, mid: base.mid, len, lanes, ends: base.ends, near: [quadAt(base.ends[0], base.c, base.ends[1], 0.14), quadAt(base.ends[0], base.c, base.ends[1], 0.86)], at: (d) => quadAt(base.ends[0], base.c, base.ends[1], Math.min(1, Math.max(0, d / (len || 1)))), arrows };
@@ -619,7 +719,7 @@ function finish(e: MapEdge, g: Geometry, floor: boolean, ports: boolean): SceneE
 export function placeBadges(edges: SceneEdge[], taken: Bounds[]): void {
   const put = (b: SceneBadge, spots: Pt[]): boolean => {
     for (const p of spots) {
-      const box = badgeBox(p, b.w);
+      const box = badgeBox(p, b.w, TEXT);
       if (hitsAny(box, taken, 1)) continue;
       b.x = fmt(p.x);
       b.y = fmt(p.y);
@@ -633,13 +733,14 @@ export function placeBadges(edges: SceneEdge[], taken: Bounds[]): void {
     if (!b) continue;
     const mid = e.len / 2;
     const spots: Pt[] = [{ x: b.x, y: b.y }];
-    for (let k = 1; k * 22 <= mid - 20; k++) spots.push(e.at(mid + k * 22), e.at(mid - k * 22));
+    const step = 22 * TEXT;
+    for (let k = 1; k * step <= mid - 20 * TEXT; k++) spots.push(e.at(mid + k * step), e.at(mid - k * step));
     // A count is never dropped: with no room it stays where it was.
-    if (!put(b, spots)) taken.push(badgeBox(b, b.w));
+    if (!put(b, spots)) taken.push(badgeBox(b, b.w, TEXT));
   }
   for (const e of edges) {
     if (!e.portsShown) continue;
-    const ds = badgeDistances(22, e.len / 2 - 14);
+    const ds = badgeDistances(22 * TEXT, e.len / 2 - 14 * TEXT, 22 * TEXT);
     for (const [badge, from] of [
       [e.ports.a, (s: number) => e.at(s)],
       [e.ports.b, (s: number) => e.at(e.len - s)],
@@ -653,151 +754,87 @@ export function placeBadges(edges: SceneEdge[], taken: Bounds[]): void {
 /** A point a fraction of the way from the first end to the centre. */
 const pointAtLerp = (ends: [Pt, Pt], t: number, mid: Pt): Pt => ({ x: ends[0].x + (mid.x - ends[0].x) * t * 2, y: ends[0].y + (mid.y - ends[0].y) * t * 2 });
 
-const CARD = { w: 158, h: 46, gapX: 40, gapY: 44, perRow: 3 };
+const CARD = { w: 158, h: 46, gapX: 40, gapY: 44, perRow: 6, track: 10 };
+/** Past this many lines a tree's port names wait until a line or a card is pointed at. */
+const TREE_PORTS = 8;
 
-/** Places the cards of a rack's tree to the right of the drawing and returns the layers' slots. */
-function placeCards(items: SceneItem[], layers: string[][]): void {
+/**
+ * Places the cards of a rack's tree right of the drawing and routes the links between them (`planTree`).
+ * A card and its slab are one item: pointing at either lights both, so no line joins them. Returns the
+ * routes, in the scene's coordinates, and the lanes of the links to the gates (finished once the gates stand).
+ */
+function placeCards(items: SceneItem[], layers: string[][], links: MapEdge[], gateRank: ReadonlyMap<string, number>): TreePlan {
   const at = new Map(items.map((i) => [i.id, i]));
   const rackItems = items.filter((i) => i.role === "device" || i.role === "shelf");
   const pills = items.filter((i) => i.labelShown && !i.card && i.pill.x1 > 0).map((i) => i.pill.x1);
-  const x0 = Math.max(0, ...rackItems.map((i) => i.iso.bounds.x1), ...pills) + 56;
-  const y0 = Math.min(...items.filter((i) => i.role === "device").map((i) => i.iso.bounds.y0), Infinity);
-  const { slots } = layoutCards(layers, CARD);
-  for (const [id, s] of slots) {
+  // Zoomed in, the cards keep one size on screen, as the labels do: the tree is laid out at the text
+  // scale. Zoomed out they shrink with the scene (k is at most 1), or a tree wider than the stage could
+  // never fit in it.
+  const k = Math.min(TEXT, 1);
+  const size = { ...CARD, w: CARD.w * k, h: CARD.h * k, gapX: CARD.gapX * k, gapY: CARD.gapY * k, track: CARD.track * k };
+  const x0 = Math.max(0, ...rackItems.map((i) => i.iso.bounds.x1), ...pills) + 64 * k;
+  const y0f = Math.min(...items.filter((i) => i.role === "device").map((i) => i.iso.bounds.y0), Infinity);
+  const y0 = Number.isFinite(y0f) ? y0f : 0;
+  const inTree = new Set(layers.flat());
+  const between = links.filter((e) => inTree.has(e.a) && inTree.has(e.b));
+  const toGates = links.flatMap((e) => (inTree.has(e.a) && gateRank.has(e.b) ? [{ key: e.id, card: e.a, gate: gateRank.get(e.b) as number }] : inTree.has(e.b) && gateRank.has(e.a) ? [{ key: e.id, card: e.b, gate: gateRank.get(e.a) as number }] : []));
+  const plan = planTree(orderLayers(layers, between), between.map((e) => ({ key: e.id, a: e.a, b: e.b })), toGates, size);
+  const move = (p: Pt): Pt => ({ x: fmt(p.x + x0), y: fmt(p.y + y0) });
+  const routes = new Map([...plan.routes].map(([k, pts]) => [k, pts.map(move)] as const));
+  const exits = new Map([...plan.exits].map(([k, x]) => [k, { pts: x.pts.map(move), laneX: fmt(x.laneX + x0) }] as const));
+  const cards = new Map([...plan.cards].map(([k, c]) => [k, { ...c, x: fmt(c.x + x0), y: fmt(c.y + y0) }] as const));
+  for (const [id, c] of cards) {
     const it = at.get(id);
     if (!it) continue;
     it.card = {
-      x: fmt(x0 + s.x),
-      y: fmt((Number.isFinite(y0) ? y0 : 0) + s.y),
-      w: CARD.w,
-      h: CARD.h,
+      x: c.x,
+      y: c.y,
+      w: size.w,
+      h: size.h,
+      k,
       icon: kindOf({ type: "device", attributes: { role: it.node.role } }).icon,
       name: it.label,
       model: it.node.model,
-      layer: s.layer,
+      layer: c.layer,
     };
-    it.navAt = { x: it.card.x + CARD.w / 2, y: it.card.y + CARD.h / 2 };
+    it.navAt = { x: c.x + size.w / 2, y: c.y + size.h / 2 };
     it.labelShown = false;
     it.subShown = false;
-    // The slab's east face meets its card through an elbow.
-    const from = project(it.rect.x + it.rect.w, it.rect.y + it.rect.d / 2, it.z + it.h / 2);
-    it.leader = roundedPath(orthogonalRoute(from, "e", { x: it.card.x, y: it.card.y + CARD.h / 2 }, "w", { stub: 18 }), 6);
   }
+  return { ...plan, routes, exits, cards, laneRight: plan.laneRight > 0 ? fmt(plan.laneRight + x0) : 0 };
 }
 
-/**
- * Routes of the edges between the cards of a rack's tree: out of a side, through a channel, into a side.
- * An edge to a gate (`gates`: the point of its west side) leaves the card by its east side when no card
- * is to its right, otherwise by its top, and runs round the cards to the gate's column.
- */
-function cardEdges(edges: MapEdge[], cards: Map<string, SceneCard>, gates: ReadonlyMap<string, Pt> = new Map()): SceneEdge[] {
-  type Plan = { e: MapEdge; ca?: SceneCard; cb?: SceneCard; ga?: Pt; gb?: Pt; sa: Side; sb: Side };
-  const plans: Plan[] = [];
-  const rightmost = (c: SceneCard) => ![...cards.values()].some((o) => o !== c && Math.abs(o.y - c.y) <= 1 && o.x > c.x);
-  for (const e of edges) {
-    const ca = cards.get(e.a);
-    const cb = cards.get(e.b);
-    const ga = gates.get(e.a);
-    const gb = gates.get(e.b);
-    if (ga && gb) continue;
-    if (ga || gb) {
-      const c = ga ? cb : ca;
-      if (!c) continue;
-      const side: Side = rightmost(c) ? "e" : "n";
-      plans.push(ga ? { e, cb: c, ga, sa: "w", sb: side } : { e, ca: c, gb, sa: side, sb: "w" });
-      continue;
-    }
-    if (!ca || !cb) continue;
-    let sa: Side;
-    let sb: Side;
-    if (ca.layer !== cb.layer || Math.abs(ca.y - cb.y) > 1) {
-      [sa, sb] = ca.y <= cb.y ? ["s", "n"] : ["n", "s"];
-    } else {
-      [sa, sb] = ca.x <= cb.x ? ["e", "w"] : ["w", "e"];
-    }
-    plans.push({ e, ca, cb, sa, sb });
-  }
-  const cardAt = (p: Plan, end: "a" | "b") => (end === "a" ? p.ca : p.cb);
-  const gateAt = (p: Plan, end: "a" | "b") => (end === "a" ? p.ga : p.gb);
-  // The links that leave one side of a card are spread along it, ordered by where they go.
-  const sides = new Map<string, { plan: number; end: "a" | "b"; other: number }[]>();
-  plans.forEach((p, i) => {
-    for (const end of ["a", "b"] as const) {
-      const c = cardAt(p, end);
-      if (!c) continue;
-      const o = cardAt(p, end === "a" ? "b" : "a") ?? gateAt(p, end === "a" ? "b" : "a");
-      if (!o) continue;
-      const side = end === "a" ? p.sa : p.sb;
-      const key = `${c.x}|${c.y}|${side}`;
-      const list = sides.get(key) ?? [];
-      const centre = "w" in o ? { x: o.x + (o as SceneCard).w / 2, y: o.y + (o as SceneCard).h / 2 } : o;
-      list.push({ plan: i, end, other: side === "n" || side === "s" ? centre.x : centre.y });
-      sides.set(key, list);
-    }
-  });
-  const attach = new Map<string, Pt>();
-  for (const list of sides.values()) {
-    list.sort((p, q) => p.other - q.other || p.plan - q.plan);
-    list.forEach((s, k) => {
-      const p = plans[s.plan] as Plan;
-      const c = cardAt(p, s.end) as SceneCard;
-      const side = (s.end === "a" ? p.sa : p.sb) as Side;
-      const f = (k + 1) / (list.length + 1);
-      const pt = side === "n" ? { x: c.x + c.w * f, y: c.y } : side === "s" ? { x: c.x + c.w * f, y: c.y + c.h } : side === "w" ? { x: c.x, y: c.y + c.h * f } : { x: c.x + c.w, y: c.y + c.h * f };
-      attach.set(`${s.plan}|${s.end}`, pt);
-    });
-  }
+/** The scene's edges of a rack's tree: the planned routes, and the links to the gates finished into their ports. */
+function cardEdges(edges: MapEdge[], plan: TreePlan, gates: ReadonlyMap<string, Pt>): SceneEdge[] {
+  const ports = edges.length <= TREE_PORTS;
   // The links that end on one gate arrive on its west side, spread along it.
-  const arriving = new Map<string, number[]>();
-  plans.forEach((p, i) => {
-    const g = p.ga ? p.e.a : p.gb ? p.e.b : undefined;
-    if (g) arriving.set(g, [...(arriving.get(g) ?? []), i]);
-  });
-  const into = new Map<number, Pt>();
+  const arriving = new Map<string, MapEdge[]>();
+  for (const e of edges) {
+    const g = gates.has(e.a) ? e.a : gates.has(e.b) ? e.b : undefined;
+    if (g && plan.exits.has(e.id)) arriving.set(g, [...(arriving.get(g) ?? []), e]);
+  }
+  const into = new Map<string, Pt>();
   for (const [id, list] of arriving) {
     const g = gates.get(id) as Pt;
-    const off = fanOffsets(list.length, 7);
-    list.forEach((i, k) => into.set(i, { x: g.x, y: g.y + (off[k] ?? 0) }));
+    const sorted = [...list].sort((p, q) => (plan.exits.get(p.id)?.laneX ?? 0) - (plan.exits.get(q.id)?.laneX ?? 0));
+    const off = fanOffsets(sorted.length, 7);
+    sorted.forEach((e, k) => into.set(e.id, { x: g.x, y: g.y + (off[k] ?? 0) }));
   }
-  // Channels between two layers: links whose spans overlap take different heights.
-  const channel = new Map<number, number>();
-  const groups = new Map<string, number[]>();
-  plans.forEach((p, i) => {
-    if (p.ga || p.gb) return;
-    if (p.sa !== "s" && p.sa !== "n") return;
-    const a = attach.get(`${i}|a`) as Pt;
-    const b = attach.get(`${i}|b`) as Pt;
-    const key = `${Math.round(Math.min(a.y, b.y))}|${Math.round(Math.max(a.y, b.y))}`;
-    groups.set(key, [...(groups.get(key) ?? []), i]);
-  });
-  for (const ids of groups.values()) {
-    const lanes = assignLanes(
-      ids.map((i) => ({ from: (attach.get(`${i}|a`) as Pt).x, to: (attach.get(`${i}|b`) as Pt).x })),
-    );
-    const n = Math.max(...lanes) + 1;
-    ids.forEach((i, k) => {
-      const a = attach.get(`${i}|a`) as Pt;
-      const b = attach.get(`${i}|b`) as Pt;
-      channel.set(i, (a.y + b.y) / 2 + ((lanes[k] as number) - (n - 1) / 2) * 6);
-    });
-  }
-  let lane = 0;
-  return plans.map((p, i) => {
-    if (p.ga || p.gb) {
-      const end = p.ga ? "b" : "a";
-      const from = attach.get(`${i}|${end}`) as Pt;
-      const to = into.get(i) as Pt;
-      const k = lane++;
-      const side = (end === "a" ? p.sa : p.sb) as "e" | "n";
-      // The lane runs left of the gates, each link on its own so that two never share a vertical.
-      const pts = gateRoute(from, side, to, { laneX: to.x - 26 - k * 7, chanY: from.y - 9 - (k % 3) * 4 });
-      return finish(p.e, pathGeometry(p.e, p.ga ? [...pts].reverse() : pts), false, true);
+  const out: SceneEdge[] = [];
+  for (const e of edges) {
+    let pts = plan.routes.get(e.id);
+    const exit = plan.exits.get(e.id);
+    const to = into.get(e.id);
+    if (!pts && exit && to) {
+      const run = [...exit.pts, { x: exit.laneX, y: to.y }, to];
+      pts = gates.has(e.a) ? run.reverse() : run;
     }
-    const a = attach.get(`${i}|a`) as Pt;
-    const b = attach.get(`${i}|b`) as Pt;
-    const pts = orthogonalRoute(a, p.sa, b, p.sb, { stub: 12, mid: channel.get(i) });
-    return finish(p.e, pathGeometry(p.e, pts), false, true);
-  });
+    if (!pts) continue;
+    const se = finish(e, pathGeometry(e, pts), false, true);
+    if (!ports) se.portsShown = false;
+    out.push(se);
+  }
+  return out;
 }
 
 /** Routes of the cables of a room: up from a rack to a tray behind the racks, along it, down to the other rack. */
@@ -828,7 +865,21 @@ function trayEdges(edges: MapEdge[], items: Map<string, SceneItem>): { edges: Sc
   return { edges: out, trays: [projectBox({ ...t, z: -0.15, h: 0.12 })], rest };
 }
 
-export function buildScene(m: TopologyMap, rot: Rot): Scene {
+/**
+ * The scene of a map level turned by `rot`. `text` (1 by default) is how much bigger than its design
+ * size text is drawn: labels and badges are sized and placed at that scale, and a device whose block
+ * would be under LABEL_MIN_PX on screen keeps its name until pointed at.
+ */
+export function buildScene(m: TopologyMap, rot: Rot, opts: { text?: number } = {}): Scene {
+  TEXT = opts.text ?? 1;
+  try {
+    return sceneOf(m, rot);
+  } finally {
+    TEXT = 1;
+  }
+}
+
+function sceneOf(m: TopologyMap, rot: Rot): Scene {
   const layout = layoutWorld(m);
   const items = layout.items.map((i) => itemIso(i, layout, rot)).sort((a, b) => a.iso.depth - b.iso.depth);
   const plates = layout.plates.map((p) => plateIso(p, layout, rot));
@@ -842,14 +893,19 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
     i.labelStart = true;
     i.labelShown = (i.node.mount?.u_height ?? 1) >= 2 || linked.has(i.id);
   }
-  // A rack whose devices are cabled shows them as a tree of cards, the gateway on top.
+  // A rack whose devices are cabled shows them as a tree of cards, the gateway on top. A device cabled
+  // to nothing but a gate (a bastion to the Internet) is in the tree too: the gates rank above it.
+  const gates = m.level === "rack" ? items.filter((i) => isGate(i.role)) : [];
   let layers: string[][] = [];
   if (m.level === "rack") {
     const nodes: TreeNode[] = items
-      .filter((i) => i.node.kind === "device")
-      .map((i) => ({ id: i.id, kind: "device", role: i.node.role, u: i.node.mount?.position, name: i.label }));
+      .filter((i) => i.node.kind === "device" || isGate(i.role))
+      .map((i) => ({ id: i.id, kind: i.node.kind, role: i.node.role, u: i.node.mount?.position, name: i.label }));
     const tree: TreeEdge[] = m.edges.map((e) => ({ a: e.a, b: e.b, medium: e.medium, toward: e.toward }));
-    layers = rankTree(nodes, tree);
+    const gateIds = new Set(gates.map((g) => g.id));
+    layers = rankTree(nodes, tree)
+      .map((l) => l.filter((id) => !gateIds.has(id)))
+      .filter((l) => l.length > 0);
     for (const id of layers.flat()) {
       const it = at.get(id);
       if (it) it.labelShown = false;
@@ -858,20 +914,29 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
   const frame = layout.frame ? frameScene(layout.frame, layout, rot) : undefined;
   // At the rack level the gates (the Internet, other places) stand in a column of their own, right of the
   // cards: they are placed once the rack, its labels and its cards are, so that nothing is drawn over them.
-  const gates = m.level === "rack" ? items.filter((i) => isGate(i.role)) : [];
   const rest = items.filter((i) => !gates.includes(i));
   const blocks = (list: SceneItem[]): Obstacle[] => list.map((i) => ({ id: i.id, box: blockBounds(i) }));
   const frameBox = frame ? union([...frame.back, ...frame.front].map((p) => p.bounds)) : undefined;
   const fixed: Obstacle[] = [...blocks(rest), ...(frameBox ? [{ id: "frame", box: frameBox }] : [])];
   const taken: Bounds[] = [];
+  // Zoomed out, the names of small things wait until pointed at; places, and what is in trouble, keep theirs.
+  if (TEXT > 1)
+    for (const i of rest) {
+      const small = (i.iso.bounds.x1 - i.iso.bounds.x0) / TEXT < LABEL_MIN_PX;
+      if (small && crowdable(i)) i.labelShown = false;
+    }
   placeLabels(rest, fixed, taken);
-  if (layers.length > 0) placeCards(items, layers);
+  const gateRank = new Map(gates.map((g, k) => [g.id, k]));
+  const inTree = new Set(layers.flat());
+  const treeLinks = m.edges.filter((e) => e.a !== e.b && at.has(e.a) && at.has(e.b) && (inTree.has(e.a) || inTree.has(e.b)) && (inTree.has(e.a) || gateRank.has(e.a)) && (inTree.has(e.b) || gateRank.has(e.b)));
+  const plan = layers.length > 0 ? placeCards(items, layers, treeLinks, gateRank) : undefined;
   const cards = new Map(items.flatMap((i) => (i.card ? [[i.id, i.card] as const] : [])));
   const gatePorts = new Map<string, Pt>();
   if (gates.length > 0) {
     const right = Math.max(0, ...[...cards.values()].map((c) => c.x + c.w), ...rest.map((i) => i.iso.bounds.x1), ...rest.filter((i) => !i.card && i.pill.x1 > 0 && i.labelShown).map((i) => i.pill.x1), frameBox?.x1 ?? 0);
     const top = Math.min(...[...cards.values()].map((c) => c.y), ...(frameBox ? [frameBox.y0] : []), Infinity);
-    const moves = columnShifts(gates.map(blockBounds), right + (cards.size > 0 ? 130 : 90), Number.isFinite(top) ? top : 0, 64);
+    const from = Math.max(right + (cards.size > 0 ? 130 : 90), (plan?.laneRight ?? 0) + 60);
+    const moves = columnShifts(gates.map(blockBounds), from, Number.isFinite(top) ? top : 0, 64);
     gates.forEach((g, k) => shiftItem(g, moves[k]?.x ?? 0, moves[k]?.y ?? 0));
     placeLabels(gates, [...fixed, ...blocks(gates), ...[...cards.values()].map((c, k) => ({ id: `card${k}`, box: { x0: c.x, y0: c.y, x1: c.x + c.w, y1: c.y + c.h } }))], taken);
     for (const g of gates) gatePorts.set(g.id, { x: blockBounds(g).x0 - 3, y: g.port.y });
@@ -885,17 +950,17 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
     edges.push(...t.edges);
     trays.push(...t.trays);
     arcs = t.rest;
-  } else if (cards.size > 0) {
-    const ends = (id: string) => cards.has(id) || gatePorts.has(id);
-    const onCards = arcs.filter((e) => ends(e.a) && ends(e.b) && !(gatePorts.has(e.a) && gatePorts.has(e.b)));
-    edges.push(...cardEdges(onCards, cards, gatePorts));
-    arcs = arcs.filter((e) => !onCards.includes(e));
+  } else if (plan) {
+    edges.push(...cardEdges(treeLinks, plan, gatePorts));
+    arcs = arcs.filter((e) => !treeLinks.includes(e));
   }
+  // The rooms' walls, which arcs between places pass above.
+  const wallOutlines = new Map(items.flatMap((i) => (i.walls ? [[i.id, [...i.walls.back, ...i.walls.front].map((w) => pointsOf(w.hull))] as const] : [])));
   for (const e of arcs) {
     const a = at.get(e.a) as SceneItem;
     const b = at.get(e.b) as SceneItem;
     // Arcs between places carry no port names of their own unless one cable is all there is.
-    edges.push(finish(e, arcGeometry(e, a, b), false, e.links === 1 && m.level !== "global" && m.level !== "site"));
+    edges.push(finish(e, arcGeometry(e, a, b, wallOutlines), false, e.links === 1 && m.level !== "global" && m.level !== "site"));
   }
   // Without any live state in the map (no source reports), "unknown" says nothing about a link: it is drawn as a running one.
   const known = m.edges.some((e) => e.oper !== undefined && e.oper !== "unknown");
@@ -903,6 +968,7 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
   // The edges keep the order the API gave them.
   const order = new Map(m.edges.map((e, i) => [e.id, i]));
   edges.sort((p, q) => (order.get(p.edge.id) ?? 0) - (order.get(q.edge.id) ?? 0));
+  if (edges.length > PORTS_MAX) for (const e of edges) e.portsShown = false;
   placeBadges(edges, taken);
 
   const bounds = union(
@@ -923,5 +989,13 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
     ],
     36,
   );
-  return { items, plates, edges, bounds, viewBox: viewBoxOf(bounds), units: layout.units, frame, ground: groundOf(layout, rot), trays };
+  const core = union(
+    [
+      ...items.map((i) => blockBounds(i)),
+      ...items.flatMap((i) => (i.card ? [{ x0: i.card.x, x1: i.card.x + i.card.w, y0: i.card.y, y1: i.card.y + i.card.h }] : [])),
+      ...(frame ? [...frame.back, ...frame.front].map((p) => p.bounds) : []),
+    ],
+    24,
+  );
+  return { items, plates, edges, bounds, viewBox: viewBoxOf(bounds), units: layout.units, frame, ground: groundOf(layout, rot), trays, core, text: TEXT };
 }

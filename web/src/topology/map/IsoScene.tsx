@@ -3,10 +3,11 @@ import type { MapNode, TopologyMap } from "../../api/types";
 import { useI18n, type MessageKey } from "../../i18n";
 import { prefersReducedMotion } from "../../motion";
 import { IconGlyph } from "../../components/ui/icons";
-import { MAX_PARTICLES, PARTICLE_SECONDS, particleCount, planFlows, STATE_DASH, type Direction, type SpeedClass } from "./flow";
+import { planFlows, sheen, STATE_DASH, type Direction, type SpeedClass } from "./flow";
 import type { IsoBox, Rot } from "./iso";
+import { isGate } from "./layout";
 import { nextSpot, type Arrow } from "./nav";
-import { buildScene, MEDIUM_DASH, type SceneBadge, type SceneEdge, type SceneFrame, type SceneItem } from "./scene";
+import { buildScene, MEDIUM_DASH, textScale, type SceneBadge, type SceneEdge, type SceneFrame, type SceneItem } from "./scene";
 
 export interface IsoSceneProps {
   map: TopologyMap;
@@ -27,8 +28,59 @@ export interface IsoSceneProps {
   label: string;
 }
 
+/** How deep a level is: going to a deeper one flies in, to a shallower one backs out. */
+const LEVEL_DEPTH: Record<string, number> = { global: 0, site: 1, unplaced: 1, room: 2, rack: 3 };
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 6;
+/** The most screen px one scene px is drawn at when the view fits a level: a lone device stays its size. */
+export const FIT_MAX = 1.6;
+/** Room kept round the framed blocks for their names, in scene px; more on top, where the controls float. */
+const FIT_PAD = 48;
+const FIT_PAD_TOP = 88;
+/** Below the blocks: their names, and the hint that floats at the bottom. */
+const FIT_PAD_BOTTOM = 96;
+
+/** The stage's size in px, once it is laid out (0 by 0 before, and where nothing is laid out). */
+function useSize(el: React.RefObject<Element | null>): { w: number; h: number } {
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  useLayoutEffect(() => {
+    const node = el.current;
+    if (!node) return;
+    const read = () => {
+      const r = node.getBoundingClientRect();
+      setSize((s) => (Math.abs(s.w - r.width) < 1 && Math.abs(s.h - r.height) < 1 ? s : { w: r.width, h: r.height }));
+    };
+    read();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(read);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [el]);
+  return size;
+}
+
+/**
+ * What the view frames at zoom 1: the level's blocks with room for their names, widened when it would
+ * draw them bigger than FIT_MAX on a stage of `stage` px (unknown: the blocks alone).
+ */
+export function fitFrame(core: { x0: number; y0: number; x1: number; y1: number }, stage: { w: number; h: number }) {
+  const x0 = core.x0 - FIT_PAD;
+  const x1 = core.x1 + FIT_PAD;
+  const y0 = core.y0 - FIT_PAD_TOP;
+  const y1 = core.y1 + FIT_PAD_BOTTOM;
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  let w = x1 - x0;
+  let h = y1 - y0;
+  if (stage.w > 0 && stage.h > 0) {
+    const s = Math.min(stage.w / w, stage.h / h);
+    if (s > FIT_MAX) {
+      w = stage.w / FIT_MAX;
+      h = stage.h / FIT_MAX;
+    }
+  }
+  return { x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2 };
+}
 const CLOUD = "M-30,12 a12,12 0 0 1 4,-23 a17,17 0 0 1 33,-6 a14,14 0 0 1 17,29 z";
 
 function usePageHidden(): boolean {
@@ -45,8 +97,10 @@ function usePageHidden(): boolean {
 export function IsoScene(p: IsoSceneProps) {
   const { t, tp } = useI18n();
   const hidden = usePageHidden();
-  const scene = useMemo(() => buildScene(p.map, p.rot), [p.map, p.rot]);
   const svg = useRef<SVGSVGElement>(null);
+  const size = useSize(svg);
+  // The scene at its design size gives the frame; the one drawn has its text at one size on screen.
+  const base = useMemo(() => buildScene(p.map, p.rot), [p.map, p.rot]);
   const els = useRef(new Map<string, SVGGElement>());
   const [hover, setHover] = useState<string | undefined>();
   const [focused, setFocused] = useState<string | undefined>();
@@ -54,9 +108,9 @@ export function IsoScene(p: IsoSceneProps) {
   // View and roving focus belong to one scene: another level or rotation starts them afresh.
   const [viewState, setViewState] = useState({ key: sceneKey, k: 1, px: 0, py: 0 });
   const [curState, setCurState] = useState<{ key: string; id?: string }>({ key: sceneKey });
-  const first = scene.items[0]?.id;
-  const initial = p.restoreFocus && scene.items.some((i) => i.id === p.restoreFocus) ? p.restoreFocus : first;
-  const cur = curState.key === sceneKey && curState.id !== undefined && scene.items.some((i) => i.id === curState.id) ? curState.id : initial;
+  const first = base.items[0]?.id;
+  const initial = p.restoreFocus && base.items.some((i) => i.id === p.restoreFocus) ? p.restoreFocus : first;
+  const cur = curState.key === sceneKey && curState.id !== undefined && base.items.some((i) => i.id === curState.id) ? curState.id : initial;
   const setCur = (id: string) => setCurState({ key: sceneKey, id });
   const view = viewState.key === sceneKey ? viewState : { key: sceneKey, k: 1, px: 0, py: 0 };
   const setView = useCallback(
@@ -67,7 +121,40 @@ export function IsoScene(p: IsoSceneProps) {
       }),
     [sceneKey],
   );
+  // The frame is the one of the scene at the text scale of the fitted view: a rack's cards grow with that
+  // scale, so the frame of the design-size scene would leave them out.
+  const laid = size.w > 0 && size.h > 0;
+  const scaleOf = (f: { x0: number; y0: number; x1: number; y1: number }) => Math.min(size.w / Math.max(f.x1 - f.x0, 1), size.h / Math.max(f.y1 - f.y0, 1));
+  const fitText = laid ? textScale(scaleOf(fitFrame(base.core, size))) : 1;
+  const fitted = useMemo(() => (fitText === 1 ? base : buildScene(p.map, p.rot, { text: fitText })), [base, fitText, p.map, p.rot]);
+  const b = fitFrame(fitted.core, size);
+  const W = Math.max(b.x1 - b.x0, 1);
+  const H = Math.max(b.y1 - b.y0, 1);
+  const screen = laid ? scaleOf(b) * view.k : 1;
+  const text = laid ? textScale(screen) : 1;
+  const scene = useMemo(() => (text === fitted.text ? fitted : text === 1 ? base : buildScene(p.map, p.rot, { text })), [base, fitted, text, p.map, p.rot]);
   const suppress = useRef(false);
+  // Where the place just opened was, as a share of the view; and how the new level comes in.
+  const drillFrom = useRef<{ fx: number; fy: number } | undefined>(undefined);
+  const lastLevel = useRef<{ key: string; depth: number } | undefined>(undefined);
+  const [enter, setEnter] = useState<{ dir: "in" | "out"; n: number; fx: number; fy: number } | undefined>(undefined);
+  useLayoutEffect(() => {
+    const depth = LEVEL_DEPTH[p.map.level] ?? 0;
+    const prev = lastLevel.current;
+    lastLevel.current = { key: sceneKey, depth };
+    const from = drillFrom.current;
+    drillFrom.current = undefined;
+    if (!prev || prev.key === sceneKey || prev.depth === depth) return;
+    const dir = depth > prev.depth ? "in" : "out";
+    setEnter((e) => ({ dir, n: (e?.n ?? 0) + 1, fx: dir === "in" && from ? from.fx : 0.5, fy: dir === "in" && from ? from.fy : 0.5 }));
+    // Only a new level moves the camera, not a refresh of the same one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sceneKey]);
+  // The origin of the flight, through the CSSOM (the CSP forbids style attributes).
+  useLayoutEffect(() => {
+    if (!enter || !svg.current) return;
+    svg.current.style.setProperty("transform-origin", `${(enter.fx * 100).toFixed(1)}% ${(enter.fy * 100).toFixed(1)}%`);
+  }, [enter]);
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
 
   const reduced = prefersReducedMotion();
@@ -96,9 +183,6 @@ export function IsoScene(p: IsoSceneProps) {
     if (svg.current) svg.current.dataset.drawnMs = String(Math.max(0, Date.now() - p.since));
   }, [scene, p.since]);
 
-  const b = scene.bounds;
-  const W = Math.max(b.x1 - b.x0, 1);
-  const H = Math.max(b.y1 - b.y0, 1);
   const vw = W / view.k;
   const vh = H / view.k;
   const vb = { x: (b.x0 + b.x1) / 2 + view.px - vw / 2, y: (b.y0 + b.y1) / 2 + view.py - vh / 2, w: vw, h: vh };
@@ -170,7 +254,12 @@ export function IsoScene(p: IsoSceneProps) {
 
   const act = (it: SceneItem) => {
     if (suppress.current) return;
-    if (it.drillable) p.onDrill(it.node);
+    if (it.drillable) {
+      // The next level flies in from where this place is on screen.
+      const at = it.navAt;
+      drillFrom.current = { fx: Math.min(1, Math.max(0, (at.x - vb.x) / vb.w)), fy: Math.min(1, Math.max(0, (at.y - vb.y) / vb.h)) };
+      p.onDrill(it.node);
+    }
     else p.onSelect(it.id);
   };
   const onKey = (e: KeyboardEvent<SVGGElement>, it: SceneItem) => {
@@ -198,6 +287,19 @@ export function IsoScene(p: IsoSceneProps) {
   };
 
   const active = hover ?? p.selected;
+  // What the pointed thing is linked to stays lit; the rest dims.
+  const linkedToActive = useMemo(() => {
+    if (active === undefined) return undefined;
+    const keep = new Set<string>([active]);
+    for (const e of scene.edges) {
+      if (e.edge.id === active) {
+        keep.add(e.edge.a);
+        keep.add(e.edge.b);
+      } else if (e.edge.a === active) keep.add(e.edge.b);
+      else if (e.edge.b === active) keep.add(e.edge.a);
+    }
+    return keep;
+  }, [active, scene.edges]);
   const hotEdge = (e: SceneEdge) => (active === undefined ? "" : active === e.edge.id || active === e.edge.a || active === e.edge.b ? " is-hot" : " is-dim");
   const kindLabel = (n: MapNode) => t(`topology.map.kind.${n.kind}` as MessageKey);
   const healthLabel = (n: MapNode) => t(`healthState.${n.health.worst}` as MessageKey);
@@ -239,16 +341,14 @@ export function IsoScene(p: IsoSceneProps) {
         {e.lanes.map((l) => {
           const cls = lane?.get(l.dir);
           if (!cls) return null;
-          const n = Math.min(particleCount(l.len, cls), MAX_PARTICLES);
-          const dur = PARTICLE_SECONDS[cls];
+          const sh = sheen(l.len, cls);
+          // A soft streak runs the lane in its direction, as light in a fibre: no beads on a string.
           return (
             <g key={l.dir} className={`iso-flow s${cls} ${l.dir}`}>
               <path className={`iso-flow-glow s${cls} ${l.dir}`} d={l.d} strokeWidth={1.2} />
-              {Array.from({ length: n }, (_, k) => (
-                <circle key={k} className="iso-particle" r={Math.min(e.width, 4.4) * 0.42 + 1}>
-                  <animateMotion dur={`${dur}s`} begin={`-${((k * dur) / n).toFixed(2)}s`} repeatCount="indefinite" path={l.d} />
-                </circle>
-              ))}
+              <path className="iso-sheen-flow" d={l.d} strokeWidth={Math.min(e.width, 4.4) * 0.45 + 0.8} strokeDasharray={sh.dash}>
+                <animate attributeName="stroke-dashoffset" from="0" to={String(-sh.period)} dur={`${sh.seconds}s`} repeatCount="indefinite" />
+              </path>
             </g>
           );
         })}
@@ -261,8 +361,8 @@ export function IsoScene(p: IsoSceneProps) {
     );
   };
   const badgeOf = (b: SceneBadge, cls: string) => (
-    <g key={cls} className={`iso-badge ${cls}${b.drop ? " is-dropped" : ""}`} transform={`translate(${b.x} ${b.y})`}>
-      <rect x={-b.w / 2} y="-8" width={b.w} height="15" rx="7.5" />
+    <g key={cls} className={`iso-badge ${cls}${b.drop ? " is-dropped" : ""}`} transform={`translate(${b.x} ${b.y}) scale(${scene.text})`}>
+      <rect x={-b.w / scene.text / 2} y="-8" width={b.w / scene.text} height="15" rx="7.5" />
       <text y="3.5" textAnchor="middle">
         {b.text}
       </text>
@@ -284,19 +384,84 @@ export function IsoScene(p: IsoSceneProps) {
       </g>
     );
   };
+  const itemEl = (it: SceneItem, n: number) => (
+      <g
+        key={it.id}
+        ref={(el) => {
+          if (el) els.current.set(it.id, el);
+          else els.current.delete(it.id);
+        }}
+        className={`iso-item iso-${it.role} h-${it.node.health.worst}${p.selected === it.id ? " is-selected" : ""}${hover === it.id ? " is-hover" : ""}${it.drillable ? " is-drill" : ""}${it.card ? " has-card" : ""}${linkedToActive && !linkedToActive.has(it.id) ? " is-dim" : ""}`}
+        data-id={it.id}
+        data-kind={it.node.kind}
+        data-i={n % 12}
+        role="button"
+        tabIndex={cur === it.id ? 0 : -1}
+        aria-label={t(it.drillable ? "topology.map.itemDrill" : "topology.map.item", { kind: kindLabel(it.node), name: it.label, health: healthLabel(it.node) })}
+        aria-pressed={p.selected === it.id}
+        onClick={() => act(it)}
+        onKeyDown={(e) => onKey(e, it)}
+        onFocus={() => {
+          setCur(it.id);
+          setFocused(it.id);
+        }}
+        onBlur={() => setFocused((f) => (f === it.id ? undefined : f))}
+        onPointerEnter={() => setHover(it.id)}
+        onPointerLeave={() => setHover(undefined)}
+      >
+        {it.parts.length === 0 ? (
+          it.role === "device" || it.role === "shelf" ? (
+            <polygon className="iso-shadow iso-shadow-flat" points={it.iso.foot} transform="translate(5 3)" />
+          ) : (
+            <polygon className="iso-shadow" points={it.iso.foot} transform="translate(12 8)" filter="url(#iso-blur)" />
+          )
+        ) : (
+          <polygon className="iso-shadow iso-shadow-flat" points={it.iso.foot} transform="translate(8 5)" />
+        )}
+        {it.node.health.worst === "critical" && !isGate(it.role) ? <polygon className="iso-alarm" points={it.iso.foot} filter="url(#iso-blur)" /> : null}
+        <g className="iso-lift">
+          {isGate(it.role) ? (
+            <GateBadge item={it} />
+          ) : (
+            <>
+              <Body item={it} />
+              {it.parts.map((b, i) => (
+                <Post key={i} box={b} />
+              ))}
+              {it.arrow ? <polygon className="iso-front" points={it.arrow} /> : null}
+              <polygon className="iso-hull" points={it.iso.hull} />
+            </>
+          )}
+        </g>
+        {it.card ? <Card item={it} /> : null}
+        <g
+          className="iso-info"
+          aria-hidden="true"
+          transform={`translate(${(it.card ? it.card.x + it.card.w : it.iso.bounds.x1) - 4} ${(it.card ? it.card.y : it.iso.bounds.y0) + 2})`}
+          onClick={(e) => {
+            e.stopPropagation();
+            p.onSelect(p.selected === it.id ? undefined : it.id);
+          }}
+        >
+          <circle r="9" />
+          <text textAnchor="middle" y="4">i</text>
+        </g>
+      </g>
+  );
   const floorEdges = scene.edges.filter((e) => e.floor);
   const airEdges = scene.edges.filter((e) => !e.floor);
 
   return (
     <svg
       ref={svg}
-      className="iso-svg"
       role="group"
       aria-label={p.label}
       aria-busy={p.busy}
       viewBox={viewBox}
       preserveAspectRatio="xMidYMid meet"
       data-state={p.busy ? "loading" : "drawn"}
+      data-enter={enter?.dir}
+      className={`iso-svg${enter ? ` is-enter-${enter.dir}-${enter.n % 2}` : ""}`}
       data-level={p.map.level}
       data-items={scene.items.length}
       data-lanes={lanes.length}
@@ -315,6 +480,15 @@ export function IsoScene(p: IsoSceneProps) {
         <filter id="iso-blur" x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation="5" />
         </filter>
+        {/* Light from the back left: the side faces darken towards the ground, the tops catch a sheen at the back. */}
+        <linearGradient id="iso-shade-side" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.24" />
+        </linearGradient>
+        <linearGradient id="iso-sheen" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.16" />
+          <stop offset="0.6" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
         <linearGradient id="iso-grad-top" x1="0" y1="0" x2="1" y2="1">
           <stop className="iso-stop-hi" offset="0" />
           <stop className="iso-stop-lo" offset="1" />
@@ -348,79 +522,19 @@ export function IsoScene(p: IsoSceneProps) {
       {floorEdges.length > 0 ? <g className="iso-edges iso-edges-floor">{floorEdges.map(edgeEl)}</g> : null}
       {scene.frame ? (
         <g className="iso-frame iso-frame-back">
+          {scene.frame.panels.map((pts, i) => (
+            <polygon key={`p${i}`} className="iso-panel" points={pts} />
+          ))}
           {scene.frame.back.map((b, i) => (
             <Post key={i} box={b} />
           ))}
         </g>
       ) : null}
-      <g className="iso-items">
-        {scene.items.map((it, n) => (
-          <g
-            key={it.id}
-            ref={(el) => {
-              if (el) els.current.set(it.id, el);
-              else els.current.delete(it.id);
-            }}
-            className={`iso-item iso-${it.role} h-${it.node.health.worst}${p.selected === it.id ? " is-selected" : ""}${hover === it.id ? " is-hover" : ""}${it.drillable ? " is-drill" : ""}${it.card ? " has-card" : ""}`}
-            data-id={it.id}
-            data-kind={it.node.kind}
-            data-i={n % 12}
-            role="button"
-            tabIndex={cur === it.id ? 0 : -1}
-            aria-label={t(it.drillable ? "topology.map.itemDrill" : "topology.map.item", { kind: kindLabel(it.node), name: it.label, health: healthLabel(it.node) })}
-            aria-pressed={p.selected === it.id}
-            onClick={() => act(it)}
-            onKeyDown={(e) => onKey(e, it)}
-            onFocus={() => {
-              setCur(it.id);
-              setFocused(it.id);
-            }}
-            onBlur={() => setFocused((f) => (f === it.id ? undefined : f))}
-            onPointerEnter={() => setHover(it.id)}
-            onPointerLeave={() => setHover(undefined)}
-          >
-            {it.parts.length === 0 ? (
-              it.role === "device" || it.role === "shelf" ? (
-                <polygon className="iso-shadow iso-shadow-flat" points={it.iso.foot} transform="translate(5 3)" />
-              ) : (
-                <polygon className="iso-shadow" points={it.iso.foot} transform="translate(12 8)" filter="url(#iso-blur)" />
-              )
-            ) : (
-              <polygon className="iso-shadow iso-shadow-flat" points={it.iso.foot} transform="translate(8 5)" />
-            )}
-            {it.leader ? <path className="iso-leader-line" d={it.leader} /> : null}
-            <g className="iso-lift">
-              <Body item={it} />
-              {it.parts.map((b, i) => (
-                <Post key={i} box={b} />
-              ))}
-              {it.role === "internet" ? (
-                <g transform={`translate(${it.iso.anchor.x} ${it.iso.anchor.y - 26})`}>
-                  <path className="iso-cloud-shadow" d={CLOUD} transform="translate(3 5)" />
-                  <path className="iso-cloud" d={CLOUD} />
-                </g>
-              ) : null}
-              {it.arrow ? <polygon className="iso-front" points={it.arrow} /> : null}
-              <polygon className="iso-hull" points={it.iso.hull} />
-            </g>
-            {it.card ? <Card item={it} /> : null}
-            <g
-              className="iso-info"
-              aria-hidden="true"
-              transform={`translate(${(it.card ? it.card.x + it.card.w : it.iso.bounds.x1) - 4} ${(it.card ? it.card.y : it.iso.bounds.y0) + 2})`}
-              onClick={(e) => {
-                e.stopPropagation();
-                p.onSelect(p.selected === it.id ? undefined : it.id);
-              }}
-            >
-              <circle r="9" />
-              <text textAnchor="middle" y="4">i</text>
-            </g>
-          </g>
-        ))}
-      </g>
+      <g className="iso-items">{scene.items.map((it, n) => (isGate(it.role) ? null : itemEl(it, n)))}</g>
       {scene.frame ? <FrameFront frame={scene.frame} /> : null}
       <g className="iso-edges">{airEdges.map(edgeEl)}</g>
+      {/* The Internet and the other places are badges at the end of their lines: drawn over them. */}
+      <g className="iso-items iso-gates">{scene.items.map((it, n) => (isGate(it.role) ? itemEl(it, n) : null))}</g>
       <g className="iso-badge-layer">{scene.edges.map(edgeBadges)}</g>
       <g className="iso-label-layer">
         {scene.items.map((it) =>
@@ -428,6 +542,7 @@ export function IsoScene(p: IsoSceneProps) {
             <Label
               key={it.id}
               item={it}
+              text={scene.text}
               shown={it.labelShown || hover === it.id || p.selected === it.id || focused === it.id}
               sub={it.subShown && it.hasSub ? (it.sub ?? summary(it.node)) : undefined}
             />
@@ -435,6 +550,30 @@ export function IsoScene(p: IsoSceneProps) {
         )}
       </g>
     </svg>
+  );
+}
+
+/** The radius of a gate's badge, from the size of the gate it stands for. */
+export const gateRadius = (it: Pick<SceneItem, "iso">) => Math.max(14, Math.min(26, Math.min(it.iso.bounds.x1 - it.iso.bounds.x0, it.iso.bounds.y1 - it.iso.bounds.y0) * 0.42));
+
+/** The Internet, as a cloud, or another place, as a building: a round badge where its lines end. */
+function GateBadge({ item: it }: { item: SceneItem }) {
+  const r = gateRadius(it);
+  const { x, y } = it.port;
+  const k = (r * 1.25) / 64;
+  return (
+    <g className="iso-gate">
+      <ellipse className="iso-gate-shadow" cx={x + 2} cy={y + r * 0.9} rx={r * 0.85} ry={r * 0.28} />
+      <circle className="iso-gate-disc" cx={x} cy={y} r={r} />
+      {it.role === "internet" ? (
+        <path className="iso-cloud" d={CLOUD} transform={`translate(${x} ${y}) scale(${k}) translate(2 6)`} />
+      ) : (
+        <g className="iso-gate-icon">
+          <IconGlyph name="site" x={x - r * 0.55} y={y - r * 0.55} size={r * 1.1} />
+        </g>
+      )}
+      <circle className="iso-hull" cx={x} cy={y} r={r + 2} />
+    </g>
   );
 }
 
@@ -452,6 +591,8 @@ function Post({ box }: { box: IsoBox }) {
 function FrameFront({ frame }: { frame: SceneFrame }) {
   return (
     <g className="iso-frame iso-frame-front" aria-hidden="true">
+      {frame.blanks ? <path className="iso-blank" d={frame.blanks} /> : null}
+      {frame.blankLines ? <path className="iso-blank-line" d={frame.blankLines} /> : null}
       <polygon className="iso-rail" points={frame.top} />
       {frame.front.map((b, i) => (
         <Post key={i} box={b} />
@@ -486,6 +627,9 @@ function Body({ item: it }: { item: SceneItem }) {
       <polygon className="iso-face iso-south" points={iso.south} />
       <polygon className="iso-face iso-east" points={iso.east} />
       <polygon className="iso-face iso-top" points={iso.top} />
+      <polygon className="iso-shade" points={iso.south} fill="url(#iso-shade-side)" />
+      <polygon className="iso-shade" points={iso.east} fill="url(#iso-shade-side)" />
+      <polygon className="iso-shade" points={iso.top} fill="url(#iso-sheen)" />
       <polygon className="iso-rim" points={iso.top} />
     </>
   );
@@ -522,7 +666,25 @@ function Body({ item: it }: { item: SceneItem }) {
           ))}
         </g>
       ) : null}
-      {it.ports ? <path className="iso-ports" d={it.ports} /> : null}
+      {it.mast ? (
+        <g className="iso-mast">
+          <line x1={it.mast.x1} y1={it.mast.y1} x2={it.mast.x2} y2={it.mast.y2} />
+          <circle cx={it.mast.x2} cy={it.mast.y2} r="2.6" />
+        </g>
+      ) : null}
+      {it.front ? (
+        <g className={`iso-front-face f-${it.front.kind}`}>
+          {it.front.screen ? <polygon className="iso-screen" points={it.front.screen} /> : null}
+          {it.front.holes ? <path className="iso-holes" d={it.front.holes} /> : null}
+          {it.front.lines ? <path className="iso-ports" d={it.front.lines} /> : null}
+        </g>
+      ) : null}
+      {it.led ? (
+        <g className={`iso-status l-${it.node.health.worst}`}>
+          <circle className="iso-status-glow" cx={it.led.x} cy={it.led.y} r="5" />
+          <circle className={`iso-led l-${it.node.health.worst}${LED_BLINK.has(it.node.health.worst) ? " is-blink" : ""}`} cx={it.led.x} cy={it.led.y} r="2.4" />
+        </g>
+      ) : null}
       {it.door ? (
         <g className="iso-door">
           <polygon className="iso-glass" points={it.door.glass} />
@@ -550,12 +712,15 @@ function Wall({ box }: { box: IsoBox }) {
 function Card({ item }: { item: SceneItem }) {
   const c = item.card;
   if (!c) return null;
+  // Drawn at its design size and scaled, so that it keeps one size on screen.
+  const w = c.w / c.k;
+  const h = c.h / c.k;
   return (
-    <g className={`iso-card-box h-${item.node.health.worst}`} transform={`translate(${c.x} ${c.y})`}>
-      <rect className="iso-card-bg" width={c.w} height={c.h} rx="9" />
-      <circle className="iso-card-icon-bg" cx="22" cy={c.h / 2} r="14" />
+    <g className={`iso-card-box h-${item.node.health.worst}`} transform={`translate(${c.x} ${c.y}) scale(${c.k})`}>
+      <rect className="iso-card-bg" width={w} height={h} rx="9" />
+      <circle className="iso-card-icon-bg" cx="22" cy={h / 2} r="14" />
       <g className="iso-card-icon">
-        <IconGlyph name={c.icon} x={14} y={c.h / 2 - 8} size={16} />
+        <IconGlyph name={c.icon} x={14} y={h / 2 - 8} size={16} />
       </g>
       <text className="iso-card-name" x="44" y={c.model ? 19 : 27}>
         {c.name}
@@ -565,17 +730,16 @@ function Card({ item }: { item: SceneItem }) {
           {c.model}
         </text>
       ) : null}
-      <circle className="iso-lamp" cx={c.w - 14} cy={c.h - 13} r="4" />
+      <circle className="iso-lamp" cx={w - 14} cy={h - 13} r="4" />
     </g>
   );
 }
 
-function Label({ item, sub, shown }: { item: SceneItem; sub?: string; shown: boolean }) {
+function Label({ item, sub, shown, text }: { item: SceneItem; sub?: string; shown: boolean; text: number }) {
   const pl = item.pill;
   const h = sub ? 34 : 21;
-  const x = pl.x0;
-  const y = pl.y0;
   const lead = item.pillLeader;
+  // The pill is drawn at its design size and scaled, so that it keeps one size on screen.
   return (
     <g className={`iso-labels h-${item.node.health.worst}${shown ? "" : " is-hidden"}`} data-for={item.id} aria-hidden="true">
       {lead ? (
@@ -584,16 +748,18 @@ function Label({ item, sub, shown }: { item: SceneItem; sub?: string; shown: boo
           <circle className="iso-leader-dot" cx={lead.x1} cy={lead.y1} r="2" />
         </g>
       ) : null}
-      <rect className="iso-pill" x={x} y={y} width={Math.max(pl.x1 - pl.x0, 1)} height={h} rx={h > 25 ? 10 : 10.5} />
-      <circle className="iso-lamp" cx={x + 11} cy={y + 10.5} r="3.5" />
-      <text className="iso-label" x={x + 20} y={y + 14.5}>
-        {item.label}
-      </text>
-      {sub ? (
-        <text className="iso-sub" x={x + 20} y={y + 28}>
-          {sub}
+      <g transform={`translate(${pl.x0} ${pl.y0}) scale(${text})`}>
+        <rect className="iso-pill" width={Math.max((pl.x1 - pl.x0) / text, 1)} height={h} rx={h > 25 ? 10 : 10.5} />
+        <circle className="iso-lamp" cx={11} cy={10.5} r="3.5" />
+        <text className="iso-label" x={20} y={14.5}>
+          {item.label}
         </text>
-      ) : null}
+        {sub ? (
+          <text className="iso-sub" x={20} y={28}>
+            {sub}
+          </text>
+        ) : null}
+      </g>
     </g>
   );
 }

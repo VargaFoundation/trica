@@ -58,10 +58,100 @@ tunnels on the rack frame at rack level. Now:
 - **Proof.** `e2e/topology-labels.spec.ts` reads the boxes the browser draws at every level of the e2e
   inventory, in both themes, and fails if two labels intersect or a label covers a block.
 
+## Amendment (2026-10-28): a rack's tree routes its lines round the cards
+
+Production feedback on a busy rack (three switches, seven servers cabled to each, a bastion, two
+gates): "c'est le bordel". Lines between the cards ran straight over the cards in their way, all the
+links of a layer shared one 44 px channel, every line carried two port names, and a device cabled to
+nothing but a gate had no card, so its link was an arc across the whole tree. Now (`tree.ts`,
+`planTree`, `orderLayers`; `scene.ts`, `placeCards`, `cardEdges`):
+
+- **Order.** Within a layer, a card moves to the mean position of its neighbours above, then below
+  (one barycentre sweep each way), so that a tree's links cross less.
+- **Rows.** A layer longer than six cards wraps onto rows of near equal length.
+- **Channels and corridors.** A line between two rows runs along the channel between them, on a lane
+  of its own; past rows in its way it runs down a corridor free of cards (between two of them, or
+  beside the row), on a track of its own. A channel grows with its lanes, the gaps between cards with
+  their tracks; a line that rises into a card moves aside when it would lie on one that drops out of
+  the card above. Two cards side by side are joined straight across, two further apart over the top
+  of their row. No line of the tree runs over a card or lies on another.
+- **Gates.** A device linked to nothing but a gate (a bastion to the Internet) gets a card. A link to
+  a gate leaves the card's east side when no card is right of it, otherwise its top, runs along the
+  channel above its row to a lane of its own right of the tree, and down that lane to the gate.
+- **Leaders.** A slab meets its card through a gutter left of the tree, then the card's west side,
+  or, past a card on its left, along the top of its row.
+- **Port names.** Past eight lines, a tree's port names wait until a line or a card is pointed at.
+- **Proof.** `tree.test.ts` plans a three-switch, seven-server tree and fails if a line enters a card
+  or lies on another; `rack-tree.test.ts` builds the scene of `testdata/busyRack.ts` (synthesised on
+  the shape of the production rack) at all four rotations and fails if a sampled point of any line is
+  inside a card, if a link is drawn as an arc, if the port names show on the dense tree, or if a
+  device linked only to a gate has no card.
+
+## Amendment (2026-10-29): visual language
+
+A critical pass over every level in both themes found the scene geometrically sound but not a product:
+- labels grew and shrank with the content (a lone device's name 40 px tall, a crowded floor's 6 px);
+- the camera framed the floor, not what stands on it;
+- every block was the same navy slab;
+- health painted whole blocks yellow or pink;
+- too many hues competed, and the lighting was flat;
+- traffic dots read as beads, the gates were bare panels, the rack was a wireframe;
+- the canvas was a 490 px strip above a legend of three paragraphs.
+
+Now:
+
+- **Text at one size on screen.** `buildScene(map, rot, { text })` sizes and places pills and badges at
+  a text scale. `IsoScene` picks it from the screen scale (`textScale`, in `TEXT_STEPS`) and rebuilds
+  the scene when a zoom crosses a step.
+- **Framing.** The view frames the level's blocks (`Scene.core`), not the floor, with room for names
+  and the floating controls. It never draws a level bigger than `FIT_MAX` (1.6) screen px per scene px.
+- **Crowds.**
+  - A device's pill only stands under its block, or one step lower (`near` in `labels.ts`).
+  - Zoomed out, a healthy device under `LABEL_MIN_PX` on screen keeps its name until pointed at.
+  - Past 12 lines at a level, port names wait until a line is pointed at.
+- **Materials.**
+  - The `iso-*` body tokens become a neutral product body: graphite in dark, off-white in light.
+  - Speed lines form one cool family.
+  - Faces get gradients (side faces darker towards the ground, a sheen on tops) and softer edges.
+  - The contrast pairs of `contrast.json` are unchanged and still pass.
+- **Health as a product shows it.**
+  - A status LED on the front of every block. A rack keeps its door LEDs; a gate has none.
+  - A soft pulsing glow on the ground under a critical one.
+  - No colour across a block: a test reads `app.css` and fails if a health class fills or strokes a face.
+- **Recognisable things.**
+  - A device's front by role (`deviceFront` in `decor.ts`): ports, a screen, drive bays, outlets.
+  - The rack is a cabinet: far panels, and blanking plates over its empty units.
+  - The Internet and other places are round badges (a cloud, a site), drawn over the ends of their lines.
+  - The slab-to-card leaders of the previous amendment are dropped: a card and its slab are one item, and pointing at either lights both.
+- **Motion.**
+  - Traffic is a soft streak running along each lane (`sheen` in `flow.ts`, an animated dash offset), at the old particles' rate and speed.
+  - Going down a level flies in from where the place was on screen; going up backs out. The origin is set through the CSSOM, since the CSP forbids style attributes.
+  - Pointing at a thing dims what it is not linked to.
+  - Nothing moves under reduced motion.
+- **Page.** The canvas takes the page's height, the controls and the hint float on it, and the legend is behind a disclosure.
+- **Proof.**
+  - Unit tests: `scale.test.ts`, `look.health.test.ts`, `objects.test.tsx`, and the sheen case of `flow.test.ts`.
+  - E2E tests: `e2e/topology-scale.spec.ts` (a name keeps its size on screen across zooms; a lone device takes under a quarter of the stage), and in `e2e/topology-map.spec.ts` the flight between levels and the absence of dots.
+  - The e2e tests fail on the previous build, and the unit tests fail without the code they cover.
+
+Follow-ups in the same story:
+
+- **Cards at one size.** The tree of a rack is laid out at the text scale, but only when the scale is under
+  1. Zoomed in, a card keeps its design size on screen. Zoomed out, it shrinks with the scene, or a tree
+  wider than the stage could never fit. The view frames the scene at the fitted text scale.
+- **Arcs above walls.**
+  - A room's or an area's lines start from the top of a mast above its walls.
+  - An arc is raised, 16 px at a time and at most 240, until no point of it (but near its ends) lies inside the walls of a room it passes over.
+  - `arcs.test.ts` checks this on four rooms in a row and on the recorded site, at every rotation.
+- **Trunks.**
+  - Three links or more from one card down to the rows below run as a trunk: one drop, one lane under the card, one track per corridor, one lane above each row served, then a drop into each card.
+  - Each link stays its own line. Only links of one trunk lie on one another.
+  - On three switches over seven servers, the channel under the switches holds three lanes instead of 21.
+
 ## Not drawn
 
 No pixel test (the proof is the tests on the scene model plus screenshots reviewed by a person); no
-route that avoids other lines crossing; no per-port drawing on a rack front; no export of the map.
+route that avoids other lines crossing (in a rack's tree lines still cross, but never overlap nor run over a card); no per-port drawing on a rack front; no export of the map.
 
 ## Consequences
 

@@ -172,7 +172,10 @@ export function MapPage() {
                   {notes.unresolved_tunnels > 0 ? <li>{tpNote("unresolvedTunnels", notes.unresolved_tunnels)}</li> : null}
                   {notes.ambiguous_placements > 0 ? <li>{tpNote("ambiguous", notes.ambiguous_placements)}</li> : null}
                 </ul>
-                <MapLegend live={map.live.enabled} uplinks={map.edges.some((e) => e.medium === "uplinked_to")} tunnels={map.edges.some((e) => e.medium === "tunnel")} />
+                <details className="iso-legend-box">
+                  <summary>{t("topology.map.legendShow")}</summary>
+                  <MapLegend live={map.live.enabled} uplinks={map.edges.some((e) => e.medium === "uplinked_to")} tunnels={map.edges.some((e) => e.medium === "tunnel")} />
+                </details>
                 <MapLinksTable map={map} selected={selected} onSelect={select} />
               </div>
               {selected ? (

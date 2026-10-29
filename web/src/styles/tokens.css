@@ -94,14 +94,14 @@
   --trica-graph-health-crit: #ff9592;
   --trica-graph-group: #212225;
   --trica-graph-group-line: #797e86;
-  /* The isometric topology map: floor, three shaded faces (light from the left), a neutral family for what is not a place. */
+  /* The isometric topology map: floor, three shaded faces of a neutral product body (light from the left), a neutral family for what is not a place. */
   --trica-iso-floor: #1f2125;
   --trica-iso-floor-line: #34373d;
-  --trica-iso-top: #355a8a;
-  --trica-iso-top-hi: #3c6396;
-  --trica-iso-south: #284569;
-  --trica-iso-east: #1e3555;
-  --trica-iso-edge: #8cc0f5;
+  --trica-iso-top: #3f434a;
+  --trica-iso-top-hi: #4a4f57;
+  --trica-iso-south: #2f3237;
+  --trica-iso-east: #25282c;
+  --trica-iso-edge: #9aa1ab;
   --trica-iso-neutral-top: #4a4e56;
   --trica-iso-neutral-south: #373a41;
   --trica-iso-neutral-east: #2b2e34;
@@ -111,19 +111,19 @@
   /* The map's scene and link encoding (ADR 0066): ground, rim light, door glass, windows, cable trays, speed classes of a link. */
   --trica-iso-ground: #17181b;
   --trica-iso-grid: #2b2e34;
-  --trica-iso-rim: #cfe4fb;
-  --trica-iso-glass: #12202f;
-  --trica-iso-vent: #4f7cae;
-  --trica-iso-window: #f1d38a;
-  --trica-iso-roof: #2c4a73;
+  --trica-iso-rim: #e4e7eb;
+  --trica-iso-glass: #1d2026;
+  --trica-iso-vent: #6b727c;
+  --trica-iso-window: #e8c77d;
+  --trica-iso-roof: #353940;
   --trica-iso-tray: #5a5f68;
   --trica-iso-particle: #ffffff;
-  --trica-iso-speed-100g: #f0abfc;
-  --trica-iso-speed-40g: #c4b5fd;
-  --trica-iso-speed-10g: #7cc4fa;
+  --trica-iso-speed-100g: #d8b4fe;
+  --trica-iso-speed-40g: #a5b4fc;
+  --trica-iso-speed-10g: #7dd3fc;
   --trica-iso-speed-5g: #5eead4;
-  --trica-iso-speed-1g: #b4bcc8;
-  --trica-iso-speed-slow: #8a919c;
+  --trica-iso-speed-1g: #cbd5e1;
+  --trica-iso-speed-slow: #94a3b8;
   --trica-iso-speed-unknown: #767c86;
 }
 
@@ -215,14 +215,14 @@
   --trica-graph-health-crit: #ce2c31;
   --trica-graph-group: #f0f0f3;
   --trica-graph-group-line: #80838d;
-  /* The isometric topology map: floor, three shaded faces (light from the left), a neutral family for what is not a place. */
+  /* The isometric topology map: floor, three shaded faces of a neutral product body (light from the left), a neutral family for what is not a place. */
   --trica-iso-floor: #eef0f4;
   --trica-iso-floor-line: #d3d7de;
-  --trica-iso-top: #d8e8fb;
-  --trica-iso-top-hi: #f1f7fe;
-  --trica-iso-south: #b4d1f4;
-  --trica-iso-east: #9dbfea;
-  --trica-iso-edge: #2f66a0;
+  --trica-iso-top: #fdfdfe;
+  --trica-iso-top-hi: #ffffff;
+  --trica-iso-south: #e6e8ec;
+  --trica-iso-east: #d5d8de;
+  --trica-iso-edge: #7a808a;
   --trica-iso-neutral-top: #e3e5ea;
   --trica-iso-neutral-south: #cbced6;
   --trica-iso-neutral-east: #b7bbc5;
@@ -233,15 +233,15 @@
   --trica-iso-ground: #e6e9ee;
   --trica-iso-grid: #cfd4dc;
   --trica-iso-rim: #ffffff;
-  --trica-iso-glass: #2a4466;
-  --trica-iso-vent: #8fb0d6;
-  --trica-iso-window: #5b86b8;
-  --trica-iso-roof: #c3d9f3;
+  --trica-iso-glass: #3a414c;
+  --trica-iso-vent: #9aa1ab;
+  --trica-iso-window: #8fb7e0;
+  --trica-iso-roof: #eceef2;
   --trica-iso-tray: #8b919c;
   --trica-iso-particle: #0f1720;
-  --trica-iso-speed-100g: #a21caf;
-  --trica-iso-speed-40g: #6d28d9;
-  --trica-iso-speed-10g: #1d6fb8;
+  --trica-iso-speed-100g: #9333ea;
+  --trica-iso-speed-40g: #4f46e5;
+  --trica-iso-speed-10g: #0369a1;
   --trica-iso-speed-5g: #0f766e;
   --trica-iso-speed-1g: #5d6673;
   --trica-iso-speed-slow: #69707c;
@@ -316,14 +316,14 @@
     --trica-graph-health-crit: #ce2c31;
     --trica-graph-group: #f0f0f3;
     --trica-graph-group-line: #80838d;
-    /* The isometric topology map: floor, three shaded faces (light from the left), a neutral family for what is not a place. */
+    /* The isometric topology map: floor, three shaded faces of a neutral product body (light from the left), a neutral family for what is not a place. */
     --trica-iso-floor: #eef0f4;
     --trica-iso-floor-line: #d3d7de;
-    --trica-iso-top: #d8e8fb;
-    --trica-iso-top-hi: #f1f7fe;
-    --trica-iso-south: #b4d1f4;
-    --trica-iso-east: #9dbfea;
-    --trica-iso-edge: #2f66a0;
+    --trica-iso-top: #fdfdfe;
+    --trica-iso-top-hi: #ffffff;
+    --trica-iso-south: #e6e8ec;
+    --trica-iso-east: #d5d8de;
+    --trica-iso-edge: #7a808a;
     --trica-iso-neutral-top: #e3e5ea;
     --trica-iso-neutral-south: #cbced6;
     --trica-iso-neutral-east: #b7bbc5;
@@ -334,15 +334,15 @@
     --trica-iso-ground: #e6e9ee;
     --trica-iso-grid: #cfd4dc;
     --trica-iso-rim: #ffffff;
-    --trica-iso-glass: #2a4466;
-    --trica-iso-vent: #8fb0d6;
-    --trica-iso-window: #5b86b8;
-    --trica-iso-roof: #c3d9f3;
+    --trica-iso-glass: #3a414c;
+    --trica-iso-vent: #9aa1ab;
+    --trica-iso-window: #8fb7e0;
+    --trica-iso-roof: #eceef2;
     --trica-iso-tray: #8b919c;
     --trica-iso-particle: #0f1720;
-    --trica-iso-speed-100g: #a21caf;
-    --trica-iso-speed-40g: #6d28d9;
-    --trica-iso-speed-10g: #1d6fb8;
+    --trica-iso-speed-100g: #9333ea;
+    --trica-iso-speed-40g: #4f46e5;
+    --trica-iso-speed-10g: #0369a1;
     --trica-iso-speed-5g: #0f766e;
     --trica-iso-speed-1g: #5d6673;
     --trica-iso-speed-slow: #69707c;

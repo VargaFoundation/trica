@@ -22,7 +22,7 @@ test("a linked rack is a tree of cards with the gateway on top, bundles, port ba
 
   await expect(page.locator(".iso-badge-bundle").first()).toContainText("×");
   expect(await page.locator(".iso-edge-badges .iso-badge-port").count()).toBeGreaterThan(0);
-  expect(await page.locator(".iso-flow animateMotion").count()).toBeGreaterThan(0);
+  expect(await page.locator(".iso-flow .iso-sheen-flow animate").count()).toBeGreaterThan(0);
   await expect(page.locator(".iso-edge .iso-edge-base").first()).toHaveAttribute("stroke-width", /\d/);
 });
 

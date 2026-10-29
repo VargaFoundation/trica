@@ -31,6 +31,18 @@ export function particleCount(len: number, cls: SpeedClass): number {
   return Math.max(1, Math.min(MAX_PARTICLES, Math.round(len / PARTICLE_SPACING[cls])));
 }
 
+/**
+ * The traffic of a lane as a moving sheen: a soft streak every `period` px (as many as particles would
+ * be), `streak` px long, that runs the lane at the particles' speed. `seconds` is the time one period takes.
+ */
+export function sheen(len: number, cls: SpeedClass): { dash: string; period: number; seconds: number } {
+  const n = particleCount(len, cls);
+  const period = Math.max(len / n, 1);
+  const streak = Math.min(period * 0.3, 16);
+  const fmt = (x: number) => Math.round(x * 10) / 10;
+  return { dash: `${fmt(streak)} ${fmt(period - streak)}`, period: fmt(period), seconds: fmt((PARTICLE_SECONDS[cls] * period) / Math.max(len, 1)) || 0.1 };
+}
+
 /** The speed class of a rate: one class per decade from 1 Mb/s up. */
 export function speedClass(bps: number): SpeedClass {
   if (bps < 1e6) return 1;

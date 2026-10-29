@@ -35,6 +35,10 @@ export interface PillSpec {
   hasSub: boolean;
   /** The pill stays beside its block, at the height of its unit (a rack's devices): it loses its caption, then is hidden. */
   beside: boolean;
+  /** How much bigger than its design size the text is drawn (the steps between spots grow with it); 1 by default. */
+  scale?: number;
+  /** The pill may only stand under its block, or one step lower: a name far from what it names helps nobody in a crowd. */
+  near?: boolean;
 }
 
 export interface PillSlot {
@@ -57,12 +61,15 @@ const DY_BESIDE = [0];
  * A pill that stays beside its block has no other spot than its own.
  */
 export function pillSlots(spec: PillSpec): PillSlot[] {
+  const k = spec.scale ?? 1;
   const offsets: { dx: number; dy: number; above: boolean; cost: number }[] = [];
-  if (spec.beside) {
-    for (const dy of DY_BESIDE) offsets.push({ dx: 0, dy, above: false, cost: Math.abs(dy) });
+  if (spec.near && !spec.beside) {
+    for (const dy of DY.slice(0, 2)) offsets.push({ dx: 0, dy: dy * k, above: false, cost: dy });
+  } else if (spec.beside) {
+    for (const dy of DY_BESIDE) offsets.push({ dx: 0, dy: dy * k, above: false, cost: Math.abs(dy) });
   } else {
-    for (const dx of DX) for (const dy of DY) offsets.push({ dx, dy, above: false, cost: dy + Math.abs(dx) * 1.2 });
-    for (const dx of DX) for (const dy of DY_ABOVE) offsets.push({ dx, dy, above: true, cost: 60 + dy + Math.abs(dx) * 1.2 });
+    for (const dx of DX) for (const dy of DY) offsets.push({ dx: dx * k, dy: dy * k, above: false, cost: dy + Math.abs(dx) * 1.2 });
+    for (const dx of DX) for (const dy of DY_ABOVE) offsets.push({ dx: dx * k, dy: dy * k, above: true, cost: 60 + dy + Math.abs(dx) * 1.2 });
   }
   offsets.sort((a, b) => a.cost - b.cost);
   const out: PillSlot[] = [];
@@ -70,7 +77,7 @@ export function pillSlots(spec: PillSpec): PillSlot[] {
     for (const withSub of spec.hasSub ? [true, false] : [false]) {
       const { w, h } = spec.size(withSub);
       const x0 = (spec.start ? spec.at.x : spec.at.x - w / 2) + o.dx;
-      const y0 = o.above ? spec.top - 6 - o.dy - h : spec.at.y + o.dy;
+      const y0 = o.above ? spec.top - 6 * k - o.dy - h : spec.at.y + o.dy;
       out.push({ rect: { x0, y0, x1: x0 + w, y1: y0 + h }, withSub, dx: o.dx, dy: o.dy, above: o.above });
     }
   }
@@ -90,8 +97,8 @@ export function leaderBetween(from: Pt, pill: Bounds): { x1: number; y1: number;
   return { x1: from.x, y1: from.y, x2: from.x <= pill.x0 ? pill.x0 : pill.x1, y2: clamp(from.y, pill.y0 + 4, pill.y1 - 4) };
 }
 
-/** The box of a badge centred on a point. */
-export const badgeBox = (p: Pt, w: number): Bounds => ({ x0: p.x - w / 2, y0: p.y - 8, x1: p.x + w / 2, y1: p.y + 7 });
+/** The box of a badge centred on a point, its text drawn `k` times its design size. */
+export const badgeBox = (p: Pt, w: number, k = 1): Bounds => ({ x0: p.x - w / 2, y0: p.y - 8 * k, x1: p.x + w / 2, y1: p.y + 7 * k });
 
 /**
  * Distances along a line, in px from the end it is measured from, where a badge may sit: its
