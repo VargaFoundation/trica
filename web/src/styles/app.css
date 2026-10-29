@@ -1831,22 +1831,42 @@ label.check {
   padding: 0;
   overflow: hidden;
 }
+/* The controls float on the canvas, as a map's do: the scene takes the whole card. */
 .iso-tools {
+  position: absolute;
+  z-index: 2;
+  top: 0.75rem;
+  left: 0.75rem;
+  right: 0.75rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--trica-line);
-  background: var(--trica-raised);
+  gap: 0.35rem;
+  pointer-events: none;
+}
+.iso-tools > * {
+  pointer-events: auto;
+}
+.iso-tools .button {
+  min-height: 2rem;
+  padding: 0.25rem 0.7rem;
+  border-color: color-mix(in srgb, var(--trica-line) 80%, transparent);
+  background: color-mix(in srgb, var(--trica-raised) 82%, transparent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--trica-iso-shadow) 18%, transparent), 0 4px 14px color-mix(in srgb, var(--trica-iso-shadow) 10%, transparent);
+  backdrop-filter: blur(8px);
 }
 .iso-tools .check {
   margin-left: auto;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--trica-line) 80%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--trica-raised) 82%, transparent);
+  backdrop-filter: blur(8px);
 }
 .iso-svg {
   display: block;
   width: 100%;
-  height: min(68vh, 44rem);
+  height: clamp(28rem, calc(100vh - 14rem), 64rem);
   min-height: 22rem;
   background: radial-gradient(ellipse at 50% 38%, var(--trica-iso-floor), var(--trica-graph-paper) 72%);
   cursor: grab;
@@ -1860,9 +1880,26 @@ label.check {
   opacity: 0.55;
 }
 .iso-help {
+  position: absolute;
+  z-index: 2;
+  left: 0.75rem;
+  bottom: 0.6rem;
+  max-width: calc(100% - 1.5rem);
   margin: 0;
-  padding: 0.5rem 0.75rem;
-  border-top: 1px solid var(--trica-line);
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--trica-raised) 78%, transparent);
+  font-size: 0.75rem;
+  backdrop-filter: blur(8px);
+}
+.iso-legend-box > summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--trica-ink-muted);
+  font-size: 0.875rem;
+}
+.iso-legend-box[open] > summary {
+  margin-bottom: 0.5rem;
 }
 
 /* The floor under a level. */

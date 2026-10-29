@@ -6,7 +6,7 @@ import { IconGlyph } from "../../components/ui/icons";
 import { MAX_PARTICLES, PARTICLE_SECONDS, particleCount, planFlows, STATE_DASH, type Direction, type SpeedClass } from "./flow";
 import type { IsoBox, Rot } from "./iso";
 import { nextSpot, type Arrow } from "./nav";
-import { buildScene, MEDIUM_DASH, type SceneBadge, type SceneEdge, type SceneFrame, type SceneItem } from "./scene";
+import { buildScene, MEDIUM_DASH, textScale, type SceneBadge, type SceneEdge, type SceneFrame, type SceneItem } from "./scene";
 
 export interface IsoSceneProps {
   map: TopologyMap;
@@ -29,6 +29,53 @@ export interface IsoSceneProps {
 
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 6;
+/** The most screen px one scene px is drawn at when the view fits a level: a lone device stays its size. */
+export const FIT_MAX = 1.6;
+/** Room kept round the framed blocks for their names, in scene px; more on top, where the controls float. */
+const FIT_PAD = 48;
+const FIT_PAD_TOP = 88;
+
+/** The stage's size in px, once it is laid out (0 by 0 before, and where nothing is laid out). */
+function useSize(el: React.RefObject<Element | null>): { w: number; h: number } {
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  useLayoutEffect(() => {
+    const node = el.current;
+    if (!node) return;
+    const read = () => {
+      const r = node.getBoundingClientRect();
+      setSize((s) => (Math.abs(s.w - r.width) < 1 && Math.abs(s.h - r.height) < 1 ? s : { w: r.width, h: r.height }));
+    };
+    read();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(read);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [el]);
+  return size;
+}
+
+/**
+ * What the view frames at zoom 1: the level's blocks with room for their names, widened when it would
+ * draw them bigger than FIT_MAX on a stage of `stage` px (unknown: the blocks alone).
+ */
+export function fitFrame(core: { x0: number; y0: number; x1: number; y1: number }, stage: { w: number; h: number }) {
+  const x0 = core.x0 - FIT_PAD;
+  const x1 = core.x1 + FIT_PAD;
+  const y0 = core.y0 - FIT_PAD_TOP;
+  const y1 = core.y1 + FIT_PAD;
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  let w = x1 - x0;
+  let h = y1 - y0;
+  if (stage.w > 0 && stage.h > 0) {
+    const s = Math.min(stage.w / w, stage.h / h);
+    if (s > FIT_MAX) {
+      w = stage.w / FIT_MAX;
+      h = stage.h / FIT_MAX;
+    }
+  }
+  return { x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2 };
+}
 const CLOUD = "M-30,12 a12,12 0 0 1 4,-23 a17,17 0 0 1 33,-6 a14,14 0 0 1 17,29 z";
 
 function usePageHidden(): boolean {
@@ -45,8 +92,10 @@ function usePageHidden(): boolean {
 export function IsoScene(p: IsoSceneProps) {
   const { t, tp } = useI18n();
   const hidden = usePageHidden();
-  const scene = useMemo(() => buildScene(p.map, p.rot), [p.map, p.rot]);
   const svg = useRef<SVGSVGElement>(null);
+  const size = useSize(svg);
+  // The scene at its design size gives the frame; the one drawn has its text at one size on screen.
+  const base = useMemo(() => buildScene(p.map, p.rot), [p.map, p.rot]);
   const els = useRef(new Map<string, SVGGElement>());
   const [hover, setHover] = useState<string | undefined>();
   const [focused, setFocused] = useState<string | undefined>();
@@ -54,9 +103,9 @@ export function IsoScene(p: IsoSceneProps) {
   // View and roving focus belong to one scene: another level or rotation starts them afresh.
   const [viewState, setViewState] = useState({ key: sceneKey, k: 1, px: 0, py: 0 });
   const [curState, setCurState] = useState<{ key: string; id?: string }>({ key: sceneKey });
-  const first = scene.items[0]?.id;
-  const initial = p.restoreFocus && scene.items.some((i) => i.id === p.restoreFocus) ? p.restoreFocus : first;
-  const cur = curState.key === sceneKey && curState.id !== undefined && scene.items.some((i) => i.id === curState.id) ? curState.id : initial;
+  const first = base.items[0]?.id;
+  const initial = p.restoreFocus && base.items.some((i) => i.id === p.restoreFocus) ? p.restoreFocus : first;
+  const cur = curState.key === sceneKey && curState.id !== undefined && base.items.some((i) => i.id === curState.id) ? curState.id : initial;
   const setCur = (id: string) => setCurState({ key: sceneKey, id });
   const view = viewState.key === sceneKey ? viewState : { key: sceneKey, k: 1, px: 0, py: 0 };
   const setView = useCallback(
@@ -67,6 +116,12 @@ export function IsoScene(p: IsoSceneProps) {
       }),
     [sceneKey],
   );
+  const b = fitFrame(base.core, size);
+  const W = Math.max(b.x1 - b.x0, 1);
+  const H = Math.max(b.y1 - b.y0, 1);
+  const screen = size.w > 0 && size.h > 0 ? Math.min(size.w / W, size.h / H) * view.k : 1;
+  const text = size.w > 0 && size.h > 0 ? textScale(screen) : 1;
+  const scene = useMemo(() => (text === 1 ? base : buildScene(p.map, p.rot, { text })), [base, text, p.map, p.rot]);
   const suppress = useRef(false);
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
 
@@ -96,9 +151,6 @@ export function IsoScene(p: IsoSceneProps) {
     if (svg.current) svg.current.dataset.drawnMs = String(Math.max(0, Date.now() - p.since));
   }, [scene, p.since]);
 
-  const b = scene.bounds;
-  const W = Math.max(b.x1 - b.x0, 1);
-  const H = Math.max(b.y1 - b.y0, 1);
   const vw = W / view.k;
   const vh = H / view.k;
   const vb = { x: (b.x0 + b.x1) / 2 + view.px - vw / 2, y: (b.y0 + b.y1) / 2 + view.py - vh / 2, w: vw, h: vh };
@@ -261,8 +313,8 @@ export function IsoScene(p: IsoSceneProps) {
     );
   };
   const badgeOf = (b: SceneBadge, cls: string) => (
-    <g key={cls} className={`iso-badge ${cls}${b.drop ? " is-dropped" : ""}`} transform={`translate(${b.x} ${b.y})`}>
-      <rect x={-b.w / 2} y="-8" width={b.w} height="15" rx="7.5" />
+    <g key={cls} className={`iso-badge ${cls}${b.drop ? " is-dropped" : ""}`} transform={`translate(${b.x} ${b.y}) scale(${scene.text})`}>
+      <rect x={-b.w / scene.text / 2} y="-8" width={b.w / scene.text} height="15" rx="7.5" />
       <text y="3.5" textAnchor="middle">
         {b.text}
       </text>
@@ -428,6 +480,7 @@ export function IsoScene(p: IsoSceneProps) {
             <Label
               key={it.id}
               item={it}
+              text={scene.text}
               shown={it.labelShown || hover === it.id || p.selected === it.id || focused === it.id}
               sub={it.subShown && it.hasSub ? (it.sub ?? summary(it.node)) : undefined}
             />
@@ -570,12 +623,11 @@ function Card({ item }: { item: SceneItem }) {
   );
 }
 
-function Label({ item, sub, shown }: { item: SceneItem; sub?: string; shown: boolean }) {
+function Label({ item, sub, shown, text }: { item: SceneItem; sub?: string; shown: boolean; text: number }) {
   const pl = item.pill;
   const h = sub ? 34 : 21;
-  const x = pl.x0;
-  const y = pl.y0;
   const lead = item.pillLeader;
+  // The pill is drawn at its design size and scaled, so that it keeps one size on screen.
   return (
     <g className={`iso-labels h-${item.node.health.worst}${shown ? "" : " is-hidden"}`} data-for={item.id} aria-hidden="true">
       {lead ? (
@@ -584,16 +636,18 @@ function Label({ item, sub, shown }: { item: SceneItem; sub?: string; shown: boo
           <circle className="iso-leader-dot" cx={lead.x1} cy={lead.y1} r="2" />
         </g>
       ) : null}
-      <rect className="iso-pill" x={x} y={y} width={Math.max(pl.x1 - pl.x0, 1)} height={h} rx={h > 25 ? 10 : 10.5} />
-      <circle className="iso-lamp" cx={x + 11} cy={y + 10.5} r="3.5" />
-      <text className="iso-label" x={x + 20} y={y + 14.5}>
-        {item.label}
-      </text>
-      {sub ? (
-        <text className="iso-sub" x={x + 20} y={y + 28}>
-          {sub}
+      <g transform={`translate(${pl.x0} ${pl.y0}) scale(${text})`}>
+        <rect className="iso-pill" width={Math.max((pl.x1 - pl.x0) / text, 1)} height={h} rx={h > 25 ? 10 : 10.5} />
+        <circle className="iso-lamp" cx={11} cy={10.5} r="3.5" />
+        <text className="iso-label" x={20} y={14.5}>
+          {item.label}
         </text>
-      ) : null}
+        {sub ? (
+          <text className="iso-sub" x={20} y={28}>
+            {sub}
+          </text>
+        ) : null}
+      </g>
     </g>
   );
 }

@@ -182,7 +182,28 @@ export interface Scene {
   ground: SceneGround;
   /** Cable trays of a room, on the floor behind its racks. */
   trays: IsoBox[];
+  /** What the view frames: the blocks, cards and frame, not the floor they stand on nor the labels. */
+  core: Bounds;
+  /** How much bigger than its design size the text of this scene is drawn. */
+  text: number;
 }
+
+/** The text scales a scene is built at: a zoom only rebuilds it when it crosses one of these steps. */
+export const TEXT_STEPS = [0.6, 0.75, 0.9, 1, 1.2, 1.45, 1.75, 2.1, 2.5] as const;
+
+/**
+ * The text scale for a view that draws one scene px as `screen` screen px: the step nearest to its
+ * inverse, so that text keeps its design size on screen (within the steps' range).
+ */
+export function textScale(screen: number): number {
+  const want = 1 / Math.max(screen, 1e-6);
+  let best: number = TEXT_STEPS[0];
+  for (const t of TEXT_STEPS) if (Math.abs(Math.log(t / want)) < Math.abs(Math.log(best / want))) best = t;
+  return best;
+}
+
+/** Below this many screen px, a device's block is too small for its name to be written until pointed at. */
+export const LABEL_MIN_PX = 18;
 
 const fmt = (n: number) => Math.round(n * 10) / 10;
 
@@ -408,12 +429,18 @@ export function arrowHead(tip: Pt, ctrl: Pt, size = 8): string {
 export const LANE_GAP = 3;
 
 const CHAR = 6.9;
+/**
+ * How much bigger than its design size text is drawn in the scene being built: the inverse of the
+ * screen scale, so that labels and badges keep one size on screen whatever the zoom (see `textScale`).
+ * Set by `buildScene` for the time it runs.
+ */
+let TEXT = 1;
 
 /** The size of a label's pill, from an estimate of the text (it is not measured). */
 function pillSizeOf(i: SceneItem): PillSize {
   return (withSub) => {
     const sub = withSub ? (i.sub?.length ?? 18) * 6.2 : 0;
-    return { w: Math.round(Math.max(i.label.length * CHAR, sub) + 30), h: withSub ? 34 : 21 };
+    return { w: Math.round((Math.max(i.label.length * CHAR, sub) + 30) * TEXT), h: (withSub ? 34 : 21) * TEXT };
   };
 }
 
@@ -452,22 +479,29 @@ export interface Obstacle {
  * down and sideways (a leader line then joins it to its block) or above, a rack's devices slide along
  * their column instead, and when nothing is free it is hidden until pointed at. Widths are estimated.
  */
+/** A device: its name stays next to it, or waits until it is pointed at. */
+const nearOnly = (i: SceneItem) => (i.role === "device" || i.role === "shelf") && !i.drillable;
+/** A device that is not in trouble: zoomed out, its name waits until it is pointed at. */
+const crowdable = (i: SceneItem) => nearOnly(i) && i.node.health.worst !== "critical" && i.node.health.worst !== "warning";
+/** Past this many lines at a level, port names wait until a line or one of its ends is pointed at. */
+const PORTS_MAX = 12;
+
 function placeLabels(items: SceneItem[], obstacles: readonly Obstacle[], taken: Bounds[]): void {
   for (const i of [...items].reverse()) {
     if (!i.labelShown) continue;
     const mine = blockBounds(i);
-    const spec: PillSpec = { at: { x: i.labelAt.x, y: i.labelAt.y - 14 }, start: i.labelStart, top: mine.y0, size: pillSizeOf(i), hasSub: i.hasSub, beside: i.labelStart };
+    const spec: PillSpec = { at: { x: i.labelAt.x, y: i.labelAt.y - 14 * TEXT }, start: i.labelStart, top: mine.y0, size: pillSizeOf(i), hasSub: i.hasSub, beside: i.labelStart, scale: TEXT, near: nearOnly(i) };
     const won = placePill(
       spec,
       taken,
       obstacles.filter((o) => o.id !== i.id).map((o) => o.box),
     );
     if (won) {
-      i.labelAt = { x: won.rect.x0 + (i.labelStart ? 0 : (won.rect.x1 - won.rect.x0) / 2), y: won.rect.y0 + 14 };
+      i.labelAt = { x: won.rect.x0 + (i.labelStart ? 0 : (won.rect.x1 - won.rect.x0) / 2), y: won.rect.y0 + 14 * TEXT };
       i.subShown = won.withSub;
       i.pill = won.rect;
       taken.push(won.rect);
-      if (i.labelStart) i.pillLeader = leaderBetween({ x: i.iso.bounds.x1, y: spec.at.y + 11 }, won.rect);
+      if (i.labelStart) i.pillLeader = leaderBetween({ x: i.iso.bounds.x1, y: spec.at.y + 11 * TEXT }, won.rect);
       else if (won.dx !== 0 || won.dy !== 0 || won.above) i.pillLeader = leaderBetween(won.above ? { x: i.iso.base.x, y: mine.y0 + 3 } : { x: i.iso.base.x, y: i.iso.bounds.y1 - 3 }, won.rect);
     } else {
       i.labelShown = false;
@@ -479,7 +513,7 @@ function placeLabels(items: SceneItem[], obstacles: readonly Obstacle[], taken: 
     // Hidden: where it shows when pointed at.
     const { w, h } = pillSizeOf(i)(false);
     const x0 = i.labelStart ? i.labelAt.x : i.labelAt.x - w / 2;
-    const y0 = i.labelAt.y - 14;
+    const y0 = i.labelAt.y - 14 * TEXT;
     i.pill = { x0, x1: x0 + w, y0, y1: y0 + h };
   }
 }
@@ -517,7 +551,7 @@ function frameScene(f: NonNullable<WorldLayout["frame"]>, layout: WorldLayout, r
   return { back: posts.slice(0, 1), front: posts.slice(1), top, ticks, marks };
 }
 
-const badge = (p: Pt, text: string): SceneBadge => ({ x: fmt(p.x), y: fmt(p.y), text, w: Math.round(text.length * 5.6 + 10) });
+const badge = (p: Pt, text: string): SceneBadge => ({ x: fmt(p.x), y: fmt(p.y), text, w: Math.round((text.length * 5.6 + 10) * TEXT) });
 
 /** What a path gives the finished edge: its centre line, its two lanes, where badges sit. */
 interface Geometry {
@@ -619,7 +653,7 @@ function finish(e: MapEdge, g: Geometry, floor: boolean, ports: boolean): SceneE
 export function placeBadges(edges: SceneEdge[], taken: Bounds[]): void {
   const put = (b: SceneBadge, spots: Pt[]): boolean => {
     for (const p of spots) {
-      const box = badgeBox(p, b.w);
+      const box = badgeBox(p, b.w, TEXT);
       if (hitsAny(box, taken, 1)) continue;
       b.x = fmt(p.x);
       b.y = fmt(p.y);
@@ -633,13 +667,14 @@ export function placeBadges(edges: SceneEdge[], taken: Bounds[]): void {
     if (!b) continue;
     const mid = e.len / 2;
     const spots: Pt[] = [{ x: b.x, y: b.y }];
-    for (let k = 1; k * 22 <= mid - 20; k++) spots.push(e.at(mid + k * 22), e.at(mid - k * 22));
+    const step = 22 * TEXT;
+    for (let k = 1; k * step <= mid - 20 * TEXT; k++) spots.push(e.at(mid + k * step), e.at(mid - k * step));
     // A count is never dropped: with no room it stays where it was.
-    if (!put(b, spots)) taken.push(badgeBox(b, b.w));
+    if (!put(b, spots)) taken.push(badgeBox(b, b.w, TEXT));
   }
   for (const e of edges) {
     if (!e.portsShown) continue;
-    const ds = badgeDistances(22, e.len / 2 - 14);
+    const ds = badgeDistances(22 * TEXT, e.len / 2 - 14 * TEXT, 22 * TEXT);
     for (const [badge, from] of [
       [e.ports.a, (s: number) => e.at(s)],
       [e.ports.b, (s: number) => e.at(e.len - s)],
@@ -766,7 +801,21 @@ function trayEdges(edges: MapEdge[], items: Map<string, SceneItem>): { edges: Sc
   return { edges: out, trays: [projectBox({ ...t, z: -0.15, h: 0.12 })], rest };
 }
 
-export function buildScene(m: TopologyMap, rot: Rot): Scene {
+/**
+ * The scene of a map level turned by `rot`. `text` (1 by default) is how much bigger than its design
+ * size text is drawn: labels and badges are sized and placed at that scale, and a device whose block
+ * would be under LABEL_MIN_PX on screen keeps its name until pointed at.
+ */
+export function buildScene(m: TopologyMap, rot: Rot, opts: { text?: number } = {}): Scene {
+  TEXT = opts.text ?? 1;
+  try {
+    return sceneOf(m, rot);
+  } finally {
+    TEXT = 1;
+  }
+}
+
+function sceneOf(m: TopologyMap, rot: Rot): Scene {
   const layout = layoutWorld(m);
   const items = layout.items.map((i) => itemIso(i, layout, rot)).sort((a, b) => a.iso.depth - b.iso.depth);
   const plates = layout.plates.map((p) => plateIso(p, layout, rot));
@@ -806,6 +855,12 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
   const frameBox = frame ? union([...frame.back, ...frame.front].map((p) => p.bounds)) : undefined;
   const fixed: Obstacle[] = [...blocks(rest), ...(frameBox ? [{ id: "frame", box: frameBox }] : [])];
   const taken: Bounds[] = [];
+  // Zoomed out, the names of small things wait until pointed at; places, and what is in trouble, keep theirs.
+  if (TEXT > 1)
+    for (const i of rest) {
+      const small = (i.iso.bounds.x1 - i.iso.bounds.x0) / TEXT < LABEL_MIN_PX;
+      if (small && crowdable(i)) i.labelShown = false;
+    }
   placeLabels(rest, fixed, taken);
   const gateRank = new Map(gates.map((g, k) => [g.id, k]));
   const inTree = new Set(layers.flat());
@@ -847,6 +902,7 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
   // The edges keep the order the API gave them.
   const order = new Map(m.edges.map((e, i) => [e.id, i]));
   edges.sort((p, q) => (order.get(p.edge.id) ?? 0) - (order.get(q.edge.id) ?? 0));
+  if (edges.length > PORTS_MAX) for (const e of edges) e.portsShown = false;
   placeBadges(edges, taken);
 
   const bounds = union(
@@ -867,5 +923,13 @@ export function buildScene(m: TopologyMap, rot: Rot): Scene {
     ],
     36,
   );
-  return { items, plates, edges, bounds, viewBox: viewBoxOf(bounds), units: layout.units, frame, ground: groundOf(layout, rot), trays };
+  const core = union(
+    [
+      ...items.map((i) => blockBounds(i)),
+      ...items.flatMap((i) => (i.card ? [{ x0: i.card.x, x1: i.card.x + i.card.w, y0: i.card.y, y1: i.card.y + i.card.h }] : [])),
+      ...(frame ? [...frame.back, ...frame.front].map((p) => p.bounds) : []),
+    ],
+    24,
+  );
+  return { items, plates, edges, bounds, viewBox: viewBoxOf(bounds), units: layout.units, frame, ground: groundOf(layout, rot), trays, core, text: TEXT };
 }
