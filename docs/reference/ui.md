@@ -97,16 +97,29 @@ addresses (`site`, `rack`, `vlan` or `classes` without `view`) keep opening the 
   declared in no rack), a rack (its devices at their unit), the unplaced devices. `level=room` with
   a site id is the site floor. The address is `?level=&id=&sel=&rot=`; a bad address falls back to
   the world with a notice.
-- **Drawing** (ADR 0066): a ground plane with a grid that fades out; every block has three shaded
-  faces, a contact shadow and a light rim on its top. A site is a building (roof, window rows, plate
-  with its code and device count), a room a slab with low cut-away walls and its name painted on the
-  floor, a rack a cabinet (frame, glass door, vents, one status LED per device; the LEDs blink only for
-  a warning or worse, never under `prefers-reduced-motion`). In a room, cables run along cable trays.
-  In a rack, devices that have a link become cards (role icon, name, model, health dot) in a tree,
-  gateway or router on top, then switches, then the rest, joined to their slab by a leader; the others
-  keep their unit. Hover lifts a block 2 px with an outline, selection outlines it in the accent
-  colour. Labels are pills, dropped (caption first) when they would overlap, and reappear on hover or
-  focus. Colours are the `--trica-iso-*` tokens (every theme defines them); no inline style.
+- **Drawing** (ADR 0066 and its "visual language" amendment): a ground plane with a grid that fades
+  out; every block is a neutral product body (graphite in dark, off-white in light) with three faces
+  lit from the back left (side faces darken towards the ground, tops catch a sheen), a contact shadow
+  and a light rim. A site is a building (roof, window rows), a room a slab with low cut-away walls and
+  its name painted on the floor, a rack of a room a cabinet (glass door, vents, one LED per device). A
+  device's front shows its role: a switch's or patch panel's ports, a firewall's or router's ports and
+  screen, a server's drive bays, storage bays, a PDU's outlets. At the rack level the rack is a cabinet
+  with far panels and blanking plates over its empty units. The Internet and other places are round
+  badges (a cloud, a site) at the end of their lines. **Health** is a status LED on the front of each
+  block (a rack: its door LEDs) and a soft pulsing glow under what is critical, never a colour across a
+  block; LEDs blink only for a warning or worse, and nothing pulses under `prefers-reduced-motion`. In a
+  room, cables run along cable trays. In a rack, devices that have a link become cards (role icon,
+  name, model, health dot) in a tree, gateway or router on top, then switches, then the rest; a card
+  and its slab are one item (pointing at either lights both); the others keep their unit. Hover lifts
+  a block 2 px with an outline and dims what it is not linked to; selection outlines it in the accent
+  colour. Colours are the `--trica-iso-*` tokens (every theme defines them); no inline style.
+- **Text and framing**: names, captions and badges keep one size on screen whatever the zoom (the scene
+  is rebuilt at a text scale, in steps, as the zoom changes). The view frames the level's blocks, not
+  the floor, and never draws them bigger than 1.6 screen px per scene px, so a lone device keeps its
+  size. A device's name stays under it (or one step lower) or waits until it is pointed at; zoomed out,
+  a small healthy device keeps its name until pointed at; past 12 lines at a level, port names wait
+  until a line is pointed at. The canvas takes the page's height, the controls and the keyboard hint
+  float on it, and the legend is behind a "Legend" disclosure.
 - **Lines** (ADR 0066): in a room and a rack, cables are smooth orthogonal paths with rounded corners
   that leave each device from its side; parallel lines are fanned out and a LAG is one bundle with a
   `xN` badge. Colour and width follow the speed class (100G and more, 25-40G, 10G, 2.5-5G, 1G, under
@@ -117,13 +130,14 @@ addresses (`site`, `rack`, `vlan` or `classes` without `view`) keep opening the 
   arc to the cloud. Above rooms, lines stay raised arcs. The side panel of a line gives both ends
   (device, port), speed, the rate in each direction with its utilisation, the members and the
   confidence (no longer drawn as a dash style).
-- **Moving**: click opens a place; the `i` badge or Space selects (side panel); Enter opens; arrows
+- **Moving**: click opens a place, and the next level flies in from where the place was on screen
+  (going up backs out; none under `prefers-reduced-motion`); the `i` badge or Space selects (side panel); Enter opens; arrows
   move between places; Escape closes the panel, then goes up; `+ - 0`, wheel and drag zoom and pan;
   the two turn buttons rotate by quarter turns (`rot`). Lines are not focusable: the links table under
   the map (first 50 rows) opens each one in the panel.
-- **Traffic**: with live data, each measured line carries dots travelling in each direction (SMIL
-  `animateMotion`; density and speed follow the rate class, at most 8 per lane), over a thin halo tinted by
-  the utilisation; a line without a rate has none. At most 150 lanes, the busiest. Nothing moves with
+- **Traffic**: with live data, each measured line carries a light streak running in each direction
+  (an SMIL-animated dash offset; how often and how fast follow the rate class, as the old particles did,
+  at most 8 streaks a lane), over a thin halo tinted by the utilisation; a line without a rate has none. At most 150 lanes, the busiest. Nothing moves with
   `prefers-reduced-motion`, with the "Animate the traffic" switch off, or when the page is hidden. The map
   is refreshed every 30 s when live data are on, never otherwise.
 - **Device uplinks** (ADR 0051, amendment of #185). `uplinked_to` is drawn as an edge of its own
@@ -144,10 +158,13 @@ addresses (`site`, `rack`, `vlan` or `classes` without `view`) keep opening the 
   recorded API answers `testdata/map-api.json`; `uplinked.test.tsx` for the device uplink: arrowheads,
   dash, legend, table and panel in both languages with axe; `tunnel.test.tsx` for the lines of one pair: shifts,
   lanes, tunnel dash and legend entry, on global-level arcs; `scene.look.test.ts` for what each level draws;
-  `route`, `speed`, `port`, `tree`, `decor`, `labels` for the pure geometry), `e2e/topology-look.spec.ts`
-  (card order, bundle and port badges, particles, LEDs), `e2e/topology-map.spec.ts` (every level in both
-  themes with axe and no CSP violation, drill by mouse and keyboard, particles present and
-  absent under reduced motion, a rack of 96 devices drawn in under a second, a device uplink drawn
+  `route`, `speed`, `port`, `tree`, `decor`, `labels` for the pure geometry; `scale.test.ts` for the text
+  scale, the frame and names in a crowd; `look.health.test.ts` for health as an LED; `objects.test.tsx`
+  for device fronts, the cabinet, the gate badges and dimming; `rack-tree.test.ts` for the rack's tree),
+  `e2e/topology-look.spec.ts` (card order, bundle and port badges, traffic, LEDs), `e2e/topology-scale.spec.ts`
+  (a name keeps its size on screen when zooming; a lone device is not blown up), `e2e/topology-map.spec.ts`
+  (every level in both themes with axe and no CSP violation, drill by mouse and keyboard, the flight in
+  and out between levels, the traffic sheen present (and no dots) and absent under reduced motion, a rack of 96 devices drawn in under a second, a device uplink drawn
   with its arrow, legend entry and table row).
 
 ### Topology: what the graph relies on

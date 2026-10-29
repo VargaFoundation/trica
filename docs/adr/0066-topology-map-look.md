@@ -87,6 +87,55 @@ nothing but a gate had no card, so its link was an arc across the whole tree. No
   inside a card, if a link is drawn as an arc, if the port names show on the dense tree, or if a
   device linked only to a gate has no card.
 
+## Amendment (2026-10-29): visual language
+
+A critical pass over every level in both themes found the scene geometrically sound but not a product:
+- labels grew and shrank with the content (a lone device's name 40 px tall, a crowded floor's 6 px);
+- the camera framed the floor, not what stands on it;
+- every block was the same navy slab;
+- health painted whole blocks yellow or pink;
+- too many hues competed, and the lighting was flat;
+- traffic dots read as beads, the gates were bare panels, the rack was a wireframe;
+- the canvas was a 490 px strip above a legend of three paragraphs.
+
+Now:
+
+- **Text at one size on screen.** `buildScene(map, rot, { text })` sizes and places pills and badges at
+  a text scale. `IsoScene` picks it from the screen scale (`textScale`, in `TEXT_STEPS`) and rebuilds
+  the scene when a zoom crosses a step.
+- **Framing.** The view frames the level's blocks (`Scene.core`), not the floor, with room for names
+  and the floating controls. It never draws a level bigger than `FIT_MAX` (1.6) screen px per scene px.
+- **Crowds.**
+  - A device's pill only stands under its block, or one step lower (`near` in `labels.ts`).
+  - Zoomed out, a healthy device under `LABEL_MIN_PX` on screen keeps its name until pointed at.
+  - Past 12 lines at a level, port names wait until a line is pointed at.
+- **Materials.**
+  - The `iso-*` body tokens become a neutral product body: graphite in dark, off-white in light.
+  - Speed lines form one cool family.
+  - Faces get gradients (side faces darker towards the ground, a sheen on tops) and softer edges.
+  - The contrast pairs of `contrast.json` are unchanged and still pass.
+- **Health as a product shows it.**
+  - A status LED on the front of every block. A rack keeps its door LEDs; a gate has none.
+  - A soft pulsing glow on the ground under a critical one.
+  - No colour across a block: a test reads `app.css` and fails if a health class fills or strokes a face.
+- **Recognisable things.**
+  - A device's front by role (`deviceFront` in `decor.ts`): ports, a screen, drive bays, outlets.
+  - The rack is a cabinet: far panels, and blanking plates over its empty units.
+  - The Internet and other places are round badges (a cloud, a site), drawn over the ends of their lines.
+  - The slab-to-card leaders of the previous amendment are dropped: a card and its slab are one item, and pointing at either lights both.
+- **Motion.**
+  - Traffic is a soft streak running along each lane (`sheen` in `flow.ts`, an animated dash offset), at the old particles' rate and speed.
+  - Going down a level flies in from where the place was on screen; going up backs out. The origin is set through the CSSOM, since the CSP forbids style attributes.
+  - Pointing at a thing dims what it is not linked to.
+  - Nothing moves under reduced motion.
+- **Page.** The canvas takes the page's height, the controls and the hint float on it, and the legend is behind a disclosure.
+- **Proof.**
+  - Unit tests: `scale.test.ts`, `look.health.test.ts`, `objects.test.tsx`, and the sheen case of `flow.test.ts`.
+  - E2E tests: `e2e/topology-scale.spec.ts` (a name keeps its size on screen across zooms; a lone device takes under a quarter of the stage), and in `e2e/topology-map.spec.ts` the flight between levels and the absence of dots.
+  - The e2e tests fail on the previous build, and the unit tests fail without the code they cover.
+
+Not done: arcs between places still cross the walls of the rooms they pass over, and a card of a rack's tree still scales with the zoom (only its routing is in scene px).
+
 ## Not drawn
 
 No pixel test (the proof is the tests on the scene model plus screenshots reviewed by a person); no

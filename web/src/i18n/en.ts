@@ -1081,7 +1081,7 @@ export const en = {
   "topology.map.links.openFor": "Details of the link {a} to {b}",
   "topology.map.legend": "Map legend",
   "topology.map.legendShow": "Legend",
-  "topology.map.legend.width": "Line colour and width follow the speed. The halo follows the utilisation, the dots follow the traffic, in each direction.",
+  "topology.map.legend.width": "Line colour and width follow the speed. The halo follows the utilisation, a light streak runs with the traffic, in each direction.",
   "topology.map.legend.speedTitle": "Speed",
   "topology.map.speed.100g": "100G and more",
   "topology.map.speed.40g": "25G to 40G",

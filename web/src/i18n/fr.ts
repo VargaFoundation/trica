@@ -1079,7 +1079,7 @@ export const fr: Record<MessageKey, string> = {
   "topology.map.links.openFor": "Détails du lien {a} vers {b}",
   "topology.map.legend": "Légende de la carte",
   "topology.map.legendShow": "Légende",
-  "topology.map.legend.width": "La couleur et l'épaisseur du trait suivent le débit. Le halo suit l'utilisation, les points suivent le trafic, dans chaque sens.",
+  "topology.map.legend.width": "La couleur et l'épaisseur du trait suivent le débit. Le halo suit l'utilisation, un reflet court avec le trafic, dans chaque sens.",
   "topology.map.legend.speedTitle": "Débit",
   "topology.map.speed.100g": "100G et plus",
   "topology.map.speed.40g": "25G à 40G",
