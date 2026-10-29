@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { MapEdge, MapNode, TopologyMap } from "../../api/types";
 import { fitFrame, FIT_MAX } from "./IsoScene";
 import { buildScene, LABEL_MIN_PX, TEXT_STEPS, textScale } from "./scene";
+import { BUSY_RACK } from "./testdata/busyRack";
 import { MAPS } from "./testdata/maps";
 
 // Text keeps one size on screen, a lone thing is not blown up, and a crowd keeps its names to itself.
@@ -47,6 +48,23 @@ describe("the text scale of a view", () => {
     expect(h(at1!)).toBeCloseTo(1, 5);
     expect(h(at2!)).toBeCloseTo(2, 5);
     expect(buildScene(MAPS.global, 0, { text: 2 }).text).toBe(2);
+  });
+});
+
+describe("the cards of a rack's tree", () => {
+  it("are laid out at the text scale, so that they keep one size on screen, and no line runs over one", () => {
+    const at1 = buildScene(BUSY_RACK, 0).items.find((i) => i.card)!.card!;
+    const s2 = buildScene(BUSY_RACK, 0, { text: 2 });
+    const at2 = s2.items.find((i) => i.id === s2.items.find((x) => x.card)!.id)!.card!;
+    expect(at2.w / at1.w).toBeCloseTo(2, 5);
+    expect(at2.h / at1.h).toBeCloseTo(2, 5);
+    expect(at2.k).toBe(2);
+    const cards = s2.items.flatMap((i) => (i.card ? [i.card] : []));
+    for (const e of s2.edges)
+      for (let d = 0; d <= e.len; d += 3) {
+        const p = e.at(d);
+        for (const c of cards) expect(p.x > c.x + 2 && p.x < c.x + c.w - 2 && p.y > c.y + 2 && p.y < c.y + c.h - 2, e.edge.id).toBe(false);
+      }
   });
 });
 

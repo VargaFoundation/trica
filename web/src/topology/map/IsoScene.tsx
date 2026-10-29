@@ -700,12 +700,15 @@ function Wall({ box }: { box: IsoBox }) {
 function Card({ item }: { item: SceneItem }) {
   const c = item.card;
   if (!c) return null;
+  // Drawn at its design size and scaled, so that it keeps one size on screen.
+  const w = c.w / c.k;
+  const h = c.h / c.k;
   return (
-    <g className={`iso-card-box h-${item.node.health.worst}`} transform={`translate(${c.x} ${c.y})`}>
-      <rect className="iso-card-bg" width={c.w} height={c.h} rx="9" />
-      <circle className="iso-card-icon-bg" cx="22" cy={c.h / 2} r="14" />
+    <g className={`iso-card-box h-${item.node.health.worst}`} transform={`translate(${c.x} ${c.y}) scale(${c.k})`}>
+      <rect className="iso-card-bg" width={w} height={h} rx="9" />
+      <circle className="iso-card-icon-bg" cx="22" cy={h / 2} r="14" />
       <g className="iso-card-icon">
-        <IconGlyph name={c.icon} x={14} y={c.h / 2 - 8} size={16} />
+        <IconGlyph name={c.icon} x={14} y={h / 2 - 8} size={16} />
       </g>
       <text className="iso-card-name" x="44" y={c.model ? 19 : 27}>
         {c.name}
@@ -715,7 +718,7 @@ function Card({ item }: { item: SceneItem }) {
           {c.model}
         </text>
       ) : null}
-      <circle className="iso-lamp" cx={c.w - 14} cy={c.h - 13} r="4" />
+      <circle className="iso-lamp" cx={w - 14} cy={h - 13} r="4" />
     </g>
   );
 }

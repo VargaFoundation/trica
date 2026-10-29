@@ -34,8 +34,10 @@ export interface SceneDoor {
 export interface SceneCard {
   x: number;
   y: number;
+  /** In scene px: the design size times `k`, the text scale the card is drawn at. */
   w: number;
   h: number;
+  k: number;
   icon: IconName;
   name: string;
   model?: string;
@@ -732,13 +734,15 @@ function placeCards(items: SceneItem[], layers: string[][], links: MapEdge[], ga
   const at = new Map(items.map((i) => [i.id, i]));
   const rackItems = items.filter((i) => i.role === "device" || i.role === "shelf");
   const pills = items.filter((i) => i.labelShown && !i.card && i.pill.x1 > 0).map((i) => i.pill.x1);
-  const x0 = Math.max(0, ...rackItems.map((i) => i.iso.bounds.x1), ...pills) + 64;
+  // The cards keep one size on screen, as the labels do: the tree is laid out at the text scale.
+  const size = { ...CARD, w: CARD.w * TEXT, h: CARD.h * TEXT, gapX: CARD.gapX * TEXT, gapY: CARD.gapY * TEXT, track: CARD.track * TEXT };
+  const x0 = Math.max(0, ...rackItems.map((i) => i.iso.bounds.x1), ...pills) + 64 * TEXT;
   const y0f = Math.min(...items.filter((i) => i.role === "device").map((i) => i.iso.bounds.y0), Infinity);
   const y0 = Number.isFinite(y0f) ? y0f : 0;
   const inTree = new Set(layers.flat());
   const between = links.filter((e) => inTree.has(e.a) && inTree.has(e.b));
   const toGates = links.flatMap((e) => (inTree.has(e.a) && gateRank.has(e.b) ? [{ key: e.id, card: e.a, gate: gateRank.get(e.b) as number }] : inTree.has(e.b) && gateRank.has(e.a) ? [{ key: e.id, card: e.b, gate: gateRank.get(e.a) as number }] : []));
-  const plan = planTree(orderLayers(layers, between), between.map((e) => ({ key: e.id, a: e.a, b: e.b })), toGates, CARD);
+  const plan = planTree(orderLayers(layers, between), between.map((e) => ({ key: e.id, a: e.a, b: e.b })), toGates, size);
   const move = (p: Pt): Pt => ({ x: fmt(p.x + x0), y: fmt(p.y + y0) });
   const routes = new Map([...plan.routes].map(([k, pts]) => [k, pts.map(move)] as const));
   const exits = new Map([...plan.exits].map(([k, x]) => [k, { pts: x.pts.map(move), laneX: fmt(x.laneX + x0) }] as const));
@@ -749,14 +753,15 @@ function placeCards(items: SceneItem[], layers: string[][], links: MapEdge[], ga
     it.card = {
       x: c.x,
       y: c.y,
-      w: CARD.w,
-      h: CARD.h,
+      w: size.w,
+      h: size.h,
+      k: TEXT,
       icon: kindOf({ type: "device", attributes: { role: it.node.role } }).icon,
       name: it.label,
       model: it.node.model,
       layer: c.layer,
     };
-    it.navAt = { x: c.x + CARD.w / 2, y: c.y + CARD.h / 2 };
+    it.navAt = { x: c.x + size.w / 2, y: c.y + size.h / 2 };
     it.labelShown = false;
     it.subShown = false;
   }

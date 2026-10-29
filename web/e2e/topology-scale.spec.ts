@@ -26,6 +26,24 @@ test("a name keeps its size on screen when the view is zoomed in or out", async 
   }
 });
 
+test("a card of a rack's tree keeps its size on screen when the view is zoomed in or out", async ({ page }) => {
+  await signInWithToken(page, `/topology?level=rack&id=${ID.r12}`);
+  await expect(page.locator(drawn)).toBeVisible();
+  const card = () => page.locator(".iso-card-box .iso-card-bg").first().evaluate((el) => el.getBoundingClientRect().height);
+  const at1 = await card();
+  expect(at1).toBeGreaterThan(20);
+  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Zoom in" }).click();
+  await page.waitForTimeout(300);
+  const zoomedIn = await card();
+  for (let i = 0; i < 5; i++) await page.getByRole("button", { name: "Zoom out" }).click();
+  await page.waitForTimeout(300);
+  const zoomedOut = await card();
+  for (const h of [zoomedIn, zoomedOut]) {
+    expect(h / at1).toBeGreaterThan(0.78);
+    expect(h / at1).toBeLessThan(1.28);
+  }
+});
+
 test("a level of one device draws it at its size, not across the stage", async ({ page }) => {
   await signInWithToken(page, "/topology?level=unplaced");
   await expect(page.locator(drawn)).toBeVisible();
