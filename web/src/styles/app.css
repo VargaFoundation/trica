@@ -2226,6 +2226,21 @@ label.check {
   stroke: none;
   pointer-events: none;
 }
+/* A room's mast: where its lines start, above its walls. */
+.iso-mast line {
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-width: 1.2;
+  stroke-dasharray: 2 2;
+  opacity: 0.7;
+}
+.iso-mast circle {
+  fill: var(--trica-iso-label-bg);
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-width: 1.2;
+}
+.iso-mast {
+  pointer-events: none;
+}
 /* A device's front: dark openings, light slits, a small screen. */
 .iso-holes {
   fill: var(--trica-iso-glass);

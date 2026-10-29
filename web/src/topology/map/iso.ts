@@ -169,3 +169,24 @@ export function columnShifts(boxes: readonly Bounds[], x: number, y: number, gap
     return at;
   });
 }
+
+/** Polygon points ("x,y x,y") as points. */
+export const pointsOf = (points: string): Pt[] =>
+  points
+    .split(" ")
+    .filter((s) => s !== "")
+    .map((s) => {
+      const [x, y] = s.split(",").map(Number) as [number, number];
+      return { x, y };
+    });
+
+/** Whether a point is inside a polygon (even-odd rule). */
+export function insidePolygon(p: Pt, poly: readonly Pt[]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i] as Pt;
+    const b = poly[j] as Pt;
+    if (a.y > p.y !== b.y > p.y && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y || 1e-9) + a.x) inside = !inside;
+  }
+  return inside;
+}

@@ -660,6 +660,12 @@ function Body({ item: it }: { item: SceneItem }) {
           ))}
         </g>
       ) : null}
+      {it.mast ? (
+        <g className="iso-mast">
+          <line x1={it.mast.x1} y1={it.mast.y1} x2={it.mast.x2} y2={it.mast.y2} />
+          <circle cx={it.mast.x2} cy={it.mast.y2} r="2.6" />
+        </g>
+      ) : null}
       {it.front ? (
         <g className={`iso-front-face f-${it.front.kind}`}>
           {it.front.screen ? <polygon className="iso-screen" points={it.front.screen} /> : null}

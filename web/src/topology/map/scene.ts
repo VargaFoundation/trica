@@ -7,7 +7,7 @@ import type { MapEdge, MapNode, TopologyMap } from "../../api/types";
 import type { IconName } from "../../components/ui/icons";
 import { kindOf } from "../../inventory/kind";
 import { deviceFront, doorGlass, faceOf, facePoly, floorMatrix, ledDots, ledStates, ventLines, wallBoxes, windows, type DeviceFront, type Face, type Rect } from "./decor";
-import { CELL, columnShifts, isoBox, project, projectBox, shiftIso, turnedWorld, turnPoint, turnRect, union, viewBoxOf, type Bounds, type IsoBox, type Pt, type Rot } from "./iso";
+import { CELL, columnShifts, insidePolygon, isoBox, pointsOf, project, projectBox, shiftIso, turnedWorld, turnPoint, turnRect, union, viewBoxOf, type Bounds, type IsoBox, type Pt, type Rot } from "./iso";
 import { isGate, layoutWorld, UZ, type ItemRole, type Plate, type WorldItem, type WorldLayout } from "./layout";
 import { edgeUtilClass, linkState, type Direction, type LinkState } from "./flow";
 import { badgeBox, badgeDistances, hitsAny, leaderBetween, merge, placePill, type PillSize, type PillSpec } from "./labels";
@@ -69,6 +69,8 @@ export interface SceneItem {
   front?: DeviceFront;
   /** Its status LED, on the right of its front: the colour of its health, as a product shows it. */
   led?: Pt;
+  /** A room's mast: from its floor up to the point above its walls where its lines start. */
+  mast?: { x1: number; y1: number; x2: number; y2: number };
   /** Little triangle on top of a rack pointing the way it faces. */
   arrow?: string;
   /** Where lines meet the item. */
@@ -218,6 +220,9 @@ export function textScale(screen: number): number {
 export const LABEL_MIN_PX = 18;
 
 const fmt = (n: number) => Math.round(n * 10) / 10;
+/** The height of a room's far walls, and of its mast above its floor (over the walls). */
+const WALL_BACK = 1.15;
+const MAST = WALL_BACK + 0.45;
 
 function plateIso(p: Plate, layout: WorldLayout, rot: Rot): ScenePlate {
   const world = { w: layout.w, d: layout.d };
@@ -307,6 +312,12 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
   }
   const gate = isGate(it.role);
   let port = iso.anchor;
+  // A room's or an area's lines start from the top of a mast above its walls, so that they pass over them.
+  let mast: SceneItem["mast"];
+  if (it.role === "room" || it.role === "area") {
+    port = project(r.x + r.w / 2, r.y + r.d / 2, z1 + MAST);
+    mast = { x1: fmt(iso.anchor.x), y1: fmt(iso.anchor.y), x2: fmt(port.x), y2: fmt(port.y) };
+  }
   if (it.role === "device") port = it.portSide === "east" ? project(r.x + r.w, r.y + r.d / 2, b.z + b.h / 2) : project(r.x + r.w / 2, r.y + r.d, b.z + b.h / 2);
   else if (gate) port = project(r.x + r.w / 2, r.y + r.d / 2, b.z + b.h / 2);
   const parts: IsoBox[] = [];
@@ -332,7 +343,7 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
   let walls: SceneItem["walls"];
   let floorText: SceneItem["floorText"];
   if (it.role === "room") {
-    const w = wallBoxes(r, z1, 1.15, 0.3);
+    const w = wallBoxes(r, z1, WALL_BACK, 0.3);
     walls = { back: w.back.map(projectBox), front: w.front.map(projectBox) };
   }
   if (it.role === "room" || it.role === "area") {
@@ -377,6 +388,7 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
     door,
     front,
     led: led ? { x: fmt(led.x), y: fmt(led.y) } : undefined,
+    mast,
     arrow,
     port,
     label: it.label,
@@ -395,7 +407,7 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
 }
 
 /** A quadratic arc between two points, bowed to one side; `shift` moves it sideways. */
-export function arc(a: Pt, b: Pt, shift = 0, reverse = false): { d: string; mid: Pt; c: Pt; ends: [Pt, Pt] } {
+export function arc(a: Pt, b: Pt, shift = 0, reverse = false, lift = 0): { d: string; mid: Pt; c: Pt; ends: [Pt, Pt] } {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
@@ -404,7 +416,7 @@ export function arc(a: Pt, b: Pt, shift = 0, reverse = false): { d: string; mid:
   const bow = Math.min(70, len * 0.2);
   const sa = { x: a.x + nx * shift, y: a.y + ny * shift };
   const sb = { x: b.x + nx * shift, y: b.y + ny * shift };
-  const c = { x: (sa.x + sb.x) / 2 + nx * bow, y: (sa.y + sb.y) / 2 + ny * bow - Math.min(30, len * 0.1) };
+  const c = { x: (sa.x + sb.x) / 2 + nx * bow, y: (sa.y + sb.y) / 2 + ny * bow - Math.min(30, len * 0.1) - lift };
   // The bow is fixed by the a to b direction, so a reversed lane runs along the same curve backwards.
   const [from, to] = reverse ? [sb, sa] : [sa, sb];
   return {
@@ -600,9 +612,30 @@ interface Geometry {
   arrows: string[];
 }
 
-function arcGeometry(e: MapEdge, a: SceneItem, b: SceneItem): Geometry {
+/** How much higher, in px, an arc is raised at a time until it clears the walls in its way, and at most. */
+const LIFT_STEP = 16;
+const LIFT_MAX = 240;
+
+/**
+ * A raised arc between two items. `wallsOf` gives the screen outlines of the rooms' walls: the arc is
+ * raised until no point of it (but near its ends) lies inside the walls of a room it passes over.
+ */
+function arcGeometry(e: MapEdge, a: SceneItem, b: SceneItem, wallsOf: ReadonlyMap<string, Pt[][]> = new Map()): Geometry {
   const shift = mediumShift(e.medium);
-  const base = arc(a.port, b.port, shift);
+  const walls = [...wallsOf].flatMap(([id, ws]) => (id === a.id || id === b.id ? [] : ws));
+  const clears = (q: ReturnType<typeof arc>) => {
+    for (let k = 2; k <= 18; k++) {
+      const p = quadAt(q.ends[0], q.c, q.ends[1], k / 20);
+      if (walls.some((w) => insidePolygon(p, w))) return false;
+    }
+    return true;
+  };
+  let lift = 0;
+  let base = arc(a.port, b.port, shift);
+  while (walls.length > 0 && lift < LIFT_MAX && !clears(base)) {
+    lift += LIFT_STEP;
+    base = arc(a.port, b.port, shift, false, lift);
+  }
   const arrows: string[] = [];
   if (e.medium === "uplinked_to") {
     if (e.toward === "a" || e.toward === "both") arrows.push(arrowHead(base.ends[0], base.c));
@@ -612,8 +645,8 @@ function arcGeometry(e: MapEdge, a: SceneItem, b: SceneItem): Geometry {
   const lanes: SceneLane[] = e.measured
     ? [
         // Two lanes side by side: a to b on one side of the line, b to a on the other, each drawn in its own direction.
-        { dir: "ab", d: arc(a.port, b.port, shift - LANE_GAP).d, len },
-        { dir: "ba", d: arc(a.port, b.port, shift + LANE_GAP, true).d, len },
+        { dir: "ab", d: arc(a.port, b.port, shift - LANE_GAP, false, lift).d, len },
+        { dir: "ba", d: arc(a.port, b.port, shift + LANE_GAP, true, lift).d, len },
       ]
     : [];
   return { d: base.d, mid: base.mid, len, lanes, ends: base.ends, near: [quadAt(base.ends[0], base.c, base.ends[1], 0.14), quadAt(base.ends[0], base.c, base.ends[1], 0.86)], at: (d) => quadAt(base.ends[0], base.c, base.ends[1], Math.min(1, Math.max(0, d / (len || 1)))), arrows };
@@ -918,11 +951,13 @@ function sceneOf(m: TopologyMap, rot: Rot): Scene {
     edges.push(...cardEdges(treeLinks, plan, gatePorts));
     arcs = arcs.filter((e) => !treeLinks.includes(e));
   }
+  // The rooms' walls, which arcs between places pass above.
+  const wallOutlines = new Map(items.flatMap((i) => (i.walls ? [[i.id, [...i.walls.back, ...i.walls.front].map((w) => pointsOf(w.hull))] as const] : [])));
   for (const e of arcs) {
     const a = at.get(e.a) as SceneItem;
     const b = at.get(e.b) as SceneItem;
     // Arcs between places carry no port names of their own unless one cable is all there is.
-    edges.push(finish(e, arcGeometry(e, a, b), false, e.links === 1 && m.level !== "global" && m.level !== "site"));
+    edges.push(finish(e, arcGeometry(e, a, b, wallOutlines), false, e.links === 1 && m.level !== "global" && m.level !== "site"));
   }
   // Without any live state in the map (no source reports), "unknown" says nothing about a link: it is drawn as a running one.
   const known = m.edges.some((e) => e.oper !== undefined && e.oper !== "unknown");
