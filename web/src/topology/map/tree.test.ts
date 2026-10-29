@@ -125,13 +125,40 @@ describe("the plan of a tree", () => {
     for (const pts of all) for (const [a, b] of segments(pts)) for (const r of boxes) expect(enters(a, b, r)).toBe(false);
   });
 
-  it("never lays two lines on one another", () => {
+  it("never lays two lines on one another, but the links of one trunk", () => {
     const all = [...plan.routes.entries(), ...[...plan.exits.entries()].map(([k, x]) => [k, x.pts] as const)];
     const hits: string[] = [];
+    const sameTrunk = (a: string, b: string) => plan.trunks.get(a) !== undefined && plan.trunks.get(a) === plan.trunks.get(b);
     all.forEach(([ka, pa], i) => {
-      for (const [kb, pb] of all.slice(i + 1)) for (const sa of segments(pa)) for (const sb of segments(pb)) if (overlap(sa, sb)) hits.push(`${ka} / ${kb}`);
+      for (const [kb, pb] of all.slice(i + 1)) if (!sameTrunk(ka, kb)) for (const sa of segments(pa)) for (const sb of segments(pb)) if (overlap(sa, sb)) hits.push(`${ka} / ${kb}`);
     });
     expect(hits).toEqual([]);
+  });
+
+  it("runs three links or more from one card to the row below as one trunk: one drop, one lane", () => {
+    const wide = planTree(layers, links, [], { ...SIZE, perRow: 8 });
+    // Every switch serves the seven servers on the row below: three trunks of seven.
+    for (const sw of ["m", "l1", "l2"]) expect(servers.filter((sv) => wide.trunks.get(`${sv}-${sw}`) === `trunk:${sw}`)).toHaveLength(7);
+    // A trunk leaves its card at one point...
+    const drops = new Set(servers.map((sv) => JSON.stringify((wide.routes.get(`${sv}-m`) as Pt[]).at(-1))));
+    expect(drops.size).toBe(1);
+    // ...and the channel under the switches holds one lane per trunk, not one per link: three trunks, and
+    // the firewall's link to s7 past the switches (21 lanes without trunks).
+    const gap = (wide.cards.get("s1")?.y ?? 0) - ((wide.cards.get("m")?.y ?? 0) + SIZE.h);
+    expect(gap).toBe(Math.max(SIZE.gapY, 2 * 12 + (4 - 1) * SIZE.track));
+    // A pair or a single link is no trunk.
+    expect(wide.trunks.has("fw-m")).toBe(false);
+  });
+
+  it("keeps a trunk past the rows in its way: one lane under the switches, one track per corridor", () => {
+    // Three to a row: servers on rows 2 to 4, so most links run down corridors.
+    for (const sw of ["m", "l1", "l2"]) expect(servers.filter((sv) => plan.trunks.get(`${sv}-${sw}`) === `trunk:${sw}`)).toHaveLength(7);
+    const gap = (plan.cards.get("s1")?.y ?? 0) - ((plan.cards.get("m")?.y ?? 0) + SIZE.h);
+    expect(gap).toBe(Math.max(SIZE.gapY, 2 * 12 + (3 - 1) * SIZE.track));
+    // The links of one trunk to one row below a corridor go down the same track.
+    const track = (key: string) => (plan.routes.get(key) as Pt[]).find((p, i, a) => i > 0 && a[i - 1]!.x === p.x && Math.abs(a[i - 1]!.y - p.y) > SIZE.h)?.x;
+    expect(track("s6-m")).toBeDefined();
+    expect(track("s6-m")).toBe(track("s7-m"));
   });
 
   it("widens a channel to hold its lines, one lane each", () => {

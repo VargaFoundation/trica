@@ -126,6 +126,8 @@ export interface TreePlan {
   h: number;
   /** The rightmost lane of the gate links (0 without any). */
   laneRight: number;
+  /** The trunk each trunked link runs in (links of one trunk share its drop and its lane). */
+  trunks: Map<string, string>;
 }
 
 /**
@@ -182,6 +184,8 @@ type Side = "n" | "s" | "e" | "w";
 type Y = { row: number; dy: number } | { ch: number; seg: number };
 type Way = { x: number; y: Y };
 
+/** How many links from one card down to the next row make a trunk. */
+export const TRUNK_MIN = 3;
 /** Margin kept free round a card by a line that runs past it. */
 const CLEAR = 8;
 /** Room between a card and the first lane of a channel. */
@@ -242,6 +246,15 @@ function planOnce(layers: readonly (readonly string[])[], links: readonly PlanLi
   const gates = [...gateLinks].filter((g) => card.has(g.card)).sort((p, q) => p.gate - q.gate || (card.get(p.card) as { row: number }).row - (card.get(q.card) as { row: number }).row);
   for (const g of gates) plans.push({ kind: "gate", key: g.key, card: g.card, side: rightmost(g.card) ? "e" : "n", gate: g.gate });
 
+  // Three links or more from one card down to the rows below run as one trunk, as a switch's cables do:
+  // one drop out of the card, one lane along the channel under it, one track down each corridor it takes,
+  // one lane along the channel above each row it serves, then a drop into each card.
+  const byUp = new Map<string, string[]>();
+  for (const p of plans) if (p.kind === "down") byUp.set(p.up, [...(byUp.get(p.up) ?? []), p.key]);
+  const trunkOf = new Map<string, string>();
+  for (const [up, keys] of byUp) if (keys.length >= TRUNK_MIN) for (const k of keys) trunkOf.set(k, `trunk:${up}`);
+  const upKey = (key: string) => trunkOf.get(key) ?? key;
+
   // The links that leave one side of a card are spread along it, ordered by where they go.
   const sides = new Map<string, { key: string; end: string; other: number }[]>();
   const touch = (id: string, side: Side, key: string, end: string, other: number) => {
@@ -250,7 +263,12 @@ function planOnce(layers: readonly (readonly string[])[], links: readonly PlanLi
   };
   for (const p of plans) {
     if (p.kind === "down") {
-      touch(p.up, "s", p.key, "up", cx(p.low));
+      const t = trunkOf.get(p.key);
+      if (!t) touch(p.up, "s", p.key, "up", cx(p.low));
+      else if (!(sides.get(`${p.up}|s`) ?? []).some((x) => x.key === t)) {
+        const lows = plans.flatMap((q) => (q.kind === "down" && trunkOf.get(q.key) === t ? [cx(q.low)] : []));
+        touch(p.up, "s", t, "up", lows.reduce((a, b) => a + b, 0) / lows.length);
+      }
       touch(p.low, "n", p.key, "low", cx(p.up));
     } else if (p.kind === "gate") touch(p.card, p.side, p.key, "card", Infinity);
     else {
@@ -284,12 +302,13 @@ function planOnce(layers: readonly (readonly string[])[], links: readonly PlanLi
   };
   const corridor = new Map<string, { lo: number; hi: number; users: { key: string; want: number }[] }>();
   const corridorOf = new Map<string, string>();
+  const trackOf = new Map<string, string>();
   for (const p of plans) {
     if (p.kind !== "down") continue;
     const ru = (card.get(p.up) as { row: number }).row;
     const rl = (card.get(p.low) as { row: number }).row;
     if (rl - ru < 2) continue;
-    const ux = (attach.get(`${p.key}|up`) as Way).x;
+    const ux = (attach.get(`${upKey(p.key)}|up`) as Way).x;
     const lx = (attach.get(`${p.key}|low`) as Way).x;
     const want = (ux + lx) / 2;
     let best: [number, number] | undefined;
@@ -302,9 +321,13 @@ function planOnce(layers: readonly (readonly string[])[], links: readonly PlanLi
     const [lo, hi] = best ?? [-Infinity, 0];
     const k = `${Math.round(lo)}|${Math.round(hi)}`;
     const c = corridor.get(k) ?? { lo, hi, users: [] };
-    c.users.push({ key: p.key, want });
+    // The links of one trunk that take one corridor share its track.
+    const t = trunkOf.get(p.key);
+    const track = t ? `${t}@${k}` : p.key;
+    if (!c.users.some((u) => u.key === track)) c.users.push({ key: track, want });
     corridor.set(k, c);
     corridorOf.set(p.key, k);
+    trackOf.set(p.key, track);
   }
   const trackX = new Map<string, number>();
   let needGapX = 0;
@@ -353,6 +376,23 @@ function planOnce(layers: readonly (readonly string[])[], links: readonly PlanLi
     return { ch, seg: list.length - 1 };
   };
   const ways = new Map<string, { pts: Way[]; flip: boolean }>();
+  // The lanes a trunk shares, made once over everything they reach.
+  const shared = new Map<string, Y>();
+  const lane = (id: string, ch: number, xs: () => number[]): Y => {
+    let y = shared.get(id);
+    if (!y) {
+      const all = xs();
+      y = seg(ch, Math.min(...all), Math.max(...all));
+      shared.set(id, y);
+    }
+    return y;
+  };
+  const members = (t: string) =>
+    plans.flatMap((q) => {
+      if (q.kind !== "down" || trunkOf.get(q.key) !== t) return [];
+      const track = trackOf.get(q.key);
+      return [{ l: attach.get(`${q.key}|low`) as Way, rl: (card.get(q.low) as { row: number }).row, track, tx: track === undefined ? undefined : trackX.get(track) }];
+    });
   const exits = new Map<string, Way[]>();
   for (const p of plans) {
     if (p.kind === "across") {
@@ -366,12 +406,22 @@ function planOnce(layers: readonly (readonly string[])[], links: readonly PlanLi
       const y = seg((card.get(p.a) as { row: number }).row, a.x, b.x);
       ways.set(p.key, { pts: [a, { x: a.x, y }, { x: b.x, y }, b], flip: false });
     } else if (p.kind === "down") {
-      const u = attach.get(`${p.key}|up`) as Way;
+      const u = attach.get(`${upKey(p.key)}|up`) as Way;
       const l = attach.get(`${p.key}|low`) as Way;
       const ru = (card.get(p.up) as { row: number }).row;
       const rl = (card.get(p.low) as { row: number }).row;
-      const tx = trackX.get(p.key);
-      if (tx === undefined) {
+      const track = trackOf.get(p.key);
+      const tx = track === undefined ? undefined : trackX.get(track);
+      const t = trunkOf.get(p.key);
+      if (t) {
+        // The lane under the card spans its drop, the cards it serves on the next row and its corridors.
+        const y1 = lane(`${t}|under`, ru + 1, () => [u.x, ...members(t).map((q) => (q.tx === undefined ? q.l.x : q.tx))]);
+        if (tx === undefined) ways.set(p.key, { pts: [u, { x: u.x, y: y1 }, { x: l.x, y: y1 }, l], flip: p.flip });
+        else {
+          const y2 = lane(`${track}|${rl}`, rl, () => [tx, ...members(t).filter((q) => q.track === track && q.rl === rl).map((q) => q.l.x)]);
+          ways.set(p.key, { pts: [u, { x: u.x, y: y1 }, { x: tx, y: y1 }, { x: tx, y: y2 }, { x: l.x, y: y2 }, l], flip: p.flip });
+        }
+      } else if (tx === undefined) {
         const y = seg(rl, u.x, l.x);
         ways.set(p.key, { pts: [u, { x: u.x, y }, { x: l.x, y }, l], flip: p.flip });
       } else {
@@ -427,5 +477,5 @@ function planOnce(layers: readonly (readonly string[])[], links: readonly PlanLi
   const outExits = new Map<string, { pts: P[]; laneX: number }>();
   for (const [key, w] of exits) outExits.set(key, { pts: w.map(pt), laneX: (laneX.get(key) as number) - left });
   const right = Math.max(widest, ...xs.map((x) => x + PAD));
-  return { out: { cards, routes, exits: outExits, w: right - left, h: rows.length > 0 ? y : 0, laneRight: laneRight > 0 ? laneRight - left : 0 }, needGapX };
+  return { out: { cards, routes, exits: outExits, w: right - left, h: rows.length > 0 ? y : 0, laneRight: laneRight > 0 ? laneRight - left : 0, trunks: trunkOf }, needGapX };
 }
