@@ -79,8 +79,8 @@ test("the traffic moves along measured links, and stands still when less motion 
     await signInWithToken(page, url);
     await expect(page.locator(drawn)).toBeVisible();
     await page.waitForTimeout(500);
-    // Particles travel by SMIL (animateMotion), which document.getAnimations() does not list.
-    const moving = await page.locator(".iso-flow animateMotion").count();
+    // The sheen runs by SMIL (an animated dash offset), which document.getAnimations() does not list.
+    const moving = await page.locator(".iso-flow .iso-sheen-flow animate").count();
     const lanes = await page.locator(".iso-flow").count();
     await ctx.close();
     return { moving, lanes };
@@ -88,9 +88,33 @@ test("the traffic moves along measured links, and stands still when less motion 
   const on = await flowing("no-preference");
   expect(on.lanes).toBeGreaterThan(0);
   expect(on.moving).toBeGreaterThan(0);
+  expect(await countBeads(browser, url)).toBe(0);
   const off = await flowing("reduce");
   expect(off.lanes).toBe(0);
   expect(off.moving).toBe(0);
+});
+
+/** The traffic dots of the old look (circles moved along the line), which the sheen replaced. */
+async function countBeads(browser: import("@playwright/test").Browser, url: string): Promise<number> {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await signInWithToken(page, url);
+  await expect(page.locator(drawn)).toBeVisible();
+  const n = await page.locator(".iso-flow circle, .iso-flow animateMotion").count();
+  await ctx.close();
+  return n;
+}
+
+test("going down a level flies into the place opened, going up backs out", async ({ page }) => {
+  await signInWithToken(page, "/topology");
+  await expect(page.locator(drawn)).toBeVisible();
+  await page.locator('.iso-item.is-drill[data-kind="site"]').first().click();
+  await expect(page.locator('.iso-svg[data-level="site"]')).toHaveAttribute("data-enter", "in");
+  const origin = await page.locator(".iso-svg").evaluate((el) => (el as SVGSVGElement).style.getPropertyValue("transform-origin"));
+  expect(origin).toMatch(/%/);
+  expect(origin).not.toBe("50% 50%");
+  await page.getByRole("button", { name: "Up one level" }).click();
+  await expect(page.locator('.iso-svg[data-level="global"]')).toHaveAttribute("data-enter", "out");
 });
 
 test("a rack of 96 devices is drawn in under a second", async ({ page }) => {

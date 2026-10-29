@@ -2503,17 +2503,18 @@ label.check {
   stroke-width: 1.8;
   stroke-linecap: round;
 }
-/* Live traffic: dots travelling along the line, each direction in its own lane. */
+/* Live traffic: a soft streak running along the line, each direction in its own lane. */
 .iso-flow {
   pointer-events: none;
 }
 .iso-flow-glow {
   stroke-opacity: 0.25;
 }
-.iso-particle {
-  fill: var(--trica-iso-particle);
-  stroke: var(--trica-iso-speed-unknown);
-  stroke-width: 0.8;
+.iso-sheen-flow {
+  fill: none;
+  stroke: var(--trica-iso-particle);
+  stroke-linecap: round;
+  stroke-opacity: 0.55;
   pointer-events: none;
 }
 .iso-pulse {
@@ -2524,14 +2525,6 @@ label.check {
 }
 
 /* Rack cards: the linked devices of a rack, as a tree like UniFi's. */
-.iso-leader-line {
-  fill: none;
-  stroke: var(--trica-iso-neutral-edge);
-  stroke-width: 1;
-  stroke-dasharray: 2 3;
-  opacity: 0.8;
-  pointer-events: none;
-}
 .iso-card-bg {
   fill: var(--trica-iso-label-bg);
   stroke: var(--trica-iso-floor-line);
@@ -2585,6 +2578,54 @@ label.check {
 }
 .iso-card-box.h-critical .iso-lamp {
   fill: var(--trica-graph-health-crit);
+}
+
+/* Going down a level flies into the place opened (the scene sets the origin where it was), going up backs out. */
+@media (prefers-reduced-motion: no-preference) {
+  .iso-svg.is-enter-in-0 {
+    animation: iso-fly-in-0 0.42s var(--trica-easing) both;
+  }
+  .iso-svg.is-enter-in-1 {
+    animation: iso-fly-in-1 0.42s var(--trica-easing) both;
+  }
+  .iso-svg.is-enter-out-0 {
+    animation: iso-fly-out-0 0.42s var(--trica-easing) both;
+  }
+  .iso-svg.is-enter-out-1 {
+    animation: iso-fly-out-1 0.42s var(--trica-easing) both;
+  }
+}
+/* Two names per way, so that two drills in a row both play. */
+@keyframes iso-fly-in-0 {
+  from {
+    opacity: 0.2;
+    transform: scale(0.55);
+  }
+}
+@keyframes iso-fly-in-1 {
+  from {
+    opacity: 0.2;
+    transform: scale(0.55);
+  }
+}
+@keyframes iso-fly-out-0 {
+  from {
+    opacity: 0.2;
+    transform: scale(1.6);
+  }
+}
+@keyframes iso-fly-out-1 {
+  from {
+    opacity: 0.2;
+    transform: scale(1.6);
+  }
+}
+/* Pointing at a thing dims what it is not linked to. */
+.iso-item {
+  transition: opacity 0.15s var(--trica-easing);
+}
+.iso-item.is-dim {
+  opacity: 0.4;
 }
 
 /* A level arrives: the floor fades in, the boxes rise one after the other. */

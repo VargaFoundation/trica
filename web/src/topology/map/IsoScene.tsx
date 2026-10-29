@@ -3,7 +3,7 @@ import type { MapNode, TopologyMap } from "../../api/types";
 import { useI18n, type MessageKey } from "../../i18n";
 import { prefersReducedMotion } from "../../motion";
 import { IconGlyph } from "../../components/ui/icons";
-import { MAX_PARTICLES, PARTICLE_SECONDS, particleCount, planFlows, STATE_DASH, type Direction, type SpeedClass } from "./flow";
+import { planFlows, sheen, STATE_DASH, type Direction, type SpeedClass } from "./flow";
 import type { IsoBox, Rot } from "./iso";
 import { isGate } from "./layout";
 import { nextSpot, type Arrow } from "./nav";
@@ -28,6 +28,8 @@ export interface IsoSceneProps {
   label: string;
 }
 
+/** How deep a level is: going to a deeper one flies in, to a shallower one backs out. */
+const LEVEL_DEPTH: Record<string, number> = { global: 0, site: 1, unplaced: 1, room: 2, rack: 3 };
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 6;
 /** The most screen px one scene px is drawn at when the view fits a level: a lone device stays its size. */
@@ -126,6 +128,27 @@ export function IsoScene(p: IsoSceneProps) {
   const text = size.w > 0 && size.h > 0 ? textScale(screen) : 1;
   const scene = useMemo(() => (text === 1 ? base : buildScene(p.map, p.rot, { text })), [base, text, p.map, p.rot]);
   const suppress = useRef(false);
+  // Where the place just opened was, as a share of the view; and how the new level comes in.
+  const drillFrom = useRef<{ fx: number; fy: number } | undefined>(undefined);
+  const lastLevel = useRef<{ key: string; depth: number } | undefined>(undefined);
+  const [enter, setEnter] = useState<{ dir: "in" | "out"; n: number; fx: number; fy: number } | undefined>(undefined);
+  useLayoutEffect(() => {
+    const depth = LEVEL_DEPTH[p.map.level] ?? 0;
+    const prev = lastLevel.current;
+    lastLevel.current = { key: sceneKey, depth };
+    const from = drillFrom.current;
+    drillFrom.current = undefined;
+    if (!prev || prev.key === sceneKey || prev.depth === depth) return;
+    const dir = depth > prev.depth ? "in" : "out";
+    setEnter((e) => ({ dir, n: (e?.n ?? 0) + 1, fx: dir === "in" && from ? from.fx : 0.5, fy: dir === "in" && from ? from.fy : 0.5 }));
+    // Only a new level moves the camera, not a refresh of the same one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sceneKey]);
+  // The origin of the flight, through the CSSOM (the CSP forbids style attributes).
+  useLayoutEffect(() => {
+    if (!enter || !svg.current) return;
+    svg.current.style.setProperty("transform-origin", `${(enter.fx * 100).toFixed(1)}% ${(enter.fy * 100).toFixed(1)}%`);
+  }, [enter]);
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
 
   const reduced = prefersReducedMotion();
@@ -225,7 +248,12 @@ export function IsoScene(p: IsoSceneProps) {
 
   const act = (it: SceneItem) => {
     if (suppress.current) return;
-    if (it.drillable) p.onDrill(it.node);
+    if (it.drillable) {
+      // The next level flies in from where this place is on screen.
+      const at = it.navAt;
+      drillFrom.current = { fx: Math.min(1, Math.max(0, (at.x - vb.x) / vb.w)), fy: Math.min(1, Math.max(0, (at.y - vb.y) / vb.h)) };
+      p.onDrill(it.node);
+    }
     else p.onSelect(it.id);
   };
   const onKey = (e: KeyboardEvent<SVGGElement>, it: SceneItem) => {
@@ -253,6 +281,19 @@ export function IsoScene(p: IsoSceneProps) {
   };
 
   const active = hover ?? p.selected;
+  // What the pointed thing is linked to stays lit; the rest dims.
+  const linkedToActive = useMemo(() => {
+    if (active === undefined) return undefined;
+    const keep = new Set<string>([active]);
+    for (const e of scene.edges) {
+      if (e.edge.id === active) {
+        keep.add(e.edge.a);
+        keep.add(e.edge.b);
+      } else if (e.edge.a === active) keep.add(e.edge.b);
+      else if (e.edge.b === active) keep.add(e.edge.a);
+    }
+    return keep;
+  }, [active, scene.edges]);
   const hotEdge = (e: SceneEdge) => (active === undefined ? "" : active === e.edge.id || active === e.edge.a || active === e.edge.b ? " is-hot" : " is-dim");
   const kindLabel = (n: MapNode) => t(`topology.map.kind.${n.kind}` as MessageKey);
   const healthLabel = (n: MapNode) => t(`healthState.${n.health.worst}` as MessageKey);
@@ -294,16 +335,14 @@ export function IsoScene(p: IsoSceneProps) {
         {e.lanes.map((l) => {
           const cls = lane?.get(l.dir);
           if (!cls) return null;
-          const n = Math.min(particleCount(l.len, cls), MAX_PARTICLES);
-          const dur = PARTICLE_SECONDS[cls];
+          const sh = sheen(l.len, cls);
+          // A soft streak runs the lane in its direction, as light in a fibre: no beads on a string.
           return (
             <g key={l.dir} className={`iso-flow s${cls} ${l.dir}`}>
               <path className={`iso-flow-glow s${cls} ${l.dir}`} d={l.d} strokeWidth={1.2} />
-              {Array.from({ length: n }, (_, k) => (
-                <circle key={k} className="iso-particle" r={Math.min(e.width, 4.4) * 0.42 + 1}>
-                  <animateMotion dur={`${dur}s`} begin={`-${((k * dur) / n).toFixed(2)}s`} repeatCount="indefinite" path={l.d} />
-                </circle>
-              ))}
+              <path className="iso-sheen-flow" d={l.d} strokeWidth={Math.min(e.width, 4.4) * 0.45 + 0.8} strokeDasharray={sh.dash}>
+                <animate attributeName="stroke-dashoffset" from="0" to={String(-sh.period)} dur={`${sh.seconds}s`} repeatCount="indefinite" />
+              </path>
             </g>
           );
         })}
@@ -346,7 +385,7 @@ export function IsoScene(p: IsoSceneProps) {
           if (el) els.current.set(it.id, el);
           else els.current.delete(it.id);
         }}
-        className={`iso-item iso-${it.role} h-${it.node.health.worst}${p.selected === it.id ? " is-selected" : ""}${hover === it.id ? " is-hover" : ""}${it.drillable ? " is-drill" : ""}${it.card ? " has-card" : ""}`}
+        className={`iso-item iso-${it.role} h-${it.node.health.worst}${p.selected === it.id ? " is-selected" : ""}${hover === it.id ? " is-hover" : ""}${it.drillable ? " is-drill" : ""}${it.card ? " has-card" : ""}${linkedToActive && !linkedToActive.has(it.id) ? " is-dim" : ""}`}
         data-id={it.id}
         data-kind={it.node.kind}
         data-i={n % 12}
@@ -409,13 +448,14 @@ export function IsoScene(p: IsoSceneProps) {
   return (
     <svg
       ref={svg}
-      className="iso-svg"
       role="group"
       aria-label={p.label}
       aria-busy={p.busy}
       viewBox={viewBox}
       preserveAspectRatio="xMidYMid meet"
       data-state={p.busy ? "loading" : "drawn"}
+      data-enter={enter?.dir}
+      className={`iso-svg${enter ? ` is-enter-${enter.dir}-${enter.n % 2}` : ""}`}
       data-level={p.map.level}
       data-items={scene.items.length}
       data-lanes={lanes.length}

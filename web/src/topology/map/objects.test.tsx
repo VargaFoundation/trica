@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { TopologyMap } from "../../api/types";
 import { I18nProvider } from "../../i18n";
@@ -84,5 +84,18 @@ describe("the places at the end of the lines", () => {
     const c = draw(BUSY_RACK);
     expect(c.querySelectorAll(".iso-item.has-card").length).toBeGreaterThan(5);
     expect(c.querySelector(".iso-leader-line")).toBeNull();
+  });
+
+  it("dims, when a thing is pointed at, everything it is not linked to", () => {
+    const c = draw(BUSY_RACK);
+    const at = (id: string) => c.querySelector(`.iso-item[data-id="${id}"]`) as Element;
+    expect(c.querySelector(".iso-item.is-dim")).toBeNull();
+    fireEvent.pointerEnter(at("infrasrv1"));
+    expect(at("infrasrv1").classList.contains("is-dim")).toBe(false);
+    expect(at("sw-mgmt").classList.contains("is-dim")).toBe(false);
+    expect(at("sw-leaf1").classList.contains("is-dim")).toBe(true);
+    expect(at("comp-svr1").classList.contains("is-dim")).toBe(true);
+    fireEvent.pointerLeave(at("infrasrv1"));
+    expect(c.querySelector(".iso-item.is-dim")).toBeNull();
   });
 });

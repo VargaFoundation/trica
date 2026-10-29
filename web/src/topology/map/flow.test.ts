@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MapEdge } from "../../api/types";
-import { edgeUtilClass, linkState, MAX_LANES, MAX_PARTICLES, PARTICLE_SECONDS, particleCount, planFlows, speedClass, STATE_DASH } from "./flow";
+import { edgeUtilClass, linkState, MAX_LANES, MAX_PARTICLES, PARTICLE_SECONDS, particleCount, planFlows, sheen, speedClass, STATE_DASH } from "./flow";
 
 const edge = (id: string, ab: number | undefined, ba: number | undefined, extra: Partial<MapEdge> = {}): MapEdge => ({
   id,
@@ -95,5 +95,18 @@ describe("the colour class of a line", () => {
     expect(edgeUtilClass(edge("e", 1, 1, { oper: "down" }))).toBe("down");
     expect(edgeUtilClass(edge("e", 1, 1, { oper: "partial", util: 0.1 }))).toBe("warn");
     expect(edgeUtilClass(edge("e", undefined, undefined, { measured: false }))).toBe("unknown");
+  });
+});
+
+describe("the sheen of a lane", () => {
+  it("streaks as often as particles would travel, at their speed", () => {
+    const s = sheen(300, 3);
+    const [streak, gap] = s.dash.split(" ").map(Number) as [number, number];
+    expect(streak + gap).toBeCloseTo(s.period, 0);
+    expect(s.period).toBeCloseTo(300 / particleCount(300, 3), 0);
+    expect(streak).toBeLessThanOrEqual(16);
+    // One period in seconds is the particles' time over the lane, scaled to the period.
+    expect(s.seconds).toBeCloseTo((PARTICLE_SECONDS[3] * s.period) / 300, 1);
+    expect(sheen(300, 5).seconds).toBeLessThan(sheen(300, 1).seconds);
   });
 });
