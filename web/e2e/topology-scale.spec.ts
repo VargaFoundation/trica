@@ -26,22 +26,28 @@ test("a name keeps its size on screen when the view is zoomed in or out", async 
   }
 });
 
-test("a card of a rack's tree keeps its size on screen when the view is zoomed in or out", async ({ page }) => {
+test("a card of a rack's tree is never drawn bigger than its design size, and fits when zoomed out", async ({ page }) => {
   await signInWithToken(page, `/topology?level=rack&id=${ID.r12}`);
   await expect(page.locator(drawn)).toBeVisible();
   const card = () => page.locator(".iso-card-box .iso-card-bg").first().evaluate((el) => el.getBoundingClientRect().height);
-  const at1 = await card();
-  expect(at1).toBeGreaterThan(20);
-  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Zoom in" }).click();
-  await page.waitForTimeout(300);
-  const zoomedIn = await card();
-  for (let i = 0; i < 5; i++) await page.getByRole("button", { name: "Zoom out" }).click();
-  await page.waitForTimeout(300);
-  const zoomedOut = await card();
-  for (const h of [zoomedIn, zoomedOut]) {
-    expect(h / at1).toBeGreaterThan(0.78);
-    expect(h / at1).toBeLessThan(1.28);
-  }
+  const zoom = async (name: string, n: number) => {
+    for (let i = 0; i < n; i++) await page.getByRole("button", { name }).click();
+    await page.waitForTimeout(300);
+  };
+  const atFit = await card();
+  expect(atFit).toBeGreaterThan(20);
+  await zoom("Zoom in", 3);
+  const in3 = await card();
+  await zoom("Zoom in", 3);
+  const in6 = await card();
+  // Zoomed in, a card keeps its design size (46 px) on screen: without the text scale, three more steps in
+  // make it about twice as tall.
+  for (const h of [in3, in6]) expect(h).toBeLessThan(46 * 1.15);
+  expect(in6 / in3).toBeGreaterThan(0.85);
+  expect(in6 / in3).toBeLessThan(1.18);
+  // Zoomed out past the fit it shrinks with the scene, so that the whole tree stays in view.
+  await zoom("Zoom out", 9);
+  expect(await card()).toBeLessThan(atFit);
 });
 
 test("a level of one device draws it at its size, not across the stage", async ({ page }) => {

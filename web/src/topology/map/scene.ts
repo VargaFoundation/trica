@@ -767,9 +767,12 @@ function placeCards(items: SceneItem[], layers: string[][], links: MapEdge[], ga
   const at = new Map(items.map((i) => [i.id, i]));
   const rackItems = items.filter((i) => i.role === "device" || i.role === "shelf");
   const pills = items.filter((i) => i.labelShown && !i.card && i.pill.x1 > 0).map((i) => i.pill.x1);
-  // The cards keep one size on screen, as the labels do: the tree is laid out at the text scale.
-  const size = { ...CARD, w: CARD.w * TEXT, h: CARD.h * TEXT, gapX: CARD.gapX * TEXT, gapY: CARD.gapY * TEXT, track: CARD.track * TEXT };
-  const x0 = Math.max(0, ...rackItems.map((i) => i.iso.bounds.x1), ...pills) + 64 * TEXT;
+  // Zoomed in, the cards keep one size on screen, as the labels do: the tree is laid out at the text
+  // scale. Zoomed out they shrink with the scene (k is at most 1), or a tree wider than the stage could
+  // never fit in it.
+  const k = Math.min(TEXT, 1);
+  const size = { ...CARD, w: CARD.w * k, h: CARD.h * k, gapX: CARD.gapX * k, gapY: CARD.gapY * k, track: CARD.track * k };
+  const x0 = Math.max(0, ...rackItems.map((i) => i.iso.bounds.x1), ...pills) + 64 * k;
   const y0f = Math.min(...items.filter((i) => i.role === "device").map((i) => i.iso.bounds.y0), Infinity);
   const y0 = Number.isFinite(y0f) ? y0f : 0;
   const inTree = new Set(layers.flat());
@@ -788,7 +791,7 @@ function placeCards(items: SceneItem[], layers: string[][], links: MapEdge[], ga
       y: c.y,
       w: size.w,
       h: size.h,
-      k: TEXT,
+      k,
       icon: kindOf({ type: "device", attributes: { role: it.node.role } }).icon,
       name: it.label,
       model: it.node.model,

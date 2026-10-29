@@ -52,13 +52,15 @@ describe("the text scale of a view", () => {
 });
 
 describe("the cards of a rack's tree", () => {
-  it("are laid out at the text scale, so that they keep one size on screen, and no line runs over one", () => {
+  it("are laid out at the text scale when zoomed in, so that they keep one size on screen, and no line runs over one", () => {
     const at1 = buildScene(BUSY_RACK, 0).items.find((i) => i.card)!.card!;
-    const s2 = buildScene(BUSY_RACK, 0, { text: 2 });
+    const s2 = buildScene(BUSY_RACK, 0, { text: 0.5 });
     const at2 = s2.items.find((i) => i.id === s2.items.find((x) => x.card)!.id)!.card!;
-    expect(at2.w / at1.w).toBeCloseTo(2, 5);
-    expect(at2.h / at1.h).toBeCloseTo(2, 5);
-    expect(at2.k).toBe(2);
+    expect(at2.w / at1.w).toBeCloseTo(0.5, 5);
+    expect(at2.h / at1.h).toBeCloseTo(0.5, 5);
+    expect(at2.k).toBe(0.5);
+    // Zoomed out they do not grow: a tree wider than the stage still fits in it.
+    expect(buildScene(BUSY_RACK, 0, { text: 2 }).items.find((i) => i.card)!.card!.w).toBe(at1.w);
     const cards = s2.items.flatMap((i) => (i.card ? [i.card] : []));
     for (const e of s2.edges)
       for (let d = 0; d <= e.len; d += 3) {

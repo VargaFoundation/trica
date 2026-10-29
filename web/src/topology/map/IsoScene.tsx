@@ -121,12 +121,18 @@ export function IsoScene(p: IsoSceneProps) {
       }),
     [sceneKey],
   );
-  const b = fitFrame(base.core, size);
+  // The frame is the one of the scene at the text scale of the fitted view: a rack's cards grow with that
+  // scale, so the frame of the design-size scene would leave them out.
+  const laid = size.w > 0 && size.h > 0;
+  const scaleOf = (f: { x0: number; y0: number; x1: number; y1: number }) => Math.min(size.w / Math.max(f.x1 - f.x0, 1), size.h / Math.max(f.y1 - f.y0, 1));
+  const fitText = laid ? textScale(scaleOf(fitFrame(base.core, size))) : 1;
+  const fitted = useMemo(() => (fitText === 1 ? base : buildScene(p.map, p.rot, { text: fitText })), [base, fitText, p.map, p.rot]);
+  const b = fitFrame(fitted.core, size);
   const W = Math.max(b.x1 - b.x0, 1);
   const H = Math.max(b.y1 - b.y0, 1);
-  const screen = size.w > 0 && size.h > 0 ? Math.min(size.w / W, size.h / H) * view.k : 1;
-  const text = size.w > 0 && size.h > 0 ? textScale(screen) : 1;
-  const scene = useMemo(() => (text === 1 ? base : buildScene(p.map, p.rot, { text })), [base, text, p.map, p.rot]);
+  const screen = laid ? scaleOf(b) * view.k : 1;
+  const text = laid ? textScale(screen) : 1;
+  const scene = useMemo(() => (text === fitted.text ? fitted : text === 1 ? base : buildScene(p.map, p.rot, { text })), [base, fitted, text, p.map, p.rot]);
   const suppress = useRef(false);
   // Where the place just opened was, as a share of the view; and how the new level comes in.
   const drillFrom = useRef<{ fx: number; fy: number } | undefined>(undefined);
