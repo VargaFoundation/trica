@@ -339,6 +339,70 @@ export function IsoScene(p: IsoSceneProps) {
       </g>
     );
   };
+  const itemEl = (it: SceneItem, n: number) => (
+      <g
+        key={it.id}
+        ref={(el) => {
+          if (el) els.current.set(it.id, el);
+          else els.current.delete(it.id);
+        }}
+        className={`iso-item iso-${it.role} h-${it.node.health.worst}${p.selected === it.id ? " is-selected" : ""}${hover === it.id ? " is-hover" : ""}${it.drillable ? " is-drill" : ""}${it.card ? " has-card" : ""}`}
+        data-id={it.id}
+        data-kind={it.node.kind}
+        data-i={n % 12}
+        role="button"
+        tabIndex={cur === it.id ? 0 : -1}
+        aria-label={t(it.drillable ? "topology.map.itemDrill" : "topology.map.item", { kind: kindLabel(it.node), name: it.label, health: healthLabel(it.node) })}
+        aria-pressed={p.selected === it.id}
+        onClick={() => act(it)}
+        onKeyDown={(e) => onKey(e, it)}
+        onFocus={() => {
+          setCur(it.id);
+          setFocused(it.id);
+        }}
+        onBlur={() => setFocused((f) => (f === it.id ? undefined : f))}
+        onPointerEnter={() => setHover(it.id)}
+        onPointerLeave={() => setHover(undefined)}
+      >
+        {it.parts.length === 0 ? (
+          it.role === "device" || it.role === "shelf" ? (
+            <polygon className="iso-shadow iso-shadow-flat" points={it.iso.foot} transform="translate(5 3)" />
+          ) : (
+            <polygon className="iso-shadow" points={it.iso.foot} transform="translate(12 8)" filter="url(#iso-blur)" />
+          )
+        ) : (
+          <polygon className="iso-shadow iso-shadow-flat" points={it.iso.foot} transform="translate(8 5)" />
+        )}
+        {it.node.health.worst === "critical" && !isGate(it.role) ? <polygon className="iso-alarm" points={it.iso.foot} filter="url(#iso-blur)" /> : null}
+        <g className="iso-lift">
+          {isGate(it.role) ? (
+            <GateBadge item={it} />
+          ) : (
+            <>
+              <Body item={it} />
+              {it.parts.map((b, i) => (
+                <Post key={i} box={b} />
+              ))}
+              {it.arrow ? <polygon className="iso-front" points={it.arrow} /> : null}
+              <polygon className="iso-hull" points={it.iso.hull} />
+            </>
+          )}
+        </g>
+        {it.card ? <Card item={it} /> : null}
+        <g
+          className="iso-info"
+          aria-hidden="true"
+          transform={`translate(${(it.card ? it.card.x + it.card.w : it.iso.bounds.x1) - 4} ${(it.card ? it.card.y : it.iso.bounds.y0) + 2})`}
+          onClick={(e) => {
+            e.stopPropagation();
+            p.onSelect(p.selected === it.id ? undefined : it.id);
+          }}
+        >
+          <circle r="9" />
+          <text textAnchor="middle" y="4">i</text>
+        </g>
+      </g>
+  );
   const floorEdges = scene.edges.filter((e) => e.floor);
   const airEdges = scene.edges.filter((e) => !e.floor);
 
@@ -412,80 +476,19 @@ export function IsoScene(p: IsoSceneProps) {
       {floorEdges.length > 0 ? <g className="iso-edges iso-edges-floor">{floorEdges.map(edgeEl)}</g> : null}
       {scene.frame ? (
         <g className="iso-frame iso-frame-back">
+          {scene.frame.panels.map((pts, i) => (
+            <polygon key={`p${i}`} className="iso-panel" points={pts} />
+          ))}
           {scene.frame.back.map((b, i) => (
             <Post key={i} box={b} />
           ))}
         </g>
       ) : null}
-      <g className="iso-items">
-        {scene.items.map((it, n) => (
-          <g
-            key={it.id}
-            ref={(el) => {
-              if (el) els.current.set(it.id, el);
-              else els.current.delete(it.id);
-            }}
-            className={`iso-item iso-${it.role} h-${it.node.health.worst}${p.selected === it.id ? " is-selected" : ""}${hover === it.id ? " is-hover" : ""}${it.drillable ? " is-drill" : ""}${it.card ? " has-card" : ""}`}
-            data-id={it.id}
-            data-kind={it.node.kind}
-            data-i={n % 12}
-            role="button"
-            tabIndex={cur === it.id ? 0 : -1}
-            aria-label={t(it.drillable ? "topology.map.itemDrill" : "topology.map.item", { kind: kindLabel(it.node), name: it.label, health: healthLabel(it.node) })}
-            aria-pressed={p.selected === it.id}
-            onClick={() => act(it)}
-            onKeyDown={(e) => onKey(e, it)}
-            onFocus={() => {
-              setCur(it.id);
-              setFocused(it.id);
-            }}
-            onBlur={() => setFocused((f) => (f === it.id ? undefined : f))}
-            onPointerEnter={() => setHover(it.id)}
-            onPointerLeave={() => setHover(undefined)}
-          >
-            {it.parts.length === 0 ? (
-              it.role === "device" || it.role === "shelf" ? (
-                <polygon className="iso-shadow iso-shadow-flat" points={it.iso.foot} transform="translate(5 3)" />
-              ) : (
-                <polygon className="iso-shadow" points={it.iso.foot} transform="translate(12 8)" filter="url(#iso-blur)" />
-              )
-            ) : (
-              <polygon className="iso-shadow iso-shadow-flat" points={it.iso.foot} transform="translate(8 5)" />
-            )}
-            {it.node.health.worst === "critical" && !isGate(it.role) ? <polygon className="iso-alarm" points={it.iso.foot} filter="url(#iso-blur)" /> : null}
-            {it.leader ? <path className="iso-leader-line" d={it.leader} /> : null}
-            <g className="iso-lift">
-              <Body item={it} />
-              {it.parts.map((b, i) => (
-                <Post key={i} box={b} />
-              ))}
-              {it.role === "internet" ? (
-                <g transform={`translate(${it.iso.anchor.x} ${it.iso.anchor.y - 26})`}>
-                  <path className="iso-cloud-shadow" d={CLOUD} transform="translate(3 5)" />
-                  <path className="iso-cloud" d={CLOUD} />
-                </g>
-              ) : null}
-              {it.arrow ? <polygon className="iso-front" points={it.arrow} /> : null}
-              <polygon className="iso-hull" points={it.iso.hull} />
-            </g>
-            {it.card ? <Card item={it} /> : null}
-            <g
-              className="iso-info"
-              aria-hidden="true"
-              transform={`translate(${(it.card ? it.card.x + it.card.w : it.iso.bounds.x1) - 4} ${(it.card ? it.card.y : it.iso.bounds.y0) + 2})`}
-              onClick={(e) => {
-                e.stopPropagation();
-                p.onSelect(p.selected === it.id ? undefined : it.id);
-              }}
-            >
-              <circle r="9" />
-              <text textAnchor="middle" y="4">i</text>
-            </g>
-          </g>
-        ))}
-      </g>
+      <g className="iso-items">{scene.items.map((it, n) => (isGate(it.role) ? null : itemEl(it, n)))}</g>
       {scene.frame ? <FrameFront frame={scene.frame} /> : null}
       <g className="iso-edges">{airEdges.map(edgeEl)}</g>
+      {/* The Internet and the other places are badges at the end of their lines: drawn over them. */}
+      <g className="iso-items iso-gates">{scene.items.map((it, n) => (isGate(it.role) ? itemEl(it, n) : null))}</g>
       <g className="iso-badge-layer">{scene.edges.map(edgeBadges)}</g>
       <g className="iso-label-layer">
         {scene.items.map((it) =>
@@ -504,6 +507,30 @@ export function IsoScene(p: IsoSceneProps) {
   );
 }
 
+/** The radius of a gate's badge, from the size of the gate it stands for. */
+export const gateRadius = (it: Pick<SceneItem, "iso">) => Math.max(14, Math.min(26, Math.min(it.iso.bounds.x1 - it.iso.bounds.x0, it.iso.bounds.y1 - it.iso.bounds.y0) * 0.42));
+
+/** The Internet, as a cloud, or another place, as a building: a round badge where its lines end. */
+function GateBadge({ item: it }: { item: SceneItem }) {
+  const r = gateRadius(it);
+  const { x, y } = it.port;
+  const k = (r * 1.25) / 64;
+  return (
+    <g className="iso-gate">
+      <ellipse className="iso-gate-shadow" cx={x + 2} cy={y + r * 0.9} rx={r * 0.85} ry={r * 0.28} />
+      <circle className="iso-gate-disc" cx={x} cy={y} r={r} />
+      {it.role === "internet" ? (
+        <path className="iso-cloud" d={CLOUD} transform={`translate(${x} ${y}) scale(${k}) translate(2 6)`} />
+      ) : (
+        <g className="iso-gate-icon">
+          <IconGlyph name="site" x={x - r * 0.55} y={y - r * 0.55} size={r * 1.1} />
+        </g>
+      )}
+      <circle className="iso-hull" cx={x} cy={y} r={r + 2} />
+    </g>
+  );
+}
+
 function Post({ box }: { box: IsoBox }) {
   return (
     <g className="iso-post">
@@ -518,6 +545,8 @@ function Post({ box }: { box: IsoBox }) {
 function FrameFront({ frame }: { frame: SceneFrame }) {
   return (
     <g className="iso-frame iso-frame-front" aria-hidden="true">
+      {frame.blanks ? <path className="iso-blank" d={frame.blanks} /> : null}
+      {frame.blankLines ? <path className="iso-blank-line" d={frame.blankLines} /> : null}
       <polygon className="iso-rail" points={frame.top} />
       {frame.front.map((b, i) => (
         <Post key={i} box={b} />
@@ -591,7 +620,13 @@ function Body({ item: it }: { item: SceneItem }) {
           ))}
         </g>
       ) : null}
-      {it.ports ? <path className="iso-ports" d={it.ports} /> : null}
+      {it.front ? (
+        <g className={`iso-front-face f-${it.front.kind}`}>
+          {it.front.screen ? <polygon className="iso-screen" points={it.front.screen} /> : null}
+          {it.front.holes ? <path className="iso-holes" d={it.front.holes} /> : null}
+          {it.front.lines ? <path className="iso-ports" d={it.front.lines} /> : null}
+        </g>
+      ) : null}
       {it.led ? (
         <g className={`iso-status l-${it.node.health.worst}`}>
           <circle className="iso-status-glow" cx={it.led.x} cy={it.led.y} r="5" />

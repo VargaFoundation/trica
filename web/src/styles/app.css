@@ -2226,6 +2226,66 @@ label.check {
   stroke: none;
   pointer-events: none;
 }
+/* A device's front: dark openings, light slits, a small screen. */
+.iso-holes {
+  fill: var(--trica-iso-glass);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.iso-screen {
+  fill: var(--trica-iso-glass);
+  stroke: var(--trica-iso-vent);
+  stroke-width: 0.6;
+  pointer-events: none;
+}
+.f-gateway .iso-screen {
+  fill: color-mix(in srgb, var(--trica-iso-glass) 70%, var(--trica-accent));
+}
+/* A rack is a cabinet: far panels behind the devices, blanking plates over its empty units. */
+.iso-panel {
+  fill: var(--trica-iso-neutral-south);
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-opacity: 0.25;
+  stroke-width: 0.8;
+  opacity: 0.45;
+  pointer-events: none;
+}
+.iso-blank {
+  fill: var(--trica-iso-neutral-top);
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-opacity: 0.3;
+  stroke-width: 0.6;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.iso-blank-line {
+  fill: none;
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-opacity: 0.18;
+  stroke-width: 0.6;
+  pointer-events: none;
+}
+/* The Internet and the other places: a round badge where their lines end. */
+.iso-gate-disc {
+  fill: var(--trica-iso-label-bg);
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-opacity: 0.55;
+  stroke-width: 1.2;
+}
+.iso-gate-shadow {
+  fill: var(--trica-iso-shadow);
+  opacity: 0.18;
+  pointer-events: none;
+}
+.iso-gate .iso-cloud {
+  fill: var(--trica-iso-neutral-top);
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-width: 2.4;
+}
+.iso-gate-icon {
+  color: var(--trica-graph-ink);
+  pointer-events: none;
+}
 
 .iso-lamp {
   fill: var(--trica-graph-util-unknown);

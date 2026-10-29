@@ -135,3 +135,86 @@ export function portStrip(r: Rect, z0: number, h: number, n: number): string {
   }
   return d;
 }
+
+/** What the front of a device shows, as a product's does: dark openings (ports, bays, outlets), light lines, a screen. */
+export interface DeviceFront {
+  kind: "switch" | "gateway" | "server" | "storage" | "pdu" | "generic";
+  /** Openings, one path of closed shapes. */
+  holes: string;
+  /** Vent slits and bay handles, one path of lines. */
+  lines: string;
+  /** A small display (a firewall's or a router's), as polygon points. */
+  screen?: string;
+}
+
+/** A grid of small openings on the south face: `cols` by `rows` between u0 and u1, in the middle of the face's height. */
+export function portGrid(r: Rect, z0: number, h: number, cols: number, rows: number, u0: number, u1: number): string {
+  let d = "";
+  const cw = (u1 - u0) / Math.max(cols, 1);
+  const band = h * 0.56;
+  const rh = band / Math.max(rows, 1);
+  for (let k = 0; k < rows; k++) {
+    for (let i = 0; i < cols; i++) {
+      const a = u0 + i * cw + cw * 0.18;
+      const b = u0 + (i + 1) * cw - cw * 0.18;
+      const lo = z0 + h * 0.22 + k * rh + rh * 0.16;
+      const p = facePoly(r, "south", a, b, lo, lo + rh * 0.68).split(" ");
+      d += `M${p.join("L")}Z`;
+    }
+  }
+  return d;
+}
+
+/** Drive bays: `n` tall slots side by side between u0 and u1, `rows` high. */
+export function driveBays(r: Rect, z0: number, h: number, n: number, rows: number, u0: number, u1: number): string {
+  let d = "";
+  const cw = (u1 - u0) / Math.max(n, 1);
+  const rh = (h * 0.8) / Math.max(rows, 1);
+  for (let k = 0; k < rows; k++) {
+    for (let i = 0; i < n; i++) {
+      const lo = z0 + h * 0.1 + k * rh + rh * 0.08;
+      const p = facePoly(r, "south", u0 + i * cw + cw * 0.08, u0 + (i + 1) * cw - cw * 0.08, lo, lo + rh * 0.84).split(" ");
+      d += `M${p.join("L")}Z`;
+    }
+  }
+  return d;
+}
+
+/** `n` vertical slits between u0 and u1, as one path of lines. */
+export function slits(r: Rect, z0: number, h: number, n: number, u0: number, u1: number): string {
+  let d = "";
+  for (let i = 0; i < n; i++) {
+    const u = u0 + ((i + 0.5) / Math.max(n, 1)) * (u1 - u0);
+    const a = facePt(r, "south", u, z0 + h * 0.25);
+    const b = facePt(r, "south", u, z0 + h * 0.75);
+    d += `M${fmt(a.x)},${fmt(a.y)}L${fmt(b.x)},${fmt(b.y)}`;
+  }
+  return d;
+}
+
+/** How many of a thing fit along a face of width w (cells), one every `pitch` cells, within [lo, hi]. */
+const fit = (w: number, pitch: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.floor(w / pitch)));
+
+/** The front of a device of a role, on the south face of its footprint (height h from z0). */
+export function deviceFront(role: string | undefined, r: Rect, z0: number, h: number): DeviceFront {
+  const tall = h >= 0.6;
+  switch (role) {
+    case "switch":
+    case "patch_panel":
+      return { kind: "switch", holes: portGrid(r, z0, h, fit(r.w, 0.085, 6, 24), tall ? 4 : 2, 0.06, 0.8), lines: "" };
+    case "firewall":
+    case "router":
+    case "access_control":
+      return { kind: "gateway", holes: portGrid(r, z0, h, fit(r.w, 0.2, 4, 8), 1, 0.42, 0.82), lines: "", screen: facePoly(r, "south", 0.08, 0.32, z0 + h * 0.28, z0 + h * 0.72) };
+    case "server":
+      return { kind: "server", holes: driveBays(r, z0, h, fit(r.w, 0.16, 4, 12), tall ? 2 : 1, 0.05, 0.6), lines: slits(r, z0, h, fit(r.w, 0.09, 4, 14), 0.64, 0.86) };
+    case "storage":
+    case "nas":
+      return { kind: "storage", holes: driveBays(r, z0, h, fit(r.w, 0.14, 4, 16), tall ? 3 : 2, 0.05, 0.86), lines: "" };
+    case "pdu":
+    case "ups":
+      return { kind: "pdu", holes: portGrid(r, z0, h, fit(r.w, 0.16, 4, 12), 1, 0.06, 0.86), lines: "" };
+    default:
+      return { kind: "generic", holes: portStrip(r, z0, h, Math.max(4, Math.min(16, Math.floor(r.w / 0.16)))), lines: "" };
+  }
+}

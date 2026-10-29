@@ -6,7 +6,7 @@
 import type { MapEdge, MapNode, TopologyMap } from "../../api/types";
 import type { IconName } from "../../components/ui/icons";
 import { kindOf } from "../../inventory/kind";
-import { doorGlass, faceOf, floorMatrix, ledDots, ledStates, portStrip, ventLines, wallBoxes, windows, type Face, type Rect } from "./decor";
+import { deviceFront, doorGlass, faceOf, facePoly, floorMatrix, ledDots, ledStates, ventLines, wallBoxes, windows, type DeviceFront, type Face, type Rect } from "./decor";
 import { CELL, columnShifts, isoBox, project, projectBox, shiftIso, turnedWorld, turnPoint, turnRect, union, viewBoxOf, type Bounds, type IsoBox, type Pt, type Rot } from "./iso";
 import { isGate, layoutWorld, UZ, type ItemRole, type Plate, type WorldItem, type WorldLayout } from "./layout";
 import { edgeUtilClass, linkState, type Direction, type LinkState } from "./flow";
@@ -63,8 +63,8 @@ export interface SceneItem {
   floorText?: { text: string; transform: string };
   /** The front of a room's rack. */
   door?: SceneDoor;
-  /** The ports of a rack device's front (one path). */
-  ports?: string;
+  /** What a device's front shows, by its role. */
+  front?: DeviceFront;
   /** Its status LED, on the right of its front: the colour of its health, as a product shows it. */
   led?: Pt;
   /** Little triangle on top of a rack pointing the way it faces. */
@@ -95,9 +95,8 @@ export interface SceneItem {
   pill: Bounds;
   /** The line from the block to its pill, when the pill is not right under (or beside) it. */
   pillLeader?: { x1: number; y1: number; x2: number; y2: number };
-  /** Its card in the rack's tree, and the leader that joins it to the slab. */
+  /** Its card in the rack's tree. */
   card?: SceneCard;
-  leader?: string;
 }
 
 export interface SceneFrame {
@@ -108,6 +107,11 @@ export interface SceneFrame {
   top: string;
   /** U ticks along the front-left post, and the numbers of some of them. */
   ticks: string;
+  /** The cabinet's back and left side panels, behind the devices (polygon points). */
+  panels: string[];
+  /** Blanking plates over the empty units of the front, one closed shape per run of empty units, and a line between units. */
+  blanks: string;
+  blankLines: string;
   marks: { x: number; y: number; text: string }[];
 }
 
@@ -344,8 +348,8 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
       };
     }
   }
-  let ports: string | undefined;
-  if (it.role === "device" && b.h >= 0.25) ports = portStrip(r, b.z, b.h, Math.max(4, Math.min(16, Math.floor(r.w / 0.16))));
+  // A device's front shows what it is: a switch's ports, a server's bays, a PDU's outlets, a firewall's screen.
+  const front = (it.role === "device" || it.role === "shelf" || it.role === "unplaced") && it.node.kind === "device" && b.h >= 0.25 ? deviceFront(it.node.role, r, b.z, b.h) : undefined;
   // A rack shows its health on its door; a gate is not a thing with a health.
   const led = it.role === "rack" || isGate(it.role) ? undefined : project(r.x + r.w - Math.min(0.3, r.w * 0.15), r.y + r.d, b.z + b.h * 0.55);
   const summarised = it.role === "site" || it.role === "room" || it.role === "area" || it.role === "rack";
@@ -365,7 +369,7 @@ function itemIso(it: WorldItem, layout: WorldLayout, rot: Rot): SceneItem {
     walls,
     floorText,
     door,
-    ports,
+    front,
     led: led ? { x: fmt(led.x), y: fmt(led.y) } : undefined,
     arrow,
     port,
@@ -449,17 +453,13 @@ function pillSizeOf(i: SceneItem): PillSize {
   };
 }
 
-/** The cloud above the Internet's gate, relative to the gate's anchor (as IsoScene draws it). */
-const CLOUD_BOX = { x0: -34, y0: -60, x1: 30, y1: -12 };
-
-/** Everything a block draws, in screen px: its faces, posts, walls, cabinets, plant and, for the Internet, its cloud. */
+/** Everything a block draws, in screen px: its faces, posts, walls, cabinets and plant; a gate's badge stays inside its box. */
 export function blockBounds(i: SceneItem): Bounds {
   let b: Bounds = i.iso.bounds;
   for (const p of i.parts) b = merge(b, p.bounds);
   if (i.walls) for (const w of [...i.walls.back, ...i.walls.front]) b = merge(b, w.bounds);
   for (const c of i.cabinets) b = merge(b, c.iso.bounds);
   if (i.plant) b = merge(b, i.plant.bounds);
-  if (i.role === "internet") b = merge(b, { x0: i.iso.anchor.x + CLOUD_BOX.x0, y0: i.iso.anchor.y + CLOUD_BOX.y0, x1: i.iso.anchor.x + CLOUD_BOX.x1, y1: i.iso.anchor.y + CLOUD_BOX.y1 });
   return b;
 }
 
@@ -553,7 +553,29 @@ function frameScene(f: NonNullable<WorldLayout["frame"]>, layout: WorldLayout, r
       marks.push({ x: fmt(c.x - 11), y: fmt(c.y + 3), text: String(u) });
     }
   }
-  return { back: posts.slice(0, 1), front: posts.slice(1), top, ticks, marks };
+  // The far panels of the cabinet, and blanking plates where no device is mounted.
+  const H = h;
+  const panels = [
+    [corner(r.x, r.y, 0), corner(r.x + r.w, r.y, 0), corner(r.x + r.w, r.y, H), corner(r.x, r.y, H)].join(" "),
+    [corner(r.x, r.y, 0), corner(r.x, r.y + r.d, 0), corner(r.x, r.y + r.d, H), corner(r.x, r.y, H)].join(" "),
+  ];
+  const filled = new Set(f.filled);
+  const inner = { x: r.x + P, y: r.y, w: r.w - 2 * P, d: r.d };
+  let blanks = "";
+  let blankLines = "";
+  for (let u = 1; u <= f.units; u++) {
+    if (filled.has(u)) continue;
+    let v = u;
+    while (v + 1 <= f.units && !filled.has(v + 1)) v++;
+    blanks += `M${facePoly(inner, "south", 0, 1, (u - 1) * UZ + 0.02, v * UZ - 0.02).split(" ").join("L")}Z`;
+    for (let k = u; k < v; k++) {
+      const a = project(inner.x, inner.y + inner.d, k * UZ);
+      const b = project(inner.x + inner.w, inner.y + inner.d, k * UZ);
+      blankLines += `M${fmt(a.x)},${fmt(a.y)}L${fmt(b.x)},${fmt(b.y)}`;
+    }
+    u = v;
+  }
+  return { back: posts.slice(0, 1), front: posts.slice(1), top, ticks, marks, panels, blanks, blankLines };
 }
 
 const badge = (p: Pt, text: string): SceneBadge => ({ x: fmt(p.x), y: fmt(p.y), text, w: Math.round((text.length * 5.6 + 10) * TEXT) });
@@ -698,10 +720,9 @@ const CARD = { w: 158, h: 46, gapX: 40, gapY: 44, perRow: 6, track: 10 };
 const TREE_PORTS = 8;
 
 /**
- * Places the cards of a rack's tree right of the drawing, routes the links between them (`planTree`),
- * and joins each slab to its card by a leader: down a gutter left of the tree, then into the card's
- * west side, or, past a card on its left, along the top of its row. Returns the routes, in the scene's
- * coordinates, and the lanes of the links to the gates (finished once the gates stand).
+ * Places the cards of a rack's tree right of the drawing and routes the links between them (`planTree`).
+ * A card and its slab are one item: pointing at either lights both, so no line joins them. Returns the
+ * routes, in the scene's coordinates, and the lanes of the links to the gates (finished once the gates stand).
  */
 function placeCards(items: SceneItem[], layers: string[][], links: MapEdge[], gateRank: ReadonlyMap<string, number>): TreePlan {
   const at = new Map(items.map((i) => [i.id, i]));
@@ -718,7 +739,6 @@ function placeCards(items: SceneItem[], layers: string[][], links: MapEdge[], ga
   const routes = new Map([...plan.routes].map(([k, pts]) => [k, pts.map(move)] as const));
   const exits = new Map([...plan.exits].map(([k, x]) => [k, { pts: x.pts.map(move), laneX: fmt(x.laneX + x0) }] as const));
   const cards = new Map([...plan.cards].map(([k, c]) => [k, { ...c, x: fmt(c.x + x0), y: fmt(c.y + y0) }] as const));
-  const gutter = x0 - 26;
   for (const [id, c] of cards) {
     const it = at.get(id);
     if (!it) continue;
@@ -735,12 +755,6 @@ function placeCards(items: SceneItem[], layers: string[][], links: MapEdge[], ga
     it.navAt = { x: c.x + CARD.w / 2, y: c.y + CARD.h / 2 };
     it.labelShown = false;
     it.subShown = false;
-    const from = project(it.rect.x + it.rect.w, it.rect.y + it.rect.d / 2, it.z + it.h / 2);
-    const first = ![...cards.values()].some((o) => o.row === c.row && o.x < c.x);
-    const pts = first
-      ? [from, { x: gutter, y: from.y }, { x: gutter, y: c.y + CARD.h / 2 }, { x: c.x, y: c.y + CARD.h / 2 }]
-      : [from, { x: gutter, y: from.y }, { x: gutter, y: c.y - 5 }, { x: c.x + 12, y: c.y - 5 }, { x: c.x + 12, y: c.y }];
-    it.leader = roundedPath(pts, 5);
   }
   return { ...plan, routes, exits, cards, laneRight: plan.laneRight > 0 ? fmt(plan.laneRight + x0) : 0 };
 }
