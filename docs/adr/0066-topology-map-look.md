@@ -148,10 +148,46 @@ Follow-ups in the same story:
   - Each link stays its own line. Only links of one trunk lie on one another.
   - On three switches over seven servers, the channel under the switches holds three lanes instead of 21.
 
+## Amendment (2026-10-30): the rack as it stands
+
+The switch trunks of the previous follow-up still crossed one another in a meshed rack. This cannot be
+helped in a drawing of nodes and links: three switches each cabled to three servers or more form
+K3,3, which is not planar, so some lines cross whatever the order.
+
+The tree of cards is therefore replaced by the rack as it stands (`elevation.ts`, `planElevation`):
+
+- **Rows.** The linked devices, one row each beside the rack, highest unit first: unit, role icon,
+  name, model and health. Unlinked devices stay in the drawn rack only.
+- **Risers.**
+  - Each link is owned by one end. A gate owns its links; otherwise it is the end with a hub's role
+    (switch, patch panel, router, firewall), then the end with more links, then the higher one.
+  - Each owner has a riser, a column beside the rows, from its own row to the farthest row it serves.
+    The Internet and the other places have theirs right of the others, under their badge and name.
+- **Dots.** A link is a dot on its owner's riser, at the other end's row.
+  - Its colour is its speed. A red dot with a cross is a link that is down, and `xN` beside it is a bundle.
+  - It is what one points at, which shows the ports and the traffic, and what one clicks, which opens the link.
+- **Nothing crosses.**
+  - Only owners have a stub, from their row to their riser.
+  - A stub runs across a riser nearer the rows only if that riser spans the stub's row without a dot
+    there. (A dot there is a junction: the device is cabled to that riser.)
+  - The risers are ordered by a topological sort of these constraints, so a switch stack has its
+    lowest switch nearest.
+  - A cycle of hubs that each span the other's row is broken at its cheapest place and drawn as a hop.
+- **Proof.**
+  - `elevation.test.ts` checks the order, one dot per link on its owner's riser, the gates rightmost,
+    zero crossings on three switches over seven servers, and exactly one counted hop for a cycle.
+  - `rack-elevation.test.ts` checks the busy rack's scene at every rotation: no line across another,
+    no line over a row, rows in unit order, the gates on top of their own risers.
+  - `e2e/topology-look.spec.ts` checks r12's rows in unit order, the dots, and that pointing at a dot
+    shows its ports and clicking it opens the link.
+
+This supersedes decision 6 ("rack tree") and the tree parts of the amendments of 2026-10-28 and
+2026-10-29: `tree.ts` and its tests are removed.
+
 ## Not drawn
 
 No pixel test (the proof is the tests on the scene model plus screenshots reviewed by a person); no
-route that avoids other lines crossing (in a rack's tree lines still cross, but never overlap nor run over a card); no per-port drawing on a rack front; no export of the map.
+route that avoids other lines crossing (but at the rack level, where nothing crosses); no per-port drawing on a rack front; no export of the map.
 
 ## Consequences
 

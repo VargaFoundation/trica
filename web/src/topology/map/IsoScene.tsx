@@ -317,7 +317,7 @@ export function IsoScene(p: IsoSceneProps) {
     return (
       <g
         key={e.edge.id}
-        className={`iso-edge u-${e.util} b-${e.band} st-${e.state} m-${e.edge.medium}${p.selected === e.edge.id ? " is-selected" : ""}${hotEdge(e)}`}
+        className={`iso-edge u-${e.util} b-${e.band} st-${e.state} m-${e.edge.medium}${e.dot ? " is-riser" : ""}${p.selected === e.edge.id ? " is-selected" : ""}${hotEdge(e)}`}
         data-id={e.edge.id}
         data-medium={e.edge.medium}
         data-band={e.band}
@@ -338,6 +338,7 @@ export function IsoScene(p: IsoSceneProps) {
         {e.arrows.map((pts, i) => (
           <polygon key={i} className="iso-edge-arrow" points={pts} />
         ))}
+
         {e.lanes.map((l) => {
           const cls = lane?.get(l.dir);
           if (!cls) return null;
@@ -368,6 +369,28 @@ export function IsoScene(p: IsoSceneProps) {
       </text>
     </g>
   );
+  // A link of a rack's elevation is its dot: drawn over every riser, it is what one points at and clicks.
+  const dotEl = (e: SceneEdge) =>
+    e.dot ? (
+      <g
+        key={e.edge.id}
+        className={`iso-edge iso-edge-dot b-${e.band} st-${e.state}${p.selected === e.edge.id ? " is-selected" : ""}${hotEdge(e)}`}
+        data-for={e.edge.id}
+        aria-hidden="true"
+        transform={`translate(${e.dot.x} ${e.dot.y}) scale(${Math.min(scene.text, 1)})`}
+        onPointerEnter={() => setHover(e.edge.id)}
+        onPointerLeave={() => setHover(undefined)}
+        onClick={(ev) => {
+          ev.stopPropagation();
+          p.onSelect(p.selected === e.edge.id ? undefined : e.edge.id);
+        }}
+      >
+        <circle className="iso-dot-hit" r="10" />
+        <circle className="iso-dot-ring" r="6.5" />
+        <circle className="iso-dot" r="4.2" />
+        {e.state === "down" ? <path className="iso-dot-x" d="M-2.4,-2.4L2.4,2.4M2.4,-2.4L-2.4,2.4" /> : null}
+      </g>
+    ) : null;
   const edgeBadges = (e: SceneEdge) => {
     const hot = hotEdge(e) === " is-hot" || p.selected === e.edge.id;
     return (
@@ -530,9 +553,24 @@ export function IsoScene(p: IsoSceneProps) {
           ))}
         </g>
       ) : null}
+      {scene.bands.length > 0 ? (
+        <g className="iso-bands" aria-hidden="true">
+          {scene.bands.map((b, i) => (
+            <rect key={i} className={i % 2 === 0 ? "iso-band" : "iso-band is-odd"} x={b.x} y={b.y} width={b.w} height={b.h} rx={6} />
+          ))}
+        </g>
+      ) : null}
       <g className="iso-items">{scene.items.map((it, n) => (isGate(it.role) ? null : itemEl(it, n)))}</g>
       {scene.frame ? <FrameFront frame={scene.frame} /> : null}
       <g className="iso-edges">{airEdges.map(edgeEl)}</g>
+      {scene.edges.some((e) => e.dot) ? <g className="iso-dots">{scene.edges.map(dotEl)}</g> : null}
+      {scene.bridges.length > 0 ? (
+        <g className="iso-bridges" aria-hidden="true">
+          {scene.bridges.map((b, i) => (
+            <path key={i} className="iso-bridge" d={`M${b.x - 6},${b.y}a6,6 0 0 1 12,0`} />
+          ))}
+        </g>
+      ) : null}
       {/* The Internet and the other places are badges at the end of their lines: drawn over them. */}
       <g className="iso-items iso-gates">{scene.items.map((it, n) => (isGate(it.role) ? itemEl(it, n) : null))}</g>
       <g className="iso-badge-layer">{scene.edges.map(edgeBadges)}</g>
@@ -709,6 +747,7 @@ function Wall({ box }: { box: IsoBox }) {
 }
 
 /** A linked device of a rack, as UniFi draws it: its role icon, its name and model, and its health. */
+/** A linked device of a rack, one row of its elevation: its unit, role icon, name and model, and its health. */
 function Card({ item }: { item: SceneItem }) {
   const c = item.card;
   if (!c) return null;
@@ -717,20 +756,23 @@ function Card({ item }: { item: SceneItem }) {
   const h = c.h / c.k;
   return (
     <g className={`iso-card-box h-${item.node.health.worst}`} transform={`translate(${c.x} ${c.y}) scale(${c.k})`}>
-      <rect className="iso-card-bg" width={w} height={h} rx="9" />
-      <circle className="iso-card-icon-bg" cx="22" cy={h / 2} r="14" />
+      <rect className="iso-card-bg" width={w} height={h} rx="7" />
+      <text className="iso-card-u" x="8" y={h / 2 + 3.5}>
+        {c.u}
+      </text>
+      <circle className="iso-card-icon-bg" cx="50" cy={h / 2} r="10" />
       <g className="iso-card-icon">
-        <IconGlyph name={c.icon} x={14} y={h / 2 - 8} size={16} />
+        <IconGlyph name={c.icon} x={43} y={h / 2 - 7} size={14} />
       </g>
-      <text className="iso-card-name" x="44" y={c.model ? 19 : 27}>
+      <text className="iso-card-name" x="66" y={c.model ? h / 2 - 1 : h / 2 + 4}>
         {c.name}
       </text>
       {c.model ? (
-        <text className="iso-card-model" x="44" y="34">
+        <text className="iso-card-model" x="66" y={h / 2 + 10}>
           {c.model}
         </text>
       ) : null}
-      <circle className="iso-lamp" cx={w - 14} cy={h - 13} r="4" />
+      <circle className="iso-lamp" cx={w - 12} cy={h / 2} r="3.5" />
     </g>
   );
 }
