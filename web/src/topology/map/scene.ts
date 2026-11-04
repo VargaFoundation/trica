@@ -14,7 +14,7 @@ import { badgeBox, badgeDistances, hitsAny, leaderBetween, merge, placePill, typ
 import { bundleMark, endBadge } from "./port";
 import { assignLanes, fanOffsets, offsetPolyline, pointAt, pointAtDistance, polylineLength, quadAt, quadLength, roundedPath, trayLaneY, trayRect, trayRoute } from "./route";
 import { BAND_WIDTH, speedBand, type SpeedBand } from "./speed";
-import { orderLayers, planTree, rankTree, type TreeEdge, type TreeNode, type TreePlan } from "./tree";
+import { planElevation, type ElevationPlan } from "./elevation";
 
 export interface Cabinet {
   iso: IsoBox;
@@ -41,7 +41,8 @@ export interface SceneCard {
   icon: IconName;
   name: string;
   model?: string;
-  layer: number;
+  /** A row of the rack's elevation: the highest unit the device takes ("" when not mounted). */
+  u: string;
 }
 
 export interface SceneItem {
@@ -179,6 +180,8 @@ export interface SceneEdge {
   portsShown: boolean;
   /** A pulse travels along a tunnel. */
   pulse: boolean;
+  /** In a rack's elevation, where the link is drawn: a dot on its owner's riser, at the other end's row. */
+  dot?: Pt;
 }
 
 export interface Scene {
@@ -194,6 +197,10 @@ export interface Scene {
   trays: IsoBox[];
   /** What the view frames: the blocks, cards and frame, not the floor they stand on nor the labels. */
   core: Bounds;
+  /** The rows of a rack's elevation, as bands across its risers, so that the eye follows a row to its dots. */
+  bands: { x: number; y: number; w: number; h: number }[];
+  /** Where a hub's stub has to run across another riser (drawn as a hop). */
+  bridges: Pt[];
   /** How much bigger than its design size the text of this scene is drawn. */
   text: number;
 }
@@ -754,84 +761,98 @@ export function placeBadges(edges: SceneEdge[], taken: Bounds[]): void {
 /** A point a fraction of the way from the first end to the centre. */
 const pointAtLerp = (ends: [Pt, Pt], t: number, mid: Pt): Pt => ({ x: ends[0].x + (mid.x - ends[0].x) * t * 2, y: ends[0].y + (mid.y - ends[0].y) * t * 2 });
 
-const CARD = { w: 158, h: 46, gapX: 40, gapY: 44, perRow: 6, track: 10 };
-/** Past this many lines a tree's port names wait until a line or a card is pointed at. */
-const TREE_PORTS = 8;
+/** A row of a rack's elevation, and the room between its risers, at design size. */
+const ROW = { rowW: 236, rowH: 34, rowGap: 4, firstRiser: 28, riserGap: 28, head: 70 };
 
 /**
- * Places the cards of a rack's tree right of the drawing and routes the links between them (`planTree`).
- * A card and its slab are one item: pointing at either lights both, so no line joins them. Returns the
- * routes, in the scene's coordinates, and the lanes of the links to the gates (finished once the gates stand).
+ * The rack's cabling as it stands (see elevation.ts): its linked devices one row each beside the rack,
+ * highest unit first, a riser per hub and per gate, a dot per link. Places the rows (as cards) and the
+ * gates, at the top of their risers, and returns the plan in the scene's coordinates.
  */
-function placeCards(items: SceneItem[], layers: string[][], links: MapEdge[], gateRank: ReadonlyMap<string, number>): TreePlan {
-  const at = new Map(items.map((i) => [i.id, i]));
-  const rackItems = items.filter((i) => i.role === "device" || i.role === "shelf");
-  const pills = items.filter((i) => i.labelShown && !i.card && i.pill.x1 > 0).map((i) => i.pill.x1);
-  // Zoomed in, the cards keep one size on screen, as the labels do: the tree is laid out at the text
-  // scale. Zoomed out they shrink with the scene (k is at most 1), or a tree wider than the stage could
-  // never fit in it.
+function placeElevation(items: SceneItem[], gates: SceneItem[], links: MapEdge[]): ElevationPlan | undefined {
+  const devices = items.filter((i) => i.node.kind === "device");
+  // Zoomed in, the rows keep one size on screen, as the labels do; zoomed out they shrink with the scene.
   const k = Math.min(TEXT, 1);
-  const size = { ...CARD, w: CARD.w * k, h: CARD.h * k, gapX: CARD.gapX * k, gapY: CARD.gapY * k, track: CARD.track * k };
-  const x0 = Math.max(0, ...rackItems.map((i) => i.iso.bounds.x1), ...pills) + 64 * k;
+  // The gates' names stand side by side above their risers: the risers are as far apart as the widest name.
+  const gateGap = Math.max(ROW.riserGap * 1.6 * k, ...gates.map((g) => pillSizeOf(g)(false).w + 10 * TEXT));
+  const size = { rowW: ROW.rowW * k, rowH: ROW.rowH * k, rowGap: ROW.rowGap * k, firstRiser: ROW.firstRiser * k, riserGap: ROW.riserGap * k, head: ROW.head * k, gateGap };
+  const plan = planElevation(
+    devices.map((i) => ({ id: i.id, u: i.node.mount?.position ?? 0, uHeight: i.node.mount?.u_height ?? 1, name: i.label, role: i.node.role })),
+    gates.map((g) => g.id),
+    links.map((e) => ({ key: e.id, a: e.a, b: e.b })),
+    size,
+  );
+  if (plan.rows.size === 0) return undefined;
+  const rackItems = items.filter((i) => i.role === "device" || i.role === "shelf");
+  const x0 = Math.max(0, ...rackItems.map((i) => i.iso.bounds.x1)) + 72 * k;
   const y0f = Math.min(...items.filter((i) => i.role === "device").map((i) => i.iso.bounds.y0), Infinity);
-  const y0 = Number.isFinite(y0f) ? y0f : 0;
-  const inTree = new Set(layers.flat());
-  const between = links.filter((e) => inTree.has(e.a) && inTree.has(e.b));
-  const toGates = links.flatMap((e) => (inTree.has(e.a) && gateRank.has(e.b) ? [{ key: e.id, card: e.a, gate: gateRank.get(e.b) as number }] : inTree.has(e.b) && gateRank.has(e.a) ? [{ key: e.id, card: e.b, gate: gateRank.get(e.a) as number }] : []));
-  const plan = planTree(orderLayers(layers, between), between.map((e) => ({ key: e.id, a: e.a, b: e.b })), toGates, size);
+  const y0 = (Number.isFinite(y0f) ? y0f : 0) - size.head;
   const move = (p: Pt): Pt => ({ x: fmt(p.x + x0), y: fmt(p.y + y0) });
-  const routes = new Map([...plan.routes].map(([k, pts]) => [k, pts.map(move)] as const));
-  const exits = new Map([...plan.exits].map(([k, x]) => [k, { pts: x.pts.map(move), laneX: fmt(x.laneX + x0) }] as const));
-  const cards = new Map([...plan.cards].map(([k, c]) => [k, { ...c, x: fmt(c.x + x0), y: fmt(c.y + y0) }] as const));
-  for (const [id, c] of cards) {
+  const at = new Map(items.map((i) => [i.id, i]));
+  for (const [id, r] of plan.rows) {
     const it = at.get(id);
     if (!it) continue;
+    const mt = it.node.mount;
+    const top = mt && mt.position > 0 ? mt.position + Math.max(1, mt.u_height ?? 1) - 1 : 0;
     it.card = {
-      x: c.x,
-      y: c.y,
-      w: size.w,
-      h: size.h,
+      x: fmt(r.x + x0),
+      y: fmt(r.y + y0),
+      w: size.rowW,
+      h: size.rowH,
       k,
       icon: kindOf({ type: "device", attributes: { role: it.node.role } }).icon,
       name: it.label,
       model: it.node.model,
-      layer: c.layer,
+      u: top > 0 ? `U${top}` : "",
     };
-    it.navAt = { x: c.x + size.w / 2, y: c.y + size.h / 2 };
+    it.navAt = { x: it.card.x + size.rowW / 2, y: it.card.y + size.rowH / 2 };
     it.labelShown = false;
     it.subShown = false;
   }
-  return { ...plan, routes, exits, cards, laneRight: plan.laneRight > 0 ? fmt(plan.laneRight + x0) : 0 };
+  // A gate stands at the top of its riser, its badge where the riser starts.
+  for (const r of plan.risers.filter((x) => x.gate)) {
+    const g = at.get(r.id);
+    if (!g) continue;
+    const to = move({ x: r.x, y: r.y0 });
+    shiftItem(g, to.x - g.port.x, to.y - g.port.y);
+  }
+  const moved = (pts: readonly Pt[]) => pts.map(move);
+  return {
+    ...plan,
+    rows: new Map([...plan.rows].map(([id, r]) => [id, { ...r, x: r.x + x0, y: r.y + y0 }] as const)),
+    risers: plan.risers.map((r) => ({ ...r, x: r.x + x0, y0: r.y0 + y0, y1: r.y1 + y0 })),
+    dots: new Map([...plan.dots].map(([key, d]) => [key, { ...move(d), riser: d.riser }] as const)),
+    routes: new Map([...plan.routes].map(([key, pts]) => [key, moved(pts)] as const)),
+    stubs: new Map([...plan.stubs].map(([id, st]) => [id, { x0: st.x0 + x0, x1: st.x1 + x0, y: st.y + y0 }] as const)),
+    bridges: moved(plan.bridges),
+    w: plan.w,
+    h: plan.h,
+  };
 }
 
-/** The scene's edges of a rack's tree: the planned routes, and the links to the gates finished into their ports. */
-function cardEdges(edges: MapEdge[], plan: TreePlan, gates: ReadonlyMap<string, Pt>): SceneEdge[] {
-  const ports = edges.length <= TREE_PORTS;
-  // The links that end on one gate arrive on its west side, spread along it.
-  const arriving = new Map<string, MapEdge[]>();
-  for (const e of edges) {
-    const g = gates.has(e.a) ? e.a : gates.has(e.b) ? e.b : undefined;
-    if (g && plan.exits.has(e.id)) arriving.set(g, [...(arriving.get(g) ?? []), e]);
-  }
-  const into = new Map<string, Pt>();
-  for (const [id, list] of arriving) {
-    const g = gates.get(id) as Pt;
-    const sorted = [...list].sort((p, q) => (plan.exits.get(p.id)?.laneX ?? 0) - (plan.exits.get(q.id)?.laneX ?? 0));
-    const off = fanOffsets(sorted.length, 7);
-    sorted.forEach((e, k) => into.set(e.id, { x: g.x, y: g.y + (off[k] ?? 0) }));
-  }
+/** The scene's edges of a rack's elevation: each link along its owner's stub and riser, to its dot. */
+function elevationEdges(edges: MapEdge[], plan: ElevationPlan): SceneEdge[] {
   const out: SceneEdge[] = [];
   for (const e of edges) {
-    let pts = plan.routes.get(e.id);
-    const exit = plan.exits.get(e.id);
-    const to = into.get(e.id);
-    if (!pts && exit && to) {
-      const run = [...exit.pts, { x: exit.laneX, y: to.y }, to];
-      pts = gates.has(e.a) ? run.reverse() : run;
-    }
-    if (!pts) continue;
+    const pts = plan.routes.get(e.id);
+    const dot = plan.dots.get(e.id);
+    if (!pts || !dot) continue;
     const se = finish(e, pathGeometry(e, pts), false, true);
-    if (!ports) se.portsShown = false;
+    se.dot = { x: dot.x, y: dot.y };
+    // Port names wait until the line is pointed at: the owner's by its row, the other's by the dot.
+    se.portsShown = false;
+    const ownerIsA = dot.riser === e.a;
+    const stub = plan.stubs.get(dot.riser);
+    const nearOwner = stub ? { x: stub.x0 + 22 * TEXT, y: stub.y - 9 * TEXT } : { x: dot.x, y: (pts[0] as Pt).y + 12 * TEXT };
+    const nearDot = { x: dot.x + 6 * TEXT + 24 * TEXT, y: dot.y - 9 * TEXT };
+    const place = (b: SceneBadge | undefined, p: Pt) => {
+      if (!b) return;
+      b.x = fmt(p.x);
+      b.y = fmt(p.y);
+    };
+    place(se.ports.a, ownerIsA ? nearOwner : nearDot);
+    place(se.ports.b, ownerIsA ? nearDot : nearOwner);
+    if (se.bundle) place(se.bundle, { x: dot.x + 14 * TEXT, y: dot.y + 10 * TEXT });
     out.push(se);
   }
   return out;
@@ -893,24 +914,8 @@ function sceneOf(m: TopologyMap, rot: Rot): Scene {
     i.labelStart = true;
     i.labelShown = (i.node.mount?.u_height ?? 1) >= 2 || linked.has(i.id);
   }
-  // A rack whose devices are cabled shows them as a tree of cards, the gateway on top. A device cabled
-  // to nothing but a gate (a bastion to the Internet) is in the tree too: the gates rank above it.
+  // A rack's linked devices are shown as they stand, one row each beside the rack (see elevation.ts).
   const gates = m.level === "rack" ? items.filter((i) => isGate(i.role)) : [];
-  let layers: string[][] = [];
-  if (m.level === "rack") {
-    const nodes: TreeNode[] = items
-      .filter((i) => i.node.kind === "device" || isGate(i.role))
-      .map((i) => ({ id: i.id, kind: i.node.kind, role: i.node.role, u: i.node.mount?.position, name: i.label }));
-    const tree: TreeEdge[] = m.edges.map((e) => ({ a: e.a, b: e.b, medium: e.medium, toward: e.toward }));
-    const gateIds = new Set(gates.map((g) => g.id));
-    layers = rankTree(nodes, tree)
-      .map((l) => l.filter((id) => !gateIds.has(id)))
-      .filter((l) => l.length > 0);
-    for (const id of layers.flat()) {
-      const it = at.get(id);
-      if (it) it.labelShown = false;
-    }
-  }
   const frame = layout.frame ? frameScene(layout.frame, layout, rot) : undefined;
   // At the rack level the gates (the Internet, other places) stand in a column of their own, right of the
   // cards: they are placed once the rack, its labels and its cards are, so that nothing is drawn over them.
@@ -926,20 +931,27 @@ function sceneOf(m: TopologyMap, rot: Rot): Scene {
       if (small && crowdable(i)) i.labelShown = false;
     }
   placeLabels(rest, fixed, taken);
-  const gateRank = new Map(gates.map((g, k) => [g.id, k]));
-  const inTree = new Set(layers.flat());
-  const treeLinks = m.edges.filter((e) => e.a !== e.b && at.has(e.a) && at.has(e.b) && (inTree.has(e.a) || inTree.has(e.b)) && (inTree.has(e.a) || gateRank.has(e.a)) && (inTree.has(e.b) || gateRank.has(e.b)));
-  const plan = layers.length > 0 ? placeCards(items, layers, treeLinks, gateRank) : undefined;
+  const rackLinks = m.level === "rack" ? m.edges.filter((e) => e.a !== e.b && at.has(e.a) && at.has(e.b)) : [];
+  const elev = m.level === "rack" ? placeElevation(items, gates, rackLinks) : undefined;
   const cards = new Map(items.flatMap((i) => (i.card ? [[i.id, i.card] as const] : [])));
-  const gatePorts = new Map<string, Pt>();
-  if (gates.length > 0) {
-    const right = Math.max(0, ...[...cards.values()].map((c) => c.x + c.w), ...rest.map((i) => i.iso.bounds.x1), ...rest.filter((i) => !i.card && i.pill.x1 > 0 && i.labelShown).map((i) => i.pill.x1), frameBox?.x1 ?? 0);
-    const top = Math.min(...[...cards.values()].map((c) => c.y), ...(frameBox ? [frameBox.y0] : []), Infinity);
-    const from = Math.max(right + (cards.size > 0 ? 130 : 90), (plan?.laneRight ?? 0) + 60);
-    const moves = columnShifts(gates.map(blockBounds), from, Number.isFinite(top) ? top : 0, 64);
+  if (elev) {
+    // A gate's name stands above its badge, at the top of its riser.
+    for (const g of gates.filter((x) => elev.risers.some((r) => r.id === x.id))) {
+      const { w, h } = pillSizeOf(g)(false);
+      const r = Math.min(26, Math.max(14, Math.min(g.iso.bounds.x1 - g.iso.bounds.x0, g.iso.bounds.y1 - g.iso.bounds.y0) * 0.42));
+      g.pill = { x0: g.port.x - w / 2, x1: g.port.x + w / 2, y0: g.port.y - r - 6 - h, y1: g.port.y - r - 6 };
+      g.labelAt = { x: g.port.x, y: g.pill.y0 + 14 * TEXT };
+      g.labelShown = true;
+      g.subShown = false;
+      g.pillLeader = undefined;
+      taken.push(g.pill);
+    }
+  } else if (gates.length > 0) {
+    const right = Math.max(0, ...rest.map((i) => i.iso.bounds.x1), ...rest.filter((i) => i.pill.x1 > 0 && i.labelShown).map((i) => i.pill.x1), frameBox?.x1 ?? 0);
+    const top = Math.min(...(frameBox ? [frameBox.y0] : []), Infinity);
+    const moves = columnShifts(gates.map(blockBounds), right + 90, Number.isFinite(top) ? top : 0, 64);
     gates.forEach((g, k) => shiftItem(g, moves[k]?.x ?? 0, moves[k]?.y ?? 0));
-    placeLabels(gates, [...fixed, ...blocks(gates), ...[...cards.values()].map((c, k) => ({ id: `card${k}`, box: { x0: c.x, y0: c.y, x1: c.x + c.w, y1: c.y + c.h } }))], taken);
-    for (const g of gates) gatePorts.set(g.id, { x: blockBounds(g).x0 - 3, y: g.port.y });
+    placeLabels(gates, [...fixed, ...blocks(gates)], taken);
   }
   for (const c of cards.values()) taken.push({ x0: c.x, y0: c.y, x1: c.x + c.w, y1: c.y + c.h });
   const trays: IsoBox[] = [];
@@ -950,9 +962,10 @@ function sceneOf(m: TopologyMap, rot: Rot): Scene {
     edges.push(...t.edges);
     trays.push(...t.trays);
     arcs = t.rest;
-  } else if (plan) {
-    edges.push(...cardEdges(treeLinks, plan, gatePorts));
-    arcs = arcs.filter((e) => !treeLinks.includes(e));
+  } else if (elev) {
+    edges.push(...elevationEdges(rackLinks, elev));
+    const drawn = new Set(elev.routes.keys());
+    arcs = arcs.filter((e) => !drawn.has(e.id));
   }
   // The rooms' walls, which arcs between places pass above.
   const wallOutlines = new Map(items.flatMap((i) => (i.walls ? [[i.id, [...i.walls.back, ...i.walls.front].map((w) => pointsOf(w.hull))] as const] : [])));
@@ -969,7 +982,11 @@ function sceneOf(m: TopologyMap, rot: Rot): Scene {
   const order = new Map(m.edges.map((e, i) => [e.id, i]));
   edges.sort((p, q) => (order.get(p.edge.id) ?? 0) - (order.get(q.edge.id) ?? 0));
   if (edges.length > PORTS_MAX) for (const e of edges) e.portsShown = false;
-  placeBadges(edges, taken);
+  // An elevation's badges stand by their dots and rows; elsewhere they slide along their lines out of each other's way.
+  placeBadges(
+    edges.filter((e) => !e.dot),
+    taken,
+  );
 
   const bounds = union(
     [
@@ -997,5 +1014,8 @@ function sceneOf(m: TopologyMap, rot: Rot): Scene {
     ],
     24,
   );
-  return { items, plates, edges, bounds, viewBox: viewBoxOf(bounds), units: layout.units, frame, ground: groundOf(layout, rot), trays, core, text: TEXT };
+  const lastRiser = elev ? Math.max(...elev.risers.map((r) => r.x)) : 0;
+  const bands = elev ? [...elev.rows.values()].map((r) => ({ x: r.x, y: r.y, w: lastRiser + 14 * Math.min(TEXT, 1) - r.x, h: r.h })) : [];
+  const coreAll = elev ? union([core, ...bands.map((b) => ({ x0: b.x, y0: b.y, x1: b.x + b.w, y1: b.y + b.h })), ...gates.map((g) => g.pill)], 0) : core;
+  return { items, plates, edges, bounds: elev ? union([bounds, coreAll], 0) : bounds, viewBox: viewBoxOf(bounds), units: layout.units, frame, ground: groundOf(layout, rot), trays, core: coreAll, text: TEXT, bands, bridges: elev?.bridges ?? [] };
 }

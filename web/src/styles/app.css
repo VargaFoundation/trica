@@ -2465,6 +2465,103 @@ label.check {
 .iso-edge.st-unknown .iso-edge-base {
   stroke: var(--trica-graph-util-unknown);
 }
+/* A rack's elevation: risers are quiet lines, the dot of each link carries its speed and its state. */
+.iso-edge.is-riser .iso-edge-base {
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-opacity: 0.6;
+  stroke-width: 1.6px;
+  stroke-dasharray: none;
+}
+.iso-edge.is-riser .iso-edge-halo,
+.iso-edge.is-riser .iso-edge-core {
+  display: none;
+}
+.iso-edge.is-riser .iso-edge-casing {
+  stroke-width: 4px;
+}
+.iso-edge.is-riser .iso-edge-hit {
+  pointer-events: none;
+}
+.iso-edge.is-riser.is-hot .iso-edge-base,
+.iso-edge.is-riser.is-selected .iso-edge-base {
+  stroke: var(--trica-accent);
+  stroke-opacity: 1;
+  stroke-width: 2.6px;
+}
+/* A riser carries many links: their traffic shows on the one pointed at, not all at once. */
+.iso-edge.is-riser .iso-flow {
+  display: none;
+}
+.iso-edge.is-riser.is-hot .iso-flow,
+.iso-edge.is-riser.is-selected .iso-flow {
+  display: inline;
+}
+.iso-dot-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+.iso-dot-ring {
+  fill: var(--trica-iso-label-bg);
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-opacity: 0.5;
+  stroke-width: 1;
+  pointer-events: none;
+}
+.iso-dot {
+  fill: var(--trica-iso-speed-unknown);
+  pointer-events: none;
+}
+.iso-edge.b-100g .iso-dot {
+  fill: var(--trica-iso-speed-100g);
+}
+.iso-edge.b-40g .iso-dot {
+  fill: var(--trica-iso-speed-40g);
+}
+.iso-edge.b-10g .iso-dot {
+  fill: var(--trica-iso-speed-10g);
+}
+.iso-edge.b-5g .iso-dot {
+  fill: var(--trica-iso-speed-5g);
+}
+.iso-edge.b-1g .iso-dot {
+  fill: var(--trica-iso-speed-1g);
+}
+.iso-edge.b-slow .iso-dot {
+  fill: var(--trica-iso-speed-slow);
+}
+.iso-edge.st-down .iso-dot {
+  fill: var(--trica-graph-down);
+}
+.iso-dot-x {
+  stroke: var(--trica-iso-label-bg);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.iso-edge.is-hot .iso-dot-ring,
+.iso-edge.is-selected .iso-dot-ring {
+  stroke: var(--trica-accent);
+  stroke-opacity: 1;
+  stroke-width: 2;
+}
+.iso-band {
+  fill: var(--trica-iso-floor);
+  opacity: 0.55;
+}
+.iso-band.is-odd {
+  opacity: 0.25;
+}
+.iso-bridge {
+  fill: none;
+  stroke: var(--trica-iso-neutral-edge);
+  stroke-width: 1.6;
+  pointer-events: none;
+}
+.iso-card-u {
+  fill: var(--trica-ink-muted);
+  font-family: var(--trica-font-mono);
+  font-size: 10px;
+}
 /* The arrowhead of a device uplink, towards the device the other one reaches the network through. */
 .iso-edge-arrow {
   fill: var(--trica-graph-util-unknown);

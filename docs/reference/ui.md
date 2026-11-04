@@ -108,11 +108,16 @@ addresses (`site`, `rack`, `vlan` or `classes` without `view`) keep opening the 
   badges (a cloud, a site) at the end of their lines. **Health** is a status LED on the front of each
   block (a rack: its door LEDs) and a soft pulsing glow under what is critical, never a colour across a
   block; LEDs blink only for a warning or worse, and nothing pulses under `prefers-reduced-motion`. In a
-  room, cables run along cable trays. In a rack, devices that have a link become cards (role icon,
-  name, model, health dot) in a tree, gateway or router on top, then switches, then the rest; three
-  links or more from one card down run as one trunk (one drop, one lane, then a drop into each card);
-  zoomed in, a card keeps its design size on screen, zoomed out it shrinks with the scene; a card
-  and its slab are one item (pointing at either lights both); the others keep their unit. Hover lifts
+  room, cables run along cable trays. In a rack, the devices that have a link are shown as they stand
+  (ADR 0066, amendment "the rack as it stands"): one row each beside the rack, highest unit first
+  (unit, role icon, name, model, health dot). Each hub (a switch, or whichever end owns the link),
+  the Internet and each other place has a riser, a column beside the rows; a dot where a row meets a
+  riser is a link (its colour is the speed, a red dot with a cross a link that is down, `xN` a bundle).
+  Only hubs have a stub from their row to their riser, and the risers are ordered so that no line
+  crosses another (a cycle of hubs that cannot be helped is drawn as a hop). Pointing at a dot shows
+  its ports (one by each end) and the line in the accent colour, with its traffic; clicking it opens
+  the link. Zoomed in, a row keeps its design size on screen; zoomed out it shrinks with the scene; a
+  row and its slab are one item (pointing at either lights both); the others keep their unit. Hover lifts
   a block 2 px with an outline and dims what it is not linked to; selection outlines it in the accent
   colour. Colours are the `--trica-iso-*` tokens (every theme defines them); no inline style.
 - **Text and framing**: names, captions and badges keep one size on screen whatever the zoom (the scene
@@ -160,9 +165,9 @@ addresses (`site`, `rack`, `vlan` or `classes` without `view`) keep opening the 
   recorded API answers `testdata/map-api.json`; `uplinked.test.tsx` for the device uplink: arrowheads,
   dash, legend, table and panel in both languages with axe; `tunnel.test.tsx` for the lines of one pair: shifts,
   lanes, tunnel dash and legend entry, on global-level arcs; `scene.look.test.ts` for what each level draws;
-  `route`, `speed`, `port`, `tree`, `decor`, `labels` for the pure geometry; `scale.test.ts` for the text
+  `route`, `speed`, `port`, `elevation`, `decor`, `labels` for the pure geometry; `scale.test.ts` for the text
   scale, the frame and names in a crowd; `look.health.test.ts` for health as an LED; `objects.test.tsx`
-  for device fronts, the cabinet, the gate badges and dimming; `rack-tree.test.ts` for the rack's tree),
+  for device fronts, the cabinet, the gate badges and dimming; `rack-elevation.test.ts` for the rack as it stands),
   `e2e/topology-look.spec.ts` (card order, bundle and port badges, traffic, LEDs), `e2e/topology-scale.spec.ts`
   (a name keeps its size on screen when zooming; a lone device is not blown up), `e2e/topology-map.spec.ts`
   (every level in both themes with axe and no CSP violation, drill by mouse and keyboard, the flight in
