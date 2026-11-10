@@ -44,3 +44,43 @@ nodes within minutes. The rules become:
 
 The result keeps its shape (`state`, `rule`, `cause`, counts per type); `degraded` counts grow.
 
+## Amendment (2026-11-10): capacity-aware rescheduling
+
+A node left is not enough: three nodes of three, two failed, and the pods of the two do not fit
+on the third, yet the workloads were reported degraded. The rescheduling rule now asks whether
+the pods would be placed.
+
+- **Rule `capacity`.** A workload that the previous rule left degraded as `rescheduled` goes down
+  with rule `capacity` when none of its down pods finds a place on the nodes left. A workload
+  with at least one pod placed stays degraded (it has lost replicas, not its service). The
+  application above follows through `instances`, as before.
+- **Placement heuristic** (`internal/graph/capacity.go`). Per cluster: the survivors are the
+  `k8s_node` objects of the cluster that are not absent, not down, not cordoned (`unschedulable`)
+  and not `ready: false`. The free room of a survivor is `cpu_capacity` and `memory_capacity_bytes`
+  (allocatable) minus the requests (`cpu_request`, `memory_request_bytes`) of the pods it hosts
+  that are not down. The demand is the down pods of the workloads that are degraded as
+  `rescheduled` or already lost to capacity, largest CPU request first (then memory, then id).
+  Each pod goes on the node with most free CPU that has room for both its CPU and its memory
+  (the scheduler spreads; ties go to the smaller id), and takes that room. Deterministic: the
+  result does not depend on the order of objects or relations.
+- **Unknown capacity keeps the old behaviour.** When a survivor reports no `cpu_capacity` or no
+  `memory_capacity_bytes`, the rule does not apply and the workload stays degraded. A pod with no
+  request attribute asks for 0. DaemonSet pods are not moved and take no room; a daemonset
+  workload is left as it was.
+- **Where the numbers come from**: the kubernetes collector (manifest) and the kubemetrics
+  collector (kube-state-metrics, ADR 0070 amendment of the same date).
+
+What it does **not** model, so a workload shown degraded here can still fail to start, and a
+workload shown down could in rare cases fit:
+
+- taints and tolerations, node selectors and affinity or anti-affinity of any kind;
+- PodDisruptionBudgets and topology spread constraints;
+- priorities and preemption (a pod that would evict another is not placed here);
+- init-container requests when the numbers come from kube-state-metrics (the kubernetes
+  collector applies the scheduler's rule: the larger of the sum of containers and the largest
+  init container), and pod overhead (neither collector adds it);
+- the `pods` allocatable count (a node full of pods by number);
+- persistent volume zone or node binding;
+- the time Kubernetes takes (image pulls, evictions, controller delay), and anything beyond CPU
+  and memory (ephemeral storage, devices, hugepages);
+- pods of a StatefulSet that need the same node, and pods already pending before the failure.

@@ -2,6 +2,7 @@ package kubemetrics
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -36,6 +37,14 @@ func build(b *sdk.Batch, snap *snapshot, cluster, env string, finishedPods bool)
 	b.Object(envRef, "environment").Identify("name", env)
 	b.Relate("deployed_in", clusterRef, envRef)
 
+	alloc := nodeAllocatable(snap)
+	cordoned := map[string]bool{}
+	for _, s := range snap.cordoned {
+		if s.label("node") != "" {
+			cordoned[s.label("node")] = s.isOne()
+		}
+	}
+
 	// Nodes. A node reported twice (two kube-state-metrics replicas) is one.
 	nodes := map[string]string{}
 	ns := sortedSamples(snap.nodes, "node")
@@ -47,13 +56,24 @@ func build(b *sdk.Batch, snap *snapshot, cluster, env string, finishedPods bool)
 		ref := "node/" + name
 		nodes[name] = ref
 		uuid := s.label("system_uuid")
-		b.Object(ref, "k8s_node").In(clusterRef).
+		o := b.Object(ref, "k8s_node").In(clusterRef).
 			Identify("name", name).
 			Set("system_uuid", uuid).
 			Set("kubelet_version", s.label("kubelet_version")).
 			Set("os_image", s.label("os_image")).
 			Set("kernel", s.label("kernel_version")).
 			Set("internal_ip", s.label("internal_ip"))
+		if a, ok := alloc[name]; ok {
+			if a.haveCPU {
+				o.Set("cpu_capacity", a.cpu)
+			}
+			if a.haveMem {
+				o.Set("memory_capacity_bytes", a.mem)
+			}
+		}
+		if v, ok := cordoned[name]; ok {
+			o.Set("unschedulable", v)
+		}
 		// The node runs on a device; the engine finds it by the SMBIOS UUID
 		// and records the link as unresolved when no device has it.
 		if uuid != "" {
@@ -62,6 +82,8 @@ func build(b *sdk.Batch, snap *snapshot, cluster, env string, finishedPods bool)
 				sdk.Ref(ref))
 		}
 	}
+
+	req := podRequests(snap)
 
 	phase := map[string]string{}
 	for _, s := range snap.phases {
@@ -93,12 +115,18 @@ func build(b *sdk.Batch, snap *snapshot, cluster, env string, finishedPods bool)
 		}
 		ref := "pod/" + key
 		node := s.label("node")
-		b.Object(ref, "pod").In(nsRef).
+		po := b.Object(ref, "pod").In(nsRef).
 			Identify("name", name).
 			Identify("uid", s.label("uid")).
 			Set("phase", ph).
 			Set("pod_ip", s.label("pod_ip")).
 			Set("node_name", node)
+		// A running pod with no request series has no request: 0 is
+		// meaningful (it fits anywhere). Only when the family was read and
+		// held series, so that a server without it does not say "0" for all.
+		if r, ok := req.of(key); ok || (req.usable && ph == "Running") {
+			po.Set("cpu_request", r.cpu).Set("memory_request_bytes", r.mem)
+		}
 		if nref, ok := nodes[node]; ok {
 			b.Relate("hosts", nref, ref)
 		}
@@ -239,4 +267,94 @@ func signature(s sample) string {
 		sb.WriteString(k + "=" + s.Metric[k] + "\x00")
 	}
 	return sb.String()
+}
+
+// allocatable is what a node offers the scheduler.
+type allocatable struct {
+	cpu              float64
+	mem              int64
+	haveCPU, haveMem bool
+}
+
+// nodeAllocatable reads kube_node_status_allocatable (resource cpu, in cores,
+// and memory, in bytes). A node reported twice keeps the first series in the
+// order of sortedSamples.
+func nodeAllocatable(snap *snapshot) map[string]allocatable {
+	out := map[string]allocatable{}
+	for _, s := range sortedSamples(snap.allocatable, "node", "resource") {
+		node, v := s.label("node"), 0.0
+		f, ok := s.number()
+		if node == "" || !ok {
+			continue
+		}
+		v = f
+		a := out[node]
+		switch s.label("resource") {
+		case "cpu":
+			if !a.haveCPU {
+				a.cpu, a.haveCPU = v, true
+			}
+		case "memory":
+			if !a.haveMem {
+				a.mem, a.haveMem = int64(math.Round(v)), true
+			}
+		}
+		out[node] = a
+	}
+	return out
+}
+
+// request is the CPU (cores) and memory (bytes) a pod asks for.
+type request struct {
+	cpu float64
+	mem int64
+}
+
+// requestSet holds the sum over the containers of each pod, from
+// kube_pod_container_resource_requests. Init containers are not read: their
+// family is not on the allow-list, so a pod whose init container asks for
+// more than all its containers together is understated (the scheduler takes
+// the larger of the two).
+type requestSet struct {
+	byPod  map[string]request
+	usable bool // the family was read and held series
+}
+
+func (r requestSet) of(key string) (request, bool) {
+	q, ok := r.byPod[key]
+	return q, ok
+}
+
+func podRequests(snap *snapshot) requestSet {
+	out := requestSet{byPod: map[string]request{}, usable: snap.haveRequests && len(snap.requests) > 0}
+	if !out.usable {
+		return out
+	}
+	// One series per container; two kube-state-metrics replicas report the
+	// same container twice, counted once.
+	seen := map[string]bool{}
+	for _, s := range sortedSamples(snap.requests, "namespace", "pod", "container", "resource") {
+		ns, pod, c, res := s.label("namespace"), s.label("pod"), s.label("container"), s.label("resource")
+		v, ok := s.number()
+		if ns == "" || pod == "" || !ok || (res != "cpu" && res != "memory") {
+			continue
+		}
+		id := ns + "/" + pod + "/" + c + "/" + res
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		q := out.byPod[ns+"/"+pod]
+		if res == "cpu" {
+			q.cpu += v
+		} else {
+			q.mem += int64(math.Round(v))
+		}
+		out.byPod[ns+"/"+pod] = q
+	}
+	for k, q := range out.byPod {
+		q.cpu = math.Round(q.cpu*1000) / 1000 // millicores: no float noise from the sum
+		out.byPod[k] = q
+	}
+	return out
 }

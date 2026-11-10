@@ -178,7 +178,8 @@ func TestK3sCluster(t *testing.T) {
 			"cpu_capacity": float64(4), "memory_capacity_bytes": int64(16367044) * 1024,
 		})
 		wk := object(t, b, "node/kube-wk-01")
-		wantAttrs(t, wk, map[string]any{"roles": []string{"worker"}, "cpu_capacity": 7.95})
+		wantAttrs(t, wk, map[string]any{"roles": []string{"worker"}, "cpu_capacity": 7.95, "unschedulable": false})
+		wantAttrs(t, object(t, b, "node/kube-wk-02"), map[string]any{"unschedulable": true})
 		if _, ok := object(t, b, "node/kube-wk-02").Attributes["roles"]; ok {
 			t.Error("a node without role label must not get an empty roles list")
 		}
@@ -239,7 +240,12 @@ func TestK3sCluster(t *testing.T) {
 		if p.Parent != "ns/shop" || p.Identity["uid"] != "00000000-0000-4000-8000-000000000023" {
 			t.Errorf("pod: %+v", p)
 		}
-		wantAttrs(t, p, map[string]any{"phase": "Running", "pod_ip": "203.0.113.17", "node_name": "kube-wk-02", "restarts": 2})
+		wantAttrs(t, p, map[string]any{"phase": "Running", "pod_ip": "203.0.113.17", "node_name": "kube-wk-02", "restarts": 2,
+			// Init container 1.5 cores beats the containers' 0.25 + 0.1; memory: the containers' sum wins.
+			"cpu_request": 1.5, "memory_request_bytes": int64(288) << 20})
+		if q := object(t, b, "pod/shop/shop-db-0"); q.Attributes["cpu_request"] != float64(0) || q.Attributes["memory_request_bytes"] != int64(0) {
+			t.Errorf("a pod without requests carries 0, got %v / %v", q.Attributes["cpu_request"], q.Attributes["memory_request_bytes"])
+		}
 		for _, c := range []struct{ typ, from, to string }{
 			{"hosts", "node/kube-wk-02", "pod/shop/shop-web-7d9f8c6b5-q8m4z"},
 			// The pod belongs to the Deployment, through its ReplicaSet.

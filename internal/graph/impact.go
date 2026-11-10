@@ -29,8 +29,15 @@ const (
 	RulePower       = "power"       // every power supply it contains is down
 	RuleUnreachable = "unreachable" // cut from every anchor by the failure
 	// RuleRescheduled: every pod of a workload is down but a node of its
-	// cluster is up, so Kubernetes starts them again there: degraded, not down.
+	// cluster is up, so Kubernetes starts them again there: degraded, not
+	// down. It holds until RuleCapacity says the nodes left have no room.
 	RuleRescheduled = "rescheduled"
+	// RuleCapacity: every pod of a workload is down and none of them fits on
+	// the nodes of its cluster that are left (CPU and memory requests against
+	// what the nodes have free, ADR 0011): Kubernetes cannot start them again,
+	// the workload is down. Only decided when the capacity of every surviving
+	// node is known; otherwise the workload stays degraded (RuleRescheduled).
+	RuleCapacity = "capacity"
 	// RuleInstances: an application is down when all its instances are, and
 	// degraded when one of them is down or degraded.
 	RuleInstances = "instances"
@@ -78,7 +85,11 @@ type ImpactResult struct {
 //     down when every target it has of that relation type is down, and is
 //     degraded while only some are (its redundancy is gone);
 //   - a workload whose pods are all down is only degraded while a node of its
-//     cluster is up (Kubernetes starts them again there), down when none is;
+//     cluster is up (Kubernetes starts them again there), down when none is,
+//     and down as well (RuleCapacity) when none of its pods fits on the nodes
+//     left: the pods of the lost nodes are placed by their CPU and memory
+//     requests against what the surviving nodes have free (capacity.go;
+//     unknown capacity changes nothing);
 //   - a device whose power supplies (psu children) are all down is down;
 //   - degrade relations (calls): the From is degraded;
 //   - a degraded object degrades what runs on or depends on it (to_from
@@ -225,11 +236,12 @@ func (p *propagation) drainDegraded() {
 
 // settle applies the rules that look at a whole set once the propagation is
 // still: a workload left degraded because its cluster had a live node goes
-// down when no node of that cluster is up any more; an application takes the
-// state of its instances. It returns how many objects it took down or
+// down when no node of that cluster is up any more, or when none of its pods
+// fits on the nodes left (capacity); an application takes the state of its
+// instances. It returns how many objects it took down or
 // degraded, so that the caller propagates again.
 func (p *propagation) settle() int {
-	changed := 0
+	changed := p.capacity()
 	for _, id := range sortedKeys(p.s.Nodes) {
 		n := p.s.Nodes[id]
 		switch n.Type {

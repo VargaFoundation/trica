@@ -15,11 +15,12 @@ import (
 )
 
 // The wire: a whole run sends GETs of the query path, one parameter, and only
-// the six metrics, in order.
+// the nine metrics, in order.
 func TestWireIsReadOnly(t *testing.T) {
 	f := newFake(t)
 	runOne(t, f, `selector: job="monitoring-kube-state-metrics"`)
-	want := []string{metricNodeInfo, metricPodInfo, metricPodOwner, metricRSOwner, metricJobOwner, metricPodPhase}
+	want := []string{metricNodeInfo, metricPodInfo, metricPodOwner, metricRSOwner, metricJobOwner, metricPodPhase,
+		metricNodeAllocatable, metricNodeCordoned, metricPodRequests}
 	if got := f.Metrics(); !slices.Equal(got, want) {
 		t.Errorf("metrics %v, want %v", got, want)
 	}
@@ -27,9 +28,14 @@ func TestWireIsReadOnly(t *testing.T) {
 		if r.Method != http.MethodGet || r.Path != "/inventory/api/v1/query" || !r.AuthValid {
 			t.Errorf("request %+v", r)
 		}
-		// The selector is ANDed to the metric and is the whole of the PromQL.
-		if q := r.Params["query"][0]; q != r.Metric+`{job="monitoring-kube-state-metrics"}` {
-			t.Errorf("query %q", q)
+		// The selector is ANDed to the metric and is the whole of the PromQL,
+		// plus, for the two per-resource families, the cpu and memory matcher.
+		want := r.Metric + `{job="monitoring-kube-state-metrics"}`
+		if needsResource(r.Metric) {
+			want = r.Metric + `{job="monitoring-kube-state-metrics",resource=~"cpu|memory"}`
+		}
+		if q := r.Params["query"][0]; q != want {
+			t.Errorf("query %q, want %q", q, want)
 		}
 	}
 	if err := f.OnlyAllowed(); err != nil {
@@ -48,7 +54,8 @@ func TestClientRefusesOtherMetrics(t *testing.T) {
 	base, _ := url.Parse(f.URL() + Prefix)
 	cl := newClient(hc, base, Account, Password, "")
 	for _, m := range []string{
-		"up", "kube_pod_container_info", "kube_pod_spec_volumes_persistentvolumeclaims_info", "kube_secret_info",
+		"up", "kube_pod_container_info", "kube_pod_init_container_resource_requests", "kube_pod_container_resource_limits",
+		"kube_node_status_capacity", "kube_pod_spec_volumes_persistentvolumeclaims_info", "kube_secret_info",
 		"kube_configmap_info", "kube_pod_container_env", "container_cpu_usage_seconds_total",
 		metricPodInfo + "[5m]", metricPodInfo + "{x=\"y\"}", "count(" + metricPodInfo + ")", "",
 	} {
@@ -68,6 +75,11 @@ func TestClientRefusesOtherMetrics(t *testing.T) {
 	// values, secrets, config maps, container arguments.
 	for _, m := range allowedMetrics {
 		for _, bad := range []string{"env", "secret", "configmap", "container", "label", "annotation"} {
+			// kube_pod_container_resource_requests is one number per container
+			// and resource: no env, no argument, no name of anything.
+			if m == metricPodRequests && bad == "container" {
+				continue
+			}
 			if strings.Contains(m, bad) {
 				t.Errorf("allowed metric %q contains %q", m, bad)
 			}

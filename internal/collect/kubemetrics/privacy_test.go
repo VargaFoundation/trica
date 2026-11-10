@@ -104,7 +104,8 @@ func TestOnlyPlacementLabelsAreRead(t *testing.T) {
 	for _, o := range b.Objects {
 		for k := range o.Attributes {
 			switch k {
-			case "phase", "pod_ip", "node_name", "system_uuid", "kubelet_version", "os_image", "kernel", "internal_ip", "kind":
+			case "phase", "pod_ip", "node_name", "system_uuid", "kubelet_version", "os_image", "kernel", "internal_ip", "kind",
+				"cpu_capacity", "memory_capacity_bytes", "unschedulable", "cpu_request", "memory_request_bytes":
 			default:
 				t.Errorf("%s %v carries the attribute %q", o.Type, o.Identity, k)
 			}

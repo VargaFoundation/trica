@@ -496,6 +496,7 @@ types:
       internal_ip: {kind: ip, search: true, label: {en: Internal IP, fr: IP interne}, description: "InternalIP address."}
       cpu_capacity: {kind: float, label: {en: CPU, fr: CPU}, description: "Allocatable CPU cores."}
       memory_capacity_bytes: {kind: int, unit: B, label: {en: Memory, fr: Mémoire}, description: "Allocatable memory."}
+      unschedulable: {kind: bool, label: {en: Cordoned, fr: Isolé}, description: "Cordoned: the scheduler places no new pod on it."}
   namespace:
     layer: compute
     label: {en: Namespace, fr: Namespace}
@@ -530,6 +531,8 @@ types:
       node_name: {kind: string, label: {en: Node, fr: Nœud}, description: "Node the pod runs on."}
       restarts: {kind: int, label: {en: Restarts, fr: Redémarrages}, description: "Total container restarts."}
       images: {kind: list, search: true, label: {en: Images, fr: Images}, description: "Container images."}
+      cpu_request: {kind: float, label: {en: CPU request, fr: Requête CPU}, description: "CPU cores requested: the sum over the containers, what the scheduler places the pod by."}
+      memory_request_bytes: {kind: int, unit: B, label: {en: Memory request, fr: Requête mémoire}, description: "Memory requested: the sum over the containers, what the scheduler places the pod by."}
   k8s_service:
     layer: compute
     label: {en: Kubernetes service, fr: Service Kubernetes}

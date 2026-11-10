@@ -165,6 +165,7 @@ metadata:
     kubernetes.io/os: linux
     node.kubernetes.io/instance-type: k3s
 spec:
+  unschedulable: true
   podCIDR: 203.0.113.128/26
   podCIDRs:
   - 203.0.113.128/26

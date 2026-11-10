@@ -25,13 +25,33 @@ const (
 	metricRSOwner  = "kube_replicaset_owner"
 	metricJobOwner = "kube_job_owner"
 	metricPodPhase = "kube_pod_status_phase"
+	// Capacity (ADR 0070 amendment, 2026-11-10): what impact analysis needs to
+	// say whether the pods of a lost node fit on the nodes left. The
+	// init-container family (kube_pod_init_container_resource_requests) is not
+	// read: the requests of init containers are left out.
+	metricNodeAllocatable = "kube_node_status_allocatable"
+	metricNodeCordoned    = "kube_node_spec_unschedulable"
+	metricPodRequests     = "kube_pod_container_resource_requests"
 )
 
 // allowedMetrics is the read allow-list: the client refuses, before sending,
 // any other metric, whatever a future change to the callers asks for. These
 // series carry placement (which pod on which node, owned by what) and no
 // environment value, manifest or container argument.
-var allowedMetrics = []string{metricNodeInfo, metricPodInfo, metricPodOwner, metricRSOwner, metricJobOwner, metricPodPhase}
+var allowedMetrics = []string{
+	metricNodeInfo, metricPodInfo, metricPodOwner, metricRSOwner, metricJobOwner, metricPodPhase,
+	metricNodeAllocatable, metricNodeCordoned, metricPodRequests,
+}
+
+// resourceMatcher narrows the families that carry one series per resource
+// (allocatable, requests) to the two the collector reads: a node has a dozen
+// others (pods, ephemeral storage, hugepages, devices) and a cluster of a few
+// hundred pods would otherwise answer thousands of useless series.
+const resourceMatcher = `resource=~"cpu|memory"`
+
+func needsResource(metric string) bool {
+	return metric == metricNodeAllocatable || metric == metricPodRequests
+}
 
 // errRefused is the error of a query that is not on the allow-list.
 var errRefused = errors.New("refused: not on the read-only allow-list")
@@ -66,10 +86,17 @@ func newClient(hc *http.Client, base *url.URL, username, passwd, selector string
 
 // promql is the expression sent for a metric.
 func (c *client) promql(metric string) string {
-	if c.selector == "" {
+	sel := c.selector
+	if needsResource(metric) {
+		if sel != "" {
+			sel += ","
+		}
+		sel += resourceMatcher
+	}
+	if sel == "" {
 		return metric
 	}
-	return metric + "{" + c.selector + "}"
+	return metric + "{" + sel + "}"
 }
 
 // result is the vector a query returned.

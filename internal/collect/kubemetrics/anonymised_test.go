@@ -46,8 +46,8 @@ func TestFixturesAreAnonymised(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if files != 6 {
-		t.Fatalf("%d fixture files scanned, want 6: the scan is broken", files)
+	if files != 9 {
+		t.Fatalf("%d fixture files scanned, want 9: the scan is broken", files)
 	}
 }
 

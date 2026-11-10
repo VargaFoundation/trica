@@ -2834,6 +2834,16 @@
               "en": "UID",
               "fr": "UID"
             }
+          },
+          "unschedulable": {
+            "description": "Cordoned: the scheduler places no new pod on it.",
+            "title": "Cordoned",
+            "type": "boolean",
+            "x-trica-kind": "bool",
+            "x-trica-label": {
+              "en": "Cordoned",
+              "fr": "Isolé"
+            }
           }
         },
         "type": "object"
@@ -3243,6 +3253,16 @@
         "additionalProperties": true,
         "description": "Attributes of a pod object. Other attributes may appear; those of the schema are typed.",
         "properties": {
+          "cpu_request": {
+            "description": "CPU cores requested: the sum over the containers, what the scheduler places the pod by.",
+            "title": "CPU request",
+            "type": "number",
+            "x-trica-kind": "float",
+            "x-trica-label": {
+              "en": "CPU request",
+              "fr": "Requête CPU"
+            }
+          },
           "images": {
             "description": "Container images.",
             "items": {
@@ -3255,6 +3275,17 @@
               "en": "Images",
               "fr": "Images"
             }
+          },
+          "memory_request_bytes": {
+            "description": "Memory requested: the sum over the containers, what the scheduler places the pod by.",
+            "title": "Memory request",
+            "type": "integer",
+            "x-trica-kind": "int",
+            "x-trica-label": {
+              "en": "Memory request",
+              "fr": "Requête mémoire"
+            },
+            "x-trica-unit": "B"
           },
           "name": {
             "description": "Pod name.",

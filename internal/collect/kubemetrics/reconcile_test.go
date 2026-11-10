@@ -2,6 +2,7 @@ package kubemetrics_test
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -240,7 +241,17 @@ func TestSecondRunChangesNothing(t *testing.T) {
 
 func (w *world) impact(failed ...*store.Object) map[string]string {
 	w.t.Helper()
-	snap := graph.Build(w.objects(), w.relations(), w.reg)
+	return w.impactWith(nil, failed...)
+}
+
+// impactWith is impact on objects a test has altered first.
+func (w *world) impactWith(alter func([]*store.Object), failed ...*store.Object) map[string]string {
+	w.t.Helper()
+	objs := w.objects()
+	if alter != nil {
+		alter(objs)
+	}
+	snap := graph.Build(objs, w.relations(), w.reg)
 	ids := make([]string, len(failed))
 	for i, f := range failed {
 		ids[i] = f.ID
@@ -259,8 +270,12 @@ func (w *world) impact(failed ...*store.Object) map[string]string {
 // TestImpactOfTheServers: when both servers that carry the pods of orion fail
 // while a third node of the cluster is up, Kubernetes starts the pods again
 // there: the workload and its instance are degraded, not down (ADR 0011
-// amendment). When every server fails, they go down. When one of the two
-// fails, the other pod still serves: degraded at most, never down.
+// amendment). That holds with the real numbers: the survivor has 72 cores and
+// about 270 GB allocatable, and the requests of the orion pods are a fraction
+// of that, so the capacity rule keeps them degraded. When every server fails,
+// they go down. When one of the two fails, the other pod still serves:
+// degraded at most, never down. Only pods asking for more than a node has
+// turn the case into down by capacity.
 func TestImpactOfTheServers(t *testing.T) {
 	w := newWorld(t)
 	wl, inst := w.find("workload", "orion"), w.instance()
@@ -292,6 +307,37 @@ func TestImpactOfTheServers(t *testing.T) {
 		t.Errorf("workload is down with one of two servers down")
 	}
 
+	// The real numbers: what each node has free against what the pods of the
+	// workload ask. The requests are those of the cluster (some millicores to a
+	// few cores per pod, partly synthesised, see testdata/README.md) against
+	// nodes of 72 cores, so the capacity rule has no reason to fire here: each
+	// node has 66 to 70 cores and about 250 GB free, the two pods of the
+	// workload ask for 0.2 core and 512 MiB in all.
+	free, demand := w.capacity(wl)
+	t.Logf("free on each node: %v; demand of the workload: %v", free, demand)
+	if demand.cpu <= 0 || demand.mem <= 0 {
+		t.Fatalf("the workload's pods carry no requests: %+v", demand)
+	}
+	for node, f := range free {
+		if f.cpu < demand.cpu || f.mem < demand.mem {
+			t.Errorf("node %s has %+v free, below the workload's %+v: the cluster is full, the cases above change", node, f, demand)
+		}
+	}
+
+	// The same topology with pods that ask for more than a node has: with both
+	// servers down nothing places them, the workload and its instance go down.
+	// This shows the rule reads, end to end, what the collector set.
+	full := w.impactWith(func(objs []*store.Object) {
+		for _, o := range objs {
+			if o.Type == "pod" && o.ParentID != nil && *o.ParentID == *wl.ParentID {
+				o.Attrs["cpu_request"] = 100.0 // a node has 72 cores
+			}
+		}
+	}, w.device(1), w.device(2))
+	if full[wl.ID] != "down" || full[inst.ID] != "down" {
+		t.Errorf("workload %q and instance %q when the pods ask for more than a node has, want down", full[wl.ID], full[inst.ID])
+	}
+
 	// A server that hosts none of orion's pods does not touch it.
 	idle := w.impact(w.device(0))
 	if _, hit := idle[inst.ID]; hit && idle[inst.ID] == "down" {
@@ -300,4 +346,53 @@ func TestImpactOfTheServers(t *testing.T) {
 	if !strings.HasPrefix(inst.Display, "orion") {
 		t.Errorf("instance display %q", inst.Display)
 	}
+}
+
+type room struct{ cpu, mem float64 }
+
+func attrNumber(v any) float64 {
+	switch n := v.(type) {
+	case float64:
+		return n
+	case int64:
+		return float64(n)
+	case json.Number:
+		f, _ := n.Float64()
+		return f
+	}
+	return 0
+}
+
+// capacity returns what each node of the workload's cluster has free (its
+// allocatable minus the requests of the pods it hosts) and what the pods of
+// the workload ask for in all.
+func (w *world) capacity(wl *store.Object) (map[string]room, room) {
+	w.t.Helper()
+	objs := map[string]*store.Object{}
+	for _, o := range w.objects() {
+		objs[o.ID] = o
+	}
+	cluster := *objs[*wl.ParentID].ParentID // workload -> namespace -> cluster
+	free := map[string]room{}
+	for _, o := range objs {
+		if o.Type == "k8s_node" && o.ParentID != nil && *o.ParentID == cluster {
+			free[o.ID] = room{attrNumber(o.Attrs["cpu_capacity"]), attrNumber(o.Attrs["memory_capacity_bytes"])}
+		}
+	}
+	var demand room
+	for _, r := range w.relations() {
+		pod := objs[r.ToID]
+		switch {
+		case r.Type == "hosts" && pod != nil && pod.Type == "pod":
+			if f, ok := free[r.FromID]; ok {
+				f.cpu -= attrNumber(pod.Attrs["cpu_request"])
+				f.mem -= attrNumber(pod.Attrs["memory_request_bytes"])
+				free[r.FromID] = f
+			}
+		case r.Type == "served_by" && r.FromID == wl.ID && pod != nil:
+			demand.cpu += attrNumber(pod.Attrs["cpu_request"])
+			demand.mem += attrNumber(pod.Attrs["memory_request_bytes"])
+		}
+	}
+	return free, demand
 }
