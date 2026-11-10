@@ -107,19 +107,36 @@ func TestListDecodeFailure(t *testing.T) {
 	}
 }
 
+// TestSlowServerHitsTimeout: a server that never answers is a transport
+// error, whichever of the client's deadline and the server's patience runs
+// out first. The fake aborts the connection instead of returning: a handler
+// that returns sends an empty 200, which a client still within its deadline
+// reads as a malformed answer (issue #222). The second case is that race,
+// made certain.
 func TestSlowServerHitsTimeout(t *testing.T) {
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		select {
-		case <-time.After(2 * time.Second):
-		case <-r.Context().Done():
-		}
-	}))
-	defer srv.Close()
-	base, _ := url.Parse(srv.URL)
-	hc := srv.Client()
-	hc.Timeout = 100 * time.Millisecond
-	_, err := newClient(hc, base, "k", APISiteManager).get(context.Background(), "/v1/hosts", nil)
-	if err == nil || kindOf(err) != errTransport {
-		t.Fatalf("error %v", err)
+	for _, tc := range []struct {
+		name           string
+		server, client time.Duration
+	}{
+		{"client gives up first", 2 * time.Second, 100 * time.Millisecond},
+		{"server gives up first", 10 * time.Millisecond, 2 * time.Second},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				select {
+				case <-time.After(tc.server):
+				case <-r.Context().Done():
+				}
+				panic(http.ErrAbortHandler)
+			}))
+			defer srv.Close()
+			base, _ := url.Parse(srv.URL)
+			hc := srv.Client()
+			hc.Timeout = tc.client
+			_, err := newClient(hc, base, "k", APISiteManager).get(context.Background(), "/v1/hosts", nil)
+			if err == nil || kindOf(err) != errTransport {
+				t.Fatalf("error %v", err)
+			}
+		})
 	}
 }
