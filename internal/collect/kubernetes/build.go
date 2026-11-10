@@ -112,6 +112,7 @@ func (x *builder) nodesAndNamespaces() {
 		if roles := nodeRoles(n.Labels); len(roles) > 0 {
 			o.Set("roles", roles)
 		}
+		o.Set("unschedulable", n.Spec.Unschedulable)
 		for _, c := range n.Status.Conditions {
 			if c.Type == corev1.NodeReady {
 				o.Set("ready", c.Status == corev1.ConditionTrue)
@@ -293,6 +294,11 @@ func (x *builder) pods() {
 			Set("node_name", p.Spec.NodeName).
 			Set("restarts", int(restarts))
 		setList(x.b.Object(ref, "pod"), "images", images(p.Spec.Containers))
+		if len(p.Spec.Containers) > 0 {
+			// 0 is meaningful: a pod without requests (BestEffort) fits anywhere.
+			cpu, mem := effectiveRequests(p.Spec)
+			x.b.Object(ref, "pod").Set("cpu_request", cpu).Set("memory_request_bytes", mem)
+		}
 
 		if node, ok := x.nodes[p.Spec.NodeName]; ok {
 			x.b.Relate("hosts", node, ref)
@@ -470,6 +476,23 @@ func controller(refs []metav1.OwnerReference) *metav1.OwnerReference {
 		return &refs[0]
 	}
 	return nil
+}
+
+// effectiveRequests is the CPU (cores) and memory (bytes) the scheduler places
+// a pod by: per resource, the larger of the sum over the containers and the
+// largest init container (init containers run one after the other). Pod
+// overhead (RuntimeClass) is not added.
+func effectiveRequests(spec corev1.PodSpec) (cpu float64, mem int64) {
+	var sumCPU, maxCPU, sumMem, maxMem int64 // CPU in millicores, exact
+	for _, c := range spec.Containers {
+		sumCPU += c.Resources.Requests.Cpu().MilliValue()
+		sumMem += c.Resources.Requests.Memory().Value()
+	}
+	for _, c := range spec.InitContainers {
+		maxCPU = max(maxCPU, c.Resources.Requests.Cpu().MilliValue())
+		maxMem = max(maxMem, c.Resources.Requests.Memory().Value())
+	}
+	return float64(max(sumCPU, maxCPU)) / 1000, max(sumMem, maxMem)
 }
 
 func images(cs []corev1.Container) []string {

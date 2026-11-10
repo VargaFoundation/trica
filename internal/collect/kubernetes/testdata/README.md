@@ -47,6 +47,12 @@ for `ip_address` (see the package README).
 | `dev-1.31/` | Recorded: a development cluster | 3 nodes, namespaces `orion` and `lyra`, no Argo CD. |
 | `kubeadm-1.29/` | kubeadm v1.29.9 | 2 nodes (one `NotReady`, the control-plane label has an empty value as kubeadm sets it), CoreDNS (2 replicas, 1 ready), kube-proxy, one application, a NodePort service; no Ingress, no KubeVirt |
 
+In `k3s-1.31/`, synthesised for the capacity rule of impact analysis: the node
+`kube-wk-02` is cordoned (`spec.unschedulable`), and the pod
+`shop-web-7d9f8c6b5-q8m4z` carries CPU and memory requests (two containers and
+an init container whose CPU request is larger than their sum, to prove the
+effective-request computation). The other pods have none.
+
 `version.json` is the body of `GET /version`; the other files are lists of
 objects as `kubectl get -o yaml` would print them (one document per object).
 KubeVirt objects (`kubevirt.io`) are served by the dynamic fake and are not

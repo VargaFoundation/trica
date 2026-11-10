@@ -3,7 +3,7 @@
 // series stored in a Prometheus-compatible time-series database, for clusters
 // trica has no Kubernetes API access to (ADR 0070).
 //
-// The client only sends GET <address>/api/v1/query, instant queries, for six
+// The client only sends GET <address>/api/v1/query, instant queries, for nine
 // kube-state-metrics families (client.go). It reads no manifest, no
 // environment value and no container argument: the series carry none. See
 // README.md for the account, the mapping and what is left out.
@@ -31,10 +31,10 @@ var Descriptor = collect.Descriptor{
 	Title:      "Kubernetes (kube-state-metrics)",
 	Vendors:    []string{"Kubernetes", "kube-state-metrics", "VictoriaMetrics", "Prometheus"},
 	Protocol:   "Prometheus HTTP API: GET /api/v1/query (instant queries) over HTTPS with basic authentication",
-	Summary:    schema.Label{EN: "A Kubernetes cluster seen through its kube-state-metrics series: the cluster, its nodes (with the server each one runs on, found by SMBIOS UUID), the namespaces, the pods with the node that hosts each one, and the workload (deployment, statefulset, daemonset, cronjob or job) that controls each pod. For clusters trica cannot query directly; it reads no manifest and no environment value.", FR: "Un cluster Kubernetes vu par ses séries kube-state-metrics : le cluster, ses nœuds (avec le serveur sur lequel chacun tourne, retrouvé par son UUID SMBIOS), les namespaces, les pods avec le nœud qui héberge chacun, et la charge (deployment, statefulset, daemonset, cronjob ou job) qui contrôle chaque pod. Pour les clusters que trica ne peut pas interroger directement ; il ne lit aucun manifeste ni aucune valeur d'environnement."},
+	Summary:    schema.Label{EN: "A Kubernetes cluster seen through its kube-state-metrics series: the cluster, its nodes (with the server each one runs on, found by SMBIOS UUID), the namespaces, the pods with the node that hosts each one, and the workload (deployment, statefulset, daemonset, cronjob or job) that controls each pod. It also reads the allocatable CPU and memory of each node, whether it is cordoned, and the CPU and memory requests of each pod, which impact analysis uses to tell whether the pods of a lost node would find room elsewhere. For clusters trica cannot query directly; it reads no manifest and no environment value.", FR: "Un cluster Kubernetes vu par ses séries kube-state-metrics : le cluster, ses nœuds (avec le serveur sur lequel chacun tourne, retrouvé par son UUID SMBIOS), les namespaces, les pods avec le nœud qui héberge chacun, et la charge (deployment, statefulset, daemonset, cronjob ou job) qui contrôle chaque pod. Il lit aussi le CPU et la mémoire allouables de chaque nœud, s'il est isolé (cordon), et les requêtes CPU et mémoire de chaque pod, dont l'analyse d'impact se sert pour savoir si les pods d'un nœud perdu trouveraient de la place ailleurs. Pour les clusters que trica ne peut pas interroger directement ; il ne lit aucun manifeste ni aucune valeur d'environnement."},
 	Deployment: collect.DeploymentTarget,
 	Collects:   []string{"environment", "k8s_cluster", "k8s_node", "namespace", "pod", "workload"},
-	ReadOnly:   "The client sends GET requests to <address>/api/v1/query only, with an instant query for one of six kube-state-metrics families (kube_node_info, kube_pod_info, kube_pod_owner, kube_replicaset_owner, kube_job_owner, kube_pod_status_phase); any other metric, path or method is refused before it is sent. There is no range, series or labels call. The account is sent in an Authorization header, never in a URL; redirects are never followed.",
+	ReadOnly:   "The client sends GET requests to <address>/api/v1/query only, with an instant query for one of nine kube-state-metrics families (kube_node_info, kube_pod_info, kube_pod_owner, kube_replicaset_owner, kube_job_owner, kube_pod_status_phase, kube_node_status_allocatable, kube_node_spec_unschedulable, kube_pod_container_resource_requests; the last and kube_node_status_allocatable only for the cpu and memory resources); any other metric, path or method is refused before it is sent. There is no range, series or labels call. The account is sent in an Authorization header, never in a URL; redirects are never followed.",
 	Address:    "Required: the https base URL of a Prometheus-compatible query API, with the path prefix that serves /api/v1/query (https://metrics.example.org/inventory).",
 	Username:   collect.Credential{Use: collect.UseRequired, Meaning: "account allowed to run instant queries on the kube-state-metrics series, used only by trica"},
 	Secret:     collect.Credential{Use: collect.UseRequired, Meaning: "password of that account"},
@@ -175,15 +175,19 @@ type snapshot struct {
 	phases                      []sample
 	haveOwners, haveRS, haveJob bool
 	havePhase                   bool
+	// Capacity: allocatable and cordoned per node, requests per container.
+	allocatable, cordoned, requests []sample
+	haveAllocatable, haveCordoned   bool
+	haveRequests                    bool
 
 	warnings []string
 	errs     []string
 	partial  bool
 }
 
-// gather runs the six queries. kube_node_info and kube_pod_info are the core:
+// gather runs the nine queries. kube_node_info and kube_pod_info are the core:
 // an error or an empty answer there fails the run (an empty cluster would
-// otherwise withdraw everything). The four others refine the picture.
+// otherwise withdraw everything). The seven others refine the picture.
 func gather(ctx context.Context, cl *client) (*snapshot, error) {
 	s := &snapshot{}
 	core := func(metric string) ([]sample, error) {
@@ -220,6 +224,9 @@ func gather(ctx context.Context, cl *client) (*snapshot, error) {
 	s.replicaSets, s.haveRS = optional(metricRSOwner)
 	s.jobs, s.haveJob = optional(metricJobOwner)
 	s.phases, s.havePhase = optional(metricPodPhase)
+	s.allocatable, s.haveAllocatable = optional(metricNodeAllocatable)
+	s.cordoned, s.haveCordoned = optional(metricNodeCordoned)
+	s.requests, s.haveRequests = optional(metricPodRequests)
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}

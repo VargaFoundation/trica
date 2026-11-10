@@ -2178,6 +2178,11 @@ export interface components {
              * @description Kubernetes UID.
              */
             uid?: string;
+            /**
+             * Cordoned
+             * @description Cordoned: the scheduler places no new pod on it.
+             */
+            unschedulable?: boolean;
         } & {
             [key: string]: unknown;
         };
@@ -2383,10 +2388,20 @@ export interface components {
         /** @description Attributes of a pod object. Other attributes may appear; those of the schema are typed. */
         "Attributes.pod": {
             /**
+             * CPU request
+             * @description CPU cores requested: the sum over the containers, what the scheduler places the pod by.
+             */
+            cpu_request?: number;
+            /**
              * Images
              * @description Container images.
              */
             images?: string[];
+            /**
+             * Memory request
+             * @description Memory requested: the sum over the containers, what the scheduler places the pod by.
+             */
+            memory_request_bytes?: number;
             /**
              * Name
              * @description Pod name.

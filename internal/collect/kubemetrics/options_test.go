@@ -86,7 +86,8 @@ func TestSelectorNarrows(t *testing.T) {
 		}
 	}
 	for _, r := range f2.Requests() {
-		if !strings.Contains(r.Params["query"][0], `{namespace!="orion"}`) {
+		// The selector comes first; the two per-resource families add their own matcher.
+		if !strings.Contains(r.Params["query"][0], `{namespace!="orion"`) {
 			t.Errorf("query %q lacks the selector", r.Params["query"][0])
 		}
 	}

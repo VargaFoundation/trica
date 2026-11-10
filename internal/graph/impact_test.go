@@ -2,6 +2,8 @@ package graph
 
 import (
 	"errors"
+	"math/rand"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -335,5 +337,228 @@ func TestImpactApplicationWithAnInstanceLeft(t *testing.T) {
 	}
 	if _, hit := got["inst-dev"]; hit {
 		t.Errorf("the other instance is affected: %q", got["inst-dev"])
+	}
+}
+
+// capWorld is a Kubernetes cluster whose nodes each have 4 cores and 8 GB
+// allocatable, for the capacity rule. Nodes are given by id.
+func capWorld(nodes ...string) *world {
+	w := (&world{}).add("cluster", "k8s_cluster", "", nil).add("ns", "namespace", "cluster", nil)
+	for _, n := range nodes {
+		w.add(n, "k8s_node", "cluster", map[string]any{"cpu_capacity": 4.0, "memory_capacity_bytes": int64(8e9)})
+	}
+	return w
+}
+
+// node overrides the attributes of a node of the world.
+func (w *world) node(id string, attrs map[string]any) *world {
+	for _, o := range w.objs {
+		if o.ID == id {
+			o.Attrs = attrs
+		}
+	}
+	return w
+}
+
+// workload adds a workload of the namespace, optionally of a kind.
+func (w *world) workload(id, kind string) *world {
+	var attrs map[string]any
+	if kind != "" {
+		attrs = map[string]any{"kind": kind}
+	}
+	return w.add(id, "workload", "ns", attrs)
+}
+
+// pod adds a pod of a workload, running on a node, with its requests
+// (cpu in cores, memory in bytes).
+func (w *world) pod(id, workload, node string, cpu float64, mem int64) *world {
+	return w.add(id, "pod", "ns", map[string]any{"cpu_request": cpu, "memory_request_bytes": mem}).
+		rel("hosts", node, id).rel("served_by", workload, id)
+}
+
+// instance adds an application with one component, whose instances run on the
+// given workloads.
+func (w *world) application(id string, workloads ...string) *world {
+	w.add(id, "application", "", nil).add(id+"/c", "component", id, nil)
+	for _, wl := range workloads {
+		i := id + "/i-" + wl
+		w.add(i, "component_instance", id+"/c", nil).rel("runs_on", i, wl)
+	}
+	return w
+}
+
+func impactStates(t *testing.T, w *world, failed ...string) map[string]string {
+	t.Helper()
+	r, err := w.snapshot().Impact(failed, ImpactOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return states(r)
+}
+
+func wantStates(t *testing.T, got map[string]string, want map[string]string) {
+	t.Helper()
+	for id, w := range want {
+		if got[id] != w {
+			t.Errorf("%s: got %q, want %q", id, got[id], w)
+		}
+	}
+}
+
+// One node of three fails and its pods fit on the other two: Kubernetes
+// starts them again, the workloads are degraded.
+func TestCapacityRescheduledWhenPodsFit(t *testing.T) {
+	w := capWorld("n1", "n2", "n3").
+		workload("wl-a", "").pod("a1", "wl-a", "n1", 1, 1e9).pod("a2", "wl-a", "n1", 1, 1e9).
+		workload("wl-b", "").pod("b1", "wl-b", "n1", 2, 2e9).
+		application("app", "wl-a", "wl-b")
+	got := impactStates(t, w, "n1")
+	wantStates(t, got, map[string]string{
+		"wl-a": "degraded/rescheduled", "wl-b": "degraded/rescheduled",
+		"app": "degraded/instances",
+	})
+}
+
+// Two nodes of three fail and what they ran does not fit on the last one:
+// the workloads with no pod placed are down, those with a pod placed stay
+// degraded, and the applications follow their instances.
+func TestCapacityDownWhenNothingFits(t *testing.T) {
+	w := capWorld("n1", "n2", "n3").
+		workload("wl-big", "").pod("big1", "wl-big", "n1", 3, 1e9).
+		workload("wl-big2", "").pod("big2", "wl-big2", "n2", 3, 1e9).
+		workload("wl-small", "").pod("small1", "wl-small", "n1", 1, 1e9).
+		workload("wl-stay", "").pod("stay1", "wl-stay", "n3", 2, 1e9).
+		application("only-big", "wl-big").
+		application("big-and-small", "wl-big", "wl-small").
+		application("both-big", "wl-big", "wl-big2")
+	// n3 has 2 cores free: the 3-core pods find no room, the 1-core one does.
+	got := impactStates(t, w, "n1", "n2")
+	wantStates(t, got, map[string]string{
+		"wl-big": "down/capacity", "wl-big2": "down/capacity",
+		"wl-small":      "degraded/rescheduled",
+		"wl-stay":       "",
+		"only-big":      "down/instances",
+		"both-big":      "down/instances",
+		"big-and-small": "degraded/instances",
+	})
+}
+
+// Memory is counted as CPU is: the pod fits by CPU and not by memory.
+func TestCapacityMemoryCounts(t *testing.T) {
+	w := capWorld("n1", "n2").
+		workload("wl", "").pod("p", "wl", "n1", 1, 9e9)
+	wantStates(t, impactStates(t, w, "n1"), map[string]string{"wl": "down/capacity"})
+	w = capWorld("n1", "n2").
+		workload("wl", "").pod("p", "wl", "n1", 1, 8e9)
+	wantStates(t, impactStates(t, w, "n1"), map[string]string{"wl": "degraded/rescheduled"})
+}
+
+// A workload with two down pods of which only one fits is degraded, not down.
+func TestCapacityPartialFitIsDegraded(t *testing.T) {
+	w := capWorld("n1", "n2").
+		workload("wl", "").pod("p1", "wl", "n1", 3, 1e9).pod("p2", "wl", "n1", 3, 1e9)
+	wantStates(t, impactStates(t, w, "n1"), map[string]string{"wl": "degraded/rescheduled"})
+}
+
+// A survivor that does not report its allocatable CPU and memory leaves the
+// capacity unknown: the rule does not apply.
+func TestCapacityUnknownIsRescheduled(t *testing.T) {
+	for name, attrs := range map[string]map[string]any{
+		"no attributes": nil,
+		"cpu only":      {"cpu_capacity": 4.0},
+		"memory only":   {"memory_capacity_bytes": int64(8e9)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			w := capWorld("n1", "n2").node("n2", attrs).
+				workload("wl", "").pod("p", "wl", "n1", 100, 1e12)
+			wantStates(t, impactStates(t, w, "n1"), map[string]string{"wl": "degraded/rescheduled"})
+		})
+	}
+}
+
+// A cordoned survivor takes no pod, and one that is not ready does not either.
+func TestCapacityCordonedSurvivorIsNotCounted(t *testing.T) {
+	roomy := map[string]any{"cpu_capacity": 4.0, "memory_capacity_bytes": int64(8e9)}
+	cases := []struct {
+		name  string
+		extra map[string]any
+		want  string
+	}{
+		{"schedulable", map[string]any{"unschedulable": false}, "degraded/rescheduled"},
+		{"cordoned", map[string]any{"unschedulable": true}, "down/capacity"},
+		{"not ready", map[string]any{"ready": false}, "down/capacity"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			attrs := map[string]any{}
+			for k, v := range roomy {
+				attrs[k] = v
+			}
+			for k, v := range tc.extra {
+				attrs[k] = v
+			}
+			// n2 is the one to test; n3 is a survivor with 2 cores left.
+			w := capWorld("n1", "n2", "n3").node("n2", attrs).
+				workload("wl", "").pod("p", "wl", "n1", 3, 1e9).
+				workload("filler", "").pod("f", "filler", "n3", 2, 1e9)
+			wantStates(t, impactStates(t, w, "n1"), map[string]string{"wl": tc.want})
+		})
+	}
+}
+
+// The pods of a daemonset are not moved: they take no room from the others,
+// and the daemonset itself is left as it was.
+func TestCapacityDaemonSetTakesNoRoom(t *testing.T) {
+	w := capWorld("n1", "n2").
+		workload("agent", "daemonset").pod("ag", "agent", "n1", 4, 1e9).
+		workload("web", "deployment").pod("wp", "web", "n1", 3, 1e9)
+	wantStates(t, impactStates(t, w, "n1"), map[string]string{
+		"agent": "degraded/rescheduled",
+		"web":   "degraded/rescheduled",
+	})
+}
+
+// A pod with no request attributes counts as asking for nothing, down or
+// running.
+func TestCapacityMissingRequestsCountZero(t *testing.T) {
+	w := capWorld("n1", "n2").
+		workload("wl", "").
+		add("bare", "pod", "ns", nil).rel("hosts", "n1", "bare").rel("served_by", "wl", "bare").
+		workload("other", "").
+		add("bare2", "pod", "ns", nil).rel("hosts", "n2", "bare2").rel("served_by", "other", "bare2")
+	wantStates(t, impactStates(t, w, "n1"), map[string]string{"wl": "degraded/rescheduled"})
+}
+
+// The result does not depend on the order objects and relations come in, nor
+// on how many times it is computed.
+func TestCapacityIsDeterministic(t *testing.T) {
+	build := func() *world {
+		// Equal pods and equal nodes everywhere: every tie is a tie.
+		w := capWorld("n1", "n2", "n3", "n4")
+		for i := 0; i < 6; i++ {
+			wl := "wl-" + string(rune('a'+i))
+			w.workload(wl, "").pod("p"+wl, wl, "n1", 1.5, 1e9).pod("q"+wl, wl, "n2", 1.5, 1e9)
+		}
+		return w.application("app", "wl-a", "wl-b", "wl-c", "wl-d", "wl-e", "wl-f")
+	}
+	ref := impactStates(t, build(), "n1", "n2")
+	downs := 0
+	for _, s := range ref {
+		if s == "down/capacity" {
+			downs++
+		}
+	}
+	// 12 pods of 1.5 cores on 2 nodes of 4: 4 are placed, 8 are not.
+	if downs == 0 || downs == 6 {
+		t.Fatalf("the scenario must split the workloads: %d down of 6 (%v)", downs, ref)
+	}
+	rng := rand.New(rand.NewSource(1))
+	for i := 0; i < 40; i++ {
+		w := build()
+		rng.Shuffle(len(w.objs), func(a, b int) { w.objs[a], w.objs[b] = w.objs[b], w.objs[a] })
+		rng.Shuffle(len(w.rels), func(a, b int) { w.rels[a], w.rels[b] = w.rels[b], w.rels[a] })
+		if got := impactStates(t, w, "n2", "n1"); !reflect.DeepEqual(got, ref) {
+			t.Fatalf("run %d differs:\n got %v\nwant %v", i, got, ref)
+		}
 	}
 }

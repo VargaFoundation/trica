@@ -527,13 +527,22 @@ metadata:
     controller: true
     blockOwnerDeletion: true
 spec:
+  initContainers:
+  - name: migrate
+    image: registry.example.test/shop/migrate:1.8.2
+    resources:
+      requests: {cpu: 1500m, memory: 64Mi}
   containers:
   - name: web
     image: registry.example.test/shop/web:1.8.2
     imagePullPolicy: IfNotPresent
+    resources:
+      requests: {cpu: 250m, memory: 256Mi}
   - name: sidecar
     image: registry.example.test/shop/metrics-sidecar:0.4.0
     imagePullPolicy: IfNotPresent
+    resources:
+      requests: {cpu: 100m, memory: 32Mi}
   restartPolicy: Always
   nodeName: kube-wk-02
 status:

@@ -20,7 +20,7 @@ on which node, owned by what) and carry no manifest, environment or argument.
 1. **A collector `kubemetrics`, one target per cluster**, reading a Prometheus-compatible query API
    (https, basic authentication, `file:` password). One database holds one cluster; there is no
    `cluster` label.
-2. **`GET /api/v1/query` only, six metrics.** Read-only is an allow-list of metric names plus the
+2. **`GET /api/v1/query` only, six metrics** (nine since the amendment of 2026-11-10 below). Read-only is an allow-list of metric names plus the
    one path and verb: `kube_node_info`, `kube_pod_info`, `kube_pod_owner`, `kube_replicaset_owner`,
    `kube_job_owner`, `kube_pod_status_phase`. Redirects are not followed; the account travels in a
    header.
@@ -44,3 +44,30 @@ on which node, owned by what) and carry no manifest, environment or argument.
   failing one of two servers leaves the instance up.
 - Nothing is known of replica counts, probes or images: not in these series.
 - Dev needs its own vmauth user and target before it is read.
+
+## Amendment (2026-11-10): three more families, for the capacity rule
+
+Impact analysis now asks whether the pods of a lost node would find room on the nodes left (ADR
+0011 amendment of the same date). That needs what a node can hold and what a pod asks for, which
+kube-state-metrics carries.
+
+- **Three families join the allow-list**, nine in all: `kube_node_status_allocatable`,
+  `kube_node_spec_unschedulable`, `kube_pod_container_resource_requests`. The path, the verb and
+  the rule that any other metric is refused before it is sent are unchanged. All three are
+  optional: a failure makes the run partial and unhealthy, as for the other optional families.
+- **Only `cpu` and `memory`.** The two per-resource families are queried with
+  `resource=~"cpu|memory"` ANDed after the user's selector, so the other resources (ephemeral
+  storage, devices, hugepages) are never fetched.
+- **Attributes**: `cpu_capacity` (cores) and `memory_capacity_bytes` on the node, from allocatable
+  (what the scheduler uses, not capacity); `unschedulable` on the node; `cpu_request` (cores) and
+  `memory_request_bytes` on the pod, summed over its containers (a series reported twice by two
+  kube-state-metrics replicas counts once). A Running pod with no request series asks for 0 when
+  the family is usable; when the family is empty or unreadable no attribute is set, so that a
+  server without the family is not read as "every pod asks for nothing".
+- **Init-container requests are not read** (`kube_pod_init_container_resource_requests` is not in
+  the allow-list). The scheduler reserves the larger of the sum of the containers and the largest
+  init container; here a pod with a heavy init container is under-counted. The kubernetes
+  collector, which reads the manifest, applies the exact rule. Pod overhead is not added either.
+- **Consequence**: `TestImpactOfTheServers` still gives degraded for both servers down with the
+  recorded numbers (a survivor has 66 to 70 cores free against 0.2 core asked), and goes down
+  only when the pods ask for more than a node has.

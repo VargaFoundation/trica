@@ -2,6 +2,8 @@ package kubemetrics
 
 import (
 	"encoding/json"
+	"math"
+	"strconv"
 	"strings"
 )
 
@@ -36,6 +38,22 @@ func (s sample) isOne() bool {
 		return false
 	}
 	return strings.TrimSpace(v) == "1"
+}
+
+// number returns the sample's value as a number.
+func (s sample) number() (float64, bool) {
+	if len(s.Value) != 2 {
+		return 0, false
+	}
+	var v string
+	if err := json.Unmarshal(s.Value[1], &v); err != nil {
+		return 0, false
+	}
+	f, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+	if err != nil || math.IsNaN(f) || math.IsInf(f, 0) || f < 0 {
+		return 0, false
+	}
+	return f, true
 }
 
 // label returns a label value, trimmed.
