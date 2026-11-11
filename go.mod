@@ -3,11 +3,11 @@ module github.com/VargaFoundation/trica
 go 1.26.9
 
 require (
-	github.com/go-jose/go-jose/v4 v4.1.7
+	github.com/go-jose/go-jose/v4 v4.1.9
 	github.com/go-routeros/routeros/v3 v3.0.1
 	github.com/jackc/pgx/v5 v5.12.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
-	github.com/pb33f/libopenapi v0.42.0
+	github.com/pb33f/libopenapi v0.42.4
 	github.com/pb33f/libopenapi-validator v0.16.2
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/prometheus/client_golang v1.25.0
