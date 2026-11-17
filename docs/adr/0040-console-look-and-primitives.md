@@ -19,7 +19,7 @@ cannot depend on one site's names.
 **Own tokens.** `tokens.css` declares every colour role as a `--trica-*` custom property, as
 resolved hex literals, in three blocks: dark (the bare `:root`, the default: it holds without
 JavaScript), light (`data-theme="light"`), and light again for the "system" choice when the
-system prefers light. The palette is transposed from the Choregos console: Radix Colors steps
+system prefers light. The palette is made of Radix Colors steps
 (slate, iris, green, amber, red, blue, plum; MIT, see NOTICE), a single iris accent, tinted round
 pills for states. `tokens.test.ts` computes the WCAG contrast of every pair the stylesheet uses,
 checks that the light and system blocks are identical, that `app.css` reads only declared tokens
