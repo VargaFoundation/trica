@@ -1,6 +1,6 @@
 /*
  * Design tokens (ADR 0040): the look of an operations console in the manner of
- * Temporal's UI, transposed from the Choregos console. Dark is the default: it
+ * Temporal's UI. Dark is the default: it
  * holds without JavaScript and it is an operations console's choice. Light is
  * data-theme="light" on <html>, or the system preference when the reader left
  * the theme on "System".
