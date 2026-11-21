@@ -85,7 +85,8 @@ third-party section for them: CC0 asks for no attribution.
   documented).
 - The part numbers that two models share (HPE `P19766-B21` and others), which the library had to
   leave as they were, can now be fixed in the files: a `finding` issue carries that work, out of
-  scope here.
+  scope here (done, issue #200: no two models of a vendor list the same part
+  number, a test guards it).
 - A model's file can be edited to add or correct anything, with its source cited in the file.
 
 ## Not proven

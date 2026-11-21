@@ -5,10 +5,14 @@ slug: hpe-proliant-dl360-gen11
 u_height: 1
 is_full_depth: true
 airflow: front-to-rear
-part_number: P19766-B21
+part_number: P52498-B21
+part_numbers:
+  - P52498-B21
+  - P52499-B21
+  - P52500-B21
 front_image: true
 rear_image: true
-comments: '[HPE ProLiant DL360 G11 Server QuickSpecs](https://www.hpe.com/psnow/doc/a50004306enw)'
+comments: '[HPE ProLiant DL360 G11 Server QuickSpecs](https://www.hpe.com/psnow/doc/a50004306enw) CTO servers P52498-B21 (4 LFF NC), P52499-B21 (8 SFF NC), P52500-B21 (20EDSFF NC), QuickSpecs a50004306enw, Step 1 Base Configuration, read 2026-11-21. P19766-B21, listed here before, is the DL360 Gen10 8SFF.'
 #minumum weight - One drive, one processor, one power supply, two heatsinks, one Smart Array controller, and five fans.
 weight: 14.56
 weight_unit: kg

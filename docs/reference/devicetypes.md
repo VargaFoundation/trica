@@ -371,8 +371,10 @@ library and `TestCatalogueListIsCurrent` fails when it is out of date (`go test
   not a template.
 - UniFi shortnames that the fingerprint database does not list (the USW-Flex-2.5G family, the
   CKG2-RM).
-- Part numbers that two models share (HPE `P19766-B21`, `P56707-B21`, `R4U28A`; Lenovo
-  `7X0x`, `7Z7x`, `7D7x`) match by name only.
+- Part numbers that two models share: the library has none (a test fails on one, except a variant
+  repeating its base model's number, ADR 0043). Where a vendor does not publish an SKU per model, the
+  model has none: the SimpliVity 380 Gen10 and the Alletra 6000 family model match by name only. A
+  number from your own `extra_dir` that two models list still matches neither by SKU.
 - A 0 U device has no place on the elevation of its own: mounted, it stands on a shelf (its own `u_height`,
   else `height_mm` in whole U, else an assumed 1 U, ADR 0068). The model files do not carry a width or a
   depth in mm; only `height_mm`, and only where a drawing was made at the chassis' own size.

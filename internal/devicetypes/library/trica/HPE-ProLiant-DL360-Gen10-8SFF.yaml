@@ -18,7 +18,7 @@ part_numbers:
 u_height: 1
 is_full_depth: true
 airflow: front-to-rear
-comments: '[QuickSpecs](https://support.hpe.com/hpesc/public/api/document/a00008159enw)'
+comments: '[QuickSpecs](https://support.hpe.com/hpesc/public/api/document/a00008159enw) P19766-B21 is the ''HPE DL360 Gen10 8SFF NC CTO Server'' (P19765-B21 is the 4LFF), read 2026-11-21.'
 console-ports:
   - name: Serial
     type: de-9
