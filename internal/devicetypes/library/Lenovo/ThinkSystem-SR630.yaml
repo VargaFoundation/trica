@@ -2,11 +2,14 @@
 manufacturer: Lenovo
 model: ThinkSystem SR630
 slug: lenovo-thinksystem-sr630
-part_number: 7X0x
+part_number: 7X01
+part_numbers:
+  - 7X01
+  - 7X02
 u_height: 1
 is_full_depth: true
 airflow: front-to-rear
-comments: '[Lenovo System SR630 product guide](https://lenovopress.lenovo.com/lp1049)'
+comments: '[Lenovo System SR630 product guide](https://lenovopress.lenovo.com/lp1049) Machine types from the title of Lenovo Docs https://pubs.lenovo.com/sr630/, read 2026-11-21.'
 subdevice_role: parent
 weight: 11.9
 weight_unit: kg

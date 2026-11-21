@@ -5,10 +5,9 @@ slug: hpe-proliant-dl360-gen10
 u_height: 1
 is_full_depth: true
 airflow: front-to-rear
-part_number: P19766-B21
 front_image: true
 rear_image: true
-comments: '[HPE ProLiant DL360 G10 Server QuickSpecs](https://www.hpe.com/psnow/doc/a00008159enw)'
+comments: '[HPE ProLiant DL360 G10 Server QuickSpecs](https://www.hpe.com/psnow/doc/a00008159enw) P19766-B21 is the 8SFF NC CTO server, not the generic model: it is listed by hpe-proliant-dl360-gen10-8sff (QuickSpecs a00008159enw, Configuration Information, read 2026-11-21).'
 #minumum weight - one hard drive, power supply and processor installed
 weight: 13.04
 weight_unit: kg

@@ -2,13 +2,17 @@
 manufacturer: Lenovo
 model: ThinkSystem SR650 V3
 slug: lenovo-thinksystem-sr650-v3
-part_number: 7D7x
+part_number: 7D75
+part_numbers:
+  - 7D75
+  - 7D76
+  - 7D77
 u_height: 2
 is_full_depth: true
 airflow: front-to-rear
 front_image: true
 rear_image: true
-comments: '[Lenovo System SR650 V3 product guide](https://lenovopress.com/lp1601)'
+comments: '[Lenovo System SR650 V3 product guide](https://lenovopress.com/lp1601) Machine types from the title of Lenovo Docs https://pubs.lenovo.com/sr650-v3/, read 2026-11-21.'
 subdevice_role: parent
 weight: 38.8
 weight_unit: kg

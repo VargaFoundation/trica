@@ -301,7 +301,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | ↳ HPE ProLiant DL360 Gen10 4LFF | `hpe-proliant-dl360-gen10-4lff` | 1 | drawn | drawn | 867958-B21, P19765-B21 |
 | ↳ HPE ProLiant DL360 Gen10 8SFF | `hpe-proliant-dl360-gen10-8sff` | 1 | drawn | drawn | 867959-B21, P19766-B21, P56949-B21, P56950-B21 |
 | HPE ProLiant DL360 Gen10 Plus | `hpe-proliant-dl360-gen10-plus` | 1 | picture | picture |  |
-| HPE ProLiant DL360 Gen11 | `hpe-proliant-dl360-gen11` | 1 | — | — |  |
+| HPE ProLiant DL360 Gen11 | `hpe-proliant-dl360-gen11` | 1 | — | — | P52498-B21, P52499-B21, P52500-B21 |
 | HPE ProLiant DL360 Gen9 | `hpe-proliant-dl360-gen9` | 1 | picture | picture |  |
 | ↳ HPE ProLiant DL360 Gen9 4LFF | `hpe-proliant-dl360-gen9-4lff` | 1 | drawn | drawn | 755259-B21 |
 | ↳ HPE ProLiant DL360 Gen9 8SFF | `hpe-proliant-dl360-gen9-8sff` | 1 | drawn | drawn | 755258-B21 |
@@ -339,7 +339,7 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 | HPE ProLiant DL580 Gen10 | `hpe-proliant-dl580-gen10` | 4 | — | — |  |
 | HPE ProLiant DL580 Gen9 | `hpe-proliant-dl580-gen9` | 4 | — | — |  |
 | HPE ProLiant DL60 Gen9 | `hpe-proliant-dl60-gen9` | 1 | — | — |  |
-| HPE ProLiant DX360 Gen10 | `hpe-proliant-dx360-gen10` | 1 | — | — |  |
+| HPE ProLiant DX360 Gen10 | `hpe-proliant-dx360-gen10` | 1 | — | — | P18229-B21, P18230-B21, P18231-B21 |
 | HPE ProLiant DX385 Gen10 Plus | `hpe-proliant-dx385-gen10-plus` | 2 | — | — |  |
 | HPE ProLiant DX385 Gen10 Plus V2 | `hpe-proliant-dx385-gen10-plus-v2` | 2 | — | — |  |
 | HPE ProLiant MicroServer Gen10 | `hpe-proliant-microserver-gen10` | 0 | — | — |  |
@@ -391,12 +391,12 @@ Every one of the 523 models of the embedded library, by manufacturer (see [the l
 |---|---|---|---|---|---|
 | Lenovo System x3550 M5 | `lenovo-system-x3550-m5` | 1 | — | — |  |
 | Lenovo System x3650 M5 | `lenovo-system-x3650-m5` | 2 | picture | picture |  |
-| Lenovo ThinkSystem SR630 | `lenovo-thinksystem-sr630` | 1 | — | — |  |
-| Lenovo ThinkSystem SR630 V2 | `lenovo-thinksystem-sr630-v2` | 1 | — | — |  |
-| Lenovo ThinkSystem SR630 V3 | `lenovo-thinksystem-sr630-v3` | 1 | — | — |  |
-| Lenovo ThinkSystem SR650 | `lenovo-thinksystem-sr650` | 2 | picture | picture |  |
-| Lenovo ThinkSystem SR650 V2 | `lenovo-thinksystem-sr650-v2` | 2 | — | — |  |
-| Lenovo ThinkSystem SR650 V3 | `lenovo-thinksystem-sr650-v3` | 2 | — | — |  |
+| Lenovo ThinkSystem SR630 | `lenovo-thinksystem-sr630` | 1 | — | — | 7X01, 7X02 |
+| Lenovo ThinkSystem SR630 V2 | `lenovo-thinksystem-sr630-v2` | 1 | — | — | 7Z70, 7Z71 |
+| Lenovo ThinkSystem SR630 V3 | `lenovo-thinksystem-sr630-v3` | 1 | — | — | 7D72, 7D73, 7D74 |
+| Lenovo ThinkSystem SR650 | `lenovo-thinksystem-sr650` | 2 | picture | picture | 7X05, 7X06 |
+| Lenovo ThinkSystem SR650 V2 | `lenovo-thinksystem-sr650-v2` | 2 | — | — | 7Z72, 7Z73 |
+| Lenovo ThinkSystem SR650 V3 | `lenovo-thinksystem-sr650-v3` | 2 | — | — | 7D75, 7D76, 7D77 |
 | Lenovo ThinkSystem SR665 | `lenovo-thinksystem-sr665` | 2 | — | — |  |
 
 ## MikroTik (18 models)

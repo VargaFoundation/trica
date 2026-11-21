@@ -5,8 +5,8 @@ slug: hpe-alletra-6070
 u_height: 4
 is_full_depth: true
 airflow: front-to-rear
-part_number: R4U28A
-comments: '[HPE Alletra Storage 6000 Server QuickSpecs](https://www.hpe.com/psnow/doc/a50002567enw)'
+part_number: R4U31A
+comments: '[HPE Alletra Storage 6000 Server QuickSpecs](https://www.hpe.com/psnow/doc/a50002567enw) R4U31A is the ''HPE Alletra 6070 Dual Controller Configure-to-order Base Array'' (R4U28A, listed here before, is the 6010), read 2026-11-21.'
 #minumum weight - 2x processor, 2x PSU, 24xHDD, 2xNVMe SSD
 weight: 54
 weight_unit: kg

@@ -5,8 +5,7 @@ slug: hpe-alletra-6000
 u_height: 4
 is_full_depth: true
 airflow: front-to-rear
-part_number: R4U28A
-comments: '[HPE Alletra Storage 6000 Server QuickSpecs](https://www.hpe.com/psnow/doc/a50002567enw)'
+comments: '[HPE Alletra Storage 6000 Server QuickSpecs](https://www.hpe.com/psnow/doc/a50002567enw) No part number: the family has one base array SKU per model (R4U28A is the 6010, R4U29A the 6030, R4U30A the 6050, R4U31A the 6070, R4U32A the 6090), QuickSpecs a50002567enw, Step 1 Base Configuration, read 2026-11-21.'
 #minumum weight - 2x processor, 2x PSU, 24xHDD, 2xNVMe SSD
 weight: 54.5
 weight_unit: kg

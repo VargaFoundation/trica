@@ -2,10 +2,13 @@
 manufacturer: Lenovo
 model: ThinkSystem SR650 V2
 slug: lenovo-thinksystem-sr650-v2
-part_number: 7Z7x
+part_number: 7Z72
+part_numbers:
+  - 7Z72
+  - 7Z73
 u_height: 2
 is_full_depth: true
-comments: '[Lenovo System SR650 V2 product guide](https://lenovopress.lenovo.com/lp1392.pdf)'
+comments: '[Lenovo System SR650 V2 product guide](https://lenovopress.lenovo.com/lp1392.pdf) Machine types from the title of Lenovo Docs https://pubs.lenovo.com/sr650-v2/, read 2026-11-21.'
 subdevice_role: parent
 airflow: front-to-rear
 weight: 38.8

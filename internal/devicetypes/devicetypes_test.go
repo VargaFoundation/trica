@@ -219,6 +219,16 @@ func TestMatching(t *testing.T) {
 		{"part number only", "HPE", "unknown chassis", "673648-B21", "hpe-proliant-dl360p-gen8", devicetypes.ByPartNumber},
 		// The part number of the DL360 Gen10 is the 8SFF NC CTO SKU: the chassis variant that lists it wins.
 		{"variant sku over part number", "HPE", "ProLiant DL360 Gen10", "P19766-B21", "hpe-proliant-dl360-gen10-8sff", devicetypes.BySKU},
+		// Part numbers that two models used to share (issue #200): each one now names a single model.
+		{"dl360 gen11 cto", "HPE", "unknown chassis", "P52499-B21", "hpe-proliant-dl360-gen11", devicetypes.BySKU},
+		{"dx360 gen10 cto", "HPE", "unknown chassis", "P18230-B21", "hpe-proliant-dx360-gen10", devicetypes.BySKU},
+		{"alletra 6070 base array", "HPE", "unknown chassis", "R4U31A", "hpe-alletra-6070", devicetypes.ByPartNumber},
+		{"sr630 machine type", "Lenovo", "unknown", "7X02", "lenovo-thinksystem-sr630", devicetypes.BySKU},
+		{"sr650 machine type", "Lenovo", "unknown", "7x06", "lenovo-thinksystem-sr650", devicetypes.BySKU},
+		{"sr630 v2 machine type", "Lenovo", "unknown", "7Z71", "lenovo-thinksystem-sr630-v2", devicetypes.BySKU},
+		{"sr650 v2 machine type", "Lenovo", "unknown", "7Z73", "lenovo-thinksystem-sr650-v2", devicetypes.BySKU},
+		{"sr630 v3 machine type", "Lenovo", "unknown", "7D74", "lenovo-thinksystem-sr630-v3", devicetypes.BySKU},
+		{"sr650 v3 machine type", "Lenovo", "unknown", "7D77", "lenovo-thinksystem-sr650-v3", devicetypes.BySKU},
 		{"slug as model", "MikroTik", "mikrotik-crs326-24g-2s-plus-rm", "", "mikrotik-crs326-24g-2s-plus-rm", devicetypes.ByModel},
 		{"airflow variant", "Arista Networks", "DCS-7050SX3-48YC8", "", "arista-dcs-7050sx3-48yc8", devicetypes.ByVariant},
 		{"own model", "Generic", "Generic 1U pfSense appliance", "", "generic-1u-pfsense-appliance", devicetypes.ByModel},

@@ -245,6 +245,40 @@ func TestDrawingsMatchTheirImagesAndModels(t *testing.T) {
 	}
 }
 
+// A part number that two models of a vendor both list matches neither by SKU,
+// only by name: the device is not identified. The only repeat the library
+// allows is a variant listing the part number of the model it is a variant
+// of (ADR 0043): the variant wins by SKU.
+func TestNoPartNumberIsListedByTwoModels(t *testing.T) {
+	models, err := devicetypes.Default()
+	if err != nil {
+		t.Fatal(err)
+	}
+	owners := map[string][]*devicetypes.Model{} // vendor|part number, upper case
+	for _, m := range models {
+		seen := map[string]bool{} // a model repeating its own number is one listing
+		for _, pn := range append([]string{m.PartNumber}, m.PartNumbers...) {
+			pn = strings.TrimSpace(pn)
+			k := strings.ToLower(m.Vendor) + "|" + strings.ToUpper(pn)
+			if pn == "" || seen[k] {
+				continue
+			}
+			seen[k] = true
+			owners[k] = append(owners[k], m)
+		}
+	}
+	for k, ms := range owners {
+		for i, a := range ms {
+			for _, b := range ms[i+1:] {
+				if a.VariantOf == b.Slug || b.VariantOf == a.Slug {
+					continue
+				}
+				t.Errorf("%s is listed by %s and %s, neither a variant of the other", k, a.Slug, b.Slug)
+			}
+		}
+	}
+}
+
 // RouterOS reports the board name, which lacks the "RM" (rack-mount) of the
 // product code the library uses: the rack-mount edition is found anyway, and
 // only for the vendor that does this.

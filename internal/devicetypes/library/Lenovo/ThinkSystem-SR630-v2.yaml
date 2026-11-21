@@ -2,13 +2,16 @@
 manufacturer: Lenovo
 model: ThinkSystem SR630 V2
 slug: lenovo-thinksystem-sr630-v2
-part_number: 7Z7x
+part_number: 7Z70
+part_numbers:
+  - 7Z70
+  - 7Z71
 u_height: 1
 is_full_depth: true
 airflow: front-to-rear
 front_image: true
 rear_image: true
-comments: '[Lenovo System SR630 V2 product guide](https://lenovopress.com/lp1391)'
+comments: '[Lenovo System SR630 V2 product guide](https://lenovopress.com/lp1391) Machine types from the title of Lenovo Docs https://pubs.lenovo.com/sr630-v2/, read 2026-11-21.'
 subdevice_role: parent
 weight: 20.8
 weight_unit: kg
