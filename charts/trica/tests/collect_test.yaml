@@ -44,6 +44,27 @@ tests:
           path: spec.template.spec.volumes
           content: {name: collect-secret-arista-credentials, secret: {secretName: arista-credentials, defaultMode: 288}}
       - equal: {path: spec.template.spec.automountServiceAccountToken, value: false}
+  - it: mounts the catalog ConfigMaps read-only as directories, not with subPath
+    template: templates/deployment.yaml
+    set:
+      collect.enabled: true
+      collect.targets: [{kind: catalog, name: main, address: /etc/trica/collect/configmaps/trica-catalog}]
+      collect.configMaps: [{name: trica-catalog}]
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: collect-configmap-trica-catalog, mountPath: /etc/trica/collect/configmaps/trica-catalog, readOnly: true}
+      - contains:
+          path: spec.template.spec.volumes
+          content: {name: collect-configmap-trica-catalog, configMap: {name: trica-catalog, defaultMode: 292}}
+  - it: mounts no catalog ConfigMap when collection is off
+    template: templates/deployment.yaml
+    set:
+      collect.configMaps: [{name: trica-catalog}]
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content: {name: collect-configmap-trica-catalog, configMap: {name: trica-catalog, defaultMode: 292}}
   - it: can take the targets file from an existing ConfigMap
     set:
       collect.enabled: true

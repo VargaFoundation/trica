@@ -68,6 +68,8 @@ commands:
   enrol    create an enrolment token for an agent or collector (prints it once
            on stdout; --prefix for a class token shared by a fleet), or revoke one
   theme    check a UI theme (theme check ARCHIVE.zip|DIR): the checks the server runs
+  catalog  check an application catalog (catalog check FILE|DIR): the checks a
+           catalog target runs before declaring anything
   version  print the version
 
 server, migrate, backup, restore, token and enrol read the database URL from TRICA_DATABASE_URL or the file
@@ -90,6 +92,8 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return runImport(ctx, args, stdin, stdout, stderr, getenv)
 	case "theme":
 		return runTheme(args, stdout, stderr)
+	case "catalog":
+		return runCatalog(args, stdout, stderr)
 	case "token":
 		return runToken(ctx, args, stdout, stderr, getenv)
 	case "enrol":

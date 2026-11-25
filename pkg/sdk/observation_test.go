@@ -49,8 +49,10 @@ func TestValidateRejects(t *testing.T) {
 			b.Object("x", "device").Identify("name", "x").In("y")
 			b.Object("y", "device").Identify("name", "y").In("x")
 		},
-		"rel no type": func(b *Batch) { b.Object("x", "device").Identify("name", "x"); b.Relate("", "x", "x") },
-		"rel bad ref": func(b *Batch) { b.Object("x", "device").Identify("name", "x"); b.Relate("contains", "x", "zz") },
+		"withdraw_omitted, partial":  func(b *Batch) { b.Confidence, b.WithdrawOmitted = Declared, true },
+		"withdraw_omitted, observed": func(b *Batch) { b.Scope, b.WithdrawOmitted = ScopeFull, true },
+		"rel no type":                func(b *Batch) { b.Object("x", "device").Identify("name", "x"); b.Relate("", "x", "x") },
+		"rel bad ref":                func(b *Batch) { b.Object("x", "device").Identify("name", "x"); b.Relate("contains", "x", "zz") },
 		"rel bad ep": func(b *Batch) {
 			b.Object("x", "device").Identify("name", "x")
 			b.RelateEndpoints("contains", Endpoint{Ref: "x"}, Endpoint{Type: "device"})
@@ -66,6 +68,14 @@ func TestValidateRejects(t *testing.T) {
 		if err := b.Validate(); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
+	}
+}
+
+func TestWithdrawOmittedOnADeclaredFullBatch(t *testing.T) {
+	b := NewBatch("catalog:main", ScopeFull)
+	b.Confidence, b.WithdrawOmitted = Declared, true
+	if err := b.Validate(); err != nil {
+		t.Fatal(err)
 	}
 }
 

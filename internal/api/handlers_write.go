@@ -63,6 +63,12 @@ func (c *call) bindBatch() (b *sdk.Batch, claimed string, err error) {
 		return nil, claimed, forbidden("this credential is not bound to a source and cannot submit batches")
 	}
 	b.Source = src
+	if c.p.Kind == KindUser && b.WithdrawOmitted {
+		// One call would retire everything the person declared elsewhere
+		// (ADR 0071): it is for a document of record (a catalog, an import),
+		// which speaks with a token bound to its own source.
+		return nil, claimed, badRequest("withdraw_omitted is for a catalog or an import bound to its own source, not for a person's batch")
+	}
 	if c.p.Kind == KindUser {
 		b.Confidence = sdk.Declared
 		for _, o := range b.Objects {

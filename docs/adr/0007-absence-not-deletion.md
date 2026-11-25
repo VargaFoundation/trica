@@ -19,3 +19,12 @@ never removed without a trace.
 
 - Inventories grow; the absent objects are filtered out of default views and searches, and kept
   for history.
+
+## Amendment (2026-11-25): declared objects a document of record no longer names
+
+A declared object is never swept: nothing is expected to see it. A full-scope declared batch that
+sets `withdraw_omitted` (the application catalog, `trica import --scope full`;
+[ADR 0071](0071-application-catalog.md)) is the whole of what its source declares: the claims it
+held on the objects it no longer names are withdrawn, identifiers excepted, and an object no
+collector ever observed and nothing else claims becomes absent at once, still named. Nothing is
+deleted; declared again, it is active again.

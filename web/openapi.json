@@ -395,6 +395,23 @@
               "fr": "Hébergement"
             }
           },
+          "lifecycle": {
+            "description": "Where the application stands in its life, as its owner declares it (application catalog, ADR 0071).",
+            "enum": [
+              "planned",
+              "development",
+              "production",
+              "deprecated",
+              "retired"
+            ],
+            "title": "Lifecycle",
+            "type": "string",
+            "x-trica-kind": "enum",
+            "x-trica-label": {
+              "en": "Lifecycle",
+              "fr": "Cycle de vie"
+            }
+          },
           "name": {
             "description": "Application slug.",
             "title": "Name",
@@ -4787,6 +4804,9 @@
               "$ref": "#/components/schemas/BatchRelation"
             },
             "type": "array"
+          },
+          "withdraw_omitted": {
+            "type": "boolean"
           }
         },
         "required": [

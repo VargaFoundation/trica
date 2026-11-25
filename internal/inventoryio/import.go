@@ -18,7 +18,8 @@ type ImportOptions struct {
 	Name string
 	// Scope is what the file claims: sdk.ScopePartial (default) only adds and
 	// refreshes; sdk.ScopeFull also withdraws what an earlier import of the
-	// same name claimed and this one does not repeat.
+	// same name claimed and this one does not repeat, whole objects included
+	// (an object only imports declared then becomes absent; ADR 0071).
 	Scope sdk.Scope
 	// Author and Reason go in the changeset.
 	Author, Reason string
@@ -41,6 +42,7 @@ func ToBatch(doc *Document, reg *schema.Registry, opt ImportOptions) (*sdk.Batch
 	// A file is written by a human or exported from another inventory: its
 	// values are declarations, the lowest rung of the priority order.
 	b.Confidence = sdk.Declared
+	b.WithdrawOmitted = scope == sdk.ScopeFull
 
 	refs := map[string]bool{}
 	for i, o := range doc.Objects {

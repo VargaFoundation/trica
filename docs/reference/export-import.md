@@ -55,7 +55,9 @@ trica import FILE [--name NAME] [--scope partial|full] [--dry-run] [--author A] 
 - The batch source is `import:NAME` (NAME defaults to the file name), confidence `declared`.
   Declared values rank below observed ones: an import never overrides what a collector sees.
 - `--scope partial` (default) adds and refreshes. `--scope full` also withdraws what an earlier
-  import with the same NAME claimed and this file omits (history keeps it; nothing is deleted).
+  import with the same NAME claimed and this file omits, objects left out of the file included:
+  such an object keeps its identifiers and, if no collector ever observed it and nothing else
+  declares anything of it, becomes absent (history keeps everything; nothing is deleted; ADR 0071).
 - `--dry-run` runs the engine in a rolled-back transaction and prints the counts.
 - Read: objects and open relations. Ignored: `provenance`, `status`, `history`, closed relations
   (`until`), `exported_at`, `at`. Refused: unknown fields, another `format` or `version`, an

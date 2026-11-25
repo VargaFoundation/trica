@@ -129,6 +129,12 @@ spec:
               mountPath: /var/run/secrets/collect/{{ .name }}
               readOnly: true
             {{- end }}
+            {{- range .Values.collect.configMaps }}
+            # A catalog target reads this directory: address /etc/trica/collect/configmaps/<name>.
+            - name: collect-configmap-{{ .name }}
+              mountPath: /etc/trica/collect/configmaps/{{ .name }}
+              readOnly: true
+            {{- end }}
             {{- end }}
             {{- if .Values.live.enabled }}
             {{- range .Values.live.secrets }}
@@ -187,6 +193,12 @@ spec:
           secret:
             secretName: {{ .name }}
             defaultMode: 0440
+        {{- end }}
+        {{- range .Values.collect.configMaps }}
+        - name: collect-configmap-{{ .name }}
+          configMap:
+            name: {{ .name }}
+            defaultMode: 0444
         {{- end }}
         {{- end }}
         {{- if .Values.deviceTypes.existingClaim }}

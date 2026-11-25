@@ -178,6 +178,38 @@ func TestBackupRestoreCommands(t *testing.T) {
 	}
 }
 
+func TestCatalogCheck(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, body string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const head = "format: trica-catalog\nversion: 1\n"
+	write("a.yaml", head+"teams: [{name: ops}]\napplications: [{name: billing, owner: ops}]\n")
+	write("b.yaml", head+"applications: [{name: crm, hosting: saas, vendor: Acme, owner: ops}]\n")
+	out, err := runCmd(t, "catalog", "check", dir)
+	if err != nil || !strings.Contains(out, "ok: a.yaml, b.yaml") || !strings.Contains(out, "applications: 2") {
+		t.Fatalf("a good catalog: %q %v", out, err)
+	}
+	// Every problem is printed, and the exit is a failure.
+	write("b.yaml", head+"applications: [{name: CRM, owner: nobody, criticality: urgent}]\n")
+	out, err = runCmd(t, "catalog", "check", dir)
+	if err == nil || !strings.Contains(err.Error(), "3 problem(s)") || !strings.Contains(out, `owner "nobody" is not in teams`) {
+		t.Fatalf("a bad catalog: %q %v", out, err)
+	}
+	empty := t.TempDir()
+	if err := os.WriteFile(filepath.Join(empty, "c.yaml"), []byte(head), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"catalog"}, {"catalog", "check"}, {"catalog", "lint", dir}, {"catalog", "check", filepath.Join(dir, "none")}, {"catalog", "check", empty}} {
+		if _, err := runCmd(t, args...); err == nil {
+			t.Errorf("%v accepted", args)
+		}
+	}
+}
+
 func TestThemeCheck(t *testing.T) {
 	dir := t.TempDir()
 	write := func(manifest string) {

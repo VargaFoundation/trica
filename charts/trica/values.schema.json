@@ -267,6 +267,22 @@
             ]
           }
         },
+        "configMaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name"
+            ]
+          }
+        },
         "kubernetes": {
           "type": "object",
           "properties": {

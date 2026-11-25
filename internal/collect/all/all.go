@@ -8,6 +8,7 @@ package all
 
 import (
 	_ "github.com/VargaFoundation/trica/internal/collect/arista"      // registers "arista"
+	_ "github.com/VargaFoundation/trica/internal/collect/catalog"     // registers "catalog"
 	_ "github.com/VargaFoundation/trica/internal/collect/hostagent"   // registers "agent", the host agent, which has no factory
 	_ "github.com/VargaFoundation/trica/internal/collect/kubemetrics" // registers "kubemetrics"
 	_ "github.com/VargaFoundation/trica/internal/collect/kubernetes"  // registers "kubernetes"
