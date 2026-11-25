@@ -291,7 +291,7 @@ func optionTarget(t *testing.T, opts map[string]any) collect.Target {
 	return tg
 }
 
-const token = "glpat-canary-0123456789"
+const token = "canary-catalog-token"
 
 // writeToken puts the token in a file the target refers to.
 func writeToken(t *testing.T) collect.Secret {
