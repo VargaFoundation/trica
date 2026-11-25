@@ -113,9 +113,9 @@ asset of the estate is in trica", it leaves these gaps:
 - **Coverage discrepancies** (a self-hosted application declared with no instance observed): a
   search answers "discovered, not declared" and "no owner"; "declared, never seen" is not computed.
 - **The naming conventions of ADR 0069** (`tenant-<x>` projects, the `-ci` suffix, `platform`) stay
-  built in; an estate with others sets `trica.io/application` on its Argo CD Applications.
+  built in; an estate with others sets `trica.io/application` on its Argo CD Applications (#242).
 - **The version of a multi-container workload** is still its first image's tag, which may be a
-  sidecar's.
+  sidecar's (#241).
 
 ## Alternatives rejected
 
