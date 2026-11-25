@@ -340,6 +340,76 @@ func TestImpactApplicationWithAnInstanceLeft(t *testing.T) {
 	}
 }
 
+// envApp is an application with one component and an instance per
+// environment, each on its own workload: prod on wl-prod (two of them, prod
+// and prod-eu, when twoProd), dev on wl-dev.
+func envApp(twoProd bool) *world {
+	w := (&world{}).
+		add("app", "application", "", nil).add("comp", "component", "app", nil).
+		add("env-prod", "environment", "", map[string]any{"kind": "prod"}).
+		add("env-dev", "environment", "", map[string]any{"kind": "dev"})
+	inst := func(id, env string) {
+		w.add(id, "component_instance", "comp", nil).add("wl-"+id, "workload", "", nil).
+			rel("runs_on", id, "wl-"+id).rel("deployed_in", id, env)
+	}
+	inst("prod", "env-prod")
+	inst("dev", "env-dev")
+	if twoProd {
+		inst("prod-eu", "env-prod")
+	}
+	return w
+}
+
+// The application's state is that of its production instances when it has
+// any (ADR 0011 amendment of 2026-11-25). Each case fails if the rule is
+// removed (the first two) or applied when it should not be (the others).
+func TestImpactApplicationFollowsProduction(t *testing.T) {
+	cases := []struct {
+		name    string
+		world   *world
+		failed  []string
+		app     string // "" when the application must be spared
+		comment string
+	}{
+		{"prod down, dev up: the application is down", envApp(false), []string{"wl-prod"}, "down/instances", "the dev instance does not keep the service up"},
+		{"dev down, prod up: the application is untouched", envApp(false), []string{"wl-dev"}, "", "a dev outage is not the application's"},
+		{"one prod instance of two down: degraded", envApp(true), []string{"wl-prod"}, "degraded/instances", ""},
+		{"both prod instances down: down", envApp(true), []string{"wl-prod", "wl-prod-eu"}, "down/instances", ""},
+		{"no prod environment: every instance counts, as before", kubeApp().
+			add("inst-dev", "component_instance", "comp", nil).add("other-wl", "workload", "", nil).
+			rel("runs_on", "inst-dev", "other-wl").
+			add("env-dev", "environment", "", map[string]any{"kind": "dev"}).rel("deployed_in", "inst-dev", "env-dev"),
+			[]string{"cluster"}, "degraded/instances", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := tc.world.snapshot().Impact(tc.failed, ImpactOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, hit := states(r)["app"]
+			if tc.app == "" && hit {
+				t.Errorf("app %q, want untouched: %s", got, tc.comment)
+			}
+			if tc.app != "" && got != tc.app {
+				t.Errorf("app %q, want %q %s", got, tc.app, tc.comment)
+			}
+		})
+	}
+}
+
+// An absent prod environment does not make its instances production.
+func TestImpactAbsentProdEnvironmentIsNotProduction(t *testing.T) {
+	w := envApp(false).absent("env-prod")
+	r, err := w.snapshot().Impact([]string{"wl-dev"}, ImpactOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := states(r)["app"]; got != "degraded/instances" {
+		t.Errorf("app %q, want degraded/instances: with no live prod environment every instance counts", got)
+	}
+}
+
 // capWorld is a Kubernetes cluster whose nodes each have 4 cores and 8 GB
 // allocatable, for the capacity rule. Nodes are given by id.
 func capWorld(nodes ...string) *world {

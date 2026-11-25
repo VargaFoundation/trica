@@ -75,6 +75,10 @@ reconciliation engine, which decides to create, update, propose or flag.
 - Objects and relations are checked one by one against the caller's rights (type, and site for a
   grant limited to sites); one refused object refuses the whole batch (403), nothing is applied.
 - Attributes with a sensitive name are refused at the door (400 `secret-attribute`).
+- `withdraw_omitted` (a full-scope declared batch that is the whole of what its source declares,
+  [ADR 0071](../adr/0071-application-catalog.md)) is refused from a person (400): one call would
+  retire everything the person declared on other objects. A token bound to its own source may
+  send it.
 
 ## Authentication, authorization, audit
 

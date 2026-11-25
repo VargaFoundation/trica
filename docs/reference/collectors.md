@@ -15,7 +15,7 @@ a pasted secret stops the start instead of collecting nothing.
 
 | Key | Meaning |
 |---|---|
-| `kind` | The collector module: `arista`, `kubemetrics`, `kubernetes`, `maas`, `mikrotik`, `pfsense`, `redfish`, `synology` or `unifi` today. `GET /api/v1/collectors` (or the Collectors page) is the authoritative list of what this build knows. |
+| `kind` | The collector module: `arista`, `catalog`, `kubemetrics`, `kubernetes`, `maas`, `mikrotik`, `pfsense`, `redfish`, `synology` or `unifi` today. `GET /api/v1/collectors` (or the Collectors page) is the authoritative list of what this build knows. |
 | `name` | Identifies the target. The batch source is `<kind>:<name>`, which is also the key of the health board and of the logs. |
 | `address` | Where to connect; the form depends on the collector (examples below). |
 | `username` | Account name, for the collectors that use one. |
@@ -181,6 +181,26 @@ uses for the same cluster, so that both describe the same objects
 ```
 
 Recorded from one three-node k3s v1.31 cluster, never run against another distribution.
+
+A `catalog` target reads the **application catalog**: the applications people declare, with their
+owner (team or person), criticality, lifecycle, business domain, repository, dependencies, SaaS
+vendor, components, and the instances no collector discovers (on a VM or a server designated by
+name, serial or uuid). It reads a YAML file, every `*.yaml` of a directory (a ConfigMap mounted
+with the chart's `collect.configMaps`, whose edits are picked up without a restart), or one https
+URL with an optional read-only token (`password`, sent as a bearer token; redirects not followed).
+Its values are **declared**: they complete the applications Kubernetes and Argo CD discover (same
+names, one object) and rank below what is observed. A catalog that does not validate fails the run
+and withdraws nothing; one that does is the whole of what it declares, so an application taken out
+of it loses what it declared, and becomes absent if nothing else sees it
+([ADR 0071](../adr/0071-application-catalog.md), [format and mapping](../../internal/collect/catalog/README.md)).
+
+```yaml
+  - kind: catalog
+    name: main
+    address: /etc/trica/collect/configmaps/trica-catalog    # or a file, or https://…/applications.yaml
+    # password: file:/var/run/secrets/collect/git-token/token  # https only
+    interval: 5m
+```
 
 Every run of a target ends in one health record on the board (`GET /api/v1/health/collection`):
 the collector's own, or, when it returned an error, panicked or reported none, one made by the

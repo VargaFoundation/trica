@@ -1019,6 +1019,12 @@ export interface components {
              */
             hosting?: "self" | "saas";
             /**
+             * Lifecycle
+             * @description Where the application stands in its life, as its owner declares it (application catalog, ADR 0071).
+             * @enum {string}
+             */
+            lifecycle?: "planned" | "development" | "production" | "deprecated" | "retired";
+            /**
              * Name
              * @description Application slug.
              */
@@ -3134,6 +3140,7 @@ export interface components {
             scope: string;
             source: string;
             unrelations?: components["schemas"]["BatchRelation"][];
+            withdraw_omitted?: boolean;
         };
         BatchEndpoint: {
             identity?: {

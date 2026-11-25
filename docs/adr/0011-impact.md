@@ -84,3 +84,14 @@ workload shown down could in rare cases fit:
 - the time Kubernetes takes (image pulls, evictions, controller delay), and anything beyond CPU
   and memory (ephemeral storage, devices, hugepages);
 - pods of a StatefulSet that need the same node, and pods already pending before the failure.
+
+## Amendment (2026-11-25): applications follow production
+
+[ADR 0071](0071-application-catalog.md): with a dev instance alive, a production outage read
+"degraded", and a dev outage degraded the application. Rule `instances` now reads an application's
+state from its instances `deployed_in` an environment of kind `prod` when it has any (an absent
+environment does not count), else from all its instances as before. Production all down: the
+application is down, whatever runs elsewhere; one production instance of two down: degraded; a
+non-production instance down: the instance shows it, the application is untouched.
+`TestImpactApplicationFollowsProduction` and `TestImpactAbsentProdEnvironmentIsNotProduction`
+guard it; `TestImpactApplicationWithAnInstanceLeft` (no environment kind known) is unchanged.

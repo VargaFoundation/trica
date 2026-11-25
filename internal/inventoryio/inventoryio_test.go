@@ -347,6 +347,43 @@ func TestFullScopeWithdraws(t *testing.T) {
 	}
 }
 
+// An object the file no longer lists loses what the import declared of it,
+// and, declared by nothing else, becomes absent (ADR 0071). Before, only the
+// objects still in the file lost their omitted values.
+func TestFullScopeWithdrawsOmittedObjects(t *testing.T) {
+	e, c := newEngine(t)
+	ctx := context.Background()
+	site := func(code, addr string) inventoryio.Object {
+		return inventoryio.Object{Ref: code, Type: "site", Identity: map[string]string{"code": code}, Attributes: map[string]any{"code": code, "address": addr}}
+	}
+	doc := func(objs ...inventoryio.Object) *inventoryio.Document {
+		return &inventoryio.Document{Format: inventoryio.FormatName, Version: 1, Objects: objs}
+	}
+	first, err := inventoryio.Import(ctx, e, doc(site("X", "1 rue A"), site("Y", "2 rue B")), inventoryio.ImportOptions{Name: "f", Scope: sdk.ScopeFull})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.t = c.t.Add(time.Hour)
+	if _, err := inventoryio.Import(ctx, e, doc(site("X", "1 rue A")), inventoryio.ImportOptions{Name: "f", Scope: sdk.ScopeFull}); err != nil {
+		t.Fatal(err)
+	}
+	y, err := e.Store.Object(ctx, first.Objects["Y"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if y.Status != "absent" || y.Attrs["address"] != nil || y.Display == "" {
+		t.Errorf("Y %+v: want absent, without its address, still named", y)
+	}
+	// A partial import omits nothing.
+	c.t = c.t.Add(time.Hour)
+	if _, err := inventoryio.Import(ctx, e, doc(site("Z", "3 rue C")), inventoryio.ImportOptions{Name: "f"}); err != nil {
+		t.Fatal(err)
+	}
+	if x, _ := e.Store.Object(ctx, first.Objects["X"]); x.Status != "active" || x.Attrs["address"] != "1 rue A" {
+		t.Errorf("X %+v after a partial import", x)
+	}
+}
+
 func TestToBatchRejections(t *testing.T) {
 	reg := schema.Builtin()
 	site := func(ref, code string) inventoryio.Object {

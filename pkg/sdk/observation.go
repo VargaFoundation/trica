@@ -78,6 +78,14 @@ type Batch struct {
 	// Health is the collector's own report on this run; it feeds the
 	// collection health board.
 	Health *Health `json:"health,omitempty"`
+	// WithdrawOmitted makes a declared full-scope batch the whole of what its
+	// source declares: the objects it declared before and does not name here
+	// lose its claims (their identifiers excepted), and one nothing else
+	// claims or observes becomes absent. Without it a full-scope batch only
+	// withdraws on the objects it names. For a document of record (an
+	// application catalog, an import of scope full, ADR 0071); refused on an
+	// observed or partial batch, whose omissions the absence sweep handles.
+	WithdrawOmitted bool `json:"withdraw_omitted,omitempty"`
 
 	refs map[string]*Object
 }
@@ -259,6 +267,9 @@ func (b *Batch) Validate() error {
 	}
 	if !b.Confidence.Valid() {
 		return fmt.Errorf("batch %s: invalid confidence %q", b.Source, b.Confidence)
+	}
+	if b.WithdrawOmitted && (b.Scope != ScopeFull || b.Confidence != Declared) {
+		return fmt.Errorf("batch %s: withdraw_omitted needs a full-scope, declared batch", b.Source)
 	}
 	b.reindex()
 	if len(b.refs) != len(b.Objects) {

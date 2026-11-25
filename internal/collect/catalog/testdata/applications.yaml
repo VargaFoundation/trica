@@ -1,0 +1,70 @@
+# Synthesised: an application catalog of a small estate (see README.md).
+# orion and lyra are the applications the kubernetes collector derives from
+# the build-1.31 fixture (Argo CD projects tenant-orion and tenant-lyra).
+format: trica-catalog
+version: 1
+
+teams:
+  - name: orion-team
+    email: orion@example.org
+    chat: "#orion"
+  - name: it-ops
+    email: it-ops@example.org
+
+people:
+  - email: Erp.Owner@example.org
+    name: ERP Owner
+
+environments:
+  - name: prod
+    kind: prod
+  - name: dev
+    kind: dev
+
+applications:
+  - name: orion
+    display_name: Orion
+    description: Customer portal.
+    domain: customer
+    criticality: high
+    lifecycle: production
+    hosting: self
+    owner: orion-team
+    repository: https://git.example.org/orion/orion
+    depends_on: [entra-id]
+    calls: [lyra]
+    components:
+      - {name: app, kind: service, technology: java}
+      - {name: postgres, kind: database, technology: postgresql}
+
+  - name: entra-id
+    display_name: Microsoft Entra ID
+    criticality: critical
+    lifecycle: production
+    hosting: saas
+    vendor: Microsoft
+    owner: it-ops
+
+  - name: legacy-erp
+    display_name: Legacy ERP
+    domain: finance
+    criticality: medium
+    lifecycle: deprecated
+    hosting: self
+    owner: erp.owner@example.org
+    depends_on: [entra-id, payroll]
+    components:
+      - {name: server, kind: service}
+      - {name: db, kind: database, technology: postgresql}
+    instances:
+      - component: server
+        environment: prod
+        version: "9.2"
+        runs_on:
+          - {type: vm, name: erp-01}
+        endpoints: [https://erp.example.org, erp.example.org:8443]
+      - component: db
+        environment: prod
+        location: dc1
+        runs_on:
+          - {type: device, serial: CZJ0000001}

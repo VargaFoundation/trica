@@ -1,0 +1,11 @@
+# Synthesised: a second file of the same catalog, for the directory layout
+# (a ConfigMap with two keys). It declares a team the first file does not.
+format: trica-catalog
+version: 1
+teams:
+  - name: lyra-team
+applications:
+  - name: lyra
+    criticality: low
+    lifecycle: production
+    owner: lyra-team

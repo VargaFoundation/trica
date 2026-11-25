@@ -124,6 +124,12 @@ collect:
   # file per key).
   secrets: []
   #  - name: arista-credentials
+  # Existing ConfigMaps to mount, each as a directory at
+  # /etc/trica/collect/configmaps/<name>/ (one file per key). For the
+  # application catalog (kind catalog, ADR 0071): mounted as a directory, an
+  # edit of the ConfigMap reaches the pod without a restart. Never a credential.
+  configMaps: []
+  #  - name: trica-catalog
   kubernetes:
     # Read-only access for a kubernetes target with address "in-cluster": a
     # ClusterRole limited to get/list/watch on what the collector reads, bound

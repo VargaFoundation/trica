@@ -95,7 +95,8 @@ type ImpactResult struct {
 //   - a degraded object degrades what runs on or depends on it (to_from
 //     relations), nothing else;
 //   - an application is down when all its instances are, degraded when one of
-//     them is down or degraded;
+//     them is down or degraded; when it has instances in a prod environment,
+//     only those count;
 //   - link relations (cabled_to, maps_to): an object that could reach an
 //     anchor before the failure and cannot any more is down.
 func (s *Snapshot) Impact(failed []string, opt ImpactOptions) (*ImpactResult, error) {
@@ -255,7 +256,7 @@ func (p *propagation) settle() int {
 				continue
 			}
 			down, hit, total, cause, depth := 0, 0, 0, "", 0
-			for _, inst := range p.instancesOf(id) {
+			for _, inst := range p.businessInstances(id) {
 				total++
 				if a := p.state[inst]; a != nil {
 					hit++
@@ -315,6 +316,39 @@ func (p *propagation) instancesOf(app string) []string {
 		}
 	}
 	return out
+}
+
+// businessInstances are the instances an application's state is read from:
+// those deployed in an environment of kind prod when it has any (ADR 0011
+// amendment of 2026-11-25), else all of them. A production outage is the
+// application's outage even while its dev instance runs; a dev instance lost
+// says nothing of the service its users get, and shows on the instance only.
+func (p *propagation) businessInstances(app string) []string {
+	all := p.instancesOf(app)
+	var prod []string
+	for _, i := range all {
+		if p.inProduction(i) {
+			prod = append(prod, i)
+		}
+	}
+	if len(prod) > 0 {
+		return prod
+	}
+	return all
+}
+
+// inProduction says whether an instance is deployed in an environment whose
+// kind is prod.
+func (p *propagation) inProduction(inst string) bool {
+	for _, e := range p.s.Out[inst] {
+		if e.Type != "deployed_in" {
+			continue
+		}
+		if env := p.s.Nodes[e.To]; env != nil && env.Type == "environment" && env.Status != StatusAbsent && fmt.Sprint(env.Attrs["kind"]) == "prod" {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *propagation) allSuppliersDown(id, relType string) bool {

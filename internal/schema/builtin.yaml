@@ -617,6 +617,7 @@ types:
       owner: {kind: string, search: true, label: {en: Owner, fr: Responsable}, description: "Owning team or person."}
       repository: {kind: string, search: true, label: {en: Repository, fr: Dépôt}, description: "Source repository URL."}
       hosting: {kind: enum, values: [self, saas], label: {en: Hosting, fr: Hébergement}, description: "self: it runs on our own infrastructure and its instances are observed. saas: a vendor runs it, it is declared by hand and has no instance."}
+      lifecycle: {kind: enum, values: [planned, development, production, deprecated, retired], search: true, label: {en: Lifecycle, fr: Cycle de vie}, description: "Where the application stands in its life, as its owner declares it (application catalog, ADR 0071)."}
       vendor: {kind: string, search: true, label: {en: Vendor, fr: Éditeur}, description: "Who runs a SaaS application."}
       description: {kind: text, search: true, label: {en: Description, fr: Description}, description: "What the application does."}
   component:
@@ -888,8 +889,8 @@ relations:
   supplied_by:
     label: {en: is supplied by, fr: est fourni par}
     inverse: {en: supplies, fr: fournit}
-    description: Vendor of a device, contract or uplink.
-    from: [device, contract, internet_access, software, device_type]
+    description: Vendor of a device, contract, uplink or SaaS application.
+    from: [device, contract, internet_access, software, device_type, application]
     to: [vendor]
   backed_up_by:
     label: {en: is backed up by, fr: est sauvegardé par}

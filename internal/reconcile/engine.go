@@ -220,6 +220,9 @@ type run struct {
 	// moved: objects whose parent changed in this batch (a room under another
 	// site): the devices placed under them are checked again.
 	moved map[string]bool
+	// omitted: objects a declared full-scope batch no longer names, whose
+	// claims of this source were withdrawn (retireOmitted).
+	omitted map[string]bool
 }
 
 type relKey struct{ Type, From, To string }
@@ -253,7 +256,7 @@ func (e *Engine) apply(ctx context.Context, tx pgx.Tx, b *sdk.Batch, author, rea
 		e: e, tx: tx, reg: reg, b: b, now: e.now(), author: author,
 		res: &Result{Objects: map[string]string{}}, ids: map[string]string{}, types: map[string]string{},
 		touchedAttrs: map[string]map[string]bool{}, touchedRels: map[relKey]bool{}, touched: map[string]bool{},
-		moved: map[string]bool{},
+		moved: map[string]bool{}, omitted: map[string]bool{},
 	}
 	r.seen = b.ObservedAt.UTC().Truncate(time.Microsecond)
 	if r.seen.IsZero() || r.seen.After(r.now) {
@@ -270,7 +273,7 @@ func (e *Engine) apply(ctx context.Context, tx pgx.Tx, b *sdk.Batch, author, rea
 		return nil, err
 	}
 	r.res.ChangesetID = r.cs
-	steps := []func(context.Context) error{r.resolveObjects, r.checkNames, r.writeClaims, r.writeRelationClaims, r.resolveAttributes, r.resolveRelations, r.checkPlacements, r.writeHealth}
+	steps := []func(context.Context) error{r.resolveObjects, r.checkNames, r.writeClaims, r.writeRelationClaims, r.resolveAttributes, r.retireOmitted, r.resolveRelations, r.checkPlacements, r.writeHealth}
 	for _, step := range steps {
 		if err := step(ctx); err != nil {
 			return nil, err
@@ -567,8 +570,20 @@ func (r *run) resolveObjects(ctx context.Context) error {
 func (r *run) refreshObject(ctx context.Context, id, parentID string, observed bool, conf sdk.Confidence) error {
 	var status string
 	var curParent *string
-	if err := r.tx.QueryRow(ctx, `SELECT status, parent_id::text FROM objects WHERE id = $1`, id).Scan(&status, &curParent); err != nil {
+	var everObserved bool
+	if err := r.tx.QueryRow(ctx, `SELECT status, parent_id::text, observed FROM objects WHERE id = $1`, id).Scan(&status, &curParent, &everObserved); err != nil {
 		return err
+	}
+	if !observed && !everObserved && status == "absent" {
+		// Declared, withdrawn (retireOmitted), declared again: back. An object
+		// that was observed stays absent until something sees it again.
+		if _, err := r.tx.Exec(ctx, `UPDATE objects SET status = 'active' WHERE id = $1`, id); err != nil {
+			return err
+		}
+		if err := r.setSystem(ctx, id, "_status", "active", conf); err != nil {
+			return err
+		}
+		r.record(PlannedChange{Op: "set", ObjectID: id, Key: "_status", Before: "absent", After: "active"})
 	}
 	if observed {
 		if _, err := r.tx.Exec(ctx, `UPDATE objects SET observed = true, first_seen = coalesce(first_seen, $2),
@@ -616,6 +631,9 @@ type claimRow struct {
 }
 
 func (r *run) writeClaims(ctx context.Context) error {
+	if err := r.withdrawOmitted(ctx); err != nil {
+		return err
+	}
 	if len(r.ids) == 0 {
 		return nil
 	}
@@ -742,6 +760,103 @@ func (r *run) writeClaims(ctx context.Context) error {
 		}
 	}
 	return r.tx.SendBatch(ctx, batch).Close()
+}
+
+// declaredFull says the batch is a document of record (sdk.Batch
+// WithdrawOmitted: an application catalog, an import of scope full): what its
+// source declared before and no longer names is withdrawn, whole objects
+// included (ADR 0071), since no sweep waits for a declaration to be seen
+// again. Other full-scope batches withdraw only on the objects they name: an
+// object a collector no longer sees goes absent through the sweep with its
+// last values kept (ADR 0007); the device-type library keeps the models no
+// device uses any more. A failed run is partial (apply) and withdraws nothing.
+func (r *run) declaredFull() bool {
+	return r.b.WithdrawOmitted && r.b.Scope == sdk.ScopeFull && r.b.Confidence == sdk.Declared
+}
+
+// withdrawOmitted withdraws the claims a declared full-scope source holds on
+// objects its batch does not name. Identifying claims stay: the object keeps
+// its name once absent, and is the same object when declared again. Every
+// omitted object is remembered, even one this source only identified (a team
+// declared by its name alone), for retireOmitted.
+func (r *run) withdrawOmitted(ctx context.Context) error {
+	if !r.declaredFull() {
+		return nil
+	}
+	named := make([]string, 0, len(r.ids))
+	for _, id := range r.ids {
+		named = append(named, id)
+	}
+	rows, err := r.tx.Query(ctx, `SELECT object_id::text, key, ident IS NULL FROM claims WHERE source = $1 AND NOT (object_id = ANY($2::uuid[]))`, r.b.Source, named)
+	if err != nil {
+		return err
+	}
+	var withdrawn [][2]string
+	for rows.Next() {
+		var id, k string
+		var plain bool
+		if err := rows.Scan(&id, &k, &plain); err != nil {
+			rows.Close()
+			return err
+		}
+		r.omitted[id] = true
+		if plain {
+			withdrawn = append(withdrawn, [2]string{id, k})
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if len(withdrawn) == 0 {
+		return nil
+	}
+	if _, err := r.tx.Exec(ctx, `DELETE FROM claims WHERE source = $1 AND ident IS NULL AND NOT (object_id = ANY($2::uuid[]))`, r.b.Source, named); err != nil {
+		return err
+	}
+	for _, w := range withdrawn {
+		r.touchAttr(w[0], w[1])
+	}
+	return nil
+}
+
+// retireOmitted marks absent the omitted objects that no collector ever
+// observed and on which nothing is claimed any more but this source's
+// identifiers: declared, then no longer declared by anyone. One that
+// something observed keeps its status, which the sweep handles; one another
+// source still declares something of stays active.
+func (r *run) retireOmitted(ctx context.Context) error {
+	if len(r.omitted) == 0 {
+		return nil
+	}
+	rows, err := r.tx.Query(ctx, `UPDATE objects o SET status = 'absent' WHERE o.id = ANY($1::uuid[]) AND o.status = 'active' AND NOT o.observed
+		AND NOT EXISTS (SELECT 1 FROM claims c WHERE c.object_id = o.id AND (c.ident IS NULL OR c.source <> $2))
+		RETURNING o.id::text`, sdk.SortedKeys(r.omitted), r.b.Source)
+	if err != nil {
+		return err
+	}
+	var retired []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		retired = append(retired, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	sort.Strings(retired)
+	for _, id := range retired {
+		if err := r.setSystem(ctx, id, "_status", "absent", sdk.Declared); err != nil {
+			return err
+		}
+		r.touched[id] = true
+		r.record(PlannedChange{Op: "set", ObjectID: id, Key: "_status", Before: "active", After: "absent"})
+	}
+	return nil
 }
 
 // canonical re-encodes JSON so that jsonb output and Go output compare equal.
